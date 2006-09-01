@@ -45,6 +45,12 @@ public:
 	static WPDResult parse(WPXInputStream *input, WPXHLListenerImpl *listenerImpl);
 	//static void parse(WPXInputStream *input, WPXHLListenerImpl *listenerImpl, WPXFileType fileType);
 	//WPXFileType getFileType(WPXInputStream *input)
+private:
+	static WPDConfidence isFileFormatSupportedWPD(WPXInputStream *input, bool partialContent);
+	static WPDConfidence isFileFormatSupportedWPS(WPXInputStream *input, bool partialContent);
+	static WPDResult parseWPD(WPXInputStream *input, WPXHLListenerImpl *listenerImpl);	
+	static WPDResult parseWPS(WPXInputStream *input, WPXHLListenerImpl *listenerImpl);	
+	
 };
 
 #endif /* WPDOCUMENT_H */

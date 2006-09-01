@@ -148,6 +148,7 @@ libwpd_0_8_la_SOURCES = \
 	WP6UnsupportedFixedLengthGroup.cpp \
 	WP6UnsupportedVariableLengthGroup.cpp \
 	WP6VariableLengthGroup.cpp \
+	WPS4.cpp \
 	WPDocument.cpp \
 	WPXContentListener.cpp \
 	WPXHeader.cpp \

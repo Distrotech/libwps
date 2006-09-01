@@ -33,6 +33,7 @@
 #include "WP42Heuristics.h"
 #include "WP5Parser.h"
 #include "WP6Parser.h"
+#include "WPS4.h"
 #include "WPXStream.h"
 #include "libwpd_internal.h"
 
@@ -52,20 +53,13 @@ the full 100%.
 */
 
 /**
-Analyzes the content of an input stream to see if it can be parsed
-\param input The input stream
-\param partialContent A boolean which states if the content from the input stream
-represents the full contents of a WordPerfect file, or just the first X bytes
-\return A confidence value which represents the likelyhood that the content from
-the input stream can be parsed
+Check for WordPerfect support.
 */
-WPDConfidence WPDocument::isFileFormatSupported(WPXInputStream *input, bool partialContent)
+WPDConfidence WPDocument::isFileFormatSupportedWPD(WPXInputStream *input, bool partialContent)
 {
 	WPDConfidence confidence = WPD_CONFIDENCE_NONE;
 
 	WPXHeader *header = NULL;
-
-	WPD_DEBUG_MSG(("WPDocument::isFileFormatSupported()\n"));
 
 	// by-pass the OLE stream (if it exists) and returns the (sub) stream with the
 	// WordPerfect document.
@@ -75,7 +69,7 @@ WPDConfidence WPDocument::isFileFormatSupported(WPXInputStream *input, bool part
 	// BIG BIG NOTE: very unsafe on partial content!!!
 	if (input->isOLEStream())
 	{
-		document = input->getDocumentOLEStream();
+		document = input->getDocumentOLEStream("PerfectOffice_MAIN");
 		if (document)
 			isDocumentOLE = true;
 		else
@@ -163,17 +157,81 @@ WPDConfidence WPDocument::isFileFormatSupported(WPXInputStream *input, bool part
 		return WPD_CONFIDENCE_NONE;
 	}
 
+
+}
+
+
+/**
+Check for Microsoft Works support.
+**/
+WPDConfidence WPDocument::isFileFormatSupportedWPS(WPXInputStream *input, bool partialContent)
+{
+	WPXInputStream * document_mn0 = input->getDocumentOLEStream("MN0");	
+	
+	//fixme: catch exceptions
+	if (document_mn0)
+	{
+		WPD_DEBUG_MSG(("Microsoft Works 4 format detected\n"));	
+		DELETEP(document_mn0);		
+		return WPD_CONFIDENCE_EXCELLENT;
+	}	
+	
+	WPXInputStream * document_contents = input->getDocumentOLEStream("CONTENTS");	
+	
+	if (document_contents)
+	{
+		/* check the Works 2000/7/8 format magic */
+		document_contents->seek(0, WPX_SEEK_SET);
+		
+		char fileMagic[8];
+		size_t numBytesRead;
+		for (int i=0; i<7 && !document_contents->atEOS(); i++)
+			fileMagic[i] = readU8(document_contents);		
+		fileMagic[7] = '\0';
+	
+		/* Works 7/8 */
+		if (0 == strcmp(fileMagic, "CHNKWKS"))
+		{
+			WPD_DEBUG_MSG(("Microsoft Works 8 (maybe 7) format detected\n"));
+		}
+		
+		/* Works 2000 */		
+		if (0 == strcmp(fileMagic, "CHNKINK"))
+		{
+			WPD_DEBUG_MSG(("Microsoft Works 2000 (v5) format detected\n"));
+		}	
+		DELETEP(document_contents);
+	}
+	
 	return WPD_CONFIDENCE_NONE;
 }
 
 /**
-Parses the input stream content. It will make callbacks to the functions provided by a
-WPXHLListenerImpl class implementation when needed. This is often commonly called the
-'main parsing routine'.
+Analyzes the content of an input stream to see if it can be parsed
 \param input The input stream
-\param listenerImpl A WPXListener implementation
+\param partialContent A boolean which states if the content from the input stream
+represents the full contents of a WordPerfect file, or just the first X bytes
+\return A confidence value which represents the likelyhood that the content from
+the input stream can be parsed
 */
-WPDResult WPDocument::parse(WPXInputStream *input, WPXHLListenerImpl *listenerImpl)
+WPDConfidence WPDocument::isFileFormatSupported(WPXInputStream *input, bool partialContent)
+{
+	WPDConfidence confidence = WPD_CONFIDENCE_NONE;
+
+	WPD_DEBUG_MSG(("WPDocument::isFileFormatSupported()\n"));
+	
+	confidence = isFileFormatSupportedWPD(input, partialContent);
+	
+	if (WPD_CONFIDENCE_NONE == confidence)
+	{
+		confidence = isFileFormatSupportedWPS(input, partialContent);
+	}
+
+	return confidence;
+}
+
+
+WPDResult WPDocument::parseWPD(WPXInputStream *input, WPXHLListenerImpl *listenerImpl)
 {
 	WPXParser *parser = NULL;
 
@@ -186,7 +244,7 @@ WPDResult WPDocument::parse(WPXInputStream *input, WPXHLListenerImpl *listenerIm
 	WPD_DEBUG_MSG(("WPDocument::parse()\n"));
 	if (input->isOLEStream())
 	{
-		document = input->getDocumentOLEStream();
+		document = input->getDocumentOLEStream("PerfectOffice_MAIN");
 		if (document)
 			isDocumentOLE = true;
 		else
@@ -249,7 +307,7 @@ WPDResult WPDocument::parse(WPXInputStream *input, WPXHLListenerImpl *listenerIm
 			DELETEP(parser); // deletes the header as well
 		}
 		else
-		{
+		{	
 			// WP file formats prior to version 5.x do not contain a generic
 			// header which can be used to determine which parser to instanciate.
 			// Use heuristics to determine with some certainty if we are dealing with
@@ -295,4 +353,43 @@ WPDResult WPDocument::parse(WPXInputStream *input, WPXHLListenerImpl *listenerIm
 		DELETEP(document);
 
 	return error;
+}
+
+
+WPDResult WPDocument::parseWPS(WPXInputStream *input, WPXHLListenerImpl *listenerImpl)
+{
+	WPXInputStream * document_mn0 = input->getDocumentOLEStream("MN0");	
+	
+	WPDResult error = WPD_OK;
+	
+	//fixme: catch exceptions
+	if (document_mn0)
+	{
+		WPD_DEBUG_MSG(("Microsoft Works 4 format detected\n"));	
+		WPS4Parser *parser = new WPS4Parser(document_mn0, NULL);
+		parser->parse(listenerImpl);
+		DELETEP(parser);		
+		DELETEP(document_mn0);		
+	}	
+	else
+		error = WPD_UNKNOWN_ERROR; //fixme too generic
+		
+	return error;
+}
+
+/**
+Parses the input stream content. It will make callbacks to the functions provided by a
+WPXHLListenerImpl class implementation when needed. This is often commonly called the
+'main parsing routine'.
+\param input The input stream
+\param listenerImpl A WPXListener implementation
+*/
+WPDResult WPDocument::parse(WPXInputStream *input, WPXHLListenerImpl *listenerImpl)
+{
+	WPDResult error = parseWPD(input, listenerImpl);
+	
+	if (WPD_OK != error)
+	{
+		parseWPS(input, listenerImpl);
+	}
 }
