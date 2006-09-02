@@ -86,14 +86,14 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
 	//fixme: sanity check offset_end_FFNTB
 	if (offset_end_FFNTB < (offset_eot+256))
 	{
-		WPD_DEBUG_MSG(("Works: offset_end_FFNTB=0x%x, too small\n"));
+		WPD_DEBUG_MSG(("Works: error: offset_end_FFNTB=0x%x, too small\n"));
 		throw FileException();
 	}
 	
 	uint32_t pnFfntb = (offset_end_FFNTB)/128; /* page number of character information */
 	input->seek((128*pnFfntb)+0x14, WPX_SEEK_SET);
 	
-	WPD_DEBUG_MSG(("Works: offset_end_FFNTB=0x%x, pnFfntb=%i, 128*pnFfntb=0x%x\n",
+	WPD_DEBUG_MSG(("Works: info: offset_end_FFNTB=0x%x, pnFfntb=%i, 128*pnFfntb=0x%x\n",
 		offset_end_FFNTB, pnFfntb, 128*pnFfntb));
 #else
 	/* offset of FFNTB */
@@ -107,7 +107,7 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
 	
 	uint32_t offset_end_FFNTB = offset_FFNTB + len_FFNTB;	
 	
-	WPD_DEBUG_MSG(("Works: offset_FFNTB=0x%x, len_FFNTB=0x%x, offset_end_FFNTB=0x%x\n",
+	WPD_DEBUG_MSG(("Works: info: offset_FFNTB=0x%x, len_FFNTB=0x%x, offset_end_FFNTB=0x%x\n",
 		offset_FFNTB, len_FFNTB, offset_end_FFNTB));
 	input->seek(offset_FFNTB, WPX_SEEK_SET);
 
@@ -121,20 +121,22 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
  * is uniquely assigned to a number.  However, some numbers
  * refer to two or more fonts.
  */
-#if 0			
+
 		if (font_number != fonts.size())
 		{
 			WPD_DEBUG_MSG(("Works: error: at position 0x%x expected font number %i but got %i (0x%x)\n",
 				(input->tell())-2, fonts.size(), font_number, font_number));		
+#if 0							
 			throw FileException();
+#endif			
 		}
-#endif
+
 		std::string s;
 		for (uint8_t i = readU8(input); i>0; i--)
 		{
 			s.append(1, (uint8_t)readU8(input));
 		}
-		WPD_DEBUG_MSG(("Works: font_number =%i =%s\n",font_number, s.c_str()));
+		WPD_DEBUG_MSG(("Works: info: font_number =%i =%s\n",font_number, s.c_str()));
 		s.append(1, 0);
 		fonts.push_back(s);
 	}
@@ -154,7 +156,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 	
 	input->seek(127, WPX_SEEK_CUR);	
 	cfod = readU8(input);
-	WPD_DEBUG_MSG(("Works: cfod = %i (%x)\n", cfod, cfod));				
+	WPD_DEBUG_MSG(("Works: info: cfod = %i (%x)\n", cfod, cfod));				
 	if (cfod > 0x18)
 	{
 		throw FileException();
@@ -173,7 +175,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 	{
 		FOD fod;
 		fod.fcLim = readU32(input);
-//		WPD_DEBUG_MSG(("Works: fcLim = %i (%x)\n", fod.fcLim, fod.fcLim));			
+//		WPD_DEBUG_MSG(("Works: info: fcLim = %i (%x)\n", fod.fcLim, fod.fcLim));			
 		
 		/* check that fcLim is not too large */
 		if (fod.fcLim > offset_eot)
@@ -336,7 +338,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 		uint8_t font_n = (uint8_t)rgchProp[2];
 		if ((fonts.size()-1) < font_n)
 		{
-			WPD_DEBUG_MSG(("Works: expected font %i but there are only %i\n", 
+			WPD_DEBUG_MSG(("Works: error: expected font %i but there are only %i\n", 
 				font_n,(fonts.size()-1) ));			
 /* fixme: some files don't index fonts nicely--some other format is used */				
 #if 0				
@@ -397,7 +399,7 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
 	{
 		uint32_t len = (*FODs_iter).fcLim - last_fcLim;
-		WPD_DEBUG_MSG(("Works: txt l=%02i rgchProp=%s\n", 
+		WPD_DEBUG_MSG(("Works: info: txt l=%02i rgchProp=%s\n", 
 			len, to_bits((*FODs_iter).fprop.rgchProp).c_str()));
 		if ((*FODs_iter).fprop.cch > 0)
 			propertyChange((*FODs_iter).fprop.rgchProp, listener);
@@ -405,7 +407,7 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 		for (uint32_t i = len; i>0; i--)
 		{
 			uint8_t readVal = readU8(input);
-//			WPD_DEBUG_MSG(("Works: position %x = %c (0x%02x)\n", (input->tell())-1, readVal, readVal));
+//			WPD_DEBUG_MSG(("Works: info: position %x = %c (0x%02x)\n", (input->tell())-1, readVal, readVal));
 			if (0x0D == readVal)
 			{
 				listener->insertEOL();
@@ -427,6 +429,7 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
  *
  */
 void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *input)
+// fixme: this function is immature
 {
 	/* read page format */
 	input->seek(0x64, WPX_SEEK_SET);
@@ -441,7 +444,7 @@ void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *in
 	/* check page format */
 	//todo: check the bottom margin which acted funny and has a strange offset
 	//fixme: assert margins within reasonable limits	
-	WPD_DEBUG_MSG(("Works: page margins (t,l,r,b): raw(%i,%i,%i,%i), inches(%f,%f,%f,%f\n",
+	WPD_DEBUG_MSG(("Works: info: page margins (t,l,r,b): raw(%i,%i,%i,%i), inches(%f,%f,%f,%f\n",
 		margin_top, margin_left, margin_right, margin_bottom,
 		margin_top/1440, margin_left/1440, margin_right/1440, margin_bottom/1440));		
 		
@@ -470,7 +473,7 @@ void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
 	offset_eos = readU32(input);
 	if (offset_eos < 3584)
 	{
-		WPD_DEBUG_MSG(("Works: offset_eos = %x (%i), too small\n", offset_eos, offset_eos));				
+		WPD_DEBUG_MSG(("Works: error: offset_eos = %x (%i), too small\n", offset_eos, offset_eos));				
 		throw FileException();
 	}
 #endif
@@ -478,9 +481,9 @@ void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
 	/* find beginning of character FODs */
 	input->seek(WPS4_FCMAC_OFFSET, WPX_SEEK_SET);
 	offset_eot = readU32(input); /* stream offset to end of text */
-	WPD_DEBUG_MSG(("Works: offset_eot at WPS4_FCMAC_OFFSET = %x (%i)\n", offset_eot, offset_eot));			
+	WPD_DEBUG_MSG(("Works: info: offset_eot at WPS4_FCMAC_OFFSET = %x (%i)\n", offset_eot, offset_eot));			
 	uint32_t pnChar = (offset_eot+127)/128; /* page number of character information */
-	WPD_DEBUG_MSG(("Works: 128*pnChar = %x (%i)\n", pnChar*128, pnChar*128));
+	WPD_DEBUG_MSG(("Works: info: 128*pnChar = %x (%i)\n", pnChar*128, pnChar*128));
 	
 	/* sanity check */
 	input->seek(128*pnChar, WPX_SEEK_SET);
@@ -677,7 +680,6 @@ void WPS4ContentListener::_openParagraph()
 
 void WPS4ContentListener::_flushText()
 {
-	WPD_DEBUG_MSG(("WPS4ContentListener::_flushText() while buffer size = %i\n", m_parseState->m_textBuffer.len()));		
 	if (m_parseState->m_textBuffer.len())
 		m_listenerImpl->insertText(m_parseState->m_textBuffer);
 	m_parseState->m_textBuffer.clear();
