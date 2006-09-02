@@ -390,6 +390,8 @@ WPDResult WPDocument::parse(WPXInputStream *input, WPXHLListenerImpl *listenerIm
 	
 	if (WPD_OK != error)
 	{
-		parseWPS(input, listenerImpl);
+		error = parseWPS(input, listenerImpl);
 	}
+	
+	return error;
 }

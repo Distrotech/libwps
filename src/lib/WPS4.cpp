@@ -79,23 +79,6 @@ WPS4Parser private
  */
 void WPS4Parser::readFontsTable(WPXInputStream * input)
 {
-	//fixme: location is 0xAA or 0x92?
-#if 0
-	input->seek(0x80, WPX_SEEK_SET);
-	uint32_t offset_end_FFNTB = readU32(input); /* end of fonts table */
-	//fixme: sanity check offset_end_FFNTB
-	if (offset_end_FFNTB < (offset_eot+256))
-	{
-		WPD_DEBUG_MSG(("Works: error: offset_end_FFNTB=0x%x, too small\n"));
-		throw FileException();
-	}
-	
-	uint32_t pnFfntb = (offset_end_FFNTB)/128; /* page number of character information */
-	input->seek((128*pnFfntb)+0x14, WPX_SEEK_SET);
-	
-	WPD_DEBUG_MSG(("Works: info: offset_end_FFNTB=0x%x, pnFfntb=%i, 128*pnFfntb=0x%x\n",
-		offset_end_FFNTB, pnFfntb, 128*pnFfntb));
-#else
 	/* offset of FFNTB */
 	input->seek(0x5E, WPX_SEEK_SET);
 	uint32_t offset_FFNTB = readU32(input);
@@ -103,15 +86,12 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
 
 	/* length of FFNTB */
 	input->seek(0x62, WPX_SEEK_SET);	
-	uint32_t len_FFNTB = readU16(input);
-	
-	uint32_t offset_end_FFNTB = offset_FFNTB + len_FFNTB;	
-	
+	uint32_t len_FFNTB = readU16(input);	
+	uint32_t offset_end_FFNTB = offset_FFNTB + len_FFNTB;		
 	WPD_DEBUG_MSG(("Works: info: offset_FFNTB=0x%x, len_FFNTB=0x%x, offset_end_FFNTB=0x%x\n",
 		offset_FFNTB, len_FFNTB, offset_end_FFNTB));
+		
 	input->seek(offset_FFNTB, WPX_SEEK_SET);
-
-#endif
 
 	while (input->tell() < offset_end_FFNTB)
 	{
@@ -157,7 +137,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 	
 	input->seek(127, WPX_SEEK_CUR);	
 	cfod = readU8(input);
-	WPD_DEBUG_MSG(("Works: info: at position 0x%02x, cfod = %i (%x)\n", (input->tell())-1,cfod, cfod));				
+//	WPD_DEBUG_MSG(("Works: info: at position 0x%02x, cfod = %i (%x)\n", (input->tell())-1,cfod, cfod));				
 	if (cfod > 0x18)
 	{
 		throw FileException();
@@ -389,7 +369,7 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
 	{
 		FOD fod = *(FODs_iter);
-		printf("FOD  fcLim=%u (0x%04x), bfprop=%u, bfprop_abs=%u\n", fod.fcLim, fod.fcLim, fod.bfprop, fod.bfprop_abs);
+//		WPD_DEBUG_MSG(("FOD  fcLim=%u (0x%04x), bfprop=%u, bfprop_abs=%u\n", fod.fcLim, fod.fcLim, fod.bfprop, fod.bfprop_abs));
 	}	
 #endif	
 	
@@ -438,6 +418,10 @@ void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *in
 	unsigned int margin_right =readU16(input);	
 	input->seek(0x78, WPX_SEEK_SET);
 	unsigned int margin_bottom =readU16(input);		
+	input->seek(0x6C, WPX_SEEK_SET);
+	unsigned int page_width = readU16(input);
+	input->seek(0x6E, WPX_SEEK_SET);
+	unsigned int page_height = readU16(input);	
 	
 	/* check page format */
 	//todo: check the bottom margin which acted funny and has a strange offset
@@ -445,6 +429,9 @@ void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *in
 	WPD_DEBUG_MSG(("Works: info: page margins (t,l,r,b): raw(%i,%i,%i,%i), inches(%f,%f,%f,%f\n",
 		margin_top, margin_left, margin_right, margin_bottom,
 		margin_top/1440, margin_left/1440, margin_right/1440, margin_bottom/1440));		
+
+	WPD_DEBUG_MSG(("Works: info: page size (w,h): raw(%i,%i), inches(%2.1f,%2.1f)\n",
+		page_width, page_height, page_width/1440, page_height/1440));
 		
 	/* record page format */
 	WPXPageSpan ps;
