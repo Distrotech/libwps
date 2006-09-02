@@ -23,6 +23,7 @@
 #define WPS4_H
 
 #include <vector>
+#include <map>
 
 #include "libwpd_internal.h"
 #include "WPXContentListener.h"
@@ -142,7 +143,7 @@ private:
 	uint32_t offset_eos; /* stream offset to end of MN0 */	
 	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */		
 	std::vector<FOD> PAFODs; /* PAragraph FOrmatting Descriptors */			
-	std::vector<std::string> fonts;	 /* indexed fonts */
+	std::map<uint8_t, std::string> fonts; /* fonts in format <index code, font name>  */
 };
 
 

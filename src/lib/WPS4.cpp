@@ -74,7 +74,7 @@ WPS4Parser private
 
 
 /**
- * Reads fonts table.
+ * Reads fonts table into memory.
  *
  */
 void WPS4Parser::readFontsTable(WPXInputStream * input)
@@ -115,30 +115,31 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
 
 	while (input->tell() < offset_end_FFNTB)
 	{
-		uint16_t font_number = readU16(input);
-/* fixme: Sometimes, the fonts are nicely indexed.  Other times
- * many start with (usually) 4112 or 8200.  In the latter case, each font
- * is uniquely assigned to a number.  However, some numbers
- * refer to two or more fonts.
- */
 
-		if (font_number != fonts.size())
+		/* Sometimes the font numbers start at 0 and increment nicely.
+		   However, other times the font numbers jump around. */
+
+		uint8_t font_number = readU8(input);
+		
+		if (fonts.find(font_number) != fonts.end())
 		{
-			WPD_DEBUG_MSG(("Works: error: at position 0x%x expected font number %i but got %i (0x%x)\n",
-				(input->tell())-2, fonts.size(), font_number, font_number));		
-#if 0							
-			throw FileException();
-#endif			
+			WPD_DEBUG_MSG(("Works: error: at position 0x%x: font number %i (0x%x) duplicated\n",
+				(input->tell())-2, font_number, font_number));		
+			throw FileException();		
 		}
+
+		//fixme: what is this byte? maybe a font class
+		uint8_t unknown_byte = readU8(input);				
 
 		std::string s;
 		for (uint8_t i = readU8(input); i>0; i--)
 		{
 			s.append(1, (uint8_t)readU8(input));
 		}
-		WPD_DEBUG_MSG(("Works: info: font_number =%i =%s\n",font_number, s.c_str()));
+		WPD_DEBUG_MSG(("Works: info: count=%i, font_number=%i, unknown=%i, name=%s\n",
+			 fonts.size(), font_number, unknown_byte, s.c_str()));
 		s.append(1, 0);
-		fonts.push_back(s);
+		fonts[font_number] = s;
 	}
 }
 
@@ -156,7 +157,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 	
 	input->seek(127, WPX_SEEK_CUR);	
 	cfod = readU8(input);
-	WPD_DEBUG_MSG(("Works: info: cfod = %i (%x)\n", cfod, cfod));				
+	WPD_DEBUG_MSG(("Works: info: at position 0x%02x, cfod = %i (%x)\n", (input->tell())-1,cfod, cfod));				
 	if (cfod > 0x18)
 	{
 		throw FileException();
@@ -242,7 +243,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 		}
 		// fixme: what is largest cch?
 		/* generally paragraph cch are bigger than character cch */
-		if ((*FODs_iter).fprop.cch > 27)
+		if ((*FODs_iter).fprop.cch > 93)
 		{
 			WPD_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).fprop.cch));
 			throw FileException();
@@ -256,7 +257,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 	/* go to end of page */
 	input->seek(page_offset	+ 128, WPX_SEEK_SET);
 
-	return (offset_eot < FODs->back().fcLim);
+	return (offset_eot > FODs->back().fcLim);
 }
 
 #ifdef DEBUG
@@ -268,7 +269,7 @@ std::string to_bits(std::string s)
 		std::bitset<8> b(s[i]);	
 		r.append(b.to_string());
 		char buf[10];
-		sprintf(buf, " (%u,0x%x)  ", (uint8_t)s[i],(uint8_t)s[i]);
+		sprintf(buf, "(%02u,0x%02x)  ", (uint8_t)s[i],(uint8_t)s[i]);
 		r.append(buf);
 	}
 	return r;
@@ -336,17 +337,14 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 	if (rgchProp.length() >= 3)
 	{
 		uint8_t font_n = (uint8_t)rgchProp[2];
-		if ((fonts.size()-1) < font_n)
+		if (fonts.find(font_n) == fonts.end())
 		{
-			WPD_DEBUG_MSG(("Works: error: expected font %i but there are only %i\n", 
-				font_n,(fonts.size()-1) ));			
-/* fixme: some files don't index fonts nicely--some other format is used */				
-#if 0				
+			WPD_DEBUG_MSG(("Works: error: encouarged font %i (0x%02x) which is not indexed\n", 
+				font_n,font_n ));			
 			throw FileException();
-#endif			
 		}
 		else
-			listener->setTextFont(fonts.at(font_n).c_str());
+			listener->setTextFont(fonts[font_n].c_str());
 	}
 	if (rgchProp.length() >= 4)
 	{
@@ -386,7 +384,7 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 {
 	oldTextAttributeBits = 0;
 	std::vector<FOD>::iterator FODs_iter;	
-#if 0
+#if 1
 	/* dump for debugging */
 	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
 	{
@@ -399,7 +397,7 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
 	{
 		uint32_t len = (*FODs_iter).fcLim - last_fcLim;
-		WPD_DEBUG_MSG(("Works: info: txt l=%02i rgchProp=%s\n", 
+		WPD_DEBUG_MSG(("Works: info: txt len=%02i rgchProp=%s\n", 
 			len, to_bits((*FODs_iter).fprop.rgchProp).c_str()));
 		if ((*FODs_iter).fprop.cch > 0)
 			propertyChange((*FODs_iter).fprop.rgchProp, listener);
