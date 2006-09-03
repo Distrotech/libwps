@@ -423,23 +423,33 @@ void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *in
 	input->seek(0x6E, WPX_SEEK_SET);
 	unsigned int page_height = readU16(input);	
 	
+	/* convert units */
+	float margin_top_inches = (float)margin_top / (float)1440;
+	float margin_left_inches = (float)margin_left / (float)1440;	
+	float margin_right_inches = (float)margin_right / (float)1440;	
+	float margin_bottom_inches = (float)margin_bottom / (float)1440;	
+	float page_width_inches = (float)page_width / (float)1440;	
+	float page_height_inches = (float)page_height / (float)1440;		
+	
 	/* check page format */
 	//todo: check the bottom margin which acted funny and has a strange offset
 	//fixme: assert margins within reasonable limits	
 	WPD_DEBUG_MSG(("Works: info: page margins (t,l,r,b): raw(%i,%i,%i,%i), inches(%f,%f,%f,%f\n",
 		margin_top, margin_left, margin_right, margin_bottom,
-		margin_top/1440, margin_left/1440, margin_right/1440, margin_bottom/1440));		
+		margin_top_inches, margin_left_inches, margin_right_inches, margin_bottom_inches));		
 
 	WPD_DEBUG_MSG(("Works: info: page size (w,h): raw(%i,%i), inches(%2.1f,%2.1f)\n",
-		page_width, page_height, page_width/1440, page_height/1440));
+		page_width, page_height, page_width_inches, page_height_inches));
 		
 	/* record page format */
 	WPXPageSpan ps;
-	ps.setMarginTop(margin_top/1440);
-//	ps.setMarginBottom(margin_bottom/1440);	
+	ps.setMarginTop(margin_top_inches);
+//	ps.setMarginBottom(margin_bottom_inches);	
 	ps.setMarginBottom(0.5);	
-	ps.setMarginLeft(margin_left/1440);		
-	ps.setMarginRight(margin_right/1440);			
+	ps.setMarginLeft(margin_left_inches);		
+	ps.setMarginRight(margin_right_inches);			
+	setFormLength(page_height_inches);
+	setFormWidth(page_width_inches);
 	
 	pageList.push_back(ps);
 }
