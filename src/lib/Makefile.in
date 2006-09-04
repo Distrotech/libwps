@@ -60,52 +60,7 @@ am__installdirs = "$(DESTDIR)$(libdir)" \
 	"$(DESTDIR)$(libwpd_stream_0_8_includedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
-am_libwpd_0_8_la_OBJECTS = libwpd_internal.lo libwpd_math.lo \
-	WP3AttributeGroup.lo WP3ContentListener.lo \
-	WP3DefinitionGroup.lo WP3DisplayGroup.lo \
-	WP3EndOfLinePageGroup.lo WP3ExtendedCharacterGroup.lo \
-	WP3FileStructure.lo WP3FixedLengthGroup.lo WP3FontGroup.lo \
-	WP3FootnoteEndnoteGroup.lo WP3Header.lo \
-	WP3HeaderFooterGroup.lo WP3Listener.lo \
-	WP3MiscellaneousGroup.lo WP3PageFormatGroup.lo WP3Parser.lo \
-	WP3Part.lo WP3SingleByteFunction.lo WP3StylesListener.lo \
-	WP3SubDocument.lo WP3TablesGroup.lo WP3UndoGroup.lo \
-	WP3UnsupportedFixedLengthGroup.lo \
-	WP3UnsupportedVariableLengthGroup.lo WP3VariableLengthGroup.lo \
-	WP42ContentListener.lo WP42FileStructure.lo \
-	WP42HeaderFooterGroup.lo WP42Heuristics.lo WP42Listener.lo \
-	WP42MarginResetGroup.lo WP42MultiByteFunctionGroup.lo \
-	WP42Parser.lo WP42Part.lo WP42StylesListener.lo \
-	WP42SubDocument.lo WP42SuppressPageCharacteristicsGroup.lo \
-	WP42UnsupportedMultiByteFunctionGroup.lo WP5AttributeGroup.lo \
-	WP5ContentListener.lo WP5DefinitionGroup.lo \
-	WP5ExtendedCharacterGroup.lo WP5FileStructure.lo \
-	WP5FixedLengthGroup.lo WP5FontGroup.lo \
-	WP5FontNameStringPoolPacket.lo WP5FootnoteEndnoteGroup.lo \
-	WP5GeneralPacketData.lo WP5GeneralPacketIndex.lo WP5Header.lo \
-	WP5HeaderFooterGroup.lo WP5Listener.lo \
-	WP5ListFontsUsedPacket.lo WP5PageFormatGroup.lo WP5Parser.lo \
-	WP5Part.lo WP5PrefixData.lo WP5SingleByteFunction.lo \
-	WP5SpecialHeaderIndex.lo WP5StylesListener.lo \
-	WP5SubDocument.lo WP5TableEOLGroup.lo WP5TableEOPGroup.lo \
-	WP5UnsupportedFixedLengthGroup.lo \
-	WP5UnsupportedVariableLengthGroup.lo WP5VariableLengthGroup.lo \
-	WP6AttributeGroup.lo WP6CharacterGroup.lo WP6ColumnGroup.lo \
-	WP6ContentListener.lo WP6DefaultInitialFontPacket.lo \
-	WP6DisplayNumberReferenceGroup.lo WP6EOLGroup.lo \
-	WP6ExtendedCharacterGroup.lo \
-	WP6ExtendedDocumentSummaryPacket.lo WP6FileStructure.lo \
-	WP6FillStylePacket.lo WP6FixedLengthGroup.lo \
-	WP6FontDescriptorPacket.lo WP6FootnoteEndnoteGroup.lo \
-	WP6GeneralTextPacket.lo WP6Header.lo WP60Header.lo \
-	WP61Header.lo WP6HeaderFooterGroup.lo WP6HighlightGroup.lo \
-	WP6Listener.lo WP6Parser.lo WP6OutlineStylePacket.lo \
-	WP6PageGroup.lo WP6ParagraphGroup.lo WP6Part.lo \
-	WP6PrefixData.lo WP6PrefixIndice.lo WP6PrefixDataPacket.lo \
-	WP6SingleByteFunction.lo WP6StyleGroup.lo WP6StylesListener.lo \
-	WP6SubDocument.lo WP6TabGroup.lo WP6UndoGroup.lo \
-	WP6UnsupportedFixedLengthGroup.lo \
-	WP6UnsupportedVariableLengthGroup.lo WP6VariableLengthGroup.lo \
+am_libwpd_0_8_la_OBJECTS = libwpd_internal.lo libwpd_math.lo WPS4.lo \
 	WPDocument.lo WPXContentListener.lo WPXHeader.lo \
 	WPXListener.lo WPXMemoryStream.lo WPXPageSpan.lo WPXParser.lo \
 	WPXPart.lo WPXProperty.lo WPXPropertyList.lo \
@@ -183,7 +138,6 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 F77 = @F77@
 FFLAGS = @FFLAGS@
-GREP = @GREP@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
@@ -236,9 +190,17 @@ WPD_MAJOR_VERSION = @WPD_MAJOR_VERSION@
 WPD_MICRO_VERSION = @WPD_MICRO_VERSION@
 WPD_MINOR_VERSION = @WPD_MINOR_VERSION@
 WPD_VERSION = @WPD_VERSION@
+ac_ct_AR = @ac_ct_AR@
+ac_ct_AS = @ac_ct_AS@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
+ac_ct_DLLTOOL = @ac_ct_DLLTOOL@
+ac_ct_DOXYGEN = @ac_ct_DOXYGEN@
 ac_ct_F77 = @ac_ct_F77@
+ac_ct_OBJDUMP = @ac_ct_OBJDUMP@
+ac_ct_RANLIB = @ac_ct_RANLIB@
+ac_ct_STRIP = @ac_ct_STRIP@
+ac_pt_PKG_CONFIG = @ac_pt_PKG_CONFIG@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
 am__fastdepCXX_FALSE = @am__fastdepCXX_FALSE@
@@ -255,30 +217,23 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 datadir = @datadir@
-datarootdir = @datarootdir@
-docdir = @docdir@
-dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
 host_os = @host_os@
 host_vendor = @host_vendor@
-htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
-localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
-pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
-psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
@@ -303,110 +258,7 @@ libwpd_0_8_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
 libwpd_0_8_la_SOURCES = \
 	libwpd_internal.cpp \
 	libwpd_math.cpp \
-	WP3AttributeGroup.cpp \
-	WP3ContentListener.cpp \
-	WP3DefinitionGroup.cpp \
-	WP3DisplayGroup.cpp \
-	WP3EndOfLinePageGroup.cpp \
-	WP3ExtendedCharacterGroup.cpp \
-	WP3FileStructure.cpp \
-	WP3FixedLengthGroup.cpp \
-	WP3FontGroup.cpp \
-	WP3FootnoteEndnoteGroup.cpp \
-	WP3Header.cpp \
-	WP3HeaderFooterGroup.cpp \
-	WP3Listener.cpp \
-	WP3MiscellaneousGroup.cpp \
-	WP3PageFormatGroup.cpp \
-	WP3Parser.cpp \
-	WP3Part.cpp \
-	WP3SingleByteFunction.cpp \
-	WP3StylesListener.cpp \
-	WP3SubDocument.cpp \
-	WP3TablesGroup.cpp \
-	WP3UndoGroup.cpp \
-	WP3UnsupportedFixedLengthGroup.cpp \
-	WP3UnsupportedVariableLengthGroup.cpp \
-	WP3VariableLengthGroup.cpp \
-	WP42ContentListener.cpp \
-	WP42FileStructure.cpp \
-	WP42HeaderFooterGroup.cpp \
-	WP42Heuristics.cpp \
-	WP42Listener.cpp \
-	WP42MarginResetGroup.cpp \
-	WP42MultiByteFunctionGroup.cpp \
-	WP42Parser.cpp \
-	WP42Part.cpp \
-	WP42StylesListener.cpp \
-	WP42SubDocument.cpp \
-	WP42SuppressPageCharacteristicsGroup.cpp \
-	WP42UnsupportedMultiByteFunctionGroup.cpp \
-	WP5AttributeGroup.cpp \
-	WP5ContentListener.cpp \
-	WP5DefinitionGroup.cpp \
-	WP5ExtendedCharacterGroup.cpp \
-	WP5FileStructure.cpp \
-	WP5FixedLengthGroup.cpp \
-	WP5FontGroup.cpp \
-	WP5FontNameStringPoolPacket.cpp \
-	WP5FootnoteEndnoteGroup.cpp \
-	WP5GeneralPacketData.cpp \
-	WP5GeneralPacketIndex.cpp \
-	WP5Header.cpp \
-	WP5HeaderFooterGroup.cpp \
-	WP5Listener.cpp \
-	WP5ListFontsUsedPacket.cpp \
-	WP5PageFormatGroup.cpp \
-	WP5Parser.cpp \
-	WP5Part.cpp \
-	WP5PrefixData.cpp \
-	WP5SingleByteFunction.cpp \
-	WP5SpecialHeaderIndex.cpp \
-	WP5StylesListener.cpp \
-	WP5SubDocument.cpp \
-	WP5TableEOLGroup.cpp \
-	WP5TableEOPGroup.cpp \
-	WP5UnsupportedFixedLengthGroup.cpp \
-	WP5UnsupportedVariableLengthGroup.cpp \
-	WP5VariableLengthGroup.cpp \
-	WP6AttributeGroup.cpp \
-	WP6CharacterGroup.cpp \
-	WP6ColumnGroup.cpp \
-	WP6ContentListener.cpp \
-	WP6DefaultInitialFontPacket.cpp \
-	WP6DisplayNumberReferenceGroup.cpp \
-	WP6EOLGroup.cpp \
-	WP6ExtendedCharacterGroup.cpp \
-	WP6ExtendedDocumentSummaryPacket.cpp \
-	WP6FileStructure.cpp \
-	WP6FillStylePacket.cpp \
-	WP6FixedLengthGroup.cpp \
-	WP6FontDescriptorPacket.cpp \
-	WP6FootnoteEndnoteGroup.cpp \
-	WP6GeneralTextPacket.cpp \
-	WP6Header.cpp \
-	WP60Header.cpp \
-	WP61Header.cpp \
-	WP6HeaderFooterGroup.cpp \
-	WP6HighlightGroup.cpp \
-	WP6Listener.cpp \
-	WP6Parser.cpp \
-	WP6OutlineStylePacket.cpp \
-	WP6PageGroup.cpp \
-	WP6ParagraphGroup.cpp \
-	WP6Part.cpp \
-	WP6PrefixData.cpp \
-	WP6PrefixIndice.cpp \
-	WP6PrefixDataPacket.cpp \
-	WP6SingleByteFunction.cpp \
-	WP6StyleGroup.cpp \
-	WP6StylesListener.cpp \
-	WP6SubDocument.cpp \
-	WP6TabGroup.cpp \
-	WP6UndoGroup.cpp \
-	WP6UnsupportedFixedLengthGroup.cpp \
-	WP6UnsupportedVariableLengthGroup.cpp \
-	WP6VariableLengthGroup.cpp \
+	WPS4.cpp \
 	WPDocument.cpp \
 	WPXContentListener.cpp \
 	WPXHeader.cpp \
@@ -426,111 +278,6 @@ libwpd_0_8_la_SOURCES = \
 	libwpd_internal.h \
 	libwpd_math.h \
 	libwpd_types.h \
-	WP3AttributeGroup.h \
-	WP3ContentListener.h \
-	WP3DefinitionGroup.h \
-	WP3DisplayGroup.h \
-	WP3EndOfLinePageGroup.h \
-	WP3ExtendedCharacterGroup.h \
-	WP3FileStructure.h \
-	WP3FixedLengthGroup.h \
-	WP3FontGroup.h \
-	WP3FootnoteEndnoteGroup.h \
-	WP3Header.h \
-	WP3HeaderFooterGroup.h \
-	WP3Listener.h \
-	WP3MiscellaneousGroup.h \
-	WP3PageFormatGroup.h \
-	WP3Parser.h \
-	WP3Part.h \
-	WP3SingleByteFunction.h \
-	WP3StylesListener.h \
-	WP3SubDocument.h \
-	WP3TablesGroup.h \
-	WP3UndoGroup.h \
-	WP3UnsupportedFixedLengthGroup.h \
-	WP3UnsupportedVariableLengthGroup.h \
-	WP3VariableLengthGroup.h \
-	WP42ContentListener.h \
-	WP42FileStructure.h \
-	WP42HeaderFooterGroup.h \
-	WP42Heuristics.h \
-	WP42Listener.h \
-	WP42MarginResetGroup.h \
-	WP42MultiByteFunctionGroup.h \
-	WP42Part.h \
-	WP42Parser.h \
-	WP42StylesListener.h \
-	WP42SubDocument.h \
-	WP42SuppressPageCharacteristicsGroup.h \
-	WP42UnsupportedMultiByteFunctionGroup.h \
-	WP5AttributeGroup.h \
-	WP5ContentListener.h \
-	WP5DefinitionGroup.h \
-	WP5ExtendedCharacterGroup.h \
-	WP5FileStructure.h \
-	WP5FixedLengthGroup.h \
-	WP5FontGroup.h \
-	WP5FontNameStringPoolPacket.h \
-	WP5FootnoteEndnoteGroup.h \
-	WP5GeneralPacketData.h \
-	WP5GeneralPacketIndex.h \
-	WP5Header.h \
-	WP5HeaderFooterGroup.h \
-	WP5Listener.h \
-	WP5ListFontsUsedPacket.h \
-	WP5PageFormatGroup.h \
-	WP5Part.h \
-	WP5Parser.h \
-	WP5PrefixData.h \
-	WP5SingleByteFunction.h \
-	WP5SpecialHeaderIndex.h \
-	WP5StylesListener.h \
-	WP5SubDocument.h \
-	WP5TableEOLGroup.h \
-	WP5TableEOPGroup.h \
-	WP5UnsupportedFixedLengthGroup.h \
-	WP5UnsupportedVariableLengthGroup.h \
-	WP5VariableLengthGroup.h \
-	WP6FileStructure.h \
-	WP6AttributeGroup.h \
-	WP6CharacterGroup.h \
-	WP6ColumnGroup.h \
-	WP6ContentListener.h \
-	WP6DefaultInitialFontPacket.h \
-	WP6DisplayNumberReferenceGroup.h \
-	WP6EOLGroup.h \
-	WP6ExtendedCharacterGroup.h \
-	WP6ExtendedDocumentSummaryPacket.h \
-	WP6FillStylePacket.h \
-	WP6FixedLengthGroup.h \
-	WP6FontDescriptorPacket.h \
-	WP6FootnoteEndnoteGroup.h \
-	WP6GeneralTextPacket.h \
-	WP6Header.h \
-	WP60Header.h \
-	WP61Header.h \
-	WP6HeaderFooterGroup.h \
-	WP6HighlightGroup.h \
-	WP6Listener.h \
-	WP6OutlineStylePacket.h \
-	WP6PageGroup.h \
-	WP6ParagraphGroup.h \
-	WP6Parser.h \
-	WP6Part.h \
-	WP6PrefixData.h	 \
-	WP6PrefixIndice.h \
-	WP6PrefixDataPacket.h \
-	WP6SingleByteFunction.h \
-	WP6StyleGroup.h \
-	WP6StylesListener.h \
-	WP6SubDocument.h \
-	WP6TabGroup.h	 \
-	WP6TibetanMap.h \
-	WP6UndoGroup.h \
-	WP6UnsupportedFixedLengthGroup.h \
-	WP6UnsupportedVariableLengthGroup.h \
-	WP6VariableLengthGroup.h \
 	WPDocument.h \
 	WPXContentListener.h \
 	WPXHeader.h \
@@ -585,9 +332,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  src/lib/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  src/lib/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign  src/lib/Makefile
+	  $(AUTOMAKE) --gnu  src/lib/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -648,111 +395,8 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GSFStream.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3AttributeGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3ContentListener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3DefinitionGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3DisplayGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3EndOfLinePageGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3ExtendedCharacterGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3FileStructure.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3FixedLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3FontGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3FootnoteEndnoteGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3Header.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3HeaderFooterGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3Listener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3MiscellaneousGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3PageFormatGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3Parser.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3Part.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3SingleByteFunction.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3StylesListener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3SubDocument.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3TablesGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3UndoGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3UnsupportedFixedLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3UnsupportedVariableLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP3VariableLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42ContentListener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42FileStructure.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42HeaderFooterGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42Heuristics.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42Listener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42MarginResetGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42MultiByteFunctionGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42Parser.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42Part.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42StylesListener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42SubDocument.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42SuppressPageCharacteristicsGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP42UnsupportedMultiByteFunctionGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5AttributeGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5ContentListener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5DefinitionGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5ExtendedCharacterGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5FileStructure.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5FixedLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5FontGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5FontNameStringPoolPacket.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5FootnoteEndnoteGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5GeneralPacketData.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5GeneralPacketIndex.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5Header.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5HeaderFooterGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5ListFontsUsedPacket.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5Listener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5PageFormatGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5Parser.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5Part.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5PrefixData.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5SingleByteFunction.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5SpecialHeaderIndex.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5StylesListener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5SubDocument.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5TableEOLGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5TableEOPGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5UnsupportedFixedLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5UnsupportedVariableLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP5VariableLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP60Header.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP61Header.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6AttributeGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6CharacterGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6ColumnGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6ContentListener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6DefaultInitialFontPacket.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6DisplayNumberReferenceGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6EOLGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6ExtendedCharacterGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6ExtendedDocumentSummaryPacket.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6FileStructure.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6FillStylePacket.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6FixedLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6FontDescriptorPacket.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6FootnoteEndnoteGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6GeneralTextPacket.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6Header.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6HeaderFooterGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6HighlightGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6Listener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6OutlineStylePacket.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6PageGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6ParagraphGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6Parser.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6Part.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6PrefixData.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6PrefixDataPacket.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6PrefixIndice.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6SingleByteFunction.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6StyleGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6StylesListener.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6SubDocument.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6TabGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6UndoGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6UnsupportedFixedLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6UnsupportedVariableLengthGroup.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WP6VariableLengthGroup.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPDocument.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPS4.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXContentListener.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXHeader.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXListener.Plo@am__quote@

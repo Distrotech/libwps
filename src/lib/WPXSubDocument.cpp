@@ -23,7 +23,6 @@
  */
 
 #include "WPXSubDocument.h"
-#include "WP3Parser.h"
 #include "libwpd_internal.h"
 #include "WPXListener.h"
 

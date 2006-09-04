@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "WPXParser.h"
-#include "WP6Parser.h"
 #include "libwpd_internal.h"
 
 WPXParser::WPXParser(WPXInputStream *input, WPXHeader *header) :
