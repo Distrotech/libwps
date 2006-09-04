@@ -61,8 +61,12 @@ void WPS4Parser::parse(WPXHLListenerImpl *listenerImpl)
 	WPD_DEBUG_MSG(("WPS4Parser::parse()\n"));		
 
 	WPXInputStream *input = getInput();		
+
+	/* parse pages */
 	WPXPageSpan m_currentPage;
 	parsePages(pageList, input);		
+	
+	/* parse document */
 	WPS4ContentListener listener(pageList, subDocuments, listenerImpl);
 	parse(input, &listener);	
 }
@@ -386,14 +390,23 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 		{
 			uint8_t readVal = readU8(input);
 //			WPD_DEBUG_MSG(("Works: info: position %x = %c (0x%02x)\n", (input->tell())-1, readVal, readVal));
-			if (0x0D == readVal)
-			{
-				listener->insertEOL();
-			}
-			else if (0x00 == readVal)
+			if (0x00 == readVal)
 				break;
-			if (0x0A != readVal)
-				listener->insertCharacter( (uint16_t)readVal );
+				
+			switch (readVal)
+			{
+				case 0x0A:
+					break;
+				case 0x0C:
+					listener->insertBreak(WPX_PAGE_BREAK);
+					break;
+				case 0x0D:
+					listener->insertEOL();
+					break;
+				default:
+					listener->insertCharacter( (uint16_t)readVal );
+					break;
+			}
 		}	
 		last_fcLim = (*FODs_iter).fcLim;	
 	}
@@ -407,21 +420,22 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
  *
  */
 void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *input)
-// fixme: this function is immature
 {
 	/* read page format */
 	input->seek(0x64, WPX_SEEK_SET);
-	unsigned int margin_top = readU16(input);
+	uint16_t margin_top = readU16(input);
+	input->seek(0x66, WPX_SEEK_SET);
+	uint16_t margin_bottom =readU16(input);			
 	input->seek(0x68, WPX_SEEK_SET);
-	unsigned int margin_left =readU16(input);
+	uint16_t margin_left =readU16(input);
 	input->seek(0x6A, WPX_SEEK_SET);
-	unsigned int margin_right =readU16(input);	
-	input->seek(0x78, WPX_SEEK_SET);
-	unsigned int margin_bottom =readU16(input);		
+	uint16_t margin_right =readU16(input);	
 	input->seek(0x6C, WPX_SEEK_SET);
-	unsigned int page_width = readU16(input);
+	uint16_t page_width = readU16(input);
 	input->seek(0x6E, WPX_SEEK_SET);
-	unsigned int page_height = readU16(input);	
+	uint16_t page_height = readU16(input);	
+	input->seek(0x7A, WPX_SEEK_SET);
+	uint8_t page_orientation = readU8(input);		
 	
 	/* convert units */
 	float margin_top_inches = (float)margin_top / (float)1440;
@@ -430,28 +444,51 @@ void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *in
 	float margin_bottom_inches = (float)margin_bottom / (float)1440;	
 	float page_width_inches = (float)page_width / (float)1440;	
 	float page_height_inches = (float)page_height / (float)1440;		
-	
+		
 	/* check page format */
-	//todo: check the bottom margin which acted funny and has a strange offset
-	//fixme: assert margins within reasonable limits	
 	WPD_DEBUG_MSG(("Works: info: page margins (t,l,r,b): raw(%i,%i,%i,%i), inches(%f,%f,%f,%f\n",
 		margin_top, margin_left, margin_right, margin_bottom,
 		margin_top_inches, margin_left_inches, margin_right_inches, margin_bottom_inches));		
 
 	WPD_DEBUG_MSG(("Works: info: page size (w,h): raw(%i,%i), inches(%2.1f,%2.1f)\n",
 		page_width, page_height, page_width_inches, page_height_inches));
+
+	if ((margin_left_inches + margin_right_inches) > page_width_inches
+		|| (margin_top_inches + margin_bottom_inches) > page_height_inches)
+	{
+		WPD_DEBUG_MSG(("Works: error: the margins are too large for the page size\n"));
+		throw FileException();
+	}
+	
+	if (page_orientation != 0 && page_orientation != 1)
+	{
+		WPD_DEBUG_MSG(("Works: error: bad page orientation code\n"));	
+		throw FileException();
+	}
 		
 	/* record page format */
 	WPXPageSpan ps;
 	ps.setMarginTop(margin_top_inches);
-//	ps.setMarginBottom(margin_bottom_inches);	
-	ps.setMarginBottom(0.5);	
+	ps.setMarginBottom(margin_bottom_inches);	
 	ps.setMarginLeft(margin_left_inches);		
 	ps.setMarginRight(margin_right_inches);			
-	setFormLength(page_height_inches);
-	setFormWidth(page_width_inches);
+	ps.setFormLength(page_height_inches);
+	ps.setFormWidth(page_width_inches);
+	if (0 == page_orientation)
+		ps.setFormOrientation(PORTRAIT);
+	else
+		ps.setFormOrientation(LANDSCAPE);
 	
 	pageList.push_back(ps);
+	
+	/* process page breaks */
+	input->seek(0x100, WPX_SEEK_SET);
+	uint8_t ch;
+	while (0x00 != (ch = readU8(input)))
+	{
+		if (ch = 0x0C)
+			pageList.push_back(ps);			
+	}
 }
 
 void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
@@ -462,16 +499,6 @@ void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
 	WPD_DEBUG_MSG(("WPS4Parser::parse()\n"));	
 
 	listener->startDocument();
-
-#if 0 /* not always valid */
-	input->seek(0xA2, WPX_SEEK_SET);
-	offset_eos = readU32(input);
-	if (offset_eos < 3584)
-	{
-		WPD_DEBUG_MSG(("Works: error: offset_eos = %x (%i), too small\n", offset_eos, offset_eos));				
-		throw FileException();
-	}
-#endif
 
 	/* find beginning of character FODs */
 	input->seek(WPS4_FCMAC_OFFSET, WPX_SEEK_SET);
@@ -485,7 +512,7 @@ void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
 	uint32_t v = readU32(input);
 	if (0x0100 != v)
 	{
-		WPD_DEBUG_MSG(("Works: warning: expected value 0x0100 at location %x but got %x (%i)\n", 128*pnChar, v, v));		
+		WPD_DEBUG_MSG(("Works: warning: expected value 0x0100 at location %x but got %x (%i)\n", 128*pnChar, v, v));
 	}
 	
 	/* go to beginning of character FODs */
