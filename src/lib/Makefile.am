@@ -45,6 +45,7 @@ libwpd_0_8_la_SOURCES = \
 	libwpd_internal.cpp \
 	libwpd_math.cpp \
 	WPS4.cpp \
+	WPS8.cpp \
 	WPDocument.cpp \
 	WPXContentListener.cpp \
 	WPXHeader.cpp \

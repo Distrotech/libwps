@@ -44,12 +44,10 @@ WPS4Parser::WPS4Parser(WPXInputStream *input, WPXHeader * header) :
 	WPXParser(input, header)
 {
 	//fixme: don't ask for a header that we don't use
-	stream_length = input->tell();
 }
 
 WPS4Parser::~WPS4Parser ()
 {
-
 }
 
 void WPS4Parser::parse(WPXHLListenerImpl *listenerImpl)
@@ -87,7 +85,7 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
 	input->seek(0x5E, WPX_SEEK_SET);
 	uint32_t offset_FFNTB = readU32(input);
 	//fixme: sanity check
-
+	
 	/* length of FFNTB */
 	input->seek(0x62, WPX_SEEK_SET);	
 	uint32_t len_FFNTB = readU16(input);	

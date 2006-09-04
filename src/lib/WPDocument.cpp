@@ -27,9 +27,10 @@
 #include <string.h>
 #include "WPDocument.h"
 #include "WPXHeader.h"
+#include "WPXStream.h"
 #include "WPXParser.h"
 #include "WPS4.h"
-#include "WPXStream.h"
+#include "WPS8.h"
 #include "libwpd_internal.h"
 
 /**
@@ -74,11 +75,14 @@ WPDConfidence WPDocument::isFileFormatSupportedWPS(WPXInputStream *input, bool p
 		for (int i=0; i<7 && !document_contents->atEOS(); i++)
 			fileMagic[i] = readU8(document_contents);		
 		fileMagic[7] = '\0';
+		
+		DELETEP(document_contents);
 	
 		/* Works 7/8 */
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
 		{
 			WPD_DEBUG_MSG(("Microsoft Works 8 (maybe 7) format detected\n"));
+			return WPD_CONFIDENCE_EXCELLENT;
 		}
 		
 		/* Works 2000 */		
@@ -86,7 +90,6 @@ WPDConfidence WPDocument::isFileFormatSupportedWPS(WPXInputStream *input, bool p
 		{
 			WPD_DEBUG_MSG(("Microsoft Works 2000 (v5) format detected\n"));
 		}	
-		DELETEP(document_contents);
 	}
 	
 	return WPD_CONFIDENCE_NONE;
@@ -117,9 +120,10 @@ Parse a Works document.
 */
 WPDResult WPDocument::parseWPS(WPXInputStream *input, WPXHLListenerImpl *listenerImpl)
 {
-	WPXInputStream * document_mn0 = input->getDocumentOLEStream("MN0");	
-	
 	WPDResult error = WPD_OK;
+
+	WPXInputStream * document_mn0 = input->getDocumentOLEStream("MN0");		
+	WPXInputStream * document_contents = input->getDocumentOLEStream("CONTENTS");		
 	
 	//fixme: catch exceptions
 	if (document_mn0)
@@ -127,11 +131,36 @@ WPDResult WPDocument::parseWPS(WPXInputStream *input, WPXHLListenerImpl *listene
 		WPD_DEBUG_MSG(("Microsoft Works 4 format detected\n"));	
 		WPS4Parser *parser = new WPS4Parser(document_mn0, NULL);
 		parser->parse(listenerImpl);
-		DELETEP(parser);		
-		DELETEP(document_mn0);		
-	}	
+		DELETEP(parser);	
+
+	}
+	else if (document_contents)
+	{
+		/* check the Works 2000/7/8 format magic */
+		document_contents->seek(0, WPX_SEEK_SET);
+		
+		char fileMagic[8];
+		size_t numBytesRead;
+		for (int i=0; i<7 && !document_contents->atEOS(); i++)
+			fileMagic[i] = readU8(document_contents);		
+		fileMagic[7] = '\0';
+			
+		/* Works 7/8 */
+		if (0 == strcmp(fileMagic, "CHNKWKS"))
+		{
+			WPD_DEBUG_MSG(("Microsoft Works 8 (maybe 7) format detected\n"));
+			WPS8Parser *parser = new WPS8Parser(document_contents, NULL);
+			parser->parse(listenerImpl);
+			DELETEP(parser);		
+		}
+
+		
+	}
 	else
 		error = WPD_UNKNOWN_ERROR; //fixme too generic
+
+	DELETEP(document_mn0);				
+	DELETEP(document_contents);		
 		
 	return error;
 }

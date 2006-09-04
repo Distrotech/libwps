@@ -61,7 +61,7 @@ am__installdirs = "$(DESTDIR)$(libdir)" \
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 am_libwpd_0_8_la_OBJECTS = libwpd_internal.lo libwpd_math.lo WPS4.lo \
-	WPDocument.lo WPXContentListener.lo WPXHeader.lo \
+	WPS8.lo WPDocument.lo WPXContentListener.lo WPXHeader.lo \
 	WPXListener.lo WPXMemoryStream.lo WPXPageSpan.lo WPXParser.lo \
 	WPXPart.lo WPXProperty.lo WPXPropertyList.lo \
 	WPXPropertyListVector.lo WPXString.lo WPXStylesListener.lo \
@@ -259,6 +259,7 @@ libwpd_0_8_la_SOURCES = \
 	libwpd_internal.cpp \
 	libwpd_math.cpp \
 	WPS4.cpp \
+	WPS8.cpp \
 	WPDocument.cpp \
 	WPXContentListener.cpp \
 	WPXHeader.cpp \
@@ -397,6 +398,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GSFStream.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPDocument.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPS4.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPS8.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXContentListener.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXHeader.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXListener.Plo@am__quote@

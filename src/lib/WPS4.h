@@ -54,8 +54,6 @@ public:
 	FPROP		fprop;	/* character or paragraph formatting */
 };
 
-enum WPS4OutlineLocation { paragraphGroup, indexHeader };
-
 class WPS4Listener;
 
 class WPS4SubDocument : public WPXSubDocument
@@ -138,7 +136,6 @@ private:
 	void propertyChange(std::string rgchProp, WPS4Listener *listener);
 	void readText(WPXInputStream * input, WPS4Listener *listener);
 	uint32_t oldTextAttributeBits;
-	uint32_t stream_length; /* total stream length, for sanity checking */
 	uint32_t offset_eot; /* stream offset to end of text */
 	uint32_t offset_eos; /* stream offset to end of MN0 */	
 	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */		
