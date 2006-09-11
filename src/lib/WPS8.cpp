@@ -75,6 +75,122 @@ WPS8Parser private
 */
 
 /**
+ * Parse an index entry in the file format's header.  For example,
+ * this function may be called multiple times to parse several FDPP
+ * entries.  This functions begins at the current position of the
+ * input stream, which will be advanced.
+ *
+ */
+
+void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
+{
+	WPD_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos %x\n", input->tell()));
+
+	uint16_t cch = readU16(input);
+
+	std::string name;
+
+	// sanity check
+	for (int i =0; i < 4; i++)
+	{
+		name.append(1, readU8(input));
+
+		if ((uint8_t)name[i] != 0 && (uint8_t)name[i] != 0x20 &&
+			(41 > (uint8_t)name[i] || (uint8_t)name[i] > 90))
+		{
+			WPD_DEBUG_MSG(("Works8: error: bad character=%u (0x%02x) in name in header index\n", 
+				(uint8_t)name[i], (uint8_t)name[i]));
+			throw ParseException();
+		}
+	}
+	name.append(1, 0);
+
+	size_t numBytesRead;
+	std::string unknown1;
+	for (int i = 0; i < 6; i ++)
+		unknown1.append(1, readU8(input));
+
+#if 0
+	WPD_DEBUG_MSG(("Works8: info: header index entry %s with data1=%s\n", name.c_str(),
+		to_bits(unknown1).c_str()));
+#endif
+
+	std::string name2;
+	for (int i =0; i < 4; i++)
+		name2.append(1, readU8(input));
+	name2.append(1, 0);
+
+	if (name != name2)
+	{
+		WPD_DEBUG_MSG(("Works8: error: name != name2, %s != %s\n", 
+			name.c_str(), name2.c_str()));
+//		throw ParseException();
+	}
+
+	uint32_t offset1 = readU32(input); // start
+	uint32_t offset2 = readU32(input); // length
+
+	WPD_DEBUG_MSG(("Works8: info: header index entry %s with offset1=%i, offset2=%i\n", 
+		name.c_str(), offset1, offset2));
+
+	// fixme: do something with this data
+}
+
+/**
+ * In the header, parse the index to the different sections of
+ * the CONTENTS stream.
+ * 
+ */
+void WPS8Parser::parseHeaderIndex(WPXInputStream * input)
+{
+	input->seek(0x0C, WPX_SEEK_SET);		
+	uint16_t n_entries = readU16(input);
+	// fixme: sanity check n_entries
+
+	input->seek(0x18, WPX_SEEK_SET);		
+	do
+	{
+		uint16_t unknown1 = readU16(input);
+		if (0x01F8 != unknown1)
+		{
+			WPD_DEBUG_MSG(("Works8: error: unknown1=%x\n", unknown1));
+#if 0
+			throw ParseException();
+#endif
+		}
+
+		uint16_t n_entries_local = readU16(input);
+
+		if (n_entries_local > 0x20)
+		{
+			WPD_DEBUG_MSG(("Works8: error: n_entries_local=%i\n", n_entries_local));
+			throw ParseException();	
+		}
+
+		uint32_t next_index_table = readU32(input);
+
+		do
+		{
+			parseHeaderIndexEntry(input);
+			n_entries--;
+			n_entries_local--;
+		} while (n_entries > 0 && n_entries_local);
+		
+		if (0xFFFFFFFF == next_index_table && n_entries > 0)
+		{
+			WPD_DEBUG_MSG(("Works8: error: expected more header index entries\n"));
+			throw ParseException();
+		}
+
+		if (0xFFFFFFFF == next_index_table)
+			break;
+
+		WPD_DEBUG_MSG(("Works8: debug: seeking to position %x\n", next_index_table));
+		input->seek(next_index_table, WPX_SEEK_SET);
+	} while (n_entries > 0);
+}
+
+/**
  * Read the page format from the file.  It seems that WPS8 files
  * can only have one page format throughout the whole document.
  *
@@ -94,11 +210,13 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 
 	listener->startDocument();
 
+	parseHeaderIndex(input);
+
 	input->seek(0x34, WPX_SEEK_SET);		
 	size_t textLength = readU32(input);
 	if (0 == textLength)
 	{
-		WPD_DEBUG_MSG(("Works: error: no text\n", textLength, textLength));
+		WPD_DEBUG_MSG(("Works: error: no text\n"));
 		throw ParseException();
 	}
 

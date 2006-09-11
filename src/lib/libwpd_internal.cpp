@@ -323,3 +323,20 @@ WPXString _numberingTypeToString(WPXNumberingType t)
 	return sListTypeSymbol;
 }
 
+#ifdef DEBUG
+std::string to_bits(std::string s)
+{
+	std::string r;
+	for (int i = 0; i < s.length(); i++)
+	{
+		std::bitset<8> b(s[i]);	
+		r.append(b.to_string());
+		char buf[10];
+		sprintf(buf, "(%02u,0x%02x)  ", (uint8_t)s[i],(uint8_t)s[i]);
+		r.append(buf);
+	}
+	return r;
+}
+#endif
+
+

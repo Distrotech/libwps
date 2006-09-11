@@ -19,9 +19,6 @@
  *
  */
 
-#ifdef DEBUG
-#include <bitset>
-#endif
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -242,22 +239,6 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 	return (offset_eot > FODs->back().fcLim);
 }
 
-#ifdef DEBUG
-std::string to_bits(std::string s)
-{
-	std::string r;
-	for (int i = 0; i < s.length(); i++)
-	{
-		std::bitset<8> b(s[i]);	
-		r.append(b.to_string());
-		char buf[10];
-		sprintf(buf, "(%02u,0x%02x)  ", (uint8_t)s[i],(uint8_t)s[i]);
-		r.append(buf);
-	}
-	return r;
-}
-#endif
-
 #define WPS4_ATTRIBUTE_BOLD 0
 #define WPS4_ATTRIBUTE_ITALICS 1
 #define WPS4_ATTRIBUTE_UNDERLINE 2
@@ -321,7 +302,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 		uint8_t font_n = (uint8_t)rgchProp[2];
 		if (fonts.find(font_n) == fonts.end())
 		{
-			WPD_DEBUG_MSG(("Works: error: encouarged font %i (0x%02x) which is not indexed\n", 
+			WPD_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n", 
 				font_n,font_n ));			
 			throw FileException();
 		}

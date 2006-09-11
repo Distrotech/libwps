@@ -25,6 +25,9 @@
 
 #ifndef LIBWPD_INTERNAL_H
 #define LIBWPD_INTERNAL_H
+#ifdef DEBUG
+#include <bitset>
+#endif
 #include "WPXStream.h"
 #include <stdio.h>
 #include <string>
@@ -227,5 +230,6 @@ int _extractDisplayReferenceNumberFromBuf(const WPXString &buf, const WPXNumberi
 WPXNumberingType _extractWPXNumberingTypeFromBuf(const WPXString &buf, const WPXNumberingType putativeWPXNumberingType);
 WPXString _numberingTypeToString(WPXNumberingType t);
 
+std::string to_bits(std::string s);
 
 #endif /* LIBWPD_INTERNAL_H */

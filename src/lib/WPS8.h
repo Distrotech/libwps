@@ -102,6 +102,8 @@ public:
 
 	void parse(WPXHLListenerImpl *listenerImpl);
 private:
+	void parseHeaderIndexEntry(WPXInputStream * input);
+	void parseHeaderIndex(WPXInputStream * input);
 	void parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *input);
 	void parse(WPXInputStream *stream, WPS8Listener *listener);
 	uint32_t offset_eot; /* stream offset to end of text */
