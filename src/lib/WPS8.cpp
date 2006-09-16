@@ -75,6 +75,187 @@ WPS8Parser private
 */
 
 /**
+ * Read the text of the document using previously-read
+ * formatting information.
+ *
+ */
+
+// fixme: this method might turn out to be like WPS4Parser::readText()
+
+void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
+{
+	WPD_DEBUG_MSG(("WPS8Parser::readText()\n"));
+
+	// fixme: stub
+	std::vector<FOD>::iterator FODs_iter;	
+
+	/* dump for debugging */
+	uint32_t last_fcLim = 0x200; //fixme: start of text might vary according to header index table?
+	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
+	{
+		FOD fod = *(FODs_iter);
+		WPD_DEBUG_MSG(("FOD  fcLim=%u (0x%04x), bfprop=%u, bfprop_abs=%u\n", 
+			fod.fcLim, fod.fcLim, fod.bfprop, fod.bfprop_abs));
+		uint32_t len = (*FODs_iter).fcLim - last_fcLim;
+		if (len % 2 != 0)
+		{
+			WPD_DEBUG_MSG(("Works: error: len %i is odd\n", len));
+			throw ParseException();
+		}
+		len /= 2;
+		WPD_DEBUG_MSG(("Works: info: txt len=%02i rgchProp=%s\n", 
+			len, to_bits((*FODs_iter).fprop.rgchProp).c_str()));
+		if ((*FODs_iter).fprop.cch > 0)
+			propertyChange((*FODs_iter).fprop.rgchProp, listener);
+		input->seek(last_fcLim, WPX_SEEK_SET);			
+		for (uint32_t i = len; i>0; i--)
+		{
+			uint16_t readVal = readU16(input);
+
+			if (0x00 == readVal)
+				break;
+				
+			switch (readVal)
+			{
+				case 0x0A:
+					break;
+				case 0x0C:
+					listener->insertBreak(WPX_PAGE_BREAK);
+					break;
+				case 0x0D:
+					listener->insertEOL();
+					break;
+				default:
+					// fixme: convert UTF-16LE to UTF-8
+					listener->insertCharacter( readVal );
+					break;
+			}
+		}	
+		last_fcLim = (*FODs_iter).fcLim;	
+	}	
+
+
+}
+
+/**
+ * Read a single page (of size page_size bytes) that contains formatting descriptors
+ * for either characters OR paragraphs.  Starts reading at current position in stream.
+ *
+ * Return: true if more pages of this type exist, otherwise false
+ *
+ */
+
+//fixme: this readFODPage is mostly the same as in WPS4
+
+bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, uint16_t page_size)
+{
+	uint32_t page_offset = input->tell();
+	// fixme: is the cfod at the end of the page ?
+	uint16_t cfod = readU16(input); /* number of FODs on this page */
+
+	if (cfod > 0x20)
+	{
+		WPD_DEBUG_MSG(("Works8: error: cfod = %i (0x%x\n", cfod, cfod));
+		throw ParseException();
+	}
+
+	input->seek(6, WPX_SEEK_CUR);	// fixme: unknown
+
+	int first_fod = FODs->size();
+
+	/* Read array of fcLim of FODs.  The fcLim refers to the offset of the
+           last character covered by the formatting. */
+	for (int i = 0; i < cfod; i++)
+	{
+		FOD fod;
+		fod.fcLim = readU32(input);
+//		WPD_DEBUG_MSG(("Works: info: fcLim = %i (%x)\n", fod.fcLim, fod.fcLim));			
+		
+		/* check that fcLim is not too large */
+		if (fod.fcLim > offset_eot)
+		{
+			WPD_DEBUG_MSG(("Works: error: length of 'text selection' %i > "
+				"total text length %i\n", fod.fcLim, offset_eot));					
+			throw FileException();	
+		}
+
+		/* check that fcLim is monotonic */
+		if (FODs->size() > 0 && FODs->back().fcLim > fod.fcLim)
+		{
+			WPD_DEBUG_MSG(("Works: error: character position list must "
+				"be monotonic, but found %i, %i\n", FODs->back().fcLim, fod.fcLim));
+			throw FileException();
+		}
+		FODs->push_back(fod);
+	} 	
+
+        /* Read array of bfprop of FODs.  The bfprop is the offset where
+           the FPROP is located. */
+	std::vector<FOD>::iterator FODs_iter;
+	for (FODs_iter = FODs->begin() + first_fod; FODs_iter!= FODs->end(); FODs_iter++)
+	{
+		if ((*FODs_iter).fcLim == offset_eot)
+			break;
+
+                (*FODs_iter).bfprop = readU16(input);
+
+		/* check size of bfprop  */
+		if (((*FODs_iter).bfprop < (8 + (6*cfod)) && (*FODs_iter).bfprop > 0) ||
+			(*FODs_iter).bfprop  > (page_size - 1))
+		{
+			WPD_DEBUG_MSG(("Works: error: size of bfprop is bad "
+				"%i (0x%x)\n", (*FODs_iter).bfprop, (*FODs_iter).bfprop));
+			throw FileException();
+		}
+
+		(*FODs_iter).bfprop_abs = (*FODs_iter).bfprop + page_offset;
+//		WPD_DEBUG_MSG(("Works: debug: bfprop = %X, bfprop_abs = %x\n",
+//                      (*FODs_iter).bfprop, (*FODs_iter).bfprop_abs));
+	}
+
+	
+	/* Read array of FPROPs.  These contain the actual formatting
+	   codes (bold, alignment, etc.) */
+	for (FODs_iter = FODs->begin()+first_fod; FODs_iter!= FODs->end(); FODs_iter++)
+	{
+		if ((*FODs_iter).fcLim == offset_eot)
+			break;
+
+		if (0 == (*FODs_iter).bfprop)
+		{
+			(*FODs_iter).fprop.cch = 0;
+			break;
+		}
+
+		input->seek((*FODs_iter).bfprop_abs, WPX_SEEK_SET);
+		(*FODs_iter).fprop.cch = readU8(input);
+		if (0 == (*FODs_iter).fprop.cch)
+		{
+			WPD_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%x", (input->tell())-1));
+			throw FileException();
+		}
+		// fixme: what is largest cch?
+		if ((*FODs_iter).fprop.cch > 93)
+		{
+			WPD_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).fprop.cch));
+			throw FileException();
+		}
+
+		(*FODs_iter).fprop.cch--;
+
+		for (int i = 0; (*FODs_iter).fprop.cch > i; i++)
+			(*FODs_iter).fprop.rgchProp.append(1, (uint8_t)readU8(input));
+	}
+	
+	/* go to end of page */
+	input->seek(page_offset	+ page_size, WPX_SEEK_SET);
+
+	return (offset_eot > FODs->back().fcLim);
+
+	
+}
+
+/**
  * Parse an index entry in the file format's header.  For example,
  * this function may be called multiple times to parse several FDPP
  * entries.  This functions begins at the current position of the
@@ -87,6 +268,11 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 	WPD_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos %x\n", input->tell()));
 
 	uint16_t cch = readU16(input);
+	if (0x18 != cch)
+	{
+		WPD_DEBUG_MSG(("Works8: cch = %i (0x%x)\n", cch, cch));
+		throw ParseException();
+	}
 
 	std::string name;
 
@@ -111,7 +297,7 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 		unknown1.append(1, readU8(input));
 
 #if 0
-	WPD_DEBUG_MSG(("Works8: info: header index entry %s with data1=%s\n", name.c_str(),
+	WPD_DEBUG_MSG(("Works8: info: header index entry %s with unknown1=%s\n", name.c_str(),
 		to_bits(unknown1).c_str()));
 #endif
 
@@ -124,16 +310,18 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 	{
 		WPD_DEBUG_MSG(("Works8: error: name != name2, %s != %s\n", 
 			name.c_str(), name2.c_str()));
+		// fixme: what to do with this?
 //		throw ParseException();
 	}
 
-	uint32_t offset1 = readU32(input); // start
-	uint32_t offset2 = readU32(input); // length
+	HeaderIndexEntries hie;
+	hie.offset = readU32(input);
+	hie.length = readU32(input);
 
-	WPD_DEBUG_MSG(("Works8: info: header index entry %s with offset1=%i, offset2=%i\n", 
-		name.c_str(), offset1, offset2));
+	WPD_DEBUG_MSG(("Works8: info: header index entry %s with offset=%i, length=%i\n", 
+		name.c_str(), hie.offset, hie.length));
 
-	// fixme: do something with this data
+	headerIndexTable.insert(make_pair(name, hie));
 }
 
 /**
@@ -210,8 +398,49 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 
 	listener->startDocument();
 
+	/* header index */
 	parseHeaderIndex(input);
 
+	HeaderIndexMultiMap::iterator pos;
+	for (pos = headerIndexTable.begin(); pos != headerIndexTable.end(); ++pos)
+	{
+		WPD_DEBUG_MSG(("Works: debug: headerIndexTable: %s, offset=%X, length=%X\n",
+			pos->first.c_str(), pos->second.offset, pos->second.length));
+	}
+
+	/* What is the total length of the text? */
+	pos = headerIndexTable.lower_bound("TEXT");
+	if (headerIndexTable.end() == pos)
+	{
+		WPD_DEBUG_MSG(("Works: error: no TEXT in header index table\n"));
+	}
+	offset_eot = pos->second.offset + pos->second.length;
+	WPD_DEBUG_MSG(("Works: debug: TEXT offset_eot = %x\n", offset_eot));
+
+	/* read character FODs (FOrmatting Descriptors) */
+
+	for (pos = headerIndexTable.begin(); pos != headerIndexTable.end(); ++pos)
+	{
+		if (0 != strcmp("FDPC",pos->first.c_str()))
+			continue;
+
+		WPD_DEBUG_MSG(("Works: debug: FDPC (%s) offset=%x, length=%x\n",
+				pos->first.c_str(), pos->second.offset, pos->second.length));
+
+		input->seek(pos->second.offset, WPX_SEEK_SET);
+		if (pos->second.length != 512)
+		{
+			WPD_DEBUG_MSG(("Works: warning: FDPC offset=%x, length=%x\n", 
+				pos->second.offset, pos->second.length));
+		}
+		readFODPage(input, &CHFODs, pos->second.length);
+	}
+
+	/* process text file using previously-read character formatting */
+	readText(input, listener);
+
+	/* Below is temporary code to simply grab the plain text. */
+#if 0
 	input->seek(0x34, WPX_SEEK_SET);		
 	size_t textLength = readU32(input);
 	if (0 == textLength)
@@ -287,9 +516,25 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 	}
 	free(source);
 	free(result);
+#endif
 	
 	listener->endDocument();		
 }
+
+
+/**
+ * Process a character property change.  The Works format supplies
+ * all the character formatting each time there is any change (as
+ * opposed to HTML, for example).
+ *
+ */
+void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
+{
+	if (0 == rgchProp.length())
+		return;
+	//fixme: stub
+}
+
 
 
 /*

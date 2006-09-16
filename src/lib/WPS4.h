@@ -26,33 +26,12 @@
 #include <map>
 
 #include "libwpd_internal.h"
+#include "WPS.h"
 #include "WPXContentListener.h"
 #include "WPXStream.h"
 #include "WPXString.h"
 #include "WPXSubDocument.h"
 #include "WPXParser.h"
-
-/* character or paragraph formatting */
-class FPROP
-{
-public:
-	uint8_t	cch; /* number of bytes in this FPROP */
-	//fixme: try WPXString
-	std::string rgchProp; /* Prefix for a CHP or PAP sufficient to handle differing bits from default */
-};
-
-/**
- * FOrmatting Descriptors
- */
-class FOD
-{
-public:
-	FOD() { fcLim = bfprop = bfprop_abs = 0; }
-	uint32_t	fcLim; /* byte number of last character covered by this FOD */
-	uint8_t		bfprop; /* byte offset from beginning of FOD array to corresponding FPROP */
-	uint32_t        bfprop_abs; /* bfprop from beginning of stream offset */
-	FPROP		fprop;	/* character or paragraph formatting */
-};
 
 class WPS4Listener;
 
@@ -130,7 +109,7 @@ private:
 	void parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *input);
 	void parse(WPXInputStream *stream, WPS4Listener *listener);
 	void readFontsTable(WPXInputStream * input);
-	bool readFODPage(WPXInputStream * input, std::vector<FOD>  * FODs);	
+	bool readFODPage(WPXInputStream * input, std::vector<FOD> * FODs);	
 	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS4Listener *listener);
 	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener *listener);
 	void propertyChange(std::string rgchProp, WPS4Listener *listener);

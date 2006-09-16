@@ -23,14 +23,28 @@
 #define WPS8_H
 
 #include <vector>
+#include <list>
 #include <map>
 
 #include "libwpd_internal.h"
+#include "WPS.h"
 #include "WPXContentListener.h"
 #include "WPXStream.h"
 #include "WPXString.h"
 #include "WPXSubDocument.h"
 #include "WPXParser.h"
+
+/**
+ * Starting near beginning of CONTENTS stream, there is an index
+ * to various types of pages in the document.
+ *
+ */
+class HeaderIndexEntries
+{
+public:
+	uint32_t offset;
+	uint32_t length;
+};
 
 class WPS8Listener;
 
@@ -94,6 +108,8 @@ public:
 	virtual void suppressPage(const uint16_t suppressCode) = 0;
 };
 
+typedef std::multimap <std::string, HeaderIndexEntries> HeaderIndexMultiMap; /* string is name */
+
 class WPS8Parser : public WPXParser
 {
 public:
@@ -102,11 +118,16 @@ public:
 
 	void parse(WPXHLListenerImpl *listenerImpl);
 private:
+	void readText(WPXInputStream * input, WPS8Listener *listener);
+	bool readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, uint16_t page_size);
 	void parseHeaderIndexEntry(WPXInputStream * input);
 	void parseHeaderIndex(WPXInputStream * input);
 	void parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *input);
 	void parse(WPXInputStream *stream, WPS8Listener *listener);
+	void propertyChange(std::string rgchProp, WPS8Listener *listener);
 	uint32_t offset_eot; /* stream offset to end of text */
+	HeaderIndexMultiMap headerIndexTable;
+	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */		
 };
 
 

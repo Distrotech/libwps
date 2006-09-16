@@ -131,15 +131,15 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
  */
 bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 {
-	uint8_t cfod; /* number of FODs on this page */
 	uint32_t page_offset = input->tell();
-	
+
 	input->seek(127, WPX_SEEK_CUR);	
-	cfod = readU8(input);
+	uint8_t cfod = readU8(input); /* number of FODs on this page */
 //	WPD_DEBUG_MSG(("Works: info: at position 0x%02x, cfod = %i (%x)\n", (input->tell())-1,cfod, cfod));				
 	if (cfod > 0x18)
 	{
-		throw FileException();
+		WPD_DEBUG_MSG(("Works4: error: cfod = %i ", cfod));
+		throw ParseException();
 	}
 	input->seek(-128, WPX_SEEK_CUR);	
 	
@@ -150,7 +150,8 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 	
 	int first_fod = FODs->size();
 
-	/* read array of fcLim of FODs */	
+        /* Read array of fcLim of FODs.  The fcLim refers to the offset of the
+           last character covered by the formatting. */
 	for (int i = 0; i < cfod; i++)
 	{
 		FOD fod;
@@ -175,14 +176,13 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 		FODs->push_back(fod);
 	} 	
 	
-	/* read array of bfprop of FODs */
+	/* Read array of bfprop of FODs.  The bfprop is the offset where 
+	   the FPROP is located. */
 	std::vector<FOD>::iterator FODs_iter;
 	for (FODs_iter = FODs->begin()+first_fod; FODs_iter!= FODs->end(); FODs_iter++)
 	{
 		if ((*FODs_iter).fcLim == offset_eot)
-		{
 			break;
-		}	
 	
 		(*FODs_iter).bfprop = readU8(input);
 		
@@ -200,21 +200,21 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 //			"%i (%x)\n", (*FODs_iter).bfprop_abs, (*FODs_iter).bfprop_abs));		
 	}
 	
-	/* read array of FPROPs */
+	/* Read array of FPROPs.  These contain the actual formatting
+	   codes (bold, alignment, etc.) */
 	for (FODs_iter = FODs->begin()+first_fod; FODs_iter!= FODs->end(); FODs_iter++)
 	{
 		if ((*FODs_iter).fcLim == offset_eot)
-		{
 			break;
-		}
+
 		if (0 == (*FODs_iter).bfprop)
 		{
 			(*FODs_iter).fprop.cch = 0;
 			break;
 		}
+
 		input->seek((*FODs_iter).bfprop_abs, WPX_SEEK_SET);
 		(*FODs_iter).fprop.cch = readU8(input);
-//		WPD_DEBUG_MSG(("Works: cch = %i\n", (*FODs_iter).fprop.cch));		
 		if (0 == (*FODs_iter).fprop.cch)
 		{
 			WPD_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%x", (input->tell())-1));
@@ -227,10 +227,9 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 			WPD_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).fprop.cch));
 			throw FileException();
 		}
+
 		for (int i = 0; (*FODs_iter).fprop.cch > i; i++)
-		{
 			(*FODs_iter).fprop.rgchProp.append(1, (uint8_t)readU8(input));
-		}
 	}
 	
 	/* go to end of page */
@@ -272,7 +271,9 @@ void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener
 }
 
 /**
- * Process a character property change.
+ * Process a character property change.  The Works format supplies
+ * all the character formatting each time there is any change (as
+ * opposed to HTML, for example).
  *
  */
 void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
@@ -383,6 +384,7 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 					listener->insertEOL();
 					break;
 				default:
+					//fixme: convert Windows 1252 to UTF-8
 					listener->insertCharacter( (uint16_t)readVal );
 					break;
 			}
