@@ -118,6 +118,7 @@ public:
 
 	void parse(WPXHLListenerImpl *listenerImpl);
 private:
+	void readFontsTable(WPXInputStream * input);
 	void readText(WPXInputStream * input, WPS8Listener *listener);
 	bool readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, uint16_t page_size);
 	void parseHeaderIndexEntry(WPXInputStream * input);
@@ -131,6 +132,7 @@ private:
 	uint32_t oldTextAttributeBits;
 	HeaderIndexMultiMap headerIndexTable;
 	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */		
+	std::vector<std::string> fonts;
 };
 
 

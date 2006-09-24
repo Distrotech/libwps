@@ -104,7 +104,7 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
 		{
 			WPD_DEBUG_MSG(("Works: error: at position 0x%x: font number %i (0x%x) duplicated\n",
 				(input->tell())-2, font_number, font_number));		
-			throw FileException();		
+			throw ParseException();		
 		}
 
 		//fixme: what is this byte? maybe a font class
@@ -163,7 +163,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 		{
 			WPD_DEBUG_MSG(("Works: error: length of 'text selection' %i > "
 				"total text length %i\n", fod.fcLim, offset_eot));					
-			throw FileException();	
+			throw ParseException();	
 		}
 
 		/* check that fcLim is monotonic */
@@ -171,7 +171,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 		{
 			WPD_DEBUG_MSG(("Works: error: character position list must "
 				"be monotonic, but found %i, %i\n", FODs->back().fcLim, fod.fcLim));
-			throw FileException();
+			throw ParseException();
 		}
 		FODs->push_back(fod);
 	} 	
@@ -192,7 +192,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 		{
 			WPD_DEBUG_MSG(("Works: error: size of bfprop is bad "
 				"%i (0x%x)\n", (*FODs_iter).bfprop, (*FODs_iter).bfprop));		
-			throw FileException();
+			throw ParseException();
 		}
 		
 		(*FODs_iter).bfprop_abs = (*FODs_iter).bfprop + page_offset;
@@ -218,14 +218,14 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 		if (0 == (*FODs_iter).fprop.cch)
 		{
 			WPD_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%x", (input->tell())-1));
-			throw FileException();
+			throw ParseException();
 		}
 		// fixme: what is largest cch?
 		/* generally paragraph cch are bigger than character cch */
 		if ((*FODs_iter).fprop.cch > 93)
 		{
 			WPD_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).fprop.cch));
-			throw FileException();
+			throw ParseException();
 		}
 
 		for (int i = 0; (*FODs_iter).fprop.cch > i; i++)
@@ -306,7 +306,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 		{
 			WPD_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n", 
 				font_n,font_n ));			
-			throw FileException();
+			throw ParseException();
 		}
 		else
 			listener->setTextFont(fonts[font_n].c_str());
@@ -439,13 +439,13 @@ void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *in
 		|| (margin_top_inches + margin_bottom_inches) > page_height_inches)
 	{
 		WPD_DEBUG_MSG(("Works: error: the margins are too large for the page size\n"));
-		throw FileException();
+		throw ParseException();
 	}
 	
 	if (page_orientation != 0 && page_orientation != 1)
 	{
 		WPD_DEBUG_MSG(("Works: error: bad page orientation code\n"));	
-		throw FileException();
+		throw ParseException();
 	}
 		
 	/* record page format */
@@ -512,11 +512,7 @@ void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
 	}		
 	
 	/* read fonts table */
-#if 1
 	readFontsTable(input);
-#else
-	fonts.push_back("Times New Roman");
-#endif
 	
 	/* process text file using previously-read character formatting */
 	readText(input, listener);

@@ -71,6 +71,43 @@ void WPS8Parser::parse(WPXHLListenerImpl *listenerImpl)
 WPS8Parser private
 */
 
+
+/**
+ * Reads fonts table into memory.
+ *
+ */
+void WPS8Parser::readFontsTable(WPXInputStream * input)
+{
+	/* find the offset */
+	HeaderIndexMultiMap::iterator pos;
+	pos = headerIndexTable.lower_bound("FONT");
+	if (headerIndexTable.end() == pos)
+	{
+		WPD_DEBUG_MSG(("Works8: error: no FONT in header index table\n"));
+	}
+	input->seek(pos->second.offset + 0x2C, WPX_SEEK_SET);
+	uint32_t offset_end_FFNTB = pos->second.offset + pos->second.length;		
+	
+	/* read each font in the table */	
+	while (input->tell() < offset_end_FFNTB)
+	{
+		uint16_t unknown1 = readU16(input);
+		uint16_t unknown2 = readU16(input);
+		uint16_t string_size = readU16(input);
+		
+		std::string s;
+		for (; string_size>0; string_size--)
+			s.append(1, (uint16_t)readU16(input));
+		s.append(1, 0);
+		if (s.empty())
+			continue;
+		WPD_DEBUG_MSG(("Works: debug: unknown{1,2}={0x%04X,0x%04X}, name=%s\n",
+			 unknown1, unknown2, s.c_str()));
+		fonts.push_back(s);
+	}
+}
+
+
 /**
  * Read the text of the document using previously-read
  * formatting information.
@@ -180,7 +217,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 		{
 			WPD_DEBUG_MSG(("Works: error: length of 'text selection' %i > "
 				"total text length %i\n", fod.fcLim, offset_eot));					
-			throw FileException();	
+			throw ParseException();	
 		}
 
 		/* check that fcLim is monotonic */
@@ -188,7 +225,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 		{
 			WPD_DEBUG_MSG(("Works: error: character position list must "
 				"be monotonic, but found %i, %i\n", FODs->back().fcLim, fod.fcLim));
-			throw FileException();
+			throw ParseException();
 		}
 		FODs->push_back(fod);
 	} 	
@@ -209,7 +246,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 		{
 			WPD_DEBUG_MSG(("Works: error: size of bfprop is bad "
 				"%i (0x%x)\n", (*FODs_iter).bfprop, (*FODs_iter).bfprop));
-			throw FileException();
+			throw ParseException();
 		}
 
 		(*FODs_iter).bfprop_abs = (*FODs_iter).bfprop + page_offset;
@@ -236,13 +273,13 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 		if (0 == (*FODs_iter).fprop.cch)
 		{
 			WPD_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%x", (input->tell())-1));
-			throw FileException();
+			throw ParseException();
 		}
 		// fixme: what is largest cch?
 		if ((*FODs_iter).fprop.cch > 93)
 		{
 			WPD_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).fprop.cch));
-			throw FileException();
+			throw ParseException();
 		}
 
 		(*FODs_iter).fprop.cch--;
@@ -403,8 +440,9 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 	HeaderIndexMultiMap::iterator pos;
 	for (pos = headerIndexTable.begin(); pos != headerIndexTable.end(); ++pos)
 	{
-		WPD_DEBUG_MSG(("Works: debug: headerIndexTable: %s, offset=%X, length=%X\n",
-			pos->first.c_str(), pos->second.offset, pos->second.length));
+		WPD_DEBUG_MSG(("Works: debug: headerIndexTable: %s, offset=0x%X, length=0x%X, end=0x%X\n",
+			pos->first.c_str(), pos->second.offset, pos->second.length, pos->second.offset +
+			pos->second.length));
 	}
 
 	/* What is the total length of the text? */
@@ -433,6 +471,9 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 		}
 		readFODPage(input, &CHFODs, pos->second.length);
 	}
+
+	/* read fonts table */
+	readFontsTable(input);
 
 	/* process text file using previously-read character formatting */
 	readText(input, listener);
@@ -575,9 +616,21 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 				break;
 
 			case 0x8A24:
-				// fixme: font change
+			{
+				/* font change */
+				uint8_t font_n = (uint8_t)rgchProp[x+8];
+				if (font_n > fonts.size())
+				{
+					WPD_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n", 
+						font_n,font_n ));			
+					throw ParseException();
+				}
+				else
+					listener->setTextFont(fonts[font_n].c_str());
+
 				x++;
 				x += rgchProp[x];
+			}
 				break;
 
 			case 0x220C:
