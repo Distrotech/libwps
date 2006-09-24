@@ -273,7 +273,8 @@ void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener
 /**
  * Process a character property change.  The Works format supplies
  * all the character formatting each time there is any change (as
- * opposed to HTML, for example).
+ * opposed to HTML, for example).  In Works 4, the position in
+ * in rgchProp is significant (e.g., bold is always in the first byte).
  *
  */
 void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)

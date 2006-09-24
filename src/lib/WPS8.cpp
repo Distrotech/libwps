@@ -19,9 +19,6 @@
  *
  */
 
-#ifdef DEBUG
-#include <bitset>
-#endif
 #include <errno.h>
 #include <iconv.h>
 #include <math.h>
@@ -94,8 +91,6 @@ void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
 	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
 	{
 		FOD fod = *(FODs_iter);
-		WPD_DEBUG_MSG(("FOD  fcLim=%u (0x%04x), bfprop=%u, bfprop_abs=%u\n", 
-			fod.fcLim, fod.fcLim, fod.bfprop, fod.bfprop_abs));
 		uint32_t len = (*FODs_iter).fcLim - last_fcLim;
 		if (len % 2 != 0)
 		{
@@ -103,10 +98,20 @@ void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
 			throw ParseException();
 		}
 		len /= 2;
-		WPD_DEBUG_MSG(("Works: info: txt len=%02i rgchProp=%s\n", 
-			len, to_bits((*FODs_iter).fprop.rgchProp).c_str()));
+
+		/* print rgchProp as hex bytes */
+		WPD_DEBUG_MSG(("rgch="));
+		for (int blah=0; blah < (*FODs_iter).fprop.rgchProp.length(); blah++)
+		{
+			WPD_DEBUG_MSG(("%02X ", (uint8_t) (*FODs_iter).fprop.rgchProp[blah]));
+		}
+		WPD_DEBUG_MSG(("\n"));
+
+		/* process character formatting */
 		if ((*FODs_iter).fprop.cch > 0)
 			propertyChange((*FODs_iter).fprop.rgchProp, listener);
+
+		/* plain text */
 		input->seek(last_fcLim, WPX_SEEK_SET);			
 		for (uint32_t i = len; i>0; i--)
 		{
@@ -119,9 +124,11 @@ void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
 			{
 				case 0x0A:
 					break;
+
 				case 0x0C:
 					listener->insertBreak(WPX_PAGE_BREAK);
 					break;
+
 				case 0x0D:
 					listener->insertEOL();
 					break;
@@ -133,8 +140,6 @@ void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
 		}	
 		last_fcLim = (*FODs_iter).fcLim;	
 	}	
-
-
 }
 
 /**
@@ -150,7 +155,6 @@ void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
 bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, uint16_t page_size)
 {
 	uint32_t page_offset = input->tell();
-	// fixme: is the cfod at the end of the page ?
 	uint16_t cfod = readU16(input); /* number of FODs on this page */
 
 	if (cfod > 0x20)
@@ -209,8 +213,8 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 		}
 
 		(*FODs_iter).bfprop_abs = (*FODs_iter).bfprop + page_offset;
-//		WPD_DEBUG_MSG(("Works: debug: bfprop = %X, bfprop_abs = %x\n",
-//                      (*FODs_iter).bfprop, (*FODs_iter).bfprop_abs));
+//		WPD_DEBUG_MSG(("Works: debug: bfprop = 0x%03X, bfprop_abs = 0x%03X\n",
+//                       (*FODs_iter).bfprop, (*FODs_iter).bfprop_abs));
 	}
 
 	
@@ -295,11 +299,6 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 	std::string unknown1;
 	for (int i = 0; i < 6; i ++)
 		unknown1.append(1, readU8(input));
-
-#if 0
-	WPD_DEBUG_MSG(("Works8: info: header index entry %s with unknown1=%s\n", name.c_str(),
-		to_bits(unknown1).c_str()));
-#endif
 
 	std::string name2;
 	for (int i =0; i < 4; i++)
@@ -418,7 +417,6 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 	WPD_DEBUG_MSG(("Works: debug: TEXT offset_eot = %x\n", offset_eot));
 
 	/* read character FODs (FOrmatting Descriptors) */
-
 	for (pos = headerIndexTable.begin(); pos != headerIndexTable.end(); ++pos)
 	{
 		if (0 != strcmp("FDPC",pos->first.c_str()))
@@ -439,100 +437,173 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 	/* process text file using previously-read character formatting */
 	readText(input, listener);
 
-	/* Below is temporary code to simply grab the plain text. */
-#if 0
-	input->seek(0x34, WPX_SEEK_SET);		
-	size_t textLength = readU32(input);
-	if (0 == textLength)
-	{
-		WPD_DEBUG_MSG(("Works: error: no text\n"));
-		throw ParseException();
-	}
-
-	WPD_DEBUG_MSG(("Works: info: textLength = %u (0x%x)\n", textLength, textLength));
-	
-	// fixme: the conversion code is not so good
-	// read the text contents
-	input->seek(0x200, WPX_SEEK_SET);	
-	uint8_t * text = (uint8_t *) malloc(textLength + 2);
-	if (!text)
-		throw GenericException();	
-	for (uint32_t x = 0; x<=textLength; x+=2)
-	{
-		text[x]=read8(input);
-		text[x+1]=read8(input);		
-	}
-	
-	text[textLength-2]=text[textLength-1]=0;
-	
-	// fixme: the conversion code is messy
-	iconv_t cd; // conversion descriptor
-	cd = iconv_open("UTF-8", "UTF-16LE"); //fixme: guessing
-	if ((iconv_t)-1 == cd)
-	{
-		WPD_DEBUG_MSG(("Works: error: iconv_open() failed\n"));
-		throw GenericException();
-	}
-	size_t outBytesLeft = textLength*2;
-	char *outBuffer = (char *)malloc(outBytesLeft+1);
-	if (NULL == outBuffer)
-	{
-		iconv_close(cd);	
-		throw GenericException();
-	}
-	char *source = (char *) text;
-	char *result = outBuffer;	
-	size_t rc = iconv(cd, (char**)&text, &textLength, &outBuffer, &outBytesLeft);
-	WPD_DEBUG_MSG(("Works: info: iconv() returns with rc=%i, textLength=%i, outBytesLeft=%i\n", 
-		rc, textLength, outBytesLeft));
-	if ((size_t)-1 == rc)
-	{
-		WPD_DEBUG_MSG(("Works: error: iconv() failed with errno=%i\n", errno));
-		iconv_close(cd);
-		free(outBuffer);
-		throw GenericException();
-	}
-	iconv_close(cd);
-	
-	uint32_t end_of_result = strlen(result);
-	
-	WPD_DEBUG_MSG(("Works: info: text=%p, outBuffer=%p, end_of_result=%i\n",
-		text, outBuffer, end_of_result));	
-	
-	for (uint32_t x = 0; x<end_of_result; x++)
-	{
-		uint8_t * ch = (uint8_t *) &result[x];
-		switch (*ch)
-		{
-			case 0x0A:
-				break;
-			case 0x0D:
-				listener->insertEOL();
-				break;
-			default:
-				listener->insertCharacter((uint8_t)*ch);
-				break;
-		}	
-	}
-	free(source);
-	free(result);
-#endif
-	
 	listener->endDocument();		
 }
+
+
+
+#define WPS8_ATTRIBUTE_BOLD 0
+#define WPS8_ATTRIBUTE_ITALICS 1
+#define WPS8_ATTRIBUTE_UNDERLINE 2
+#define WPS8_ATTRIBUTE_STRIKEOUT 3
+#define WPS8_ATTRIBUTE_SUBSCRIPT 4
+#define WPS8_ATTRIBUTE_SUPERSCRIPT 5
+
+void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8Listener *listener)
+{
+	if ((oldTextAttributeBits ^ newTextAttributeBits) & bit)
+		listener->attributeChange(newTextAttributeBits & bit, attribute);
+}
+
+/**
+ * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
+ *
+ */
+void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8Listener *listener)
+{
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_BOLD, WPX_BOLD_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_ITALICS, WPX_ITALICS_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_UNDERLINE, WPX_UNDERLINE_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_STRIKEOUT, WPX_STRIKEOUT_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_SUBSCRIPT, WPX_SUBSCRIPT_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_SUPERSCRIPT, WPX_SUPERSCRIPT_BIT, listener);
+	oldTextAttributeBits = newTextAttributeBits;
+}
+
 
 
 /**
  * Process a character property change.  The Works format supplies
  * all the character formatting each time there is any change (as
- * opposed to HTML, for example).
+ * opposed to HTML, for example).  In Works 8, the position in
+ * rgchProp is not significant because there are some kind of
+ * codes.
  *
  */
 void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 {
+	//fixme: this method is immature
+	/* check */
+	/* sometimes, the rgchProp is blank */
 	if (0 == rgchProp.length())
 		return;
-	//fixme: stub
+	/* other than blank, the shortest should be 9 bytes */
+	if (rgchProp.length() < 9)
+	{
+		WPD_DEBUG_MSG(("Works8: error: rgchProp.length() < 9\n"));
+		throw ParseException();
+	}
+	if (0 == (rgchProp.length() % 2))
+	{
+		WPD_DEBUG_MSG(("Works8: error: rgchProp.length() is even\n"));
+		throw ParseException();
+	}
+        if (0 != rgchProp[0] || 0 != rgchProp[1] || 0 != rgchProp[2])
+	{
+		WPD_DEBUG_MSG(("Works8: error: rgchProp does not begin 0x000000\n"));		
+		throw ParseException();
+	}
+
+	/* set default properties */
+        uint32_t textAttributeBits = 0;
+
+	/* set difference from default properties */
+	for (uint32_t x = 3; x < rgchProp.length(); x += 2)
+	{
+		if (0x0A == rgchProp[x+1])
+		{
+			switch(rgchProp[x])
+			{
+				case 0x02:
+					textAttributeBits |= WPX_BOLD_BIT;
+					break;
+				case 0x03:
+					textAttributeBits |= WPX_ITALICS_BIT;
+					break;
+				case 0x04:
+					//fixme: outline
+					break;
+				case 0x05:
+					//fixme: shadow
+					break;
+				case 0x10:
+					textAttributeBits |= WPX_STRIKEOUT_BIT;
+					break;
+				case 0x13:
+					//fixme: small caps
+					break;
+				case 0x14:
+					//fixme: all caps
+					break;
+				case 0x16:
+					//fixme: emboss
+					break;
+				case 0x17:
+					//fixme: engrave
+					break;
+				default:
+					WPD_DEBUG_MSG(("Works8: error: unknown 0x0A format code 0x%04X\n", rgchProp[x]));
+ 					throw ParseException();
+			}
+			continue;
+		}
+
+		uint16_t format_code = rgchProp[x] | (rgchProp[x+1] << 8);
+		
+		switch (format_code)
+		{
+			case 0x0000:
+				break;
+
+			case 0x120F:
+				if (1 == rgchProp[x+2])
+					textAttributeBits |= WPX_SUPERSCRIPT_BIT;
+				if (2 == rgchProp[x+2])
+					textAttributeBits |= WPX_SUBSCRIPT_BIT;
+				x += 2;
+				break;
+
+			case 0x2212:
+				x += 2;
+				// fixme: always 0x22120409?
+				break;
+
+			case 0x121E:
+				// fixme: there are various styles of underline
+				textAttributeBits |= WPX_UNDERLINE_BIT;
+				x += 2;
+				break;
+
+			case 0x8A24:
+				// fixme: font change
+				x++;
+				x += rgchProp[x];
+				break;
+
+			case 0x220C:
+			{
+				/* font size */
+				uint32_t font_size =  WPD_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
+				listener->setFontSize(font_size/12700);
+				x += 4;
+				break;
+			}
+
+			case 0x222E:
+				//fixme: color
+				x += 4;
+				break;
+			
+			default:
+				WPD_DEBUG_MSG(("Works8: error: unknown format code 0x%04X\n", format_code));		
+				throw ParseException();
+				break;
+
+
+		}
+	}
+
+	propertyChangeDelta(textAttributeBits, listener);
 }
 
 
@@ -604,9 +675,35 @@ void WPS8ContentListener::attributeChange(const bool isOn, const uint8_t attribu
 {
 	WPD_DEBUG_MSG(("WPS8ContentListener::attributeChange(%i, %i)\n", isOn, attribute));		
 	_closeSpan();
-
-	//fixme: stub	
+	
+	uint32_t textAttributeBit = 0;
+	switch (attribute)
+	{
+		case WPS8_ATTRIBUTE_BOLD:
+			textAttributeBit = WPX_BOLD_BIT;
+			break;
+		case WPS8_ATTRIBUTE_ITALICS:
+			textAttributeBit = WPX_ITALICS_BIT;		
+			break;
+		case WPS8_ATTRIBUTE_UNDERLINE:
+			textAttributeBit = WPX_UNDERLINE_BIT;		
+			break;	
+		case WPS8_ATTRIBUTE_STRIKEOUT:
+			textAttributeBit = WPX_STRIKEOUT_BIT;		
+			break;				
+		case WPS8_ATTRIBUTE_SUBSCRIPT:
+			textAttributeBit = WPX_SUBSCRIPT_BIT;		
+			break;							
+		case WPS8_ATTRIBUTE_SUPERSCRIPT:
+			textAttributeBit = WPX_SUPERSCRIPT_BIT;		
+			break;							
+	}
+	if (isOn)
+		m_ps->m_textAttributeBits |= textAttributeBit;
+	else
+		m_ps->m_textAttributeBits ^= textAttributeBit;
 }
+
 
 void WPS8ContentListener::marginChange(const uint8_t side, const uint16_t margin) {}
 void WPS8ContentListener::indentFirstLineChange(const int16_t offset) {}

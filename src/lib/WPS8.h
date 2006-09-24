@@ -124,8 +124,11 @@ private:
 	void parseHeaderIndex(WPXInputStream * input);
 	void parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *input);
 	void parse(WPXInputStream *stream, WPS8Listener *listener);
+	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8Listener *listener);
+	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS8Listener *listener);
 	void propertyChange(std::string rgchProp, WPS8Listener *listener);
 	uint32_t offset_eot; /* stream offset to end of text */
+	uint32_t oldTextAttributeBits;
 	HeaderIndexMultiMap headerIndexTable;
 	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */		
 };
