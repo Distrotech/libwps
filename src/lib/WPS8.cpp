@@ -25,8 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "WPS8.h"
-#include "WPDocument.h"
-#include "WPXHeader.h"
+#include "WPSDocument.h"
 #include "WPXStream.h"
 #include "libwpd_internal.h"
 

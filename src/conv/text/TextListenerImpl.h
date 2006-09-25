@@ -27,7 +27,7 @@
 #define TEXTLISTENERIMPL_H
 
 #include <glib.h>
-#include "WPXHLListenerImpl.h"
+#include <libwpd/WPXHLListenerImpl.h>
 
 class TextListenerImpl : public WPXHLListenerImpl
 {

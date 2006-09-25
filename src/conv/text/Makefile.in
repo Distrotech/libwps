@@ -47,7 +47,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES = wpd2text.rc
-@WITH_LIBWPD_STREAM_TRUE@am__EXEEXT_1 = wpd2text$(EXEEXT)
+am__EXEEXT_1 = wpd2text$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
@@ -119,11 +119,11 @@ LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
-LIBWPD_CFLAGS = @LIBWPD_CFLAGS@
-LIBWPD_CXXFLAGS = @LIBWPD_CXXFLAGS@
-LIBWPD_LIBS = @LIBWPD_LIBS@
-LIBWPD_STREAM_WIN32_RESOURCE = @LIBWPD_STREAM_WIN32_RESOURCE@
-LIBWPD_WIN32_RESOURCE = @LIBWPD_WIN32_RESOURCE@
+LIBWPS_CFLAGS = @LIBWPS_CFLAGS@
+LIBWPS_CXXFLAGS = @LIBWPS_CXXFLAGS@
+LIBWPS_LIBS = @LIBWPS_LIBS@
+LIBWPS_STREAM_WIN32_RESOURCE = @LIBWPS_STREAM_WIN32_RESOURCE@
+LIBWPS_WIN32_RESOURCE = @LIBWPS_WIN32_RESOURCE@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_AGE = @LT_AGE@
@@ -152,17 +152,15 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
-WITH_LIBWPD_DOCS_FALSE = @WITH_LIBWPD_DOCS_FALSE@
-WITH_LIBWPD_DOCS_TRUE = @WITH_LIBWPD_DOCS_TRUE@
-WITH_LIBWPD_STREAM_FALSE = @WITH_LIBWPD_STREAM_FALSE@
-WITH_LIBWPD_STREAM_TRUE = @WITH_LIBWPD_STREAM_TRUE@
+WITH_LIBWPS_DOCS_FALSE = @WITH_LIBWPS_DOCS_FALSE@
+WITH_LIBWPS_DOCS_TRUE = @WITH_LIBWPS_DOCS_TRUE@
 WPD2HTML_WIN32_RESOURCE = @WPD2HTML_WIN32_RESOURCE@
 WPD2RAW_WIN32_RESOURCE = @WPD2RAW_WIN32_RESOURCE@
 WPD2TEXT_WIN32_RESOURCE = @WPD2TEXT_WIN32_RESOURCE@
-WPD_MAJOR_VERSION = @WPD_MAJOR_VERSION@
-WPD_MICRO_VERSION = @WPD_MICRO_VERSION@
-WPD_MINOR_VERSION = @WPD_MINOR_VERSION@
-WPD_VERSION = @WPD_VERSION@
+WPS_MAJOR_VERSION = @WPS_MAJOR_VERSION@
+WPS_MICRO_VERSION = @WPS_MICRO_VERSION@
+WPS_MINOR_VERSION = @WPS_MINOR_VERSION@
+WPS_VERSION = @WPS_VERSION@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_AS = @ac_ct_AS@
 ac_ct_CC = @ac_ct_CC@
@@ -211,12 +209,14 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-@WITH_LIBWPD_STREAM_FALSE@target_wpd2text = 
-@WITH_LIBWPD_STREAM_TRUE@target_wpd2text = wpd2text
-AM_CXXFLAGS = $(LIBWPD_CXXFLAGS) $(DEBUG_CXXFLAGS) -I$(top_srcdir)/src/lib/
+target_wpd2text = wpd2text
+AM_CXXFLAGS = $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS) -I$(top_srcdir)/src/lib/
 wpd2text_LDFLAGS = -L../../lib/
 wpd2text_DEPENDENCIES = @WPD2TEXT_WIN32_RESOURCE@ 
-wpd2text_LDADD = -lwpd-0.8 -lwpd-stream-0.8 $(LIBWPD_LIBS) @WPD2TEXT_WIN32_RESOURCE@ 
+wpd2text_LDADD = -lwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
+	-lwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
+	$(LIBWPS_LIBS) @WPD2RAW_WIN32_RESOURCE@
+
 wpd2text_SOURCES = \
 	TextListenerImpl.cpp \
 	TextListenerImpl.h \
@@ -246,9 +246,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  src/conv/text/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  src/conv/text/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  src/conv/text/Makefile
+	  $(AUTOMAKE) --foreign  src/conv/text/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

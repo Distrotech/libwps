@@ -97,11 +97,11 @@ LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
-LIBWPD_CFLAGS = @LIBWPD_CFLAGS@
-LIBWPD_CXXFLAGS = @LIBWPD_CXXFLAGS@
-LIBWPD_LIBS = @LIBWPD_LIBS@
-LIBWPD_STREAM_WIN32_RESOURCE = @LIBWPD_STREAM_WIN32_RESOURCE@
-LIBWPD_WIN32_RESOURCE = @LIBWPD_WIN32_RESOURCE@
+LIBWPS_CFLAGS = @LIBWPS_CFLAGS@
+LIBWPS_CXXFLAGS = @LIBWPS_CXXFLAGS@
+LIBWPS_LIBS = @LIBWPS_LIBS@
+LIBWPS_STREAM_WIN32_RESOURCE = @LIBWPS_STREAM_WIN32_RESOURCE@
+LIBWPS_WIN32_RESOURCE = @LIBWPS_WIN32_RESOURCE@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_AGE = @LT_AGE@
@@ -130,17 +130,15 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
-WITH_LIBWPD_DOCS_FALSE = @WITH_LIBWPD_DOCS_FALSE@
-WITH_LIBWPD_DOCS_TRUE = @WITH_LIBWPD_DOCS_TRUE@
-WITH_LIBWPD_STREAM_FALSE = @WITH_LIBWPD_STREAM_FALSE@
-WITH_LIBWPD_STREAM_TRUE = @WITH_LIBWPD_STREAM_TRUE@
+WITH_LIBWPS_DOCS_FALSE = @WITH_LIBWPS_DOCS_FALSE@
+WITH_LIBWPS_DOCS_TRUE = @WITH_LIBWPS_DOCS_TRUE@
 WPD2HTML_WIN32_RESOURCE = @WPD2HTML_WIN32_RESOURCE@
 WPD2RAW_WIN32_RESOURCE = @WPD2RAW_WIN32_RESOURCE@
 WPD2TEXT_WIN32_RESOURCE = @WPD2TEXT_WIN32_RESOURCE@
-WPD_MAJOR_VERSION = @WPD_MAJOR_VERSION@
-WPD_MICRO_VERSION = @WPD_MICRO_VERSION@
-WPD_MINOR_VERSION = @WPD_MINOR_VERSION@
-WPD_VERSION = @WPD_VERSION@
+WPS_MAJOR_VERSION = @WPS_MAJOR_VERSION@
+WPS_MICRO_VERSION = @WPS_MICRO_VERSION@
+WPS_MINOR_VERSION = @WPS_MINOR_VERSION@
+WPS_VERSION = @WPS_VERSION@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_AS = @ac_ct_AS@
 ac_ct_CC = @ac_ct_CC@
@@ -203,9 +201,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  docs/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  docs/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  docs/Makefile
+	  $(AUTOMAKE) --foreign  docs/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -456,7 +454,7 @@ info: info-recursive
 
 info-am:
 
-@WITH_LIBWPD_DOCS_FALSE@install-data-am:
+@WITH_LIBWPS_DOCS_FALSE@install-data-am:
 
 install-exec-am:
 
@@ -482,7 +480,7 @@ ps: ps-recursive
 
 ps-am:
 
-@WITH_LIBWPD_DOCS_FALSE@uninstall-am: uninstall-info-am
+@WITH_LIBWPS_DOCS_FALSE@uninstall-am: uninstall-info-am
 
 uninstall-info: uninstall-info-recursive
 
@@ -500,14 +498,14 @@ uninstall-info: uninstall-info-recursive
 	uninstall uninstall-am uninstall-info-am
 
 
-@WITH_LIBWPD_DOCS_TRUE@install-data-am:
-@WITH_LIBWPD_DOCS_TRUE@	mkdir -p $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) $(srcdir)/libwpd.dia $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) $(srcdir)/libwpd.png $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
+@WITH_LIBWPS_DOCS_TRUE@install-data-am:
+@WITH_LIBWPS_DOCS_TRUE@	mkdir -p $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) $(srcdir)/libwpd.dia $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) $(srcdir)/libwpd.png $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
 
-@WITH_LIBWPD_DOCS_TRUE@uninstall-am:
-@WITH_LIBWPD_DOCS_TRUE@	-rm -f $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/libwpd.dia
-@WITH_LIBWPD_DOCS_TRUE@	-rm -f $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/libwpd.png
+@WITH_LIBWPS_DOCS_TRUE@uninstall-am:
+@WITH_LIBWPS_DOCS_TRUE@	-rm -f $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/libwpd.dia
+@WITH_LIBWPS_DOCS_TRUE@	-rm -f $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/libwpd.png
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

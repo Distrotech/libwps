@@ -38,8 +38,8 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 subdir = src/lib
-DIST_COMMON = $(am__libwpd_stream_0_8_include_HEADERS_DIST) \
-	$(libwpd_0_8_include_HEADERS) $(srcdir)/Makefile.am \
+DIST_COMMON = $(libwps_0_1_include_HEADERS) \
+	$(libwps_stream_0_1_include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/libwpd-stream.rc.in \
 	$(srcdir)/libwpd.rc.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -56,25 +56,20 @@ am__vpath_adj = case $$p in \
   esac;
 am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
 am__installdirs = "$(DESTDIR)$(libdir)" \
-	"$(DESTDIR)$(libwpd_0_8_includedir)" \
-	"$(DESTDIR)$(libwpd_stream_0_8_includedir)"
+	"$(DESTDIR)$(libwps_0_1_includedir)" \
+	"$(DESTDIR)$(libwps_stream_0_1_includedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
-am_libwpd_0_8_la_OBJECTS = libwpd_internal.lo libwpd_math.lo WPS4.lo \
-	WPS8.lo WPDocument.lo WPXContentListener.lo WPXHeader.lo \
+am_libwps_0_1_la_OBJECTS = libwpd_internal.lo libwpd_math.lo WPS4.lo \
+	WPS8.lo WPSDocument.lo WPXContentListener.lo WPXHeader.lo \
 	WPXListener.lo WPXMemoryStream.lo WPXPageSpan.lo WPXParser.lo \
-	WPXPart.lo WPXProperty.lo WPXPropertyList.lo \
-	WPXPropertyListVector.lo WPXString.lo WPXStylesListener.lo \
-	WPXSubDocument.lo WPXTable.lo
-libwpd_0_8_la_OBJECTS = $(am_libwpd_0_8_la_OBJECTS)
+	WPXPart.lo WPXString.lo WPXStylesListener.lo WPXSubDocument.lo \
+	WPXTable.lo
+libwps_0_1_la_OBJECTS = $(am_libwps_0_1_la_OBJECTS)
 am__DEPENDENCIES_1 =
-am__libwpd_stream_0_8_la_SOURCES_DIST = GSFStream.cpp
 am__objects_1 = GSFStream.lo
-@WITH_LIBWPD_STREAM_TRUE@am_libwpd_stream_0_8_la_OBJECTS =  \
-@WITH_LIBWPD_STREAM_TRUE@	$(am__objects_1)
-libwpd_stream_0_8_la_OBJECTS = $(am_libwpd_stream_0_8_la_OBJECTS)
-@WITH_LIBWPD_STREAM_TRUE@am_libwpd_stream_0_8_la_rpath = -rpath \
-@WITH_LIBWPD_STREAM_TRUE@	$(libdir)
+am_libwps_stream_0_1_la_OBJECTS = $(am__objects_1)
+libwps_stream_0_1_la_OBJECTS = $(am_libwps_stream_0_1_la_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -94,14 +89,13 @@ LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libwpd_0_8_la_SOURCES) $(libwpd_stream_0_8_la_SOURCES)
-DIST_SOURCES = $(libwpd_0_8_la_SOURCES) \
-	$(am__libwpd_stream_0_8_la_SOURCES_DIST)
-libwpd_0_8_includeHEADERS_INSTALL = $(INSTALL_HEADER)
-am__libwpd_stream_0_8_include_HEADERS_DIST = GSFStream.h
-libwpd_stream_0_8_includeHEADERS_INSTALL = $(INSTALL_HEADER)
-HEADERS = $(libwpd_0_8_include_HEADERS) \
-	$(libwpd_stream_0_8_include_HEADERS)
+SOURCES = $(libwps_0_1_la_SOURCES) $(libwps_stream_0_1_la_SOURCES)
+DIST_SOURCES = $(libwps_0_1_la_SOURCES) \
+	$(libwps_stream_0_1_la_SOURCES)
+libwps_0_1_includeHEADERS_INSTALL = $(INSTALL_HEADER)
+libwps_stream_0_1_includeHEADERS_INSTALL = $(INSTALL_HEADER)
+HEADERS = $(libwps_0_1_include_HEADERS) \
+	$(libwps_stream_0_1_include_HEADERS)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -146,11 +140,11 @@ LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
-LIBWPD_CFLAGS = @LIBWPD_CFLAGS@
-LIBWPD_CXXFLAGS = @LIBWPD_CXXFLAGS@
-LIBWPD_LIBS = @LIBWPD_LIBS@
-LIBWPD_STREAM_WIN32_RESOURCE = @LIBWPD_STREAM_WIN32_RESOURCE@
-LIBWPD_WIN32_RESOURCE = @LIBWPD_WIN32_RESOURCE@
+LIBWPS_CFLAGS = @LIBWPS_CFLAGS@
+LIBWPS_CXXFLAGS = @LIBWPS_CXXFLAGS@
+LIBWPS_LIBS = @LIBWPS_LIBS@
+LIBWPS_STREAM_WIN32_RESOURCE = @LIBWPS_STREAM_WIN32_RESOURCE@
+LIBWPS_WIN32_RESOURCE = @LIBWPS_WIN32_RESOURCE@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_AGE = @LT_AGE@
@@ -179,17 +173,15 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
-WITH_LIBWPD_DOCS_FALSE = @WITH_LIBWPD_DOCS_FALSE@
-WITH_LIBWPD_DOCS_TRUE = @WITH_LIBWPD_DOCS_TRUE@
-WITH_LIBWPD_STREAM_FALSE = @WITH_LIBWPD_STREAM_FALSE@
-WITH_LIBWPD_STREAM_TRUE = @WITH_LIBWPD_STREAM_TRUE@
+WITH_LIBWPS_DOCS_FALSE = @WITH_LIBWPS_DOCS_FALSE@
+WITH_LIBWPS_DOCS_TRUE = @WITH_LIBWPS_DOCS_TRUE@
 WPD2HTML_WIN32_RESOURCE = @WPD2HTML_WIN32_RESOURCE@
 WPD2RAW_WIN32_RESOURCE = @WPD2RAW_WIN32_RESOURCE@
 WPD2TEXT_WIN32_RESOURCE = @WPD2TEXT_WIN32_RESOURCE@
-WPD_MAJOR_VERSION = @WPD_MAJOR_VERSION@
-WPD_MICRO_VERSION = @WPD_MICRO_VERSION@
-WPD_MINOR_VERSION = @WPD_MINOR_VERSION@
-WPD_VERSION = @WPD_VERSION@
+WPS_MAJOR_VERSION = @WPS_MAJOR_VERSION@
+WPS_MICRO_VERSION = @WPS_MICRO_VERSION@
+WPS_MINOR_VERSION = @WPS_MINOR_VERSION@
+WPS_VERSION = @WPS_VERSION@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_AS = @ac_ct_AS@
 ac_ct_CC = @ac_ct_CC@
@@ -243,24 +235,23 @@ target_alias = @target_alias@
 @PLATFORM_WIN32_TRUE@no_undefined = -no-undefined
 @OS_WIN32_FALSE@version_info = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 @OS_WIN32_TRUE@version_info = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) -avoid-version
-@WITH_LIBWPD_STREAM_FALSE@target_libwpd_stream = 
-@WITH_LIBWPD_STREAM_TRUE@target_libwpd_stream = libwpd-stream-0.8.la
-lib_LTLIBRARIES = libwpd-0.8.la $(target_libwpd_stream)
-libwpd_0_8_includedir = $(includedir)/libwpd-0.8/libwpd
-libwpd_0_8_include_HEADERS = libwpd.h libwpd_types.h WPXStream.h WPXProperty.h WPXPropertyList.h \
-WPXString.h WPXPropertyListVector.h WPDocument.h WPXHLListenerImpl.h
+target_libwps_stream = libwps-stream-0.1.la
+lib_LTLIBRARIES = libwps-0.1.la $(target_libwps_stream)
+libwps_0_1_includedir = $(includedir)/libwps-0.8/libwps
+libwps_0_1_include_HEADERS = libwps.h libwpd_types.h WPXStream.h  \
+WPSDocument.h
 
 INCLUDES = -I$(srcdir)
-AM_CXXFLAGS = $(LIBWPD_CXXFLAGS) $(DEBUG_CXXFLAGS)
-libwpd_0_8_la_LIBADD = @LIBWPD_WIN32_RESOURCE@
-libwpd_0_8_la_DEPENDENCIES = @LIBWPD_WIN32_RESOURCE@
-libwpd_0_8_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
-libwpd_0_8_la_SOURCES = \
+AM_CXXFLAGS = $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS)
+libwps_0_1_la_LIBADD = @LIBWPS_WIN32_RESOURCE@
+libwps_0_1_la_DEPENDENCIES = @LIBWPS_WIN32_RESOURCE@
+libwps_0_1_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
+libwps_0_1_la_SOURCES = \
 	libwpd_internal.cpp \
 	libwpd_math.cpp \
 	WPS4.cpp \
 	WPS8.cpp \
-	WPDocument.cpp \
+	WPSDocument.cpp \
 	WPXContentListener.cpp \
 	WPXHeader.cpp \
 	WPXListener.cpp \
@@ -268,48 +259,41 @@ libwpd_0_8_la_SOURCES = \
 	WPXPageSpan.cpp \
 	WPXParser.cpp \
 	WPXPart.cpp \
-	WPXProperty.cpp \
-	WPXPropertyList.cpp \
-	WPXPropertyListVector.cpp \
 	WPXString.cpp \
 	WPXStylesListener.cpp \
 	WPXSubDocument.cpp \
 	WPXTable.cpp \
-	libwpd.h \
+	libwps.h \
 	libwpd_internal.h \
 	libwpd_math.h \
 	libwpd_types.h \
-	WPDocument.h \
+	WPSDocument.h \
 	WPXContentListener.h \
 	WPXHeader.h \
 	WPXFileStructure.h \
-	WPXHLListenerImpl.h \
 	WPXListener.h \
 	WPXMemoryStream.h \
 	WPXPageSpan.h \
 	WPXParser.h \
 	WPXPart.h \
-	WPXProperty.h \
-	WPXPropertyList.h \
-	WPXPropertyListVector.h \
 	WPXString.h \
 	WPXStylesListener.h \
 	WPXSubDocument.h \
 	WPXTable.h
 
-libwpd_stream_headers = GSFStream.h
-libwpd_stream_sources = GSFStream.cpp
-@WITH_LIBWPD_STREAM_TRUE@libwpd_stream_0_8_includedir = $(includedir)/libwpd-0.8/libwpd
-@WITH_LIBWPD_STREAM_TRUE@libwpd_stream_0_8_include_HEADERS = $(libwpd_stream_headers)
-@WITH_LIBWPD_STREAM_TRUE@libwpd_stream_0_8_la_LIBADD = $(LIBWPD_LIBS) @LIBWPD_STREAM_WIN32_RESOURCE@
-@WITH_LIBWPD_STREAM_TRUE@libwpd_stream_0_8_la_DEPENDENCIES = @LIBWPD_STREAM_WIN32_RESOURCE@
-@WITH_LIBWPD_STREAM_TRUE@libwpd_stream_0_8_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
-@WITH_LIBWPD_STREAM_TRUE@libwpd_stream_0_8_la_SOURCES = $(libwpd_stream_sources)
+libwps_stream_headers = GSFStream.h
+libwps_stream_sources = GSFStream.cpp
+libwps_stream_0_1_includedir = $(includedir)/libwps-0.8/libwps
+libwps_stream_0_1_include_HEADERS = $(libwps_stream_headers)
+libwps_stream_0_1_la_LIBADD = $(LIBWPS_LIBS) @LIBWPS_STREAM_WIN32_RESOURCE@
+libwps_stream_0_1_la_DEPENDENCIES = @LIBWPS_STREAM_WIN32_RESOURCE@
+libwps_stream_0_1_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
+libwps_stream_0_1_la_SOURCES = $(libwps_stream_sources)
 
 # Include the GSFStream.* in case we build a tarball without stream
 EXTRA_DIST = \
-	$(libwpd_stream_sources) \
-	$(libwpd_stream_headers) \
+	$(libwps_stream_sources) \
+	$(libwps_stream_headers) \
 	makefile.mk \
 	libwpd.rc.in \
 	libwpd-stream.rc.in
@@ -333,9 +317,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  src/lib/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  src/lib/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  src/lib/Makefile
+	  $(AUTOMAKE) --foreign  src/lib/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -384,10 +368,10 @@ clean-libLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libwpd-0.8.la: $(libwpd_0_8_la_OBJECTS) $(libwpd_0_8_la_DEPENDENCIES) 
-	$(CXXLINK) -rpath $(libdir) $(libwpd_0_8_la_LDFLAGS) $(libwpd_0_8_la_OBJECTS) $(libwpd_0_8_la_LIBADD) $(LIBS)
-libwpd-stream-0.8.la: $(libwpd_stream_0_8_la_OBJECTS) $(libwpd_stream_0_8_la_DEPENDENCIES) 
-	$(CXXLINK) $(am_libwpd_stream_0_8_la_rpath) $(libwpd_stream_0_8_la_LDFLAGS) $(libwpd_stream_0_8_la_OBJECTS) $(libwpd_stream_0_8_la_LIBADD) $(LIBS)
+libwps-0.1.la: $(libwps_0_1_la_OBJECTS) $(libwps_0_1_la_DEPENDENCIES) 
+	$(CXXLINK) -rpath $(libdir) $(libwps_0_1_la_LDFLAGS) $(libwps_0_1_la_OBJECTS) $(libwps_0_1_la_LIBADD) $(LIBS)
+libwps-stream-0.1.la: $(libwps_stream_0_1_la_OBJECTS) $(libwps_stream_0_1_la_DEPENDENCIES) 
+	$(CXXLINK) -rpath $(libdir) $(libwps_stream_0_1_la_LDFLAGS) $(libwps_stream_0_1_la_OBJECTS) $(libwps_stream_0_1_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -396,9 +380,9 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GSFStream.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPDocument.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPS4.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPS8.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPSDocument.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXContentListener.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXHeader.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXListener.Plo@am__quote@
@@ -406,9 +390,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXPageSpan.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXParser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXPart.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXProperty.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXPropertyList.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXPropertyListVector.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXString.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXStylesListener.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPXSubDocument.Plo@am__quote@
@@ -446,39 +427,39 @@ clean-libtool:
 distclean-libtool:
 	-rm -f libtool
 uninstall-info-am:
-install-libwpd_0_8_includeHEADERS: $(libwpd_0_8_include_HEADERS)
+install-libwps_0_1_includeHEADERS: $(libwps_0_1_include_HEADERS)
 	@$(NORMAL_INSTALL)
-	test -z "$(libwpd_0_8_includedir)" || $(mkdir_p) "$(DESTDIR)$(libwpd_0_8_includedir)"
-	@list='$(libwpd_0_8_include_HEADERS)'; for p in $$list; do \
+	test -z "$(libwps_0_1_includedir)" || $(mkdir_p) "$(DESTDIR)$(libwps_0_1_includedir)"
+	@list='$(libwps_0_1_include_HEADERS)'; for p in $$list; do \
 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
 	  f=$(am__strip_dir) \
-	  echo " $(libwpd_0_8_includeHEADERS_INSTALL) '$$d$$p' '$(DESTDIR)$(libwpd_0_8_includedir)/$$f'"; \
-	  $(libwpd_0_8_includeHEADERS_INSTALL) "$$d$$p" "$(DESTDIR)$(libwpd_0_8_includedir)/$$f"; \
+	  echo " $(libwps_0_1_includeHEADERS_INSTALL) '$$d$$p' '$(DESTDIR)$(libwps_0_1_includedir)/$$f'"; \
+	  $(libwps_0_1_includeHEADERS_INSTALL) "$$d$$p" "$(DESTDIR)$(libwps_0_1_includedir)/$$f"; \
 	done
 
-uninstall-libwpd_0_8_includeHEADERS:
+uninstall-libwps_0_1_includeHEADERS:
 	@$(NORMAL_UNINSTALL)
-	@list='$(libwpd_0_8_include_HEADERS)'; for p in $$list; do \
+	@list='$(libwps_0_1_include_HEADERS)'; for p in $$list; do \
 	  f=$(am__strip_dir) \
-	  echo " rm -f '$(DESTDIR)$(libwpd_0_8_includedir)/$$f'"; \
-	  rm -f "$(DESTDIR)$(libwpd_0_8_includedir)/$$f"; \
+	  echo " rm -f '$(DESTDIR)$(libwps_0_1_includedir)/$$f'"; \
+	  rm -f "$(DESTDIR)$(libwps_0_1_includedir)/$$f"; \
 	done
-install-libwpd_stream_0_8_includeHEADERS: $(libwpd_stream_0_8_include_HEADERS)
+install-libwps_stream_0_1_includeHEADERS: $(libwps_stream_0_1_include_HEADERS)
 	@$(NORMAL_INSTALL)
-	test -z "$(libwpd_stream_0_8_includedir)" || $(mkdir_p) "$(DESTDIR)$(libwpd_stream_0_8_includedir)"
-	@list='$(libwpd_stream_0_8_include_HEADERS)'; for p in $$list; do \
+	test -z "$(libwps_stream_0_1_includedir)" || $(mkdir_p) "$(DESTDIR)$(libwps_stream_0_1_includedir)"
+	@list='$(libwps_stream_0_1_include_HEADERS)'; for p in $$list; do \
 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
 	  f=$(am__strip_dir) \
-	  echo " $(libwpd_stream_0_8_includeHEADERS_INSTALL) '$$d$$p' '$(DESTDIR)$(libwpd_stream_0_8_includedir)/$$f'"; \
-	  $(libwpd_stream_0_8_includeHEADERS_INSTALL) "$$d$$p" "$(DESTDIR)$(libwpd_stream_0_8_includedir)/$$f"; \
+	  echo " $(libwps_stream_0_1_includeHEADERS_INSTALL) '$$d$$p' '$(DESTDIR)$(libwps_stream_0_1_includedir)/$$f'"; \
+	  $(libwps_stream_0_1_includeHEADERS_INSTALL) "$$d$$p" "$(DESTDIR)$(libwps_stream_0_1_includedir)/$$f"; \
 	done
 
-uninstall-libwpd_stream_0_8_includeHEADERS:
+uninstall-libwps_stream_0_1_includeHEADERS:
 	@$(NORMAL_UNINSTALL)
-	@list='$(libwpd_stream_0_8_include_HEADERS)'; for p in $$list; do \
+	@list='$(libwps_stream_0_1_include_HEADERS)'; for p in $$list; do \
 	  f=$(am__strip_dir) \
-	  echo " rm -f '$(DESTDIR)$(libwpd_stream_0_8_includedir)/$$f'"; \
-	  rm -f "$(DESTDIR)$(libwpd_stream_0_8_includedir)/$$f"; \
+	  echo " rm -f '$(DESTDIR)$(libwps_stream_0_1_includedir)/$$f'"; \
+	  rm -f "$(DESTDIR)$(libwps_stream_0_1_includedir)/$$f"; \
 	done
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
@@ -560,7 +541,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LTLIBRARIES) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(libwpd_0_8_includedir)" "$(DESTDIR)$(libwpd_stream_0_8_includedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(libwps_0_1_includedir)" "$(DESTDIR)$(libwps_stream_0_1_includedir)"; do \
 	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
 	done
 install: install-am
@@ -608,8 +589,8 @@ info: info-am
 
 info-am:
 
-install-data-am: install-data-local install-libwpd_0_8_includeHEADERS \
-	install-libwpd_stream_0_8_includeHEADERS
+install-data-am: install-data-local install-libwps_0_1_includeHEADERS \
+	install-libwps_stream_0_1_includeHEADERS
 
 install-exec-am: install-libLTLIBRARIES
 
@@ -638,8 +619,8 @@ ps: ps-am
 ps-am:
 
 uninstall-am: uninstall-info-am uninstall-libLTLIBRARIES \
-	uninstall-libwpd_0_8_includeHEADERS \
-	uninstall-libwpd_stream_0_8_includeHEADERS uninstall-local
+	uninstall-libwps_0_1_includeHEADERS \
+	uninstall-libwps_stream_0_1_includeHEADERS uninstall-local
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
 	clean-libLTLIBRARIES clean-libtool ctags distclean \
@@ -648,30 +629,30 @@ uninstall-am: uninstall-info-am uninstall-libLTLIBRARIES \
 	install install-am install-data install-data-am \
 	install-data-local install-exec install-exec-am install-info \
 	install-info-am install-libLTLIBRARIES \
-	install-libwpd_0_8_includeHEADERS \
-	install-libwpd_stream_0_8_includeHEADERS install-man \
+	install-libwps_0_1_includeHEADERS \
+	install-libwps_stream_0_1_includeHEADERS install-man \
 	install-strip installcheck installcheck-am installdirs \
 	maintainer-clean maintainer-clean-generic mostlyclean \
 	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
 	pdf pdf-am ps ps-am tags uninstall uninstall-am \
 	uninstall-info-am uninstall-libLTLIBRARIES \
-	uninstall-libwpd_0_8_includeHEADERS \
-	uninstall-libwpd_stream_0_8_includeHEADERS uninstall-local
+	uninstall-libwps_0_1_includeHEADERS \
+	uninstall-libwps_stream_0_1_includeHEADERS uninstall-local
 
 
 @OS_WIN32_TRUE@install-libtool-import-lib:
-@OS_WIN32_TRUE@	$(INSTALL) .libs/libwpd*-0.8.dll.a $(DESTDIR)$(libdir)
+@OS_WIN32_TRUE@	$(INSTALL) .libs/libwps*-0.1.dll.a $(DESTDIR)$(libdir)
 
 @OS_WIN32_TRUE@uninstall-libtool-import-lib:
-@OS_WIN32_TRUE@	-rm $(DESTDIR)$(libdir)/libwpd*-0.8.dll.a
+@OS_WIN32_TRUE@	-rm $(DESTDIR)$(libdir)/libwps*-0.8.dll.a
 @OS_WIN32_FALSE@install-libtool-import-lib:
 @OS_WIN32_FALSE@uninstall-libtool-import-lib:
 
-@OS_WIN32_TRUE@@LIBWPD_WIN32_RESOURCE@ : libwpd.rc
-@OS_WIN32_TRUE@	$(top_srcdir)/build/win32/lt-compile-resource libwpd.rc @LIBWPD_WIN32_RESOURCE@
+@OS_WIN32_TRUE@@LIBWPS_WIN32_RESOURCE@ : libwpd.rc
+@OS_WIN32_TRUE@	$(top_srcdir)/build/win32/lt-compile-resource libwpd.rc @LIBWPS_WIN32_RESOURCE@
 
-@OS_WIN32_TRUE@@LIBWPD_STREAM_WIN32_RESOURCE@ : libwpd-stream.rc
-@OS_WIN32_TRUE@	$(top_srcdir)/build/win32/lt-compile-resource libwpd-stream.rc @LIBWPD_STREAM_WIN32_RESOURCE@
+@OS_WIN32_TRUE@@LIBWPS_STREAM_WIN32_RESOURCE@ : libwpd-stream.rc
+@OS_WIN32_TRUE@	$(top_srcdir)/build/win32/lt-compile-resource libwpd-stream.rc @LIBWPS_STREAM_WIN32_RESOURCE@
 
 install-data-local: install-libtool-import-lib
 

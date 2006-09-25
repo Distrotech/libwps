@@ -1,38 +1,37 @@
-%define name libwpd
+%define name libwps
 %define version @VERSION@
 %define  RELEASE 1
 %define  release     %{?CUSTOM_RELEASE} %{!?CUSTOM_RELEASE:%RELEASE}
 
 Name: %{name}
-Summary: Library for reading and converting WordPerfect(tm) documents.
+Summary: Library for reading and converting Microsoft Works documents
 Version: %{version}
 Release: %{release}
 Source: %{name}-%{version}.tar.gz
 Group: System Environment/Libraries
-URL: http://libwpd.sf.net/
+URL: http://libwps.sourceforge.net/
 BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
 License: LGPL
-Requires: glib2 >= 2.0.0, libgsf >= 1.6.0
-BuildRequires: glib2-devel >= 2.0.0, libgsf-devel >= 1.6.0
+Requires: glib2 >= 2.0.0, libgsf >= 1.6.0, libwpd >= 0.8
+BuildRequires: glib2-devel >= 2.0.0, libgsf-devel >= 1.6.0, libwpd-devel >= 0.8
 
 %description
-Library that handles Word Perfect documents.
+Library that handles Microsoft Works documents.
 
 %if %{!?_without_stream:1}%{?_without_stream:0}
 %package tools
-Requires: libwpd
-Summary: Tools to transform WordPerfect Documents into other formats
+Requires: %{name} = %{version}-%{release}
+Summary: Tools to transform Works documents into other formats
 Group: Applications/Publishing
 
 %description tools
-Tools to transform WordPerfect Documents into other formats.
+Tools to transform Works documents into other formats.
 Currently supported: html, raw, text
 %endif
 
 %package devel
-Requires: libwpd = %{version}-%{release}
-Requires: glib2-devel >= 2.0.0, libgsf-devel >= 1.6.0
-Summary: Files for developing with libwpd.
+Requires: %{name} = %{version}-%{release}
+Summary: Files for developing with libwps.
 Group: Development/Libraries
 
 %description devel
@@ -40,12 +39,12 @@ Includes and definitions for developing with libwpd.
 
 %if %{!?_without_docs:1}%{?_without_docs:0}
 %package docs
-Requires: libwpd
-Summary: Documentation of libwpd API
+Requires: %{name}
+Summary: Documentation of libwps API
 Group: Development/Documentation
 
 %description docs
-Documentation of libwpd API for developing with libwpd
+Documentation of libwps API for developing with libwps
 %endif
 
 %prep
@@ -71,7 +70,7 @@ umask 022
 
 %files
 %defattr(644,root,root,755)
-%{_libdir}/libwpd*-@WPD_MAJOR_VERSION@.@WPD_MINOR_VERSION@.so.*
+%{_libdir}/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.so.*
 
 %if %{!?_without_stream:1}%{?_without_stream:0}
 %files tools
@@ -81,17 +80,20 @@ umask 022
 
 %files devel
 %defattr(644,root,root,755)
-%{_libdir}/libwpd*-@WPD_MAJOR_VERSION@.@WPD_MINOR_VERSION@.so
-%{_libdir}/libwpd*-@WPD_MAJOR_VERSION@.@WPD_MINOR_VERSION@.*a
-%{_libdir}/pkgconfig/libwpd*-@WPD_MAJOR_VERSION@.@WPD_MINOR_VERSION@.pc
-%{_includedir}/libwpd-@WPD_MAJOR_VERSION@.@WPD_MINOR_VERSION@/libwpd
+%{_libdir}/libwpd*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.so
+%{_libdir}/libwpd*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.*a
+%{_libdir}/pkgconfig/libwpd*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
+%{_includedir}/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@/libwps
 
 %if %{!?_without_docs:1}%{?_without_docs:0}
 %files docs
-%{_datadir}/doc/libwpd-@WPD_VERSION@/*
+%{_datadir}/doc/libwps-@WPS_VERSION@/*
 %endif
 
 %changelog
+* Sun Sep 24 2006 Andrew Ziem <andrewziem users sourceforge net>
+- wpd to wps
+
 * Fri Jan 28 2005 Fridrich Strba <fridrich.strba@bluewin.ch>
 - Adapt to the new libwpd-X.Y and libwpd-stream-X.Y modules
 

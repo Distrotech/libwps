@@ -129,7 +129,6 @@ static const uint16_t asciiMap[] =
 	248, 249, 250, 251, 252, 253, 254, 255,
 };
 
-#include "WPXFileStructure.h"
 #include "libwpd_math.h"
 
 uint16_t fixedPointToWPUs(const uint32_t fixedPointNumber)

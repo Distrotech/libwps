@@ -2,15 +2,15 @@ SUBDIRS = doxygen
 
 EXTRA_DIST = libwpd.dia libwpd.png
 
-if WITH_LIBWPD_DOCS
+if WITH_LIBWPS_DOCS
 
 install-data-am:
-	mkdir -p $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@
-	$(INSTALL) $(srcdir)/libwpd.dia $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
-	$(INSTALL) $(srcdir)/libwpd.png $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
+	mkdir -p $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@
+	$(INSTALL) $(srcdir)/libwpd.dia $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+	$(INSTALL) $(srcdir)/libwpd.png $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
 
 uninstall-am:
-	-rm -f $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/libwpd.dia
-	-rm -f $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/libwpd.png
+	-rm -f $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/libwpd.dia
+	-rm -f $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/libwpd.png
 
 endif

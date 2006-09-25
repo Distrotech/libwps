@@ -25,7 +25,7 @@
 #include "WPXContentListener.h"
 #include "WPXPageSpan.h"
 #include "libwpd_internal.h"
-#include "WPXProperty.h"
+#include <libwpd/WPXProperty.h>
 #ifdef _MSC_VER
 #include <minmax.h>
 #define LIBWPD_MIN min

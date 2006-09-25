@@ -1,6 +1,7 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2003 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003-2004 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2006 Andrew Ziem (andrewziem users sourceforge net)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -16,42 +17,39 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by
- * Corel Corporation or Corel Corporation Limited."
- */
 
 #include <stdlib.h>
 #include <string.h>
-#include "WPDocument.h"
+#include "WPSDocument.h"
+#include "WPS4.h"
+#include "WPS8.h"
 #include "WPXHeader.h"
 #include "WPXStream.h"
 #include "WPXParser.h"
-#include "WPS4.h"
-#include "WPS8.h"
 #include "libwpd_internal.h"
 
 /**
-\mainpage libwpd documentation
-This document contains both the libwpd API specification and the normal libwpd
+\mainpage libwps documentation
+This document contains both the libwps API specification and the normal libwps
 documentation.
-\section api_docs libwpd API documentation
-The external libwpd API is provided by the WPDocument class. This class, combined
+\section api_docs libwps API documentation
+The external libwps API is provided by the WPSDocument class. This class, combined
 with the WPXHLListenerImpl class, are the only two classes that will be of interest
-for the application programmer using libwpd.
-\section lib_docs libwpd documentation
-If you are interrested in the structure of libwpd itself, this whole document
-would be a good starting point for exploring the interals of libwpd. Mind that
-this document is a work-in-progress, and will most likely not cover libwpd for
+for the application programmer using libwps.
+\section lib_docs libwps documentation
+If you are interrested in the structure of libwps itself, this whole document
+would be a good starting point for exploring the interals of libwps. Mind that
+this document is a work-in-progress, and will most likely not cover libwps for
 the full 100%.
 */
 
 /**
 Check for Microsoft Works support.
 **/
-WPDConfidence WPDocument::isFileFormatSupportedWPS(WPXInputStream *input, bool partialContent)
+WPDConfidence WPSDocument::isFileFormatSupportedWPS(WPXInputStream *input, bool partialContent)
 {
 	WPXInputStream * document_mn0 = input->getDocumentOLEStream("MN0");	
 	
@@ -103,11 +101,11 @@ represents the full contents of a WordPerfect file, or just the first X bytes
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-WPDConfidence WPDocument::isFileFormatSupported(WPXInputStream *input, bool partialContent)
+WPDConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input, bool partialContent)
 {
 	WPDConfidence confidence = WPD_CONFIDENCE_NONE;
 
-	WPD_DEBUG_MSG(("WPDocument::isFileFormatSupported()\n"));
+	WPD_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
 	
 	confidence = isFileFormatSupportedWPS(input, partialContent);
 
@@ -118,7 +116,7 @@ WPDConfidence WPDocument::isFileFormatSupported(WPXInputStream *input, bool part
 /**
 Parse a Works document.
 */
-WPDResult WPDocument::parseWPS(WPXInputStream *input, WPXHLListenerImpl *listenerImpl)
+WPDResult WPSDocument::parseWPS(WPXInputStream *input, WPXHLListenerImpl *listenerImpl)
 {
 	WPDResult error = WPD_OK;
 
@@ -172,7 +170,7 @@ WPXHLListenerImpl class implementation when needed. This is often commonly calle
 \param input The input stream
 \param listenerImpl A WPXListener implementation
 */
-WPDResult WPDocument::parse(WPXInputStream *input, WPXHLListenerImpl *listenerImpl)
+WPDResult WPSDocument::parse(WPXInputStream *input, WPXHLListenerImpl *listenerImpl)
 {
 	WPDResult error = parseWPS(input, listenerImpl);
 	

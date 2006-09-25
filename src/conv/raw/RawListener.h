@@ -25,7 +25,7 @@
 
 #ifndef RAWLISTENERIMPL_H
 #define RAWLISTENERIMPL_H
-#include "WPXHLListenerImpl.h"
+#include <libwpd/WPXHLListenerImpl.h>
 #include <stack>
 
 using namespace std;

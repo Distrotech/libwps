@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2002-2003 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002-2004 Marc Maurer (uwog@uwog.net)
  *  
@@ -16,18 +16,14 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by 
- * Corel Corporation or Corel Corporation Limited."
- */
- 
 #include <gsf/gsf-utils.h>
 #include <gsf/gsf-input-stdio.h>
 #include <stdio.h>
 #include <string.h>
-#include "libwpd.h"
+#include "libwps.h"
 #include "GSFStream.h"
 #include "TextListenerImpl.h"
 
@@ -69,7 +65,7 @@ int main(int argc, char *argv[])
 
 	GSFInputStream *gsfInput = new GSFInputStream(input);
 
-	WPDConfidence confidence = WPDocument::isFileFormatSupported(gsfInput, false);
+	WPDConfidence confidence = WPSDocument::isFileFormatSupported(gsfInput, false);
 	if (confidence == WPD_CONFIDENCE_NONE || confidence == WPD_CONFIDENCE_POOR)
 	{
 		printf("ERROR: Unsupported file format!\n");
@@ -78,7 +74,7 @@ int main(int argc, char *argv[])
 	}
 	
 	TextListenerImpl listenerImpl(isInfo);
- 	WPDResult error = WPDocument::parse(gsfInput, static_cast<WPXHLListenerImpl *>(&listenerImpl));
+ 	WPDResult error = WPSDocument::parse(gsfInput, static_cast<WPXHLListenerImpl *>(&listenerImpl));
 
 	if (error == WPD_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");

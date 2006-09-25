@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
  *  
@@ -16,15 +16,12 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by 
- * Corel Corporation or Corel Corporation Limited."
- */
 
-#ifndef WPDOCUMENT_H
-#define WPDOCUMENT_H
+#ifndef WPSDOCUMENT_H
+#define WPSDOCUMENT_H
 
 #include "WPXStream.h"
 
@@ -35,10 +32,10 @@ class WPXHLListenerImpl;
 
 /**
 This class provides all the functions an application would need to parse 
-WordPerfect documents.
+Works documents.
 */
 
-class WPDocument
+class WPSDocument
 {
 public:
 	static WPDConfidence isFileFormatSupported(WPXInputStream *input, bool partialContent);
@@ -46,11 +43,9 @@ public:
 	//static void parse(WPXInputStream *input, WPXHLListenerImpl *listenerImpl, WPXFileType fileType);
 	//WPXFileType getFileType(WPXInputStream *input)
 private:
-	static WPDConfidence isFileFormatSupportedWPD(WPXInputStream *input, bool partialContent);
 	static WPDConfidence isFileFormatSupportedWPS(WPXInputStream *input, bool partialContent);
-	static WPDResult parseWPD(WPXInputStream *input, WPXHLListenerImpl *listenerImpl);	
 	static WPDResult parseWPS(WPXInputStream *input, WPXHLListenerImpl *listenerImpl);	
 	
 };
 
-#endif /* WPDOCUMENT_H */
+#endif /* WPSDOCUMENT_H */

@@ -3,8 +3,9 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libwpd-0.8
-Description: A library for reading and writing Corel WordPerfect(tm) documents
+Name: libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
+Description: A library for reading Microsoft Works documents
 Version: @VERSION@
-Libs: -L${libdir} -lwpd-0.8
-Cflags: -I${includedir}/libwpd-0.8
+Libs: -L${libdir} -lwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
+Cflags: -I${includedir}/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
+

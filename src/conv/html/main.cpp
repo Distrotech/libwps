@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include "HtmlListenerImpl.h"
 #include "GSFStream.h"
-#include "WPDocument.h"
+#include "WPSDocument.h"
 
 int main(int argc, char *argv[])
 {
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 	
 	GSFInputStream *gsfInput = new GSFInputStream(input);
 
-	WPDConfidence confidence = WPDocument::isFileFormatSupported(gsfInput, false);
+	WPDConfidence confidence = WPSDocument::isFileFormatSupported(gsfInput, false);
 	if (confidence == WPD_CONFIDENCE_NONE || confidence == WPD_CONFIDENCE_POOR)
 	{
 		printf("ERROR: Unsupported file format!\n");
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	}
 
 	HtmlListenerImpl listenerImpl;
- 	WPDResult error = WPDocument::parse(gsfInput, static_cast<WPXHLListenerImpl *>(&listenerImpl));
+ 	WPDResult error = WPSDocument::parse(gsfInput, static_cast<WPXHLListenerImpl *>(&listenerImpl));
 
 	if (error == WPD_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");

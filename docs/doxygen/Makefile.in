@@ -88,11 +88,11 @@ LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
-LIBWPD_CFLAGS = @LIBWPD_CFLAGS@
-LIBWPD_CXXFLAGS = @LIBWPD_CXXFLAGS@
-LIBWPD_LIBS = @LIBWPD_LIBS@
-LIBWPD_STREAM_WIN32_RESOURCE = @LIBWPD_STREAM_WIN32_RESOURCE@
-LIBWPD_WIN32_RESOURCE = @LIBWPD_WIN32_RESOURCE@
+LIBWPS_CFLAGS = @LIBWPS_CFLAGS@
+LIBWPS_CXXFLAGS = @LIBWPS_CXXFLAGS@
+LIBWPS_LIBS = @LIBWPS_LIBS@
+LIBWPS_STREAM_WIN32_RESOURCE = @LIBWPS_STREAM_WIN32_RESOURCE@
+LIBWPS_WIN32_RESOURCE = @LIBWPS_WIN32_RESOURCE@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_AGE = @LT_AGE@
@@ -121,17 +121,15 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
-WITH_LIBWPD_DOCS_FALSE = @WITH_LIBWPD_DOCS_FALSE@
-WITH_LIBWPD_DOCS_TRUE = @WITH_LIBWPD_DOCS_TRUE@
-WITH_LIBWPD_STREAM_FALSE = @WITH_LIBWPD_STREAM_FALSE@
-WITH_LIBWPD_STREAM_TRUE = @WITH_LIBWPD_STREAM_TRUE@
+WITH_LIBWPS_DOCS_FALSE = @WITH_LIBWPS_DOCS_FALSE@
+WITH_LIBWPS_DOCS_TRUE = @WITH_LIBWPS_DOCS_TRUE@
 WPD2HTML_WIN32_RESOURCE = @WPD2HTML_WIN32_RESOURCE@
 WPD2RAW_WIN32_RESOURCE = @WPD2RAW_WIN32_RESOURCE@
 WPD2TEXT_WIN32_RESOURCE = @WPD2TEXT_WIN32_RESOURCE@
-WPD_MAJOR_VERSION = @WPD_MAJOR_VERSION@
-WPD_MICRO_VERSION = @WPD_MICRO_VERSION@
-WPD_MINOR_VERSION = @WPD_MINOR_VERSION@
-WPD_VERSION = @WPD_VERSION@
+WPS_MAJOR_VERSION = @WPS_MAJOR_VERSION@
+WPS_MICRO_VERSION = @WPS_MICRO_VERSION@
+WPS_MINOR_VERSION = @WPS_MINOR_VERSION@
+WPS_VERSION = @WPS_VERSION@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_AS = @ac_ct_AS@
 ac_ct_CC = @ac_ct_CC@
@@ -196,9 +194,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  docs/doxygen/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  docs/doxygen/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  docs/doxygen/Makefile
+	  $(AUTOMAKE) --foreign  docs/doxygen/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -307,7 +305,7 @@ info: info-am
 
 info-am:
 
-@WITH_LIBWPD_DOCS_FALSE@install-data-am:
+@WITH_LIBWPS_DOCS_FALSE@install-data-am:
 
 install-exec-am:
 
@@ -333,7 +331,7 @@ ps: ps-am
 
 ps-am:
 
-@WITH_LIBWPD_DOCS_FALSE@uninstall-am: uninstall-info-am
+@WITH_LIBWPS_DOCS_FALSE@uninstall-am: uninstall-info-am
 
 .PHONY: all all-am check check-am clean clean-generic clean-libtool \
 	clean-local distclean distclean-generic distclean-libtool \
@@ -346,21 +344,21 @@ ps-am:
 	uninstall uninstall-am uninstall-info-am
 
 
-@WITH_LIBWPD_DOCS_TRUE@install-data-am:
-@WITH_LIBWPD_DOCS_TRUE@	mkdir -p $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/html
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) html/*.html $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/html/
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) html/*.png $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/html/
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) html/*.css $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/html/
+@WITH_LIBWPS_DOCS_TRUE@install-data-am:
+@WITH_LIBWPS_DOCS_TRUE@	mkdir -p $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/html
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) html/*.html $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/html/
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) html/*.png $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/html/
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) html/*.css $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/html/
 
-@WITH_LIBWPD_DOCS_TRUE@uninstall-am:
-@WITH_LIBWPD_DOCS_TRUE@	-rm -rf $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/html
+@WITH_LIBWPS_DOCS_TRUE@uninstall-am:
+@WITH_LIBWPS_DOCS_TRUE@	-rm -rf $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/html
 
-@WITH_LIBWPD_DOCS_TRUE@all:
-@WITH_LIBWPD_DOCS_TRUE@	test -f header.html.in || $(LN_S) $(srcdir)/header.html.in ./
-@WITH_LIBWPD_DOCS_TRUE@	test -f footer.html.in || $(LN_S) $(srcdir)/footer.html.in ./
-@WITH_LIBWPD_DOCS_TRUE@	doxygen $(srcdir)/doxygen.cfg
+@WITH_LIBWPS_DOCS_TRUE@all:
+@WITH_LIBWPS_DOCS_TRUE@	test -f header.html.in || $(LN_S) $(srcdir)/header.html.in ./
+@WITH_LIBWPS_DOCS_TRUE@	test -f footer.html.in || $(LN_S) $(srcdir)/footer.html.in ./
+@WITH_LIBWPS_DOCS_TRUE@	doxygen $(srcdir)/doxygen.cfg
 
-@WITH_LIBWPD_DOCS_FALSE@all:
+@WITH_LIBWPS_DOCS_FALSE@all:
 
 distclean-local: clean-local
 

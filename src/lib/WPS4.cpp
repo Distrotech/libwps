@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "WPS4.h"
-#include "WPDocument.h"
+#include "WPSDocument.h"
 #include "WPXHeader.h"
 #include "WPXStream.h"
 #include "libwpd_internal.h"

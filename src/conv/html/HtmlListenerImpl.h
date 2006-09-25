@@ -27,7 +27,7 @@
 #ifndef HTMLLISTENERIMPL_H
 #define HTMLLISTENERIMPL_H
 
-#include "WPXHLListenerImpl.h"
+#include <libwpd/WPXHLListenerImpl.h>
 
 class HtmlListenerImpl : public WPXHLListenerImpl
 {

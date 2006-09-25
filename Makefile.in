@@ -117,7 +117,6 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 F77 = @F77@
 FFLAGS = @FFLAGS@
-GREP = @GREP@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
@@ -126,11 +125,11 @@ LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
-LIBWPD_CFLAGS = @LIBWPD_CFLAGS@
-LIBWPD_CXXFLAGS = @LIBWPD_CXXFLAGS@
-LIBWPD_LIBS = @LIBWPD_LIBS@
-LIBWPD_STREAM_WIN32_RESOURCE = @LIBWPD_STREAM_WIN32_RESOURCE@
-LIBWPD_WIN32_RESOURCE = @LIBWPD_WIN32_RESOURCE@
+LIBWPS_CFLAGS = @LIBWPS_CFLAGS@
+LIBWPS_CXXFLAGS = @LIBWPS_CXXFLAGS@
+LIBWPS_LIBS = @LIBWPS_LIBS@
+LIBWPS_STREAM_WIN32_RESOURCE = @LIBWPS_STREAM_WIN32_RESOURCE@
+LIBWPS_WIN32_RESOURCE = @LIBWPS_WIN32_RESOURCE@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_AGE = @LT_AGE@
@@ -159,20 +158,26 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
-WITH_LIBWPD_DOCS_FALSE = @WITH_LIBWPD_DOCS_FALSE@
-WITH_LIBWPD_DOCS_TRUE = @WITH_LIBWPD_DOCS_TRUE@
-WITH_LIBWPD_STREAM_FALSE = @WITH_LIBWPD_STREAM_FALSE@
-WITH_LIBWPD_STREAM_TRUE = @WITH_LIBWPD_STREAM_TRUE@
+WITH_LIBWPS_DOCS_FALSE = @WITH_LIBWPS_DOCS_FALSE@
+WITH_LIBWPS_DOCS_TRUE = @WITH_LIBWPS_DOCS_TRUE@
 WPD2HTML_WIN32_RESOURCE = @WPD2HTML_WIN32_RESOURCE@
 WPD2RAW_WIN32_RESOURCE = @WPD2RAW_WIN32_RESOURCE@
 WPD2TEXT_WIN32_RESOURCE = @WPD2TEXT_WIN32_RESOURCE@
-WPD_MAJOR_VERSION = @WPD_MAJOR_VERSION@
-WPD_MICRO_VERSION = @WPD_MICRO_VERSION@
-WPD_MINOR_VERSION = @WPD_MINOR_VERSION@
-WPD_VERSION = @WPD_VERSION@
+WPS_MAJOR_VERSION = @WPS_MAJOR_VERSION@
+WPS_MICRO_VERSION = @WPS_MICRO_VERSION@
+WPS_MINOR_VERSION = @WPS_MINOR_VERSION@
+WPS_VERSION = @WPS_VERSION@
+ac_ct_AR = @ac_ct_AR@
+ac_ct_AS = @ac_ct_AS@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
+ac_ct_DLLTOOL = @ac_ct_DLLTOOL@
+ac_ct_DOXYGEN = @ac_ct_DOXYGEN@
 ac_ct_F77 = @ac_ct_F77@
+ac_ct_OBJDUMP = @ac_ct_OBJDUMP@
+ac_ct_RANLIB = @ac_ct_RANLIB@
+ac_ct_STRIP = @ac_ct_STRIP@
+ac_pt_PKG_CONFIG = @ac_pt_PKG_CONFIG@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
 am__fastdepCXX_FALSE = @am__fastdepCXX_FALSE@
@@ -189,36 +194,29 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 datadir = @datadir@
-datarootdir = @datarootdir@
-docdir = @docdir@
-dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
 host_os = @host_os@
 host_vendor = @host_vendor@
-htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
-localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
-pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
-psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 pkgconfdir = $(libdir)/pkgconfig
-@WITH_LIBWPD_STREAM_TRUE@LIBWPD_STREAM_PC = libwpd-stream-0.8.pc
+LIBWPD_STREAM_PC = libwpd-stream-0.8.pc
 pkgconf_DATA = libwpd-0.8.pc $(LIBWPD_STREAM_PC)
 SUBDIRS = src build docs autopackage
 EXTRA_DIST = \
@@ -631,8 +629,8 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-@WITH_LIBWPD_DOCS_FALSE@uninstall-local:
-@WITH_LIBWPD_DOCS_FALSE@install-data-local:
+@WITH_LIBWPS_DOCS_FALSE@uninstall-local:
+@WITH_LIBWPS_DOCS_FALSE@install-data-local:
 clean: clean-recursive
 
 clean-am: clean-generic clean-libtool mostlyclean-am
@@ -714,17 +712,17 @@ rpm: dist
 zip: all install
 	sh libwpd-zip
 
-@WITH_LIBWPD_DOCS_TRUE@install-data-local:
-@WITH_LIBWPD_DOCS_TRUE@	mkdir -p $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) $(srcdir)/CHANGES $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) $(srcdir)/COPYING $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) $(srcdir)/CREDITS $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) $(srcdir)/HACKING $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) $(srcdir)/INSTALL $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) $(srcdir)/README $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
-@WITH_LIBWPD_DOCS_TRUE@	$(INSTALL) $(srcdir)/TODO $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@/
-@WITH_LIBWPD_DOCS_TRUE@uninstall-local:
-@WITH_LIBWPD_DOCS_TRUE@	-rm -rf $(DESTDIR)$(datadir)/doc/libwpd-@WPD_VERSION@
+@WITH_LIBWPS_DOCS_TRUE@install-data-local:
+@WITH_LIBWPS_DOCS_TRUE@	mkdir -p $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) $(srcdir)/CHANGES $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) $(srcdir)/COPYING $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) $(srcdir)/CREDITS $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) $(srcdir)/HACKING $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) $(srcdir)/INSTALL $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) $(srcdir)/README $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+@WITH_LIBWPS_DOCS_TRUE@	$(INSTALL) $(srcdir)/TODO $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+@WITH_LIBWPS_DOCS_TRUE@uninstall-local:
+@WITH_LIBWPS_DOCS_TRUE@	-rm -rf $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

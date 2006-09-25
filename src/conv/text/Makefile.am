@@ -1,16 +1,15 @@
-if WITH_LIBWPD_STREAM
 target_wpd2text = wpd2text
-else
-target_wpd2text =
-endif
 
 bin_PROGRAMS = $(target_wpd2text)
 
-AM_CXXFLAGS = $(LIBWPD_CXXFLAGS) $(DEBUG_CXXFLAGS) -I$(top_srcdir)/src/lib/
+AM_CXXFLAGS = $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS) -I$(top_srcdir)/src/lib/
 
 wpd2text_LDFLAGS = -L../../lib/
 wpd2text_DEPENDENCIES = @WPD2TEXT_WIN32_RESOURCE@ 
-wpd2text_LDADD = -lwpd-0.8 -lwpd-stream-0.8 $(LIBWPD_LIBS) @WPD2TEXT_WIN32_RESOURCE@ 
+wpd2text_LDADD = -lwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
+	-lwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
+	$(LIBWPS_LIBS) @WPD2RAW_WIN32_RESOURCE@
+
 wpd2text_SOURCES = \
 	TextListenerImpl.cpp \
 	TextListenerImpl.h \

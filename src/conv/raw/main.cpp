@@ -26,7 +26,7 @@
 #include <gsf/gsf-utils.h>
 #include <gsf/gsf-input-stdio.h>
 #include <stdio.h>
-#include "libwpd.h"
+#include "libwps.h"
 #include "GSFStream.h"
 #include "RawListener.h"
 
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 
 	GSFInputStream *gsfInput = new GSFInputStream(input);
 
-	WPDConfidence confidence = WPDocument::isFileFormatSupported(gsfInput, false);
+	WPDConfidence confidence = WPSDocument::isFileFormatSupported(gsfInput, false);
 	if (confidence == WPD_CONFIDENCE_NONE || confidence == WPD_CONFIDENCE_POOR)
 	{
 		printf("ERROR: Unsupported file format!\n");
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 	}
 	
 	RawListenerImpl listenerImpl(printIndentLevel);
- 	WPDResult error = WPDocument::parse(gsfInput, static_cast<WPXHLListenerImpl *>(&listenerImpl));
+ 	WPDResult error = WPSDocument::parse(gsfInput, static_cast<WPXHLListenerImpl *>(&listenerImpl));
 
 	if (error == WPD_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
