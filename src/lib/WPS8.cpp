@@ -77,21 +77,23 @@ WPS8Parser private
  */
 void WPS8Parser::readFontsTable(WPXInputStream * input)
 {
-	/* find the offset */
+	/* find the fonts page offset, fonts array offset, and ending offset */
 	HeaderIndexMultiMap::iterator pos;
 	pos = headerIndexTable.lower_bound("FONT");
 	if (headerIndexTable.end() == pos)
 	{
 		WPD_DEBUG_MSG(("Works8: error: no FONT in header index table\n"));
+		throw ParseException();
 	}
-	input->seek(pos->second.offset + 0x2C, WPX_SEEK_SET);
-	uint32_t offset_end_FFNTB = pos->second.offset + pos->second.length;		
+	input->seek(pos->second.offset + 0x04, WPX_SEEK_SET);
+	uint32_t n_fonts = readU32(input);
+	input->seek(pos->second.offset + 0x10 + (4*n_fonts), WPX_SEEK_SET);
+	uint32_t offset_end_FFNTB = pos->second.offset + pos->second.length;
 	
 	/* read each font in the table */	
-	while (input->tell() < offset_end_FFNTB)
+	while ((input->tell()+8) < offset_end_FFNTB && fonts.size() < n_fonts)
 	{
-		uint16_t unknown1 = readU16(input);
-		uint16_t unknown2 = readU16(input);
+		uint32_t unknown = readU32(input);
 		uint16_t string_size = readU16(input);
 		
 		std::string s;
@@ -100,9 +102,15 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
 		s.append(1, 0);
 		if (s.empty())
 			continue;
-		WPD_DEBUG_MSG(("Works: debug: unknown{1,2}={0x%04X,0x%04X}, name=%s\n",
-			 unknown1, unknown2, s.c_str()));
+		WPD_DEBUG_MSG(("Works: debug: unknown={0x%08X}, name=%s\n",
+			 unknown, s.c_str()));
 		fonts.push_back(s);
+	}
+
+	if (fonts.size() != n_fonts)
+	{
+		WPD_DEBUG_MSG(("Works: warning: expected %i fonts but only found %i\n",
+			n_fonts, fonts.size()));
 	}
 }
 
@@ -305,13 +313,15 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 
 void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 {
-	WPD_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos %x\n", input->tell()));
+	WPD_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos 0x%X\n", input->tell()));
 
 	uint16_t cch = readU16(input);
 	if (0x18 != cch)
 	{
-		WPD_DEBUG_MSG(("Works8: cch = %i (0x%x)\n", cch, cch));
+		WPD_DEBUG_MSG(("Works8: error: parseHeaderIndexEntry cch = %i (0x%X)\n", cch, cch));
+#if 0
 		throw ParseException();
+#endif
 	}
 
 	std::string name;
@@ -353,10 +363,12 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 	hie.offset = readU32(input);
 	hie.length = readU32(input);
 
-	WPD_DEBUG_MSG(("Works8: info: header index entry %s with offset=%i, length=%i\n", 
+	WPD_DEBUG_MSG(("Works8: debug: header index entry %s with offset=0x%04X, length=0x%04X\n", 
 		name.c_str(), hie.offset, hie.length));
 
 	headerIndexTable.insert(make_pair(name, hie));
+
+	input->seek(0x18 - cch, WPX_SEEK_CUR);
 }
 
 /**
