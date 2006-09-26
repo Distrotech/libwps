@@ -19,6 +19,7 @@
  *
  */
 
+#include <iconv.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -356,7 +357,14 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 		FOD fod = *(FODs_iter);
 //		WPD_DEBUG_MSG(("FOD  fcLim=%u (0x%04x), bfprop=%u, bfprop_abs=%u\n", fod.fcLim, fod.fcLim, fod.bfprop, fod.bfprop_abs));
 	}	
-#endif	
+#endif
+
+	iconv_t cd = iconv_open("UTF-8", "WINDOWS-1252");
+	if ((iconv_t)-1 == cd)
+	{
+		WPD_DEBUG_MSG(("Works: error: iconv_open() failed\n"));
+		throw GenericException();
+	}
 	
 	uint32_t last_fcLim = 0x100;
 	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
@@ -369,6 +377,11 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 		input->seek(last_fcLim, WPX_SEEK_SET);			
 		for (uint32_t i = len; i>0; i--)
 		{
+			char *inchar;
+			char outbuf;
+			char *outchar;
+			size_t outbytesleft = 1;
+			size_t inbytesleft = 0;
 			uint8_t readVal = readU8(input);
 //			WPD_DEBUG_MSG(("Works: info: position %x = %c (0x%02x)\n", (input->tell())-1, readVal, readVal));
 			if (0x00 == readVal)
@@ -385,13 +398,21 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 					listener->insertEOL();
 					break;
 				default:
-					//fixme: convert Windows 1252 to UTF-8
-					listener->insertCharacter( (uint16_t)readVal );
+					inchar = (char *)&readVal;
+					outchar = &outbuf;
+					size_t rc = iconv(cd, &inchar, &inbytesleft, &outchar, &outbytesleft);
+					if ((size_t) -1 == rc || inbytesleft != 0)
+					{
+						WPD_DEBUG_MSG(("Works: error: iconv() failed\n"));
+						throw GenericException();
+					}
+					listener->insertCharacter( (uint16_t)outbuf );
 					break;
 			}
 		}	
 		last_fcLim = (*FODs_iter).fcLim;	
 	}
+	iconv_close(cd);
 
 }
 
