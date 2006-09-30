@@ -13,7 +13,8 @@ URL: http://libwps.sourceforge.net/
 BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
 License: LGPL
 Requires: glib2 >= 2.0.0, libgsf >= 1.6.0, libwpd >= 0.8
-BuildRequires: glib2-devel >= 2.0.0, libgsf-devel >= 1.6.0, libwpd-devel >= 0.8
+BuildRequires: glib2-devel >= 2.0.0, libgsf-devel >= 1.6.0
+BuildRequires: libwpd-devel >= 0.8, glibc-devel
 
 %description
 Library that handles Microsoft Works documents.
@@ -35,7 +36,7 @@ Summary: Files for developing with libwps.
 Group: Development/Libraries
 
 %description devel
-Includes and definitions for developing with libwpd.
+Includes and definitions for developing with libwps.
 
 %if %{!?_without_docs:1}%{?_without_docs:0}
 %package docs
@@ -80,9 +81,9 @@ umask 022
 
 %files devel
 %defattr(644,root,root,755)
-%{_libdir}/libwpd*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.so
-%{_libdir}/libwpd*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.*a
-%{_libdir}/pkgconfig/libwpd*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
+%{_libdir}/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.so
+%{_libdir}/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.*a
+%{_libdir}/pkgconfig/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
 %{_includedir}/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@/libwps
 
 %if %{!?_without_docs:1}%{?_without_docs:0}

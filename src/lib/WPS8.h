@@ -25,12 +25,12 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <libwpd/WPXString.h>
 
 #include "libwpd_internal.h"
 #include "WPS.h"
 #include "WPXContentListener.h"
 #include "WPXStream.h"
-#include "WPXString.h"
 #include "WPXSubDocument.h"
 #include "WPXParser.h"
 

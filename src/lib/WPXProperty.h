@@ -25,7 +25,7 @@
 
 #ifndef WPXPROPERTY_H
 #define WPXPROPERTY_H
-#include "WPXString.h"
+#include <libwpd/WPXString.h>
 
 enum WPXUnit { INCH, PERCENT, POINT, TWIP };
 

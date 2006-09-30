@@ -50,7 +50,6 @@ libwps_0_1_la_SOURCES = \
 	WPXPageSpan.cpp \
 	WPXParser.cpp \
 	WPXPart.cpp \
-	WPXString.cpp \
 	WPXStylesListener.cpp \
 	WPXSubDocument.cpp \
 	WPXTable.cpp \
@@ -67,7 +66,6 @@ libwps_0_1_la_SOURCES = \
 	WPXPageSpan.h \
 	WPXParser.h \
 	WPXPart.h \
-	WPXString.h \
 	WPXStylesListener.h \
 	WPXSubDocument.h \
 	WPXTable.h

@@ -1,4 +1,18 @@
-INSTALLATION:
+INSTALLATION
+
+General
+=======
+
+Since libwps was based on libwpd code (for convenience), installing
+libwps should be much like installing libwpd.  Below are libwpd's original
+installation instructions.  To this, please note there are two additional
+dependencies as follows:
+
+- libwpd <http://libwpd.sourceforge.net/>
+- iconv <http://www.gnu.org/software/libiconv/>
+
+On Fedora Core 5, the iconv header is included in the glibc-devel package.
+
 
 Unix/Linux
 ==========
