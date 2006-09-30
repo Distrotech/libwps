@@ -428,30 +428,30 @@ void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *in
 	input->seek(0x64, WPX_SEEK_SET);
 	uint16_t margin_top = readU16(input);
 	input->seek(0x66, WPX_SEEK_SET);
-	uint16_t margin_bottom =readU16(input);			
+	uint16_t margin_bottom =readU16(input);
 	input->seek(0x68, WPX_SEEK_SET);
 	uint16_t margin_left =readU16(input);
 	input->seek(0x6A, WPX_SEEK_SET);
-	uint16_t margin_right =readU16(input);	
+	uint16_t margin_right =readU16(input);
 	input->seek(0x6C, WPX_SEEK_SET);
-	uint16_t page_width = readU16(input);
+	uint16_t page_height = readU16(input);
 	input->seek(0x6E, WPX_SEEK_SET);
-	uint16_t page_height = readU16(input);	
+	uint16_t page_width = readU16(input);
 	input->seek(0x7A, WPX_SEEK_SET);
-	uint8_t page_orientation = readU8(input);		
-	
+	uint8_t page_orientation = readU8(input);
+
 	/* convert units */
 	float margin_top_inches = (float)margin_top / (float)1440;
-	float margin_left_inches = (float)margin_left / (float)1440;	
-	float margin_right_inches = (float)margin_right / (float)1440;	
-	float margin_bottom_inches = (float)margin_bottom / (float)1440;	
-	float page_width_inches = (float)page_width / (float)1440;	
-	float page_height_inches = (float)page_height / (float)1440;		
+	float margin_left_inches = (float)margin_left / (float)1440;
+	float margin_right_inches = (float)margin_right / (float)1440;
+	float margin_bottom_inches = (float)margin_bottom / (float)1440;
+	float page_width_inches = (float)page_width / (float)1440;
+	float page_height_inches = (float)page_height / (float)1440;
 		
 	/* check page format */
-	WPD_DEBUG_MSG(("Works: info: page margins (t,l,r,b): raw(%i,%i,%i,%i), inches(%f,%f,%f,%f\n",
+	WPD_DEBUG_MSG(("Works: info: page margins (t,l,r,b): raw(%i,%i,%i,%i), inches(%f,%f,%f,%f)\n",
 		margin_top, margin_left, margin_right, margin_bottom,
-		margin_top_inches, margin_left_inches, margin_right_inches, margin_bottom_inches));		
+		margin_top_inches, margin_left_inches, margin_right_inches, margin_bottom_inches));
 
 	WPD_DEBUG_MSG(("Works: info: page size (w,h): raw(%i,%i), inches(%2.1f,%2.1f)\n",
 		page_width, page_height, page_width_inches, page_height_inches));
