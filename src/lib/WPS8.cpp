@@ -254,7 +254,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 	uint16_t cfod = readU16(input); /* number of FODs on this page */
 
 	//fixme: what is the largest possible cfod?
-	if (cfod > 0x43)
+	if (cfod > 0x49)
 	{
 		WPD_DEBUG_MSG(("Works8: error: cfod = %i (0x%X)\n", cfod, cfod));
 		throw ParseException();
