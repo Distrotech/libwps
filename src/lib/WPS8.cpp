@@ -170,12 +170,30 @@ void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
 					break;
 
 				case 0x0C:
-					listener->insertBreak(WPX_PAGE_BREAK);
+					//fixme: add a page to list of pages
+					//listener->insertBreak(WPX_PAGE_BREAK);
 					break;
 
 				case 0x0D:
 					listener->insertEOL();
 					break;
+
+				case 0x0E:
+					//fixme: column break
+					break;
+
+				case 0x1E:
+					//fixme: non-breaking hyphen
+					break;
+
+				case 0x1F:
+					//fixme: optional breaking hyphen
+					break;
+
+				case 0x23:
+					//fixme: page number
+					break;
+
 				default:
 					// fixme: convert UTF-16LE to UTF-8
 					listener->insertCharacter( readVal );
@@ -201,9 +219,10 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 	uint32_t page_offset = input->tell();
 	uint16_t cfod = readU16(input); /* number of FODs on this page */
 
-	if (cfod > 0x20)
+	//fixme: what is the largest possible cfod?
+	if (cfod > 0x43)
 	{
-		WPD_DEBUG_MSG(("Works8: error: cfod = %i (0x%x\n", cfod, cfod));
+		WPD_DEBUG_MSG(("Works8: error: cfod = %i (0x%X)\n", cfod, cfod));
 		throw ParseException();
 	}
 
@@ -283,7 +302,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 			throw ParseException();
 		}
 		// fixme: what is largest cch?
-		if ((*FODs_iter).fprop.cch > 93)
+		if ((*FODs_iter).fprop.cch > 118)
 		{
 			WPD_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).fprop.cch));
 			throw ParseException();
@@ -463,7 +482,7 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 		WPD_DEBUG_MSG(("Works: error: no TEXT in header index table\n"));
 	}
 	offset_eot = pos->second.offset + pos->second.length;
-	WPD_DEBUG_MSG(("Works: debug: TEXT offset_eot = %x\n", offset_eot));
+	WPD_DEBUG_MSG(("Works: debug: TEXT offset_eot = 0x%04X\n", offset_eot));
 
 	/* read character FODs (FOrmatting Descriptors) */
 	for (pos = headerIndexTable.begin(); pos != headerIndexTable.end(); ++pos)
@@ -471,13 +490,13 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 		if (0 != strcmp("FDPC",pos->first.c_str()))
 			continue;
 
-		WPD_DEBUG_MSG(("Works: debug: FDPC (%s) offset=%x, length=%x\n",
+		WPD_DEBUG_MSG(("Works: debug: FDPC (%s) offset=%x, length=0x%X\n",
 				pos->first.c_str(), pos->second.offset, pos->second.length));
 
 		input->seek(pos->second.offset, WPX_SEEK_SET);
 		if (pos->second.length != 512)
 		{
-			WPD_DEBUG_MSG(("Works: warning: FDPC offset=%x, length=%x\n", 
+			WPD_DEBUG_MSG(("Works: warning: FDPC offset=%x, length=0x%X\n", 
 				pos->second.offset, pos->second.length));
 		}
 		readFODPage(input, &CHFODs, pos->second.length);
@@ -540,7 +559,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 	if (0 == rgchProp.length())
 		return;
 	/* other than blank, the shortest should be 9 bytes */
-	if (rgchProp.length() < 9)
+	if (rgchProp.length() < 3)
 	{
 		WPD_DEBUG_MSG(("Works8: error: rgchProp.length() < 9\n"));
 		throw ParseException();
@@ -584,6 +603,9 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 				case 0x13:
 					//fixme: small caps
 					break;
+				case 0x15:
+					//fixme: unknown
+					break;
 				case 0x14:
 					//fixme: all caps
 					break;
@@ -607,6 +629,11 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 			case 0x0000:
 				break;
 
+			case 0x1200:
+				//fixme: related to tables?
+				x += 2;
+				break;
+
 			case 0x120F:
 				if (1 == rgchProp[x+2])
 					textAttributeBits |= WPX_SUPERSCRIPT_BIT;
@@ -615,17 +642,46 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 				x += 2;
 				break;
 
-			case 0x2212:
-				x += 2;
-				// fixme: always 0x22120409?
-				break;
-
 			case 0x121E:
 				// fixme: there are various styles of underline
 				textAttributeBits |= WPX_UNDERLINE_BIT;
 				x += 2;
 				break;
 
+			case 0x220C:
+			{
+				/* font size */
+				uint32_t font_size =  WPD_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
+				listener->setFontSize(font_size/12700);
+				x += 4;
+				break;
+			}
+
+			case 0x2218:
+				//fixme: unknown
+				x += 4;
+				break;
+
+			case 0x2212:
+				x += 2;
+				// fixme: always 0x22120409?
+				break;
+
+			case 0x2222:
+				//fixme: color?
+				x += 4;
+				break;
+
+			case 0x2223:
+				//fixme: date and time field?
+				x += 4;
+				break;
+
+			case 0x222E:
+				//fixme: color
+				x += 4;
+				break;
+	
 			case 0x8A24:
 			{
 				/* font change */
@@ -642,22 +698,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 				x++;
 				x += rgchProp[x];
 			}
-				break;
-
-			case 0x220C:
-			{
-				/* font size */
-				uint32_t font_size =  WPD_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-				listener->setFontSize(font_size/12700);
-				x += 4;
-				break;
-			}
-
-			case 0x222E:
-				//fixme: color
-				x += 4;
-				break;
-			
+				break;		
 			default:
 				WPD_DEBUG_MSG(("Works8: error: unknown format code 0x%04X\n", format_code));		
 				throw ParseException();
