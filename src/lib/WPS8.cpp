@@ -291,7 +291,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 		if (0 == (*FODs_iter).bfprop)
 		{
 			(*FODs_iter).fprop.cch = 0;
-			break;
+			continue;
 		}
 
 		input->seek((*FODs_iter).bfprop_abs, WPX_SEEK_SET);
