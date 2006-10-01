@@ -341,6 +341,44 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 	propertyChangeDelta(textAttributeBits, listener);
 }
 
+
+/**
+ * Insert the given character converted using the
+ * given iconv conversion descriptor.
+ *
+ */
+void WPS4Parser::insertCharacter(iconv_t cd, char readVal, WPS4Listener *listener)
+{
+	char *inchar;
+	char outbuf[4];
+	char *outchar;
+	size_t outbytesleft = 4;
+	size_t inbytesleft = 1;
+	int i;
+
+	switch (readVal)
+	{
+		case 0x81:
+		case 0x8D:
+		case 0x8F:
+		case 0x90:
+		case 0x9D:
+			readVal = ' ';
+	}
+
+	inchar = (char *)&readVal;
+	outchar = (char *) outbuf;
+	size_t rc = iconv(cd, &inchar, &inbytesleft, &outchar, &outbytesleft);
+	if ((size_t) -1 == rc || inbytesleft != 0)
+	{
+		WPD_DEBUG_MSG(("Works: error: iconv() failed on readVal=(0x%02X); rc = %i, inbytesleft = %i\n", readVal, rc, inbytesleft));
+		throw GenericException();
+	}
+
+	for (i = 0; i <(4-outbytesleft); i++)
+		listener->insertCharacter( (uint8_t) outbuf[i]);
+}
+
 /**
  * Read the text of the document using previously-read
  * formatting information.
@@ -377,13 +415,7 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 		input->seek(last_fcLim, WPX_SEEK_SET);			
 		for (uint32_t i = len; i>0; i--)
 		{
-			char *inchar;
-			char outbuf;
-			char *outchar;
-			size_t outbytesleft = 1;
-			size_t inbytesleft = 0;
 			uint8_t readVal = readU8(input);
-//			WPD_DEBUG_MSG(("Works: info: position %x = %c (0x%02x)\n", (input->tell())-1, readVal, readVal));
 			if (0x00 == readVal)
 				break;
 				
@@ -391,29 +423,23 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 			{
 				case 0x0A:
 					break;
+
 				case 0x0C:
 					listener->insertBreak(WPX_PAGE_BREAK);
 					break;
+
 				case 0x0D:
 					listener->insertEOL();
 					break;
+
 				default:
-					inchar = (char *)&readVal;
-					outchar = &outbuf;
-					size_t rc = iconv(cd, &inchar, &inbytesleft, &outchar, &outbytesleft);
-					if ((size_t) -1 == rc || inbytesleft != 0)
-					{
-						WPD_DEBUG_MSG(("Works: error: iconv() failed\n"));
-						throw GenericException();
-					}
-					listener->insertCharacter( (uint16_t)outbuf );
+					this->insertCharacter(cd, readVal, listener);
 					break;
 			}
 		}	
 		last_fcLim = (*FODs_iter).fcLim;	
 	}
 	iconv_close(cd);
-
 }
 
 

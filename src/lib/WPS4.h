@@ -114,6 +114,7 @@ private:
 	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS4Listener *listener);
 	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener *listener);
 	void propertyChange(std::string rgchProp, WPS4Listener *listener);
+	void insertCharacter(iconv_t cd, char readVal, WPS4Listener *listener);
 	void readText(WPXInputStream * input, WPS4Listener *listener);
 	uint32_t oldTextAttributeBits;
 	uint32_t offset_eot; /* stream offset to end of text */
