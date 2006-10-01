@@ -116,6 +116,34 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
 
 
 /**
+ * Insert the given character converted using the
+ * given iconv conversion descriptor.
+ *
+ */
+void WPS8Parser::insertCharacter(iconv_t cd, uint16_t readVal, WPS8Listener *listener)
+{
+	char *inchar;
+	char outbuf[4];
+	char *outchar;
+	size_t outbytesleft = 4;
+	size_t inbytesleft = 2;
+	int i;
+
+	inchar = (char *)&readVal;
+	outchar = (char *) outbuf;
+	size_t rc = iconv(cd, &inchar, &inbytesleft, &outchar, &outbytesleft);
+	if ((size_t) -1 == rc || inbytesleft != 0)
+	{
+		WPD_DEBUG_MSG(("Works: error: iconv() failed on readVal=(0x%02X); rc = %i, inbytesleft = %i\n", readVal, rc, inbytesleft));
+		throw GenericException();
+	}
+
+	for (i = 0; i <(4-outbytesleft); i++)
+		listener->insertCharacter( (uint8_t) outbuf[i]);
+}
+
+
+/**
  * Read the text of the document using previously-read
  * formatting information.
  *
@@ -127,10 +155,15 @@ void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
 {
 	WPD_DEBUG_MSG(("WPS8Parser::readText()\n"));
 
-	// fixme: stub
 	std::vector<FOD>::iterator FODs_iter;	
 
-	/* dump for debugging */
+	iconv_t cd = iconv_open("UTF-8", "UTF-16LE");
+	if ((iconv_t)-1 == cd)
+	{
+		WPD_DEBUG_MSG(("Works: error: iconv_open() failed\n"));
+		throw GenericException();
+	}
+
 	uint32_t last_fcLim = 0x200; //fixme: start of text might vary according to header index table?
 	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
 	{
@@ -196,12 +229,13 @@ void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
 
 				default:
 					// fixme: convert UTF-16LE to UTF-8
-					listener->insertCharacter( readVal );
+					this->insertCharacter(cd, readVal, listener);
 					break;
 			}
-		}	
-		last_fcLim = (*FODs_iter).fcLim;	
-	}	
+		}
+		last_fcLim = (*FODs_iter).fcLim;
+	}
+	iconv_close(cd);
 }
 
 /**
@@ -302,7 +336,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 			throw ParseException();
 		}
 		// fixme: what is largest cch?
-		if ((*FODs_iter).fprop.cch > 118)
+		if ((*FODs_iter).fprop.cch > 122)
 		{
 			WPD_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).fprop.cch));
 			throw ParseException();
