@@ -15,7 +15,7 @@ install-libtool-import-lib:
 	$(INSTALL) .libs/libwps*-0.1.dll.a $(DESTDIR)$(libdir)
 
 uninstall-libtool-import-lib:
-	-rm $(DESTDIR)$(libdir)/libwps*-0.8.dll.a
+	-rm $(DESTDIR)$(libdir)/libwps*-0.1.dll.a
 
 else
 version_info = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
@@ -23,12 +23,10 @@ install-libtool-import-lib:
 uninstall-libtool-import-lib:
 endif
 
-target_libwps_stream = libwps-stream-0.1.la
-
-lib_LTLIBRARIES = libwps-0.1.la $(target_libwps_stream)
-libwps_0_1_includedir = $(includedir)/libwps-0.8/libwps
+lib_LTLIBRARIES = libwps-0.1.la
+libwps_0_1_includedir = $(includedir)/libwps-0.1/libwps
 libwps_0_1_include_HEADERS = libwps.h libwpd_types.h WPXStream.h  \
-WPSDocument.h
+WPSDocument.h GSFStream.h
 
 INCLUDES = -I$(srcdir)
 
@@ -68,26 +66,14 @@ libwps_0_1_la_SOURCES = \
 	WPXPart.h \
 	WPXStylesListener.h \
 	WPXSubDocument.h \
-	WPXTable.h
-
-libwps_stream_headers = GSFStream.h
-libwps_stream_sources = GSFStream.cpp
-
-libwps_stream_0_1_includedir = $(includedir)/libwps-0.8/libwps
-libwps_stream_0_1_include_HEADERS = $(libwps_stream_headers)
-
-libwps_stream_0_1_la_LIBADD  = $(LIBWPS_LIBS) @LIBWPS_STREAM_WIN32_RESOURCE@
-libwps_stream_0_1_la_DEPENDENCIES = @LIBWPS_STREAM_WIN32_RESOURCE@
-libwps_stream_0_1_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
-libwps_stream_0_1_la_SOURCES = $(libwps_stream_sources)
+	WPXTable.h \
+	GSFStream.cpp
 
 if OS_WIN32
 
 @LIBWPS_WIN32_RESOURCE@ : libwpd.rc
 	$(top_srcdir)/build/win32/lt-compile-resource libwpd.rc @LIBWPS_WIN32_RESOURCE@
 
-@LIBWPS_STREAM_WIN32_RESOURCE@ : libwpd-stream.rc
-	$(top_srcdir)/build/win32/lt-compile-resource libwpd-stream.rc @LIBWPS_STREAM_WIN32_RESOURCE@
 endif
 
 
@@ -95,15 +81,10 @@ install-data-local: install-libtool-import-lib
 
 uninstall-local: uninstall-libtool-import-lib
 
-# Include the GSFStream.* in case we build a tarball without stream
 EXTRA_DIST = \
-	$(libwps_stream_sources) \
-	$(libwps_stream_headers) \
 	makefile.mk \
-	libwpd.rc.in \
-	libwpd-stream.rc.in
+	libwpd.rc.in
 
 # These may be in the builddir too
 BUILD_EXTRA_DIST = \
-	libwpd.rc \
-	libwpd-stream.rc
+	libwpd.rc 

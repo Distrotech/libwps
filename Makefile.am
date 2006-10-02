@@ -1,8 +1,6 @@
 pkgconfdir = $(libdir)/pkgconfig
 
-LIBWPD_STREAM_PC = libwpd-stream-0.8.pc
-
-pkgconf_DATA = libwpd-0.8.pc $(LIBWPD_STREAM_PC)
+pkgconf_DATA = libwpd-0.8.pc
 
 SUBDIRS = src build docs autopackage
 
