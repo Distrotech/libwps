@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2002-2003 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002-2004 Marc Maurer (uwog@uwog.net)
  *  
@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
 #include <gsf/gsf-utils.h>
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	gsf_init ();
 	if (argc < 2)
 	{
-		printf("Usage: wpd2html <WordPerfect Document>\n");
+		printf("Usage: wps2html <Works Document>\n");
 		return 1;
 	}
 	

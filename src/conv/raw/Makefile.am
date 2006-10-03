@@ -1,32 +1,30 @@
-target_wpd2raw = wpd2raw
+target_wps2raw = wps2raw
 
-bin_PROGRAMS = $(target_wpd2raw)
+bin_PROGRAMS = $(target_wps2raw)
 
 AM_CXXFLAGS = $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS) -I$(top_srcdir)/src/lib/
 
-wpd2raw_LDFLAGS = -L../../lib/
-wpd2raw_DEPENDENCIES = @WPD2RAW_WIN32_RESOURCE@
-wpd2raw_LDADD = -lwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
-	-lwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
-	$(LIBWPS_LIBS) @WPD2RAW_WIN32_RESOURCE@
+wps2raw_LDFLAGS = -L../../lib/
+wps2raw_DEPENDENCIES = @WPS2RAW_WIN32_RESOURCE@
+wps2raw_LDADD = -lwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
+	$(LIBWPS_LIBS) @WPS2RAW_WIN32_RESOURCE@
 
-wpd2raw_SOURCES = \
+wps2raw_SOURCES = \
 	RawListener.cpp	 \
 	RawListener.h	 \
 	main.cpp
 
 if OS_WIN32
 
-@WPD2RAW_WIN32_RESOURCE@ : wpd2raw.rc
-	$(top_srcdir)/build/win32/lt-compile-resource wpd2raw.rc @WPD2RAW_WIN32_RESOURCE@
+@WPS2RAW_WIN32_RESOURCE@ : wps2raw.rc
+	$(top_srcdir)/build/win32/lt-compile-resource wps2raw.rc @WPS2RAW_WIN32_RESOURCE@
 endif
 
-# Include the wpd2raw_SOURCES in case we build a tarball without stream
 EXTRA_DIST = \
-	$(wpd2raw_SOURCES)	\
-	wpd2raw.rc.in
+	$(wps2raw_SOURCES)	\
+	wps2raw.rc.in
 
 # These may be in the builddir too
 BUILD_EXTRA_DIST = \
-	wpd2raw.rc	 
+	wps2raw.rc	 
  

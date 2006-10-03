@@ -1,0 +1,31 @@
+#include <winver.h>
+
+VS_VERSION_INFO VERSIONINFO
+  FILEVERSION @WPS_MAJOR_VERSION@,@WPS_MINOR_VERSION@,@WPS_MICRO_VERSION@,BUILDNUMBER
+  PRODUCTVERSION @WPS_MAJOR_VERSION@,@WPS_MINOR_VERSION@,@WPS_MICRO_VERSION@,0
+  FILEFLAGSMASK 0
+  FILEFLAGS 0
+  FILEOS VOS__WINDOWS32
+  FILETYPE VFT_APP
+  FILESUBTYPE VFT2_UNKNOWN
+  BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+      BLOCK "040904B0"
+      BEGIN
+	VALUE "CompanyName", "The libwps developer community"
+	VALUE "FileDescription", "wps2text"
+	VALUE "FileVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@.BUILDNUMBER"
+	VALUE "InternalName", "wps2text"
+	VALUE "LegalCopyright", "Copyright (C) 2002-2006 William Lachance, Marc Maurer, Fridrich Strba, other contributers"
+	VALUE "OriginalFilename", "wps2text.exe"
+	VALUE "ProductName", "libwps"
+	VALUE "ProductVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@"
+      END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+      VALUE "Translation", 0x409, 1200
+    END
+  END
+

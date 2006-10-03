@@ -9,17 +9,14 @@ cd @prefix@
 
 DLLDIR=lib
 [ -f bin/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll ] && \
-[ -f bin/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll ] && \
 DLLDIR=bin
 
 strip --strip-all \
 $DLLDIR/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll \
-$DLLDIR/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll
 
 rm $ZIP
 zip $ZIP -@ <<EOF
 $DLLDIR/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll
-$DLLDIR/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll
 EOF
 
 rm $DEVZIP
@@ -27,8 +24,5 @@ zip -r $DEVZIP -@ <<EOF
 include/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
 lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll.a
 lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.a
-lib/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll.a
-lib/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.a
-lib/pkgconfig/libwpd-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
-lib/pkgconfig/libwpd-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
+lib/pkgconfig/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
 EOF

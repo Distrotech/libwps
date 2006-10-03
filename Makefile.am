@@ -1,15 +1,15 @@
 pkgconfdir = $(libdir)/pkgconfig
 
-pkgconf_DATA = libwpd-0.8.pc
+pkgconf_DATA = libwps-0.8.pc
 
 SUBDIRS = src build docs autopackage
 
 EXTRA_DIST = \
 	autogen.sh	\
-	libwpd.spec	\
-	libwpd.spec.in	\
-	libwpd-*.pc.in	\
-	libwpd-zip.in	\
+	libwps.spec	\
+	libwps.spec.in	\
+	libwps-*.pc.in	\
+	libwps-zip.in	\
 	CHANGES		\
 	COPYING		\
 	CREDITS		\
@@ -26,7 +26,7 @@ rpm: dist
 	@rm -f $(PACKAGE)-$(VERSION).tar.gz
 
 zip: all install
-	sh libwpd-zip
+	sh libwps-zip
 
 if WITH_LIBWPS_DOCS
 install-data-local:

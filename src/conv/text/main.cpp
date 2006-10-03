@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 {
 	if (argc < 2)
 	{
-		printf("Usage: wpd2text [--info] <WordPerfect Document>\n");
+		printf("Usage: wps2text [--info] <Works Document>\n");
 		printf("Use \"--info\" to get document metadata instead\n");
 		printf("of the document itself\n");
 		return -1;

@@ -71,8 +71,8 @@ libwps_0_1_la_SOURCES = \
 
 if OS_WIN32
 
-@LIBWPS_WIN32_RESOURCE@ : libwpd.rc
-	$(top_srcdir)/build/win32/lt-compile-resource libwpd.rc @LIBWPS_WIN32_RESOURCE@
+@LIBWPS_WIN32_RESOURCE@ : libwps.rc
+	$(top_srcdir)/build/win32/lt-compile-resource libwps.rc @LIBWPS_WIN32_RESOURCE@
 
 endif
 
@@ -83,8 +83,8 @@ uninstall-local: uninstall-libtool-import-lib
 
 EXTRA_DIST = \
 	makefile.mk \
-	libwpd.rc.in
+	libwps.rc.in
 
 # These may be in the builddir too
 BUILD_EXTRA_DIST = \
-	libwpd.rc 
+	libwps.rc 

@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002,2004 Marc Maurer (uwog@uwog.net)
  *  
@@ -16,11 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
- */
-
-/* "This product is not manufactured, approved, or supported by 
- * Corel Corporation or Corel Corporation Limited."
+ * For further information visit http://libwps.sourceforge.net
  */
 
 #include <gsf/gsf-utils.h>
@@ -37,7 +33,7 @@ int main(int argc, char *argv[])
 	
 	if (argc < 2)
 	{
-		printf("Usage: wpd2raw [OPTION] <WordPerfect Document>\n");
+		printf("Usage: wps2raw [OPTION] <Works Document>\n");
 		return -1;
 	}
 	gsf_init();
@@ -46,7 +42,7 @@ int main(int argc, char *argv[])
 	{
 		if (argc == 2)
 		{
-			printf("Usage: wpd2raw [OPTION] <WordPerfect Document>\n");
+			printf("Usage: wps2raw [OPTION] <Works Document>\n");
 			return -1;
 		}
 			
@@ -55,7 +51,7 @@ int main(int argc, char *argv[])
 	}
 	else if (!strcmp(argv[1], "--help"))
 	{
-		printf("Usage: wpd2raw [OPTION] <WordPerfect Document>\n");
+		printf("Usage: wps2raw [OPTION] <Works Document>\n");
 		printf("\n");
 		printf("Options:\n");
 		printf("--callgraph		    Display the call graph nesting level\n");

@@ -1,12 +1,12 @@
 # -*-shell-script-*-
 
 [Meta]
-RootName: @libwpd.sourceforge.net/libwpd:@VERSION@
-DisplayName: A library for importing WordPerfect (tm) documents
-ShortName: libwpd
-Maintainer: libwpd Team - http://libwpd.sourceforge.net/authors_licensing.html
+RootName: @libwps.sourceforge.net/libwps:@VERSION@
+DisplayName: A library for importing Works documents
+ShortName: libwps
+Maintainer: libwps Team - http://libwps.sourceforge.net/
 Packager: Robert Staudinger <robsta@stereolyzer.net>
-Summary: A library for importing WordPerfect (tm) documents.
+Summary: A library for importing Works documents.
 SoftwareVersion: @VERSION@
 AutopackageTarget: 1.0
 PackageVersion: 1
@@ -18,7 +18,7 @@ PackageVersion: 1
 InterfaceVersion: @LT_CURRENT@.@LT_AGE@
 
 [Description]
-A library for importing WordPerfect (tm) documents.
+A library for importing Works documents.
 
 [BuildPrepare]
 # doesn't need binreloc
@@ -36,7 +36,7 @@ require @gnu.org/libstdc++ 3
 [Install]
 installExe ./bin/*
 installLib ./lib/*.so.*.*.*
-DATADEST="share/doc/libwpd-@VERSION@"
+DATADEST="share/doc/libwps-@VERSION@"
 if [ ! -e "$PREFIX/$DATADEST" ] ; then
   mkdir -p "$PREFIX/$DATADEST"
 fi
