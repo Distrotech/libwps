@@ -34,15 +34,6 @@ const uint8_t DUMMY_INTERNAL_HEADER_FOOTER = 16;
 
 // precondition: 0 <= headerFooterType <= 3 (i.e.: we don't handle watermarks here)
 WPXHeaderFooter::WPXHeaderFooter(const WPXHeaderFooterType headerFooterType, const WPXHeaderFooterOccurence occurence, 
-				 const uint8_t internalType, WPXTableList tableList) :
-	m_type(headerFooterType),
-	m_occurence(occurence),
-	m_internalType(internalType),
-	m_tableList(tableList)
-{
-}
-
-WPXHeaderFooter::WPXHeaderFooter(const WPXHeaderFooterType headerFooterType, const WPXHeaderFooterOccurence occurence, 
 				 const uint8_t internalType) :
 	m_type(headerFooterType),
 	m_occurence(occurence),
@@ -53,8 +44,7 @@ WPXHeaderFooter::WPXHeaderFooter(const WPXHeaderFooterType headerFooterType, con
 WPXHeaderFooter::WPXHeaderFooter(const WPXHeaderFooter &headerFooter) :
 	m_type(headerFooter.getType()),
 	m_occurence(headerFooter.getOccurence()),
-	m_internalType(headerFooter.getInternalType()),
-	m_tableList(headerFooter.getTableList())
+	m_internalType(headerFooter.getInternalType())
 {
 }
 
@@ -113,10 +103,9 @@ WPXPageSpan::~WPXPageSpan()
 }
 
 
-void WPXPageSpan::setHeaderFooter(const WPXHeaderFooterType type, const uint8_t headerFooterType, const WPXHeaderFooterOccurence occurence, 
-				  WPXTableList tableList)
+void WPXPageSpan::setHeaderFooter(const WPXHeaderFooterType type, const uint8_t headerFooterType, const WPXHeaderFooterOccurence occurence)
 {
-	WPXHeaderFooter headerFooter(type, occurence, headerFooterType, tableList);
+	WPXHeaderFooter headerFooter(type, occurence, headerFooterType);
 	switch (occurence) 
 	{
 	case ALL:

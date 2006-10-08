@@ -47,7 +47,6 @@ libwps_0_1_la_SOURCES = \
 	WPXPageSpan.cpp \
 	WPXParser.cpp \
 	WPXStylesListener.cpp \
-	WPXTable.cpp \
 	libwps.h \
 	libwpd_internal.h \
 	libwpd_math.h \
@@ -60,7 +59,6 @@ libwps_0_1_la_SOURCES = \
 	WPXPageSpan.h \
 	WPXParser.h \
 	WPXStylesListener.h \
-	WPXTable.h \
 	GSFStream.cpp
 
 if OS_WIN32

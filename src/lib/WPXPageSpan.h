@@ -29,7 +29,6 @@
 #include "libwps.h"
 #include "WPXFileStructure.h"
 #include <vector>
-#include "WPXTable.h"
 #include "libwpd_internal.h"
 
 // intermediate page representation class: for internal use only (by the high-level content/styles listeners). should not be exported.
@@ -38,21 +37,17 @@ class WPXHeaderFooter
 {
 public:
 	WPXHeaderFooter(const WPXHeaderFooterType headerFooterType, const WPXHeaderFooterOccurence occurence, 
-			const uint8_t internalType, WPXTableList tableList);
-	WPXHeaderFooter(const WPXHeaderFooterType headerFooterType, const WPXHeaderFooterOccurence occurence, 
 			const uint8_t internalType);
 	WPXHeaderFooter(const WPXHeaderFooter &headerFooter);
 	~WPXHeaderFooter();
 	const WPXHeaderFooterType getType() const { return m_type; }
 	const WPXHeaderFooterOccurence getOccurence() const { return m_occurence; }
 	const uint8_t getInternalType() const { return m_internalType; }
-	WPXTableList getTableList() const { return m_tableList; }
 
 private:
 	WPXHeaderFooterType m_type;
 	WPXHeaderFooterOccurence m_occurence;
 	uint8_t m_internalType; // for suppression
-	WPXTableList m_tableList;
 };
 
 class WPXPageSpan
@@ -74,8 +69,7 @@ public:
 	const int getPageSpan() const { return m_pageSpan; }
 	const std::vector<WPXHeaderFooter> & getHeaderFooterList() const { return m_headerFooterList; }
 
-	void setHeaderFooter(const WPXHeaderFooterType type, const uint8_t headerFooterType, const WPXHeaderFooterOccurence occurence, 
-			     WPXTableList tableList);
+	void setHeaderFooter(const WPXHeaderFooterType type, const uint8_t headerFooterType, const WPXHeaderFooterOccurence occurence);
 	void setHeadFooterSuppression(const uint8_t headerFooterType, const bool suppress) { m_isHeaderFooterSuppressed[headerFooterType] = suppress; }
 	void setFormLength(const float formLength) { m_formLength = formLength; }
 	void setFormWidth(const float formWidth) { m_formWidth = formWidth; }

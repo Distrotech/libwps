@@ -25,7 +25,6 @@
 #ifndef WPXCONTENTLISTENER_H
 #define WPXCONTENTLISTENER_H
 
-#include "WPXTable.h"
 #include "libwpd_internal.h"
 #include "WPXPageSpan.h"
 #include "WPXListener.h"
@@ -34,15 +33,6 @@
 #include <vector>
 #include <list>
 #include <set>
-
-typedef struct _WPXTableDefinition WPXTableDefinition;
-struct _WPXTableDefinition
-{
-	uint8_t m_positionBits;
-	float m_leftOffset;
-	std::vector < WPXColumnDefinition > columns;
-	std::vector < WPXColumnProperties > columnsProperties;
-};
 
 typedef struct _WPXContentParsingState WPXContentParsingState;
 struct _WPXContentParsingState
@@ -73,18 +63,9 @@ struct _WPXContentParsingState
 	bool m_isListElementOpened;
 
 	std::vector<unsigned int> m_numRowsToSkip;
-	WPXTableDefinition m_tableDefinition;
-	int m_currentTableCol;
-	int m_currentTableRow;
-	int m_currentTableCellNumberInRow;
-	bool m_isTableOpened;
-	bool m_isTableRowOpened;
-	bool m_isTableColumnOpened;
-	bool m_isTableCellOpened;
 	bool m_wasHeaderRow;
 	bool m_isCellWithoutParagraph;
 	uint32_t m_cellAttributeBits;
-	uint8_t m_paragraphJustificationBeforeTable;
 	uint8_t m_paragraphJustificationBeforeColumns;
 	
 	std::list<WPXPageSpan>::iterator m_nextPageSpanIter;
@@ -167,16 +148,6 @@ protected:
 
 	void _openSpan();
 	void _closeSpan();
-
-	void _openTable();
-	void _closeTable();
-	void _openTableRow(const float height, const bool isMinimumHeight, const bool isHeaderRow);
-	void _closeTableRow();
-	void _openTableCell(const uint8_t colSpan, const uint8_t rowSpan, const uint8_t borderBits, 
-				const RGBSColor * cellFgColor, const RGBSColor * cellBgColor,
-				const RGBSColor * cellBorderColor,
-				const WPXVerticalAlignment cellVerticalAlignment);
-	void _closeTableCell();
 
 	float _movePositionToFirstColumn(float position);
 
