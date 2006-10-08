@@ -71,15 +71,6 @@ public:
 					const std::vector<bool> &isFixedWidth) = 0;
 	virtual void endDocument() = 0;
 
-	virtual void defineTable(const uint8_t position, const uint16_t leftOffset) = 0;
-	virtual void addTableColumnDefinition(const uint32_t width, const uint32_t leftGutter, const uint32_t rightGutter,
-					const uint32_t attributes, const uint8_t alignment) = 0;
-	virtual void startTable() = 0;
- 	virtual void closeCell() = 0;
-	virtual void closeRow() = 0;
-	virtual void setTableCellSpan(const uint16_t colSpan, const uint16_t rowSpan) = 0;
-	virtual void setTableCellFillColor(const RGBSColor * cellFillColor) = 0;
- 	virtual void endTable() = 0;
 	virtual void undoChange(const uint8_t undoType, const uint16_t undoLevel) = 0;
 	virtual void justificationChange(const uint8_t justification) = 0;
 	virtual void setTextColor(const RGBSColor * fontColor) = 0;
@@ -146,17 +137,6 @@ public:
 					const std::vector<bool> &isFixedWidth);
 	void endDocument() { WPXContentListener::endDocument(); };
 
-	void defineTable(const uint8_t position, const uint16_t leftOffset);
-	void addTableColumnDefinition(const uint32_t width, const uint32_t leftGutter, const uint32_t rightGutter,
-					const uint32_t attributes, const uint8_t alignment);
-	void startTable();
- 	void insertRow();
- 	void insertCell();
- 	void closeCell();
-	void closeRow();
-	void setTableCellSpan(const uint16_t colSpan, const uint16_t rowSpan);
-	void setTableCellFillColor(const RGBSColor * cellFillColor);
- 	void endTable();
 	void undoChange(const uint8_t undoType, const uint16_t undoLevel);
 	void justificationChange(const uint8_t justification);
 	void setTextColor(const RGBSColor * fontColor);

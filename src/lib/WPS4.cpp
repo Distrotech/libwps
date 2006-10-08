@@ -675,17 +675,6 @@ void WPS4ContentListener::indentFirstLineChange(const int16_t offset) {}
 void WPS4ContentListener::columnChange(const WPXTextColumnType columnType, const uint8_t numColumns, const std::vector<float> &columnWidth,
 				const std::vector<bool> &isFixedWidth) {}
 
-void WPS4ContentListener::defineTable(const uint8_t position, const uint16_t leftOffset) {}
-void WPS4ContentListener::addTableColumnDefinition(const uint32_t width, const uint32_t leftGutter, const uint32_t rightGutter,
-				const uint32_t attributes, const uint8_t alignment) {}
-void WPS4ContentListener::startTable() {}
-void WPS4ContentListener::insertRow() {}
-void WPS4ContentListener::insertCell() {}
-void WPS4ContentListener::closeCell() {}
-void WPS4ContentListener::closeRow() {}
-void WPS4ContentListener::setTableCellSpan(const uint16_t colSpan, const uint16_t rowSpan) {}
-void WPS4ContentListener::setTableCellFillColor(const RGBSColor * cellFillColor) {}
-void WPS4ContentListener::endTable() {}
 void WPS4ContentListener::undoChange(const uint8_t undoType, const uint16_t undoLevel) {}
 void WPS4ContentListener::justificationChange(const uint8_t justification) {}
 void WPS4ContentListener::setTextColor(const RGBSColor * fontColor) { }

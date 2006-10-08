@@ -847,17 +847,6 @@ void WPS8ContentListener::indentFirstLineChange(const int16_t offset) {}
 void WPS8ContentListener::columnChange(const WPXTextColumnType columnType, const uint8_t numColumns, const std::vector<float> &columnWidth,
 				const std::vector<bool> &isFixedWidth) {}
 
-void WPS8ContentListener::defineTable(const uint8_t position, const uint16_t leftOffset) {}
-void WPS8ContentListener::addTableColumnDefinition(const uint32_t width, const uint32_t leftGutter, const uint32_t rightGutter,
-				const uint32_t attributes, const uint8_t alignment) {}
-void WPS8ContentListener::startTable() {}
-void WPS8ContentListener::insertRow() {}
-void WPS8ContentListener::insertCell() {}
-void WPS8ContentListener::closeCell() {}
-void WPS8ContentListener::closeRow() {}
-void WPS8ContentListener::setTableCellSpan(const uint16_t colSpan, const uint16_t rowSpan) {}
-void WPS8ContentListener::setTableCellFillColor(const RGBSColor * cellFillColor) {}
-void WPS8ContentListener::endTable() {}
 void WPS8ContentListener::undoChange(const uint8_t undoType, const uint16_t undoLevel) {}
 void WPS8ContentListener::justificationChange(const uint8_t justification) {}
 void WPS8ContentListener::setTextColor(const RGBSColor * fontColor) { }
