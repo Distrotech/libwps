@@ -44,12 +44,9 @@ libwps_0_1_la_SOURCES = \
 	WPXContentListener.cpp \
 	WPXHeader.cpp \
 	WPXListener.cpp \
-	WPXMemoryStream.cpp \
 	WPXPageSpan.cpp \
 	WPXParser.cpp \
-	WPXPart.cpp \
 	WPXStylesListener.cpp \
-	WPXSubDocument.cpp \
 	WPXTable.cpp \
 	libwps.h \
 	libwpd_internal.h \
@@ -60,12 +57,9 @@ libwps_0_1_la_SOURCES = \
 	WPXHeader.h \
 	WPXFileStructure.h \
 	WPXListener.h \
-	WPXMemoryStream.h \
 	WPXPageSpan.h \
 	WPXParser.h \
-	WPXPart.h \
 	WPXStylesListener.h \
-	WPXSubDocument.h \
 	WPXTable.h \
 	GSFStream.cpp
 

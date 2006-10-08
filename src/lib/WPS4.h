@@ -31,17 +31,9 @@
 #include "WPXHeader.h"
 #include "WPXStream.h"
 #include <libwpd/WPXString.h>
-#include "WPXSubDocument.h"
 #include "WPXParser.h"
 
 class WPS4Listener;
-
-class WPS4SubDocument : public WPXSubDocument
-{
-public:
-	WPS4SubDocument(uint8_t * streamData, const int dataSize);
-	void parse(WPS4Listener *listener) const;
-};
 
 class WPS4PrefixDataPacket
 {
@@ -49,7 +41,6 @@ public:
 	WPS4PrefixDataPacket(WPXInputStream * input);	
 	virtual ~WPS4PrefixDataPacket() {}
 	virtual void parse(WPS4Listener *listener) const {}
-	virtual WPS4SubDocument * getSubDocument() const { return NULL; }
 
 //	static WPS4PrefixDataPacket * constructPrefixDataPacket(WPXInputStream * input, WPS4PrefixIndice *prefixIndice);
 
@@ -137,7 +128,7 @@ struct _WPS4ContentParsingState
 class WPS4ContentListener : public WPS4Listener, protected WPXContentListener
 {
 public:
-	WPS4ContentListener(std::list<WPXPageSpan> &pageList, std::vector<WPS4SubDocument *> &subDocuments, WPXHLListenerImpl *listenerImpl);
+	WPS4ContentListener(std::list<WPXPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
 	~WPS4ContentListener();
 
 	void startDocument() { WPXContentListener::startDocument(); };
@@ -174,11 +165,9 @@ public:
 	void insertPageNumber(const WPXString &pageNumber);
 	void insertNoteReference(const WPXString &noteReference);
 	void insertNote(const WPXNoteType noteType);
-//	void headerFooterGroup(const uint8_t headerFooterType, const uint8_t occurenceBits, WP3SubDocument *subDocument);
 	void suppressPage(const uint16_t suppressCode);
 	
 protected:
-	void _handleSubDocument(const WPXSubDocument *subDocument, const bool isHeaderFooter, WPXTableList tableList, int nextTableIndice = 0);
 	void _openParagraph();
 
 	void _flushText();

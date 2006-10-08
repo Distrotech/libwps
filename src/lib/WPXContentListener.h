@@ -27,7 +27,6 @@
 
 #include "WPXTable.h"
 #include "libwpd_internal.h"
-#include "WPXSubDocument.h"
 #include "WPXPageSpan.h"
 #include "WPXListener.h"
 #include <libwpd/WPXHLListenerImpl.h>
@@ -128,9 +127,6 @@ struct _WPXContentParsingState
 	std::vector<WPXTabStop> m_tabStops;
 	bool m_isTabPositionRelative;
 
-	std::set <const WPXSubDocument *> m_subDocuments;
-
-	bool m_inSubDocument;
 	bool m_isNote;
 };
 
@@ -142,7 +138,6 @@ protected:
 
 	void startDocument();
 	void endDocument();
-	void handleSubDocument(const WPXSubDocument *subDocument, const bool isHeaderFooter, WPXTableList tableList, int nextTableIndice);
 	void insertBreak(const uint8_t breakType);
 	void lineSpacingChange(const float lineSpacing);
 	void justificationChange(const uint8_t justification);
@@ -151,7 +146,6 @@ protected:
 	WPXHLListenerImpl * m_listenerImpl;
 	WPXPropertyList m_metaData;
 
-	virtual void _handleSubDocument(const WPXSubDocument *subDocument, const bool isHeaderFooter, WPXTableList tableList, int nextTableIndice) = 0;
 	virtual void _flushText() = 0;
 	virtual void _changeList() = 0;
 

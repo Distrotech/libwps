@@ -51,8 +51,6 @@ WPS4Parser::~WPS4Parser ()
 void WPS4Parser::parse(WPXHLListenerImpl *listenerImpl)
 {
 	std::list<WPXPageSpan> pageList;
-	//fixme: subDocuments not used
-	std::vector<WPS4SubDocument *> subDocuments;	
 	
 	WPD_DEBUG_MSG(("WPS4Parser::parse()\n"));		
 
@@ -63,7 +61,7 @@ void WPS4Parser::parse(WPXHLListenerImpl *listenerImpl)
 	parsePages(pageList, input);		
 	
 	/* parse document */
-	WPS4ContentListener listener(pageList, subDocuments, listenerImpl);
+	WPS4ContentListener listener(pageList, listenerImpl);
 	parse(input, &listener);	
 }
 
@@ -597,7 +595,7 @@ _WPS4ContentParsingState::~_WPS4ContentParsingState()
 WPS4ContentListener public
 */
 
-WPS4ContentListener::WPS4ContentListener(std::list<WPXPageSpan> &pageList, std::vector<WPS4SubDocument *> &subDocuments, WPXHLListenerImpl *listenerImpl) :
+WPS4ContentListener::WPS4ContentListener(std::list<WPXPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
 	WPS4Listener(),
 	WPXContentListener(pageList, listenerImpl),
 	m_parseState(new WPS4ContentParsingState)
@@ -713,11 +711,6 @@ void WPS4ContentListener::suppressPage(const uint16_t suppressCode) {}
 /*
 WPS4ContentListener protected 
 */
-
-void WPS4ContentListener::_handleSubDocument(const WPXSubDocument *subDocument, const bool isHeaderFooter, WPXTableList tableList, int nextTableIndice)
-{
-	WPD_DEBUG_MSG(("STUB WPS4ContentListener::_handleSubDocument()\n"));		
-}
 
 void WPS4ContentListener::_openParagraph()
 {

@@ -106,7 +106,6 @@ _WPXContentParsingState::_WPXContentParsingState() :
 
 	m_alignmentCharacter('.'),
 	m_isTabPositionRelative(false),
-	m_inSubDocument(false),
 	m_isNote(false)
 {
 }
@@ -318,7 +317,6 @@ void WPXContentListener::_openPageSpan()
 			else
 				m_listenerImpl->openFooter(propList); 
 
-			handleSubDocument((*iter).getSubDocument(), true, (*iter).getTableList(), 0);
 			if ((*iter).getType() == HEADER)
 				m_listenerImpl->closeHeader();
 			else
@@ -369,7 +367,7 @@ void WPXContentListener::_openParagraph()
 		 
 	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
 	{
-		if (!m_ps->m_isTableOpened && !m_ps->m_inSubDocument)
+		if (!m_ps->m_isTableOpened)
 		{
 			if (m_ps->m_sectionAttributesChanged)
 				_closeSection();
@@ -536,7 +534,7 @@ void WPXContentListener::_closeParagraph()
 	m_ps->m_isParagraphOpened = false;
 	m_ps->m_currentListLevel = 0;
 
-	if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred && !m_ps->m_inSubDocument)
+	if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred)
 		_closePageSpan();
 }
 
@@ -544,7 +542,7 @@ void WPXContentListener::_openListElement()
 {
 	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
 	{
-		if (!m_ps->m_isTableOpened && !m_ps->m_isSectionOpened && !m_ps->m_inSubDocument)
+		if (!m_ps->m_isTableOpened && !m_ps->m_isSectionOpened)
 			_openSection();
 
 		WPXPropertyList propList;
@@ -572,7 +570,7 @@ void WPXContentListener::_closeListElement()
 	m_ps->m_isListElementOpened = false;
 	m_ps->m_currentListLevel = 0;
 
-	if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred && !m_ps->m_inSubDocument)
+	if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred)
 		_closePageSpan();
 }
 
@@ -766,11 +764,11 @@ void WPXContentListener::_closeTable()
 	_changeList();
 
 	// handle case where a section attributes changed in the middle of the table
-	if (m_ps->m_sectionAttributesChanged && !m_ps->m_inSubDocument)
+	if (m_ps->m_sectionAttributesChanged)
 		_closeSection();
 		
 	// handle case where page span is closed in the middle of a table
-	if (m_ps->m_isPageSpanBreakDeferred && !m_ps->m_inSubDocument)
+	if (m_ps->m_isPageSpanBreakDeferred)
 		_closePageSpan();
 }
 
@@ -939,46 +937,6 @@ void WPXContentListener::_closeTableCell()
 	m_ps->m_isTableCellOpened = false;
 }
 
-
-/**
-Creates an new document state. Saves the old state on a "stack".
-*/
-void WPXContentListener::handleSubDocument(const WPXSubDocument *subDocument, const bool isHeaderFooter, WPXTableList tableList, int nextTableIndice)
-{
-	// save our old parsing state on our "stack"
-	WPXContentParsingState *oldPS = m_ps;
-	m_ps = new WPXContentParsingState();
-	// BEGIN: copy page properties into the new parsing state
-	m_ps->m_pageFormWidth = oldPS->m_pageFormWidth;
-	m_ps->m_pageMarginLeft = oldPS->m_pageMarginLeft;
-	m_ps->m_pageMarginRight = oldPS->m_pageMarginRight;
-	m_ps->m_subDocuments = oldPS->m_subDocuments;
-	m_ps->m_isNote = oldPS->m_isNote;
-	// END: copy page properties into the new parsing state
-	m_ps->m_inSubDocument = true;
-	bool oldIsUndoOn = isUndoOn();
-	setUndoOn(false);
-	// Check whether the document is calling itself
-	if ((subDocument) && (m_ps->m_subDocuments.find(subDocument) == m_ps->m_subDocuments.end()))
-	{
-		m_ps->m_subDocuments.insert(subDocument);
-		if (isHeaderFooter)
-			m_ps->m_isHeaderFooterWithoutParagraph = true;
-		_handleSubDocument(subDocument, isHeaderFooter, tableList, nextTableIndice);
-		if (m_ps->m_isHeaderFooterWithoutParagraph)
-		{
-			_openSpan();
-			_closeParagraph();
-		}
-	}
-
-	// restore our old parsing state
-	
-	setUndoOn(oldIsUndoOn);
-	delete m_ps;
-	m_ps = oldPS;
-}
-
 void WPXContentListener::insertBreak(const uint8_t breakType)
 {
 	if (!isUndoOn())
@@ -986,7 +944,7 @@ void WPXContentListener::insertBreak(const uint8_t breakType)
 		switch (breakType)
 		{
 		case WPX_COLUMN_BREAK:
-			if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
+			if (!m_ps->m_isPageSpanOpened)
 				_openSpan();				
 			if (m_ps->m_isParagraphOpened)
 				_closeParagraph();
@@ -996,7 +954,7 @@ void WPXContentListener::insertBreak(const uint8_t breakType)
 			m_ps->m_isTextColumnWithoutParagraph = true;
 			break;
 		case WPX_PAGE_BREAK:
-			if (!m_ps->m_isPageSpanOpened && !m_ps->m_inSubDocument)
+			if (!m_ps->m_isPageSpanOpened)
 				_openSpan();				
 			if (m_ps->m_isParagraphOpened)
 				_closeParagraph();
@@ -1006,9 +964,6 @@ void WPXContentListener::insertBreak(const uint8_t breakType)
 			break;
 			// TODO: (.. line break?)
 		}
-
-		if (m_ps->m_inSubDocument)
-			return;
 
 		switch (breakType)
 		{
