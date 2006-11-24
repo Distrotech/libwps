@@ -136,6 +136,8 @@ WPDResult WPSDocument::parseWPS(libwps::WPSInputStream *input, WPXHLListenerImpl
 			}
 
 			case 4:
+			case 3:
+			case 2:
 			{
 				WPS4Parser *parser = new WPS4Parser(header->getInput(), header);
 				parser->parse(listenerImpl);
