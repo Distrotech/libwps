@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002,2004 Marc Maurer (uwog@uwog.net)
  *  
@@ -19,12 +19,8 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by 
- * Corel Corporation or Corel Corporation Limited."
- */
-
-#ifndef LIBWPD_INTERNAL_H
-#define LIBWPD_INTERNAL_H
+#ifndef LIBWPS_INTERNAL_H
+#define LIBWPS_INTERNAL_H
 #ifdef DEBUG
 #include <bitset>
 #endif
@@ -205,11 +201,6 @@ class GenericException
 	// needless to say, we could flesh this class out a bit
 };
 
-class UnsupportedEncryptionException
-{
-	// needless to say, we could flesh this class out a bit
-};
-
 // Various usefull, but cheesey functions
 
 int _extractNumericValueFromRoman(const char romanChar);
@@ -219,4 +210,4 @@ WPXString _numberingTypeToString(WPSNumberingType t);
 
 std::string to_bits(std::string s);
 
-#endif /* LIBWPD_INTERNAL_H */
+#endif /* LIBWPS_INTERNAL_H */

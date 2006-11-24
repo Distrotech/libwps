@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
  *  
@@ -17,10 +17,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
  * For further information visit http://libwps.sourceforge.net
- */
-
-/* "This product is not manufactured, approved, or supported by 
- * Corel Corporation or Corel Corporation Limited."
  */
 
 #include <math.h>

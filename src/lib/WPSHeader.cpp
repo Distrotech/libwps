@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002-2004 Marc Maurer (uwog@uwog.net)
  *  
@@ -19,10 +19,6 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by
- * Corel Corporation or Corel Corporation Limited."
- */
-
 #include <stdlib.h>
 #include <string.h>
 #include "WPSHeader.h"
@@ -30,13 +26,12 @@
 #include "libwps.h"
 #include "libwps_internal.h"
 	
-WPSHeader::WPSHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion, uint16_t documentEncryption) :
+WPSHeader::WPSHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion) :
 	m_documentOffset(documentOffset),
 	m_productType(productType),
 	m_fileType(fileType),
 	m_majorVersion(majorVersion),
-	m_minorVersion(minorVersion),
-	m_documentEncryption(documentEncryption)
+	m_minorVersion(minorVersion)
 {
 }
 

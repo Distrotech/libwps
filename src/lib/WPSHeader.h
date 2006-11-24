@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002-2003 Marc Maurer (uwog@uwog.net)
  *  
@@ -19,21 +19,17 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by 
- * Corel Corporation or Corel Corporation Limited."
- */
- 
 #ifndef WPSHEADER_H
 #define WPSHEADER_H
 
 #include <stdlib.h>
+#include "libwps_types.h"
 #include "WPSStream.h"
-#include <inttypes.h>
 
 class WPSHeader
 {
  public:	
-	WPSHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion, uint16_t documentEncryption);
+	WPSHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion);
 	virtual ~WPSHeader();
 
 	static WPSHeader * constructHeader(libwps::WPSInputStream *input);
@@ -43,7 +39,6 @@ class WPSHeader
 	const uint8_t getFileType() const { return m_fileType; }
 	const uint8_t getMajorVersion() const { return m_majorVersion; }
 	const uint8_t getMinorVersion() const { return m_minorVersion; }
-	const uint16_t getDocumentEncryption() const { return m_documentEncryption; }
 
  private:	
 	uint32_t m_documentOffset;
@@ -51,7 +46,6 @@ class WPSHeader
 	uint8_t m_fileType;
 	uint8_t m_majorVersion;
 	uint8_t m_minorVersion;
- 	uint16_t m_documentEncryption;		
 };
 
 #endif /* WPSHEADER_H */

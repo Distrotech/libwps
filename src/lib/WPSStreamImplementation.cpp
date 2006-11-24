@@ -19,10 +19,6 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by
- * Corel Corporation or Corel Corporation Limited."
- */
-
 #include "WPSStreamImplementation.h"
 #include "WPSOLEStream.h"
 #include "libwps.h"

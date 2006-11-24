@@ -37,7 +37,6 @@ libwps_0_1_la_DEPENDENCIES = @LIBWPS_WIN32_RESOURCE@
 libwps_0_1_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
 libwps_0_1_la_SOURCES = \
 	libwps_internal.cpp \
-	libwps_math.cpp \
 	WPS4.cpp \
 	WPS8.cpp \
 	WPSDocument.cpp \

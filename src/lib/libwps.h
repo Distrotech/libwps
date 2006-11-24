@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
  *  
@@ -19,14 +19,10 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by 
- * Corel Corporation or Corel Corporation Limited."
- */
-
-#ifndef LIBWPD_H
-#define LIBWPD_H
+#ifndef LIBWPS_H
+#define LIBWPS_H
 
 #include "libwpd/WPXHLListenerImpl.h"
 #include "WPSDocument.h"
 
-#endif /* LIBWPD_H */
+#endif /* LIBWPS_H */

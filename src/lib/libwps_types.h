@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2005 William Lachance (william.lachance@sympatico.ca)
  *  
  * This library is free software; you can redistribute it and/or
@@ -18,12 +18,8 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by 
- * Corel Corporation or Corel Corporation Limited."
- */
-
-#ifndef LIBWPD_TYPES_H
-#define LIBWPD_TYPES_H
+#ifndef LIBWPS_TYPES_H
+#define LIBWPS_TYPES_H
 
 #ifdef _MSC_VER
 typedef signed char int8_t;
@@ -36,4 +32,4 @@ typedef unsigned int uint32_t;
 #include <inttypes.h>
 #endif /* _MSC_VER */
 
-#endif /* LIBWPD_TYPES_H */
+#endif /* LIBWPS_TYPES_H */

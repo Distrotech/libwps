@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2006 Fridrich Strba (fridrich.strba@bluewin.ch)
  *
  * This library is free software; you can redistribute it and/or
@@ -18,21 +18,17 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by
- * Corel Corporation or Corel Corporation Limited."
- */
-
 #include "WPSContentListener.h"
 #include "WPSPageSpan.h"
 #include "libwps_internal.h"
 #include <libwpd/WPXProperty.h>
 #ifdef _MSC_VER
 #include <minmax.h>
-#define LIBWPD_MIN min
-#define LIBWPD_MAX max
+#define LIBWPS_MIN min
+#define LIBWPS_MAX max
 #else
-#define LIBWPD_MIN std::min
-#define LIBWPD_MAX std::max
+#define LIBWPS_MIN std::min
+#define LIBWPS_MAX std::max
 #endif
 
 _WPSContentParsingState::_WPSContentParsingState() :
@@ -797,11 +793,11 @@ WPXString WPSContentListener::_mergeColorsToString(const RGBSColor *fgColor, con
 	}
 
 	float fgAmount = (float)tmpFgColor.m_s/100.0f;
-	float bgAmount = LIBWPD_MAX(((float)tmpBgColor.m_s-(float)tmpFgColor.m_s)/100.0f, 0.0f);
+	float bgAmount = LIBWPS_MAX(((float)tmpBgColor.m_s-(float)tmpFgColor.m_s)/100.0f, 0.0f);
 
-	int bgRed = LIBWPD_MIN((int)(((float)tmpFgColor.m_r*fgAmount)+((float)tmpBgColor.m_r*bgAmount)), 255);
-	int bgGreen = LIBWPD_MIN((int)(((float)tmpFgColor.m_g*fgAmount)+((float)tmpBgColor.m_g*bgAmount)), 255);
-	int bgBlue = LIBWPD_MIN((int)(((float)tmpFgColor.m_b*fgAmount)+((float)tmpBgColor.m_b*bgAmount)), 255);
+	int bgRed = LIBWPS_MIN((int)(((float)tmpFgColor.m_r*fgAmount)+((float)tmpBgColor.m_r*bgAmount)), 255);
+	int bgGreen = LIBWPS_MIN((int)(((float)tmpFgColor.m_g*fgAmount)+((float)tmpBgColor.m_g*bgAmount)), 255);
+	int bgBlue = LIBWPS_MIN((int)(((float)tmpFgColor.m_b*fgAmount)+((float)tmpBgColor.m_b*bgAmount)), 255);
 
 	tmpColor.sprintf("#%.2x%.2x%.2x", bgRed, bgGreen, bgBlue);
 

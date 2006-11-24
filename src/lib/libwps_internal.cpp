@@ -1,4 +1,4 @@
-/* libwpd
+/* libwps
  * Copyright (C) 2002, 2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002, 2004 Marc Maurer (uwog@uwog.net)
  *  
@@ -19,9 +19,6 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by 
- * Corel Corporation or Corel Corporation Limited."
- */
 #include "libwps_internal.h"
 #include "WPSStream.h"
 #include <ctype.h>
@@ -123,56 +120,6 @@ static const uint16_t asciiMap[] =
 	248, 249, 250, 251, 252, 253, 254, 255,
 };
 
-#include "libwps_math.h"
-
-uint16_t fixedPointToWPUs(const uint32_t fixedPointNumber)
-{
-	int16_t fixedPointNumberIntegerPart = (int16_t)((fixedPointNumber & 0xFFFF0000) >> 16);
-	float fixedPointNumberFractionalPart = (float)((double)(fixedPointNumber & 0x0000FFFF)/(double)0xFFFF);
-	uint16_t numberWPU = (uint16_t)rint((((float)fixedPointNumberIntegerPart + fixedPointNumberFractionalPart)*50)/3);
-	return numberWPU;
-}
-
-_RGBSColor::_RGBSColor(uint8_t r, uint8_t g, uint8_t b, uint8_t s)
-	:	m_r(r),
-		m_g(g),
-		m_b(b),
-		m_s(s)
-{
-}
-
-_RGBSColor::_RGBSColor()
-	:	m_r(0),
-		m_g(0),
-		m_b(0),
-		m_s(0)
-{
-}
-
-_RGBSColor::_RGBSColor(uint16_t red, uint16_t green, uint16_t blue)
-{
-	int minRGB = red;
-	if (minRGB > green)
-		minRGB = green;
-	if (minRGB > blue)
-		minRGB = blue;
-		
-	if (minRGB >= 65535)
-	{
-		m_r = 255;
-		m_g = 255;
-		m_b = 255;
-		m_s = 100;
-	}
-	else
-	{
-		m_r = (uint8_t)rint(255*((double)(red - minRGB))/((double)(65535 - minRGB)));
-		m_g = (uint8_t)rint(255*((double)(green - minRGB))/((double)(65535 - minRGB)));
-		m_b = (uint8_t)rint(255*((double)(blue - minRGB))/((double)(65535 - minRGB)));
-		m_s = (uint8_t)rint(100*((double)(65535 - minRGB))/(double)65535);
-	}		
-}
-
 _WPSTabStop::_WPSTabStop(float position, WPSTabAlignment alignment, uint16_t leaderCharacter, uint8_t leaderNumSpaces)
 	:	m_position(position),
 		m_alignment(alignment),
@@ -200,120 +147,6 @@ _WPSColumnProperties::_WPSColumnProperties()
 	:	m_attributes(0x00000000),
 		m_alignment(0x00)
 {
-}
-
-// HACK: this function is really cheesey
-int _extractNumericValueFromRoman(const char romanChar)
-{
-	switch (romanChar)
-	{
-	case 'I':
-	case 'i':
-		return 1;
-	case 'V':
-	case 'v':
-		return 5;
-	case 'X':
-	case 'x':
-		return 10;
-	default:
-		throw ParseException();
-	}
-	return 1;
-}
-
-// _extractDisplayReferenceNumberFromBuf: given a nuWP6_DEFAULT_FONT_SIZEmber string in UCS2 represented
-// as letters, numbers, or roman numerals.. return an integer value representing its number
-// HACK: this function is really cheesey
-// NOTE: if the input is not valid, the output is unspecified
-int _extractDisplayReferenceNumberFromBuf(const WPXString &buf, const WPSNumberingType listType)
-{
-	if (listType == LOWERCASE_ROMAN || listType == UPPERCASE_ROMAN)
-	{
-		int currentSum = 0;
-		int lastMark = 0;
-		WPXString::Iter i(buf);
-		for (i.rewind(); i.next();)
-		{
-			int currentMark = _extractNumericValueFromRoman(*(i()));
-			if (lastMark < currentMark) {
-				currentSum = currentMark - lastMark;
-			}
-			else
-				currentSum+=currentMark;
-			lastMark = currentMark;
-		}
-		return currentSum;
-	}
-	else if (listType == LOWERCASE || listType == UPPERCASE)
-	{
-		// FIXME: what happens to a lettered list that goes past z? ah
-		// the sweet mysteries of life
-		if (buf.len()==0)
-			throw ParseException();
-		char c = buf.cstr()[0];
-		if (listType==LOWERCASE)
-			c = toupper(c);
-		return (c - 64);
-	}
-	else if (listType == ARABIC)
-	{
-		int currentSum = 0;
-		WPXString::Iter i(buf);
-		for (i.rewind(); i.next();)
-		{
-			currentSum *= 10;
-			currentSum+=(*(i())-48);
-		}
-		return currentSum;
-	}
-
-	return 1;
-}
-
-WPSNumberingType _extractWPSNumberingTypeFromBuf(const WPXString &buf, const WPSNumberingType putativeWPSNumberingType)
-{
-	WPXString::Iter i(buf);
-	for (i.rewind(); i.next();)
-	{
-		if ((*(i()) == 'I' || *(i()) == 'V' || *(i()) == 'X') &&
-		    (putativeWPSNumberingType == LOWERCASE_ROMAN || putativeWPSNumberingType == UPPERCASE_ROMAN))
-			return UPPERCASE_ROMAN;
-		else if ((*(i()) == 'i' || *(i()) == 'v' || *(i()) == 'x') &&
-		    (putativeWPSNumberingType == LOWERCASE_ROMAN || putativeWPSNumberingType == UPPERCASE_ROMAN))
-			return LOWERCASE_ROMAN;
-		else if (*(i()) >= 'A' && *(i()) <= 'Z')
-			return UPPERCASE;
-		else if (*(i()) >= 'a' && *(i()) <= 'z')
-			return LOWERCASE;
-	}
-
-	return ARABIC;
-}
-
-WPXString _numberingTypeToString(WPSNumberingType t)
-{
-	WPXString sListTypeSymbol("1");
-	switch (t)
-	{
-	case ARABIC:
-		sListTypeSymbol.sprintf("1");
-		break;	
-	case LOWERCASE:
-		sListTypeSymbol.sprintf("a");
-		break;	
-	case UPPERCASE:
-		sListTypeSymbol.sprintf("A");
-		break;	
- 	case LOWERCASE_ROMAN:
-		sListTypeSymbol.sprintf("i");
-		break;	
- 	case UPPERCASE_ROMAN:
-		sListTypeSymbol.sprintf("I");
-		break;
-	}
-
-	return sListTypeSymbol;
 }
 
 #ifdef DEBUG
