@@ -28,7 +28,7 @@
 #ifdef DEBUG
 #include <bitset>
 #endif
-#include "WPXStream.h"
+#include "WPSStream.h"
 #include <stdio.h>
 #include <string>
 #include <libwpd/WPXString.h>
@@ -70,13 +70,13 @@
 
 // add more of these as needed for byteswapping
 // (the 8-bit functions are just there to make things consistent)
-int8_t read8(WPXInputStream *input); 
-uint8_t readU8(WPXInputStream *input); 
-uint16_t readU16(WPXInputStream *input, bool bigendian=false);
-uint32_t readU32(WPXInputStream *input, bool bigendian=false);
+int8_t read8(libwps::WPSInputStream *input); 
+uint8_t readU8(libwps::WPSInputStream *input); 
+uint16_t readU16(libwps::WPSInputStream *input, bool bigendian=false);
+uint32_t readU32(libwps::WPSInputStream *input, bool bigendian=false);
 
-WPXString readPascalString(WPXInputStream *input);
-WPXString readCString(WPXInputStream *input);
+WPXString readPascalString(libwps::WPSInputStream *input);
+WPXString readCString(libwps::WPSInputStream *input);
 
 void appendUCS4(WPXString &str, uint32_t ucs4);
 

@@ -19,12 +19,11 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#include <gsf/gsf-utils.h>
-#include <gsf/gsf-input-stdio.h>
 #include <stdio.h>
 #include "libwps.h"
-#include "GSFStream.h"
 #include "RawListener.h"
+#include "WPSStreamImplementation.h"
+
 
 int main(int argc, char *argv[])
 {
@@ -36,7 +35,6 @@ int main(int argc, char *argv[])
 		printf("Usage: wps2raw [OPTION] <Works Document>\n");
 		return -1;
 	}
-	gsf_init();
 
 	if (!strcmp(argv[1], "--callgraph"))
 	{
@@ -60,31 +58,19 @@ int main(int argc, char *argv[])
 	}
 	else
 		file = argv[1];
-		
-	
-	GError   *err = NULL;
-	GsfInput * input = GSF_INPUT(gsf_input_stdio_new (file, &err));
-	if (input == NULL) 
-	{
-		g_return_val_if_fail (err != NULL, 1);
-		
-		g_warning ("'%s' error: %s", file, err->message);
-		g_error_free (err);
-		return 1;
-	}
 
-	GSFInputStream *gsfInput = new GSFInputStream(input);
+	libwps::WPSInputStream* input = new libwps::WPSFileStream(file);
 
-	WPDConfidence confidence = WPSDocument::isFileFormatSupported(gsfInput, false);
+	WPDConfidence confidence = WPSDocument::isFileFormatSupported(input, false);
 	if (confidence == WPD_CONFIDENCE_NONE || confidence == WPD_CONFIDENCE_POOR)
 	{
 		printf("ERROR: Unsupported file format!\n");
-		delete gsfInput;
+		delete input;
 		return 1;
 	}
 	
 	RawListenerImpl listenerImpl(printIndentLevel);
- 	WPDResult error = WPSDocument::parse(gsfInput, static_cast<WPXHLListenerImpl *>(&listenerImpl));
+	WPDResult error = WPSDocument::parse(input, static_cast<WPXHLListenerImpl *>(&listenerImpl));
 
 	if (error == WPD_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
@@ -97,9 +83,7 @@ int main(int argc, char *argv[])
 	else if (error != WPD_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 
-	delete gsfInput;
-	g_object_unref (G_OBJECT (input));
-	gsf_shutdown();
+	delete input;
 
 	if (error != WPD_OK)
 		return 1;

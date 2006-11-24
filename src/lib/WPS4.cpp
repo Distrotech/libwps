@@ -25,8 +25,8 @@
 #include <string.h>
 #include "WPS4.h"
 #include "WPSDocument.h"
+#include "WPSStream.h"
 #include "WPXHeader.h"
-#include "WPXStream.h"
 #include "libwpd_internal.h"
 
 
@@ -38,7 +38,7 @@ WPS4Parser public
 */
 
 
-WPS4Parser::WPS4Parser(WPXInputStream *input, WPXHeader * header) :
+WPS4Parser::WPS4Parser(libwps::WPSInputStream *input, WPXHeader * header) :
 	WPXParser(input, header)
 {
 	//fixme: don't ask for a header that we don't use
@@ -54,7 +54,7 @@ void WPS4Parser::parse(WPXHLListenerImpl *listenerImpl)
 	
 	WPD_DEBUG_MSG(("WPS4Parser::parse()\n"));		
 
-	WPXInputStream *input = getInput();		
+	libwps::WPSInputStream *input = getInput();		
 
 	/* parse pages */
 	WPXPageSpan m_currentPage;
@@ -75,21 +75,21 @@ WPS4Parser private
  * Reads fonts table into memory.
  *
  */
-void WPS4Parser::readFontsTable(WPXInputStream * input)
+void WPS4Parser::readFontsTable(libwps::WPSInputStream * input)
 {
 	/* offset of FFNTB */
-	input->seek(0x5E, WPX_SEEK_SET);
+	input->seek(0x5E);
 	uint32_t offset_FFNTB = readU32(input);
 	//fixme: sanity check
 	
 	/* length of FFNTB */
-	input->seek(0x62, WPX_SEEK_SET);	
+	input->seek(0x62);	
 	uint32_t len_FFNTB = readU16(input);	
 	uint32_t offset_end_FFNTB = offset_FFNTB + len_FFNTB;		
 	WPD_DEBUG_MSG(("Works: info: offset_FFNTB=0x%x, len_FFNTB=0x%x, offset_end_FFNTB=0x%x\n",
 		offset_FFNTB, len_FFNTB, offset_end_FFNTB));
 		
-	input->seek(offset_FFNTB, WPX_SEEK_SET);
+	input->seek(offset_FFNTB);
 
 	while (input->tell() < offset_end_FFNTB)
 	{
@@ -128,11 +128,11 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
  * Return: true if more pages of this type exist, otherwise false
  *
  */
-bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
+bool WPS4Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * FODs)
 {
 	uint32_t page_offset = input->tell();
 
-	input->seek(127, WPX_SEEK_CUR);	
+	input->seek(page_offset + 127);	
 	uint8_t cfod = readU8(input); /* number of FODs on this page */
 //	WPD_DEBUG_MSG(("Works: info: at position 0x%02x, cfod = %i (%x)\n", (input->tell())-1,cfod, cfod));				
 	if (cfod > 0x18)
@@ -140,7 +140,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 		WPD_DEBUG_MSG(("Works4: error: cfod = %i ", cfod));
 		throw ParseException();
 	}
-	input->seek(-128, WPX_SEEK_CUR);	
+	input->seek(page_offset);	
 	
 	uint32_t fcFirst; /* Byte number of first character covered by this page 
 			     of formatting information */	
@@ -212,7 +212,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 			continue;
 		}
 
-		input->seek((*FODs_iter).bfprop_abs, WPX_SEEK_SET);
+		input->seek((*FODs_iter).bfprop_abs);
 		(*FODs_iter).fprop.cch = readU8(input);
 		if (0 == (*FODs_iter).fprop.cch)
 		{
@@ -232,7 +232,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 	}
 	
 	/* go to end of page */
-	input->seek(page_offset	+ 128, WPX_SEEK_SET);
+	input->seek(page_offset	+ 128);
 
 	return (offset_eot > FODs->back().fcLim);
 }
@@ -304,8 +304,10 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 		if (fonts.find(font_n) == fonts.end())
 		{
 			WPD_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n", 
-				font_n,font_n ));			
+				font_n,font_n ));
+#if 0
 			throw ParseException();
+#endif
 		}
 		else
 			listener->setTextFont(fonts[font_n].c_str());
@@ -382,7 +384,7 @@ void WPS4Parser::insertCharacter(iconv_t cd, char readVal, WPS4Listener *listene
  * formatting information.
  *
  */
-void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
+void WPS4Parser::readText(libwps::WPSInputStream * input, WPS4Listener *listener)
 {
 	oldTextAttributeBits = 0;
 	std::vector<FOD>::iterator FODs_iter;	
@@ -410,7 +412,7 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 			len, to_bits((*FODs_iter).fprop.rgchProp).c_str()));
 		if ((*FODs_iter).fprop.cch > 0)
 			propertyChange((*FODs_iter).fprop.rgchProp, listener);
-		input->seek(last_fcLim, WPX_SEEK_SET);			
+		input->seek(last_fcLim);			
 		for (uint32_t i = len; i>0; i--)
 		{
 			uint8_t readVal = readU8(input);
@@ -446,22 +448,22 @@ void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
  * can only have one page format throughout the whole document.
  *
  */
-void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *input)
+void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, libwps::WPSInputStream *input)
 {
 	/* read page format */
-	input->seek(0x64, WPX_SEEK_SET);
+	input->seek(0x64);
 	uint16_t margin_top = readU16(input);
-	input->seek(0x66, WPX_SEEK_SET);
+	input->seek(0x66);
 	uint16_t margin_bottom =readU16(input);
-	input->seek(0x68, WPX_SEEK_SET);
+	input->seek(0x68);
 	uint16_t margin_left =readU16(input);
-	input->seek(0x6A, WPX_SEEK_SET);
+	input->seek(0x6A);
 	uint16_t margin_right =readU16(input);
-	input->seek(0x6C, WPX_SEEK_SET);
+	input->seek(0x6C);
 	uint16_t page_height = readU16(input);
-	input->seek(0x6E, WPX_SEEK_SET);
+	input->seek(0x6E);
 	uint16_t page_width = readU16(input);
-	input->seek(0x7A, WPX_SEEK_SET);
+	input->seek(0x7A);
 	uint8_t page_orientation = readU8(input);
 
 	/* convert units */
@@ -509,7 +511,7 @@ void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *in
 	pageList.push_back(ps);
 	
 	/* process page breaks */
-	input->seek(0x100, WPX_SEEK_SET);
+	input->seek(0x100);
 	uint8_t ch;
 	while (0x00 != (ch = readU8(input)))
 	{
@@ -518,7 +520,7 @@ void WPS4Parser::parsePages(std::list<WPXPageSpan> &pageList, WPXInputStream *in
 	}
 }
 
-void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
+void WPS4Parser::parse(libwps::WPSInputStream *input, WPS4Listener *listener)
 {
 	uint8_t readVal;
 	size_t text_length;
@@ -528,14 +530,14 @@ void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
 	listener->startDocument();
 
 	/* find beginning of character FODs */
-	input->seek(WPS4_FCMAC_OFFSET, WPX_SEEK_SET);
+	input->seek(WPS4_FCMAC_OFFSET);
 	offset_eot = readU32(input); /* stream offset to end of text */
 	WPD_DEBUG_MSG(("Works: info: offset_eot at WPS4_FCMAC_OFFSET = %x (%i)\n", offset_eot, offset_eot));			
 	uint32_t pnChar = (offset_eot+127)/128; /* page number of character information */
 	WPD_DEBUG_MSG(("Works: info: 128*pnChar = %x (%i)\n", pnChar*128, pnChar*128));
 	
 	/* sanity check */
-	input->seek(128*pnChar, WPX_SEEK_SET);
+	input->seek(128*pnChar);
 	uint32_t v = readU32(input);
 	if (0x0100 != v)
 	{
@@ -543,7 +545,7 @@ void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
 	}
 	
 	/* go to beginning of character FODs */
-	input->seek(128*pnChar, WPX_SEEK_SET);
+	input->seek(128*pnChar);
 
 	/* read character FODs */	
 	while (readFODPage(input, &CHFODs))

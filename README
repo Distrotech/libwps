@@ -13,6 +13,8 @@ dependencies as follows:
 
 On Fedora Core 5, the iconv header is included in the glibc-devel package.
 
+Furthermore, libwps does not require libgsf (though libwpd may use it).
+
 
 Unix/Linux
 ==========
@@ -23,12 +25,11 @@ sequence of commands:
 ./configure ; make ; su -c 'make install'
 
 Note that this assumes that you have development versions of glib (>=
-2.0.0) and libgsf (>= 1.6.0).
+2.0.0).
 
 LINKS:
 
 glib is available at ftp://ftp.gnome.org/pub/gnome/sources/glib/
-libgsf is available at ftp://ftp.gnome.org/pub/gnome/sources/libgsf/
 
 Extensive installation instructions can be found in the INSTALL file.
 

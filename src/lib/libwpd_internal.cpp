@@ -23,58 +23,52 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 #include "libwpd_internal.h"
-#include "WPXStream.h"
+#include "WPSStream.h"
 #include <ctype.h>
 
-uint8_t readU8(WPXInputStream *input)
+uint8_t readU8(libwps::WPSInputStream *input)
 {
-	size_t numBytesRead;
-	uint8_t const * p = input->read(sizeof(uint8_t), numBytesRead);
-	
-  	if (!p || numBytesRead != sizeof(uint8_t))
-  		throw FileException();
-
-	return WPD_LE_GET_GUINT8(p);
+        return input->getchar();
 }
 
-int8_t read8(WPXInputStream *input)
+int8_t read8(libwps::WPSInputStream *input)
 {
-	size_t numBytesRead;
-	int8_t const * p = (int8_t const *) input->read(sizeof(int8_t), numBytesRead);
+	char buffer;
+	size_t numBytesRead = input->read(sizeof(int8_t), &buffer);
 
-  	if (!p || numBytesRead != sizeof(int8_t))
+  	if (numBytesRead != sizeof(int8_t))
   		throw FileException();
 
-	return (int8_t)*(p);
+	return (int8_t)(buffer);
 }
 
-uint16_t readU16(WPXInputStream *input, bool bigendian)
+uint16_t readU16(libwps::WPSInputStream *input, bool bigendian)
 {
-	size_t numBytesRead;
-	uint16_t const *val = (uint16_t const *)input->read(sizeof(uint16_t), numBytesRead);
+	unsigned char buffer[2];
+	size_t numBytesRead = input->read(sizeof(uint16_t), (char *)buffer);
 
-	if (!val || numBytesRead != sizeof(uint16_t))
+	if (numBytesRead != sizeof(uint16_t))
   		throw FileException();
 
 	if (bigendian)
-		return WPD_BE_GET_GUINT16(val);
-	return WPD_LE_GET_GUINT16(val);
+		return WPD_BE_GET_GUINT16(buffer);
+	return WPD_LE_GET_GUINT16(buffer);
 }
 
-uint32_t readU32(WPXInputStream *input, bool bigendian)
+uint32_t readU32(libwps::WPSInputStream *input, bool bigendian)
 {
-	size_t numBytesRead;
-	uint32_t const *val = (uint32_t const *)input->read(sizeof(uint32_t), numBytesRead);
+	char buffer[4];
+	size_t numBytesRead = input->read(sizeof(uint32_t), (char *) buffer);
 
-	if (!val || numBytesRead != sizeof(uint32_t))
+	if (numBytesRead != sizeof(uint32_t))
   		throw FileException();
 
 	if (bigendian)
-		return WPD_BE_GET_GUINT32(val);
-	return WPD_LE_GET_GUINT32(val);
+		return WPD_BE_GET_GUINT32(buffer);
+	return WPD_LE_GET_GUINT32(buffer);
 }
 
-WPXString readPascalString(WPXInputStream *input)
+WPXString readPascalString(libwps::WPSInputStream *input)
 {
 	int pascalStringLength = readU8(input);
 	WPXString tmpString;
@@ -83,7 +77,7 @@ WPXString readPascalString(WPXInputStream *input)
 	return tmpString;
 }
 
-WPXString readCString(WPXInputStream *input)
+WPXString readCString(libwps::WPSInputStream *input)
 {
 	WPXString tmpString;
 	char character;

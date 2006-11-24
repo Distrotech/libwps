@@ -30,7 +30,7 @@
 #include "libwps.h"
 #include "libwpd_internal.h"
 	
-WPXHeader::WPXHeader(WPXInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion, uint16_t documentEncryption) :
+WPXHeader::WPXHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion, uint16_t documentEncryption) :
 	m_documentOffset(documentOffset),
 	m_productType(productType),
 	m_fileType(fileType),
@@ -44,7 +44,7 @@ WPXHeader::~WPXHeader()
 {
 }
 
-WPXHeader * WPXHeader::constructHeader(WPXInputStream *input)
+WPXHeader * WPXHeader::constructHeader(libwps::WPSInputStream *input)
 {
 	WPD_DEBUG_MSG(("WPXHeader::constructHeader()\n"));
 	

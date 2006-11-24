@@ -27,15 +27,16 @@
 #define WPXHEADER_H
 
 #include <stdlib.h>
-#include "WPXStream.h"
+#include "WPSStream.h"
+#include <inttypes.h>
 
 class WPXHeader
 {
  public:	
-	WPXHeader(WPXInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion, uint16_t documentEncryption);
+	WPXHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion, uint16_t documentEncryption);
 	virtual ~WPXHeader();
 
-	static WPXHeader * constructHeader(WPXInputStream *input);
+	static WPXHeader * constructHeader(libwps::WPSInputStream *input);
 		
 	const uint32_t getDocumentOffset() const { return m_documentOffset; }
 	const uint8_t getProductType() const { return m_productType; }

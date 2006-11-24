@@ -23,7 +23,7 @@
 #ifndef WPSDOCUMENT_H
 #define WPSDOCUMENT_H
 
-#include "WPXStream.h"
+#include "WPSStream.h"
 
 enum WPDConfidence { WPD_CONFIDENCE_NONE=0, WPD_CONFIDENCE_POOR, WPD_CONFIDENCE_LIKELY, WPD_CONFIDENCE_GOOD, WPD_CONFIDENCE_EXCELLENT };
 enum WPDResult { WPD_OK, WPD_FILE_ACCESS_ERROR, WPD_PARSE_ERROR, WPD_UNSUPPORTED_ENCRYPTION_ERROR, WPD_OLE_ERROR, WPD_UNKNOWN_ERROR };
@@ -38,13 +38,13 @@ Works documents.
 class WPSDocument
 {
 public:
-	static WPDConfidence isFileFormatSupported(WPXInputStream *input, bool partialContent);
-	static WPDResult parse(WPXInputStream *input, WPXHLListenerImpl *listenerImpl);
-	//static void parse(WPXInputStream *input, WPXHLListenerImpl *listenerImpl, WPXFileType fileType);
-	//WPXFileType getFileType(WPXInputStream *input)
+	static WPDConfidence isFileFormatSupported(libwps::WPSInputStream *input, bool partialContent);
+	static WPDResult parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl);
+	//static void parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl, WPXFileType fileType);
+	//WPXFileType getFileType(libwps::WPSInputStream *input)
 private:
-	static WPDConfidence isFileFormatSupportedWPS(WPXInputStream *input, bool partialContent);
-	static WPDResult parseWPS(WPXInputStream *input, WPXHLListenerImpl *listenerImpl);	
+	static WPDConfidence isFileFormatSupportedWPS(libwps::WPSInputStream *input, bool partialContent);
+	static WPDResult parseWPS(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl);	
 	
 };
 

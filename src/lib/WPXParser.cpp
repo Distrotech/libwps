@@ -28,7 +28,7 @@
 #include "WPXParser.h"
 #include "libwpd_internal.h"
 
-WPXParser::WPXParser(WPXInputStream *input, WPXHeader *header) :
+WPXParser::WPXParser(libwps::WPSInputStream *input, WPXHeader *header) :
 	m_input(input),
 	m_header(header)
 {

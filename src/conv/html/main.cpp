@@ -19,46 +19,31 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#include <gsf/gsf-utils.h>
-#include <gsf/gsf-input-stdio.h>
 #include <stdio.h>
 #include "HtmlListenerImpl.h"
-#include "GSFStream.h"
 #include "WPSDocument.h"
+#include "WPSStreamImplementation.h"
 
 int main(int argc, char *argv[])
 {
-	gsf_init ();
 	if (argc < 2)
 	{
 		printf("Usage: wps2html <Works Document>\n");
 		return 1;
 	}
-	
-	GError   *err = NULL;
-	GsfInput * input;
-	input = GSF_INPUT(gsf_input_stdio_new (argv[1], &err));
-	if (input == NULL) 
-	{
-		g_return_val_if_fail (err != NULL, 1);
-		
-		g_warning ("'%s' error: %s", argv[1], err->message);
-		g_error_free (err);
-		return 1;
-	}
-	
-	GSFInputStream *gsfInput = new GSFInputStream(input);
 
-	WPDConfidence confidence = WPSDocument::isFileFormatSupported(gsfInput, false);
+	libwps::WPSInputStream* input = new libwps::WPSFileStream(argv[1]);
+
+	WPDConfidence confidence = WPSDocument::isFileFormatSupported(input, false);
 	if (confidence == WPD_CONFIDENCE_NONE || confidence == WPD_CONFIDENCE_POOR)
 	{
 		printf("ERROR: Unsupported file format!\n");
-		delete gsfInput;
+		delete input;
 		return 1;
 	}
-
+	
 	HtmlListenerImpl listenerImpl;
- 	WPDResult error = WPSDocument::parse(gsfInput, static_cast<WPXHLListenerImpl *>(&listenerImpl));
+	WPDResult error = WPSDocument::parse(input, static_cast<WPXHLListenerImpl *>(&listenerImpl));
 
 	if (error == WPD_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
@@ -71,9 +56,7 @@ int main(int argc, char *argv[])
 	else if (error != WPD_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 
-	delete gsfInput;
-	g_object_unref (G_OBJECT (input));
-	gsf_shutdown();
+	delete input;
 
 	if (error != WPD_OK)
 		return 1;

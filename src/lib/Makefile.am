@@ -25,8 +25,8 @@ endif
 
 lib_LTLIBRARIES = libwps-0.1.la
 libwps_0_1_includedir = $(includedir)/libwps-0.1/libwps
-libwps_0_1_include_HEADERS = libwps.h libwpd_types.h WPXStream.h  \
-WPSDocument.h GSFStream.h
+libwps_0_1_include_HEADERS = libwps.h libwpd_types.h \
+WPSDocument.h WPSStream.h
 
 INCLUDES = -I$(srcdir)
 
@@ -41,6 +41,8 @@ libwps_0_1_la_SOURCES = \
 	WPS4.cpp \
 	WPS8.cpp \
 	WPSDocument.cpp \
+	WPSOLEStream.cpp \
+	WPSStreamImplementation.cpp \
 	WPXContentListener.cpp \
 	WPXHeader.cpp \
 	WPXListener.cpp \
@@ -58,8 +60,7 @@ libwps_0_1_la_SOURCES = \
 	WPXListener.h \
 	WPXPageSpan.h \
 	WPXParser.h \
-	WPXStylesListener.h \
-	GSFStream.cpp
+	WPXStylesListener.h
 
 if OS_WIN32
 

@@ -12,8 +12,8 @@ Group: System Environment/Libraries
 URL: http://libwps.sourceforge.net/
 BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
 License: LGPL
-Requires: glib2 >= 2.0.0, libgsf >= 1.6.0, libwpd >= 0.8
-BuildRequires: glib2-devel >= 2.0.0, libgsf-devel >= 1.6.0
+Requires: glib2 >= 2.0.0, libwpd >= 0.8
+BuildRequires: glib2-devel >= 2.0.0
 BuildRequires: libwpd-devel >= 0.8, glibc-devel
 
 %description
