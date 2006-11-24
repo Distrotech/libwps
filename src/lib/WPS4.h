@@ -25,13 +25,13 @@
 #include <vector>
 #include <map>
 
-#include "libwpd_internal.h"
+#include "libwps_internal.h"
 #include "WPS.h"
-#include "WPXContentListener.h"
-#include "WPXHeader.h"
+#include "WPSContentListener.h"
+#include "WPSHeader.h"
 #include "WPSStream.h"
 #include <libwpd/WPXString.h>
-#include "WPXParser.h"
+#include "WPSParser.h"
 
 class WPS4Listener;
 
@@ -64,10 +64,10 @@ public:
 	virtual void lineSpacingChange(const float lineSpacing) = 0;
 	virtual void attributeChange(const bool isOn, const uint8_t attribute) = 0;
 	virtual void pageMarginChange(const uint8_t side, const uint16_t margin) = 0;
-	virtual void pageFormChange(const uint16_t length, const uint16_t width, const WPXFormOrientation orientation, const bool isPersistent) = 0;
+	virtual void pageFormChange(const uint16_t length, const uint16_t width, const WPSFormOrientation orientation, const bool isPersistent) = 0;
 	virtual void marginChange(const uint8_t side, const uint16_t margin) = 0;
 	virtual void indentFirstLineChange(const int16_t offset) = 0;
-	virtual void columnChange(const WPXTextColumnType columnType, const uint8_t numColumns, const std::vector<float> &columnWidth,
+	virtual void columnChange(const WPSTextColumnType columnType, const uint8_t numColumns, const std::vector<float> &columnWidth,
 					const std::vector<bool> &isFixedWidth) = 0;
 	virtual void endDocument() = 0;
 
@@ -81,15 +81,15 @@ public:
 	virtual void suppressPage(const uint16_t suppressCode) = 0;
 };
 
-class WPS4Parser : public WPXParser
+class WPS4Parser : public WPSParser
 {
 public:
-	WPS4Parser(libwps::WPSInputStream *input, WPXHeader * header);
+	WPS4Parser(libwps::WPSInputStream *input, WPSHeader * header);
 	~WPS4Parser();
 
 	void parse(WPXHLListenerImpl *listenerImpl);
 private:
-	void parsePages(std::list<WPXPageSpan> &pageList, libwps::WPSInputStream *input);
+	void parsePages(std::list<WPSPageSpan> &pageList, libwps::WPSInputStream *input);
 	void parse(libwps::WPSInputStream *stream, WPS4Listener *listener);
 	void readFontsTable(libwps::WPSInputStream * input);
 	bool readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * FODs);	
@@ -116,26 +116,26 @@ struct _WPS4ContentParsingState
 };
 
 
-class WPS4ContentListener : public WPS4Listener, protected WPXContentListener
+class WPS4ContentListener : public WPS4Listener, protected WPSContentListener
 {
 public:
-	WPS4ContentListener(std::list<WPXPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
+	WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
 	~WPS4ContentListener();
 
-	void startDocument() { WPXContentListener::startDocument(); };
+	void startDocument() { WPSContentListener::startDocument(); };
 	void insertCharacter(const uint16_t character);
 	void insertTab(const uint8_t tabType, float tabPosition);
-	void insertBreak(const uint8_t breakType) { WPXContentListener::insertBreak(breakType); };
+	void insertBreak(const uint8_t breakType) { WPSContentListener::insertBreak(breakType); };
 	void insertEOL();
 	void attributeChange(const bool isOn, const uint8_t attribute);
-	void lineSpacingChange(const float lineSpacing) { WPXContentListener::lineSpacingChange(lineSpacing); };
+	void lineSpacingChange(const float lineSpacing) { WPSContentListener::lineSpacingChange(lineSpacing); };
 	void pageMarginChange(const uint8_t side, const uint16_t margin) {};
-	void pageFormChange(const uint16_t length, const uint16_t width, const WPXFormOrientation orientation, const bool isPersistent) {};
+	void pageFormChange(const uint16_t length, const uint16_t width, const WPSFormOrientation orientation, const bool isPersistent) {};
 	void marginChange(const uint8_t side, const uint16_t margin);
 	void indentFirstLineChange(const int16_t offset);
-	void columnChange(const WPXTextColumnType columnType, const uint8_t numColumns, const std::vector<float> &columnWidth,
+	void columnChange(const WPSTextColumnType columnType, const uint8_t numColumns, const std::vector<float> &columnWidth,
 					const std::vector<bool> &isFixedWidth);
-	void endDocument() { WPXContentListener::endDocument(); };
+	void endDocument() { WPSContentListener::endDocument(); };
 
 	void undoChange(const uint8_t undoType, const uint16_t undoLevel);
 	void justificationChange(const uint8_t justification);
@@ -144,7 +144,7 @@ public:
 	void setFontSize(const uint16_t fontSize);
 	void insertPageNumber(const WPXString &pageNumber);
 	void insertNoteReference(const WPXString &noteReference);
-	void insertNote(const WPXNoteType noteType);
+	void insertNote(const WPSNoteType noteType);
 	void suppressPage(const uint16_t suppressCode);
 	
 protected:

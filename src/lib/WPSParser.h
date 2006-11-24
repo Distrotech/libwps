@@ -1,6 +1,6 @@
 /* libwpd
- * Copyright (C) 2003 David Mandelin (mandelin@cs.wisc.edu)
- * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
  *  
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -16,37 +16,38 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
 /* "This product is not manufactured, approved, or supported by 
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include "libwpd_math.h"
+#ifndef WPSPARSER_H
+#define WPSPARSER_H
 
-#if defined(_WIN32) && !defined(__MINGW32__)
+#include "WPSHeader.h"
+//#include "WPSListener.h"
 
-double rint(double x) 
+class WPXHLListenerImpl;
+
+class WPSParser
 {
-	double y, z;
-	int n;
+public:
+	WPSParser(libwps::WPSInputStream * input, WPSHeader *header);
+	virtual ~WPSParser();
 
-	if(x >= 0) 
-	{
-		y = x + 0.5;
-		z = floor(y);
-		n = static_cast<int>(z);
-		if (y == z && n % 2) --z;
-	} 
-	else 
-	{
-		y = x - 0.5;
-		z = ceil(y);
-		n = static_cast<int>(z);
-		if(y == z && n % 2) ++z;
-	}
-	return z;
-}
+	virtual void parse(WPXHLListenerImpl *listenerImpl) = 0;
 
-#endif
+protected:
+	WPSHeader * getHeader() { return m_header; }
+	libwps::WPSInputStream * getInput() { return m_input; }
+	
+private:
+	libwps::WPSInputStream * m_input;
+//	WPSListener * m_hlListener;
+
+	WPSHeader * m_header;
+};
+
+#endif /* WPSPARSER_H */

@@ -16,27 +16,27 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
 /* "This product is not manufactured, approved, or supported by 
  * Corel Corporation or Corel Corporation Limited."
  */
  
-#ifndef WPXHEADER_H
-#define WPXHEADER_H
+#ifndef WPSHEADER_H
+#define WPSHEADER_H
 
 #include <stdlib.h>
 #include "WPSStream.h"
 #include <inttypes.h>
 
-class WPXHeader
+class WPSHeader
 {
  public:	
-	WPXHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion, uint16_t documentEncryption);
-	virtual ~WPXHeader();
+	WPSHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion, uint16_t documentEncryption);
+	virtual ~WPSHeader();
 
-	static WPXHeader * constructHeader(libwps::WPSInputStream *input);
+	static WPSHeader * constructHeader(libwps::WPSInputStream *input);
 		
 	const uint32_t getDocumentOffset() const { return m_documentOffset; }
 	const uint8_t getProductType() const { return m_productType; }
@@ -54,4 +54,4 @@ class WPXHeader
  	uint16_t m_documentEncryption;		
 };
 
-#endif /* WPXHEADER_H */
+#endif /* WPSHEADER_H */

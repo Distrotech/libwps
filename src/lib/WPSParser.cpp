@@ -1,9 +1,7 @@
 /* libwpd
- * Copyright (C) 2002-2005 William Lachance (william.lachance@sympatico.ca)
- * Copyright (C) 2004 Net Integration Technologies (http://www.net-itech.com)
- * Copyright (C) 2002-2003 Marc Maurer (uwog@uwog.net)
- * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
- *
+ * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
+ *  
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -18,20 +16,25 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by
+/* "This product is not manufactured, approved, or supported by 
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include "WPXStylesListener.h"
+#include <stdlib.h>
+#include <string.h>
+#include "WPSParser.h"
+#include "libwps_internal.h"
 
-WPXStylesListener::WPXStylesListener(std::list<WPXPageSpan> &pageList) :
-	WPXListener(pageList)
+WPSParser::WPSParser(libwps::WPSInputStream *input, WPSHeader *header) :
+	m_input(input),
+	m_header(header)
 {
 }
 
-WPXStylesListener::~WPXStylesListener()
+WPSParser::~WPSParser()
 {
+	DELETEP(m_header);
 }

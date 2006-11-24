@@ -1,6 +1,6 @@
 /* libwpd
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
- * Copyright (C) 2002-2004 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
  *  
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -16,37 +16,20 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by
+/* "This product is not manufactured, approved, or supported by 
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "WPXHeader.h"
-#include "WPXFileStructure.h"
-#include "libwps.h"
-#include "libwpd_internal.h"
-	
-WPXHeader::WPXHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion, uint16_t documentEncryption) :
-	m_documentOffset(documentOffset),
-	m_productType(productType),
-	m_fileType(fileType),
-	m_majorVersion(majorVersion),
-	m_minorVersion(minorVersion),
-	m_documentEncryption(documentEncryption)
-{
-}
+#ifndef WPSFILESTRUCTURE_H
+#define WPSFILESTRUCTURE_H
 
-WPXHeader::~WPXHeader()
-{
-}
+// header defines
 
-WPXHeader * WPXHeader::constructHeader(libwps::WPSInputStream *input)
-{
-	WPD_DEBUG_MSG(("WPXHeader::constructHeader()\n"));
-	
-	return NULL;
-}
+#define WPS_NUM_HEADER_FOOTER_TYPES 6
+#define WPS_FOOTER_A 0x02
+#define WPS_FOOTER_B 0x03
+
+#endif /* WPSFILESTRUCTURE_H */

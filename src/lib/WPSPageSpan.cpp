@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
 /* "This product is not manufactured, approved, or supported by 
@@ -25,15 +25,15 @@
 
 #include <math.h>
 #include <algorithm>
-#include "WPXPageSpan.h"
-#include "libwpd_internal.h"
+#include "WPSPageSpan.h"
+#include "libwps_internal.h"
 
-const float WPX_DEFAULT_PAGE_MARGIN_TOP = 1.0f;
-const float WPX_DEFAULT_PAGE_MARGIN_BOTTOM = 1.0f;
+const float WPS_DEFAULT_PAGE_MARGIN_TOP = 1.0f;
+const float WPS_DEFAULT_PAGE_MARGIN_BOTTOM = 1.0f;
 const uint8_t DUMMY_INTERNAL_HEADER_FOOTER = 16;
 
 // precondition: 0 <= headerFooterType <= 3 (i.e.: we don't handle watermarks here)
-WPXHeaderFooter::WPXHeaderFooter(const WPXHeaderFooterType headerFooterType, const WPXHeaderFooterOccurence occurence, 
+WPSHeaderFooter::WPSHeaderFooter(const WPSHeaderFooterType headerFooterType, const WPSHeaderFooterOccurence occurence, 
 				 const uint8_t internalType) :
 	m_type(headerFooterType),
 	m_occurence(occurence),
@@ -41,32 +41,32 @@ WPXHeaderFooter::WPXHeaderFooter(const WPXHeaderFooterType headerFooterType, con
 {
 }
 
-WPXHeaderFooter::WPXHeaderFooter(const WPXHeaderFooter &headerFooter) :
+WPSHeaderFooter::WPSHeaderFooter(const WPSHeaderFooter &headerFooter) :
 	m_type(headerFooter.getType()),
 	m_occurence(headerFooter.getOccurence()),
 	m_internalType(headerFooter.getInternalType())
 {
 }
 
-WPXHeaderFooter::~WPXHeaderFooter()
+WPSHeaderFooter::~WPSHeaderFooter()
 {
 }
 
-WPXPageSpan::WPXPageSpan() :
+WPSPageSpan::WPSPageSpan() :
 	m_formLength(11.0f),
 	m_formWidth(8.5f),
 	m_formOrientation(PORTRAIT),
 	m_marginLeft(1.0f),
 	m_marginRight(1.0f),
-	m_marginTop(WPX_DEFAULT_PAGE_MARGIN_TOP),
-	m_marginBottom(WPX_DEFAULT_PAGE_MARGIN_BOTTOM),
+	m_marginTop(WPS_DEFAULT_PAGE_MARGIN_TOP),
+	m_marginBottom(WPS_DEFAULT_PAGE_MARGIN_BOTTOM),
 	m_pageSpan(1)
 {
-	for (int i=0; i<WPX_NUM_HEADER_FOOTER_TYPES; i++)
+	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)
 		m_isHeaderFooterSuppressed[i]=false;
 }
 
-WPXPageSpan::WPXPageSpan(const WPXPageSpan &page) :
+WPSPageSpan::WPSPageSpan(const WPSPageSpan &page) :
 	m_formLength(page.getFormLength()),
 	m_formWidth(page.getFormWidth()),
 	m_formOrientation(page.getFormOrientation()),
@@ -77,13 +77,13 @@ WPXPageSpan::WPXPageSpan(const WPXPageSpan &page) :
 	m_headerFooterList(page.getHeaderFooterList()),
 	m_pageSpan(page.getPageSpan())
 {
-	for (int i=0; i<WPX_NUM_HEADER_FOOTER_TYPES; i++)
+	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)
 		m_isHeaderFooterSuppressed[i] = page.getHeaderFooterSuppression(i);	
 }
 
 // NB: this is not a literal "clone" function: it is contingent on the side margins that are passed,
 // and suppression variables are not copied
-WPXPageSpan::WPXPageSpan(const WPXPageSpan &page, float paragraphMarginLeft, float paragraphMarginRight) :
+WPSPageSpan::WPSPageSpan(const WPSPageSpan &page, float paragraphMarginLeft, float paragraphMarginRight) :
 	m_formLength(page.getFormLength()),
 	m_formWidth(page.getFormWidth()),
 	m_formOrientation(page.getFormOrientation()),
@@ -94,18 +94,18 @@ WPXPageSpan::WPXPageSpan(const WPXPageSpan &page, float paragraphMarginLeft, flo
 	m_headerFooterList(page.getHeaderFooterList()),
 	m_pageSpan(page.getPageSpan())
 {
-	for (int i=0; i<WPX_NUM_HEADER_FOOTER_TYPES; i++)
+	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)
 		m_isHeaderFooterSuppressed[i] = false;	
 }
 
-WPXPageSpan::~WPXPageSpan()
+WPSPageSpan::~WPSPageSpan()
 {
 }
 
 
-void WPXPageSpan::setHeaderFooter(const WPXHeaderFooterType type, const uint8_t headerFooterType, const WPXHeaderFooterOccurence occurence)
+void WPSPageSpan::setHeaderFooter(const WPSHeaderFooterType type, const uint8_t headerFooterType, const WPSHeaderFooterOccurence occurence)
 {
-	WPXHeaderFooter headerFooter(type, occurence, headerFooterType);
+	WPSHeaderFooter headerFooter(type, occurence, headerFooterType);
 	switch (occurence) 
 	{
 	case ALL:
@@ -126,17 +126,17 @@ void WPXPageSpan::setHeaderFooter(const WPXHeaderFooterType type, const uint8_t 
 	bool containsHFLeft = _containsHeaderFooter(type, ODD);
 	bool containsHFRight = _containsHeaderFooter(type, EVEN);
 
-	WPD_DEBUG_MSG(("Contains HFL: %i HFR: %i\n", containsHFLeft, containsHFRight));
+	WPS_DEBUG_MSG(("Contains HFL: %i HFR: %i\n", containsHFLeft, containsHFRight));
 	if (containsHFLeft && !containsHFRight)
 	{
-		WPD_DEBUG_MSG(("Inserting dummy header right\n"));
-		WPXHeaderFooter dummyHeader(type, EVEN, DUMMY_INTERNAL_HEADER_FOOTER);
+		WPS_DEBUG_MSG(("Inserting dummy header right\n"));
+		WPSHeaderFooter dummyHeader(type, EVEN, DUMMY_INTERNAL_HEADER_FOOTER);
 		m_headerFooterList.push_back(dummyHeader);
 	}
 	else if (!containsHFLeft && containsHFRight)
 	{
-		WPD_DEBUG_MSG(("Inserting dummy header left\n"));
-		WPXHeaderFooter dummyHeader(type, ODD, DUMMY_INTERNAL_HEADER_FOOTER);
+		WPS_DEBUG_MSG(("Inserting dummy header left\n"));
+		WPSHeaderFooter dummyHeader(type, ODD, DUMMY_INTERNAL_HEADER_FOOTER);
 		m_headerFooterList.push_back(dummyHeader);
 	}
 }
@@ -145,7 +145,7 @@ void WPXPageSpan::setHeaderFooter(const WPXHeaderFooterType type, const uint8_t 
 // since this is a span, not an individuated page, we have to swap header/footer odd/even paramaters
 // if we're not starting on an odd page
 // ALSO: add a left/right footer to the page, if we have one but not the other (post-processing step)
-void WPXPageSpan::makeConsistent(int startingPageNumber)
+void WPSPageSpan::makeConsistent(int startingPageNumber)
 {
 	if (!(startingPageNumber % 2))
 	{
@@ -153,21 +153,21 @@ void WPXPageSpan::makeConsistent(int startingPageNumber)
 	}
 }
 
-void WPXPageSpan::_removeHeaderFooter(WPXHeaderFooterType type, WPXHeaderFooterOccurence occurence)
+void WPSPageSpan::_removeHeaderFooter(WPSHeaderFooterType type, WPSHeaderFooterOccurence occurence)
 {
-	for (std::vector<WPXHeaderFooter>::iterator iter = m_headerFooterList.begin(); iter != m_headerFooterList.end(); iter++) 
+	for (std::vector<WPSHeaderFooter>::iterator iter = m_headerFooterList.begin(); iter != m_headerFooterList.end(); iter++) 
 	{
 		if ((*iter).getType() == type && (*iter).getOccurence() == occurence) {
-			WPD_DEBUG_MSG(("WordPerfect: Removing header/footer element of type: %i since it is identical to %i\n",(*iter).getType(), type));
+			WPS_DEBUG_MSG(("WordPerfect: Removing header/footer element of type: %i since it is identical to %i\n",(*iter).getType(), type));
 			m_headerFooterList.erase(iter);
 			return;
 		}
 	}
 }
 
-bool WPXPageSpan::_containsHeaderFooter(WPXHeaderFooterType type, WPXHeaderFooterOccurence occurence)
+bool WPSPageSpan::_containsHeaderFooter(WPSHeaderFooterType type, WPSHeaderFooterOccurence occurence)
 {
-	for (std::vector<WPXHeaderFooter>::iterator iter = m_headerFooterList.begin(); iter != m_headerFooterList.end(); iter++) 
+	for (std::vector<WPSHeaderFooter>::iterator iter = m_headerFooterList.begin(); iter != m_headerFooterList.end(); iter++) 
 	{
 		if ((*iter).getType()==type && (*iter).getOccurence()==occurence)
 			return true;
@@ -176,30 +176,30 @@ bool WPXPageSpan::_containsHeaderFooter(WPXHeaderFooterType type, WPXHeaderFoote
 	return false;
 }
 
-inline bool operator==(const WPXHeaderFooter &headerFooter1, const WPXHeaderFooter &headerFooter2)
+inline bool operator==(const WPSHeaderFooter &headerFooter1, const WPSHeaderFooter &headerFooter2)
 {
 	return ((headerFooter1.getType() == headerFooter2.getType()) && 
 		(headerFooter1.getOccurence() == headerFooter2.getOccurence()) &&
 		(headerFooter1.getInternalType() == headerFooter2.getInternalType()) );
 }
 
-bool operator==(const WPXPageSpan &page1, const WPXPageSpan &page2)
+bool operator==(const WPSPageSpan &page1, const WPSPageSpan &page2)
 {
 	if ((page1.getMarginLeft() != page2.getMarginLeft()) || (page1.getMarginRight() != page2.getMarginRight()) ||
 	    (page1.getMarginTop() != page2.getMarginTop())|| (page1.getMarginBottom() != page2.getMarginBottom()))
 		return false;
 
 
-	for (int i=0; i<WPX_NUM_HEADER_FOOTER_TYPES; i++) {
+	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++) {
 		if (page1.getHeaderFooterSuppression(i) != page2.getHeaderFooterSuppression(i))
 			return false;
 	}
 
 	// NOTE: yes this is O(n^2): so what? n=4 at most
-	const std::vector<WPXHeaderFooter> headerFooterList1 = page1.getHeaderFooterList();
-	const std::vector<WPXHeaderFooter> headerFooterList2 = page2.getHeaderFooterList();
-	std::vector<WPXHeaderFooter>::const_iterator iter1;		
-	std::vector<WPXHeaderFooter>::const_iterator iter2;		
+	const std::vector<WPSHeaderFooter> headerFooterList1 = page1.getHeaderFooterList();
+	const std::vector<WPSHeaderFooter> headerFooterList2 = page2.getHeaderFooterList();
+	std::vector<WPSHeaderFooter>::const_iterator iter1;		
+	std::vector<WPSHeaderFooter>::const_iterator iter2;		
 
 	for (iter1 = headerFooterList1.begin(); iter1 != headerFooterList1.end(); iter1++)
 	{
@@ -219,7 +219,7 @@ bool operator==(const WPXPageSpan &page1, const WPXPageSpan &page2)
 	}
 
 	
-	WPD_DEBUG_MSG(("WordPerfect: WPXPageSpan == comparison finished, found no differences\n"));
+	WPS_DEBUG_MSG(("WordPerfect: WPSPageSpan == comparison finished, found no differences\n"));
 
 	return true;
 }

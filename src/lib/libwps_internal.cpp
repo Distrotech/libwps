@@ -16,13 +16,13 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
 /* "This product is not manufactured, approved, or supported by 
  * Corel Corporation or Corel Corporation Limited."
  */
-#include "libwpd_internal.h"
+#include "libwps_internal.h"
 #include "WPSStream.h"
 #include <ctype.h>
 
@@ -123,7 +123,7 @@ static const uint16_t asciiMap[] =
 	248, 249, 250, 251, 252, 253, 254, 255,
 };
 
-#include "libwpd_math.h"
+#include "libwps_math.h"
 
 uint16_t fixedPointToWPUs(const uint32_t fixedPointNumber)
 {
@@ -173,7 +173,7 @@ _RGBSColor::_RGBSColor(uint16_t red, uint16_t green, uint16_t blue)
 	}		
 }
 
-_WPXTabStop::_WPXTabStop(float position, WPXTabAlignment alignment, uint16_t leaderCharacter, uint8_t leaderNumSpaces)
+_WPSTabStop::_WPSTabStop(float position, WPSTabAlignment alignment, uint16_t leaderCharacter, uint8_t leaderNumSpaces)
 	:	m_position(position),
 		m_alignment(alignment),
 		m_leaderCharacter(leaderCharacter),
@@ -181,7 +181,7 @@ _WPXTabStop::_WPXTabStop(float position, WPXTabAlignment alignment, uint16_t lea
 {
 }
 
-_WPXTabStop::_WPXTabStop()
+_WPSTabStop::_WPSTabStop()
 	:	m_position(0.0f),
 		m_alignment(LEFT),
 		m_leaderCharacter('\0'),
@@ -189,14 +189,14 @@ _WPXTabStop::_WPXTabStop()
 {
 }
 
-_WPXColumnDefinition::_WPXColumnDefinition()
+_WPSColumnDefinition::_WPSColumnDefinition()
 	:	m_width(0.0f),
 		m_leftGutter(0.0f),
 		m_rightGutter(0.0f)
 {
 }
 
-_WPXColumnProperties::_WPXColumnProperties()
+_WPSColumnProperties::_WPSColumnProperties()
 	:	m_attributes(0x00000000),
 		m_alignment(0x00)
 {
@@ -226,7 +226,7 @@ int _extractNumericValueFromRoman(const char romanChar)
 // as letters, numbers, or roman numerals.. return an integer value representing its number
 // HACK: this function is really cheesey
 // NOTE: if the input is not valid, the output is unspecified
-int _extractDisplayReferenceNumberFromBuf(const WPXString &buf, const WPXNumberingType listType)
+int _extractDisplayReferenceNumberFromBuf(const WPXString &buf, const WPSNumberingType listType)
 {
 	if (listType == LOWERCASE_ROMAN || listType == UPPERCASE_ROMAN)
 	{
@@ -271,16 +271,16 @@ int _extractDisplayReferenceNumberFromBuf(const WPXString &buf, const WPXNumberi
 	return 1;
 }
 
-WPXNumberingType _extractWPXNumberingTypeFromBuf(const WPXString &buf, const WPXNumberingType putativeWPXNumberingType)
+WPSNumberingType _extractWPSNumberingTypeFromBuf(const WPXString &buf, const WPSNumberingType putativeWPSNumberingType)
 {
 	WPXString::Iter i(buf);
 	for (i.rewind(); i.next();)
 	{
 		if ((*(i()) == 'I' || *(i()) == 'V' || *(i()) == 'X') &&
-		    (putativeWPXNumberingType == LOWERCASE_ROMAN || putativeWPXNumberingType == UPPERCASE_ROMAN))
+		    (putativeWPSNumberingType == LOWERCASE_ROMAN || putativeWPSNumberingType == UPPERCASE_ROMAN))
 			return UPPERCASE_ROMAN;
 		else if ((*(i()) == 'i' || *(i()) == 'v' || *(i()) == 'x') &&
-		    (putativeWPXNumberingType == LOWERCASE_ROMAN || putativeWPXNumberingType == UPPERCASE_ROMAN))
+		    (putativeWPSNumberingType == LOWERCASE_ROMAN || putativeWPSNumberingType == UPPERCASE_ROMAN))
 			return LOWERCASE_ROMAN;
 		else if (*(i()) >= 'A' && *(i()) <= 'Z')
 			return UPPERCASE;
@@ -291,7 +291,7 @@ WPXNumberingType _extractWPXNumberingTypeFromBuf(const WPXString &buf, const WPX
 	return ARABIC;
 }
 
-WPXString _numberingTypeToString(WPXNumberingType t)
+WPXString _numberingTypeToString(WPSNumberingType t)
 {
 	WPXString sListTypeSymbol("1");
 	switch (t)

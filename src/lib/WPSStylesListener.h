@@ -1,8 +1,5 @@
 /* libwpd
- * Copyright (C) 2002-2005 William Lachance (william.lachance@sympatico.ca)
- * Copyright (C) 2004 Net Integration Technologies (http://www.net-itech.com)
- * Copyright (C) 2002-2003 Marc Maurer (uwog@uwog.net)
- * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
+ * Copyright (C) 2006 Fridrich Strba (fridrich.strba@bluewin.ch)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -18,21 +15,28 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
 /* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include "WPXListener.h"
+#ifndef WPSSTYLESLISTENER_H
+#define WPSSTYLESLISTENER_H
 
-WPXListener::WPXListener(std::list<WPXPageSpan> &pageList) :
-	m_isUndoOn(false),
-	m_pageList(pageList)
-{
-}
+#include "libwps_internal.h"
+#include "WPSPageSpan.h"
+#include "WPSListener.h"
+#include "WPSPageSpan.h"
+#include <vector>
+#include <list>
 
-WPXListener::~WPXListener()
+class WPSStylesListener : protected WPSListener
 {
-}
+protected:
+	WPSStylesListener(std::list<WPSPageSpan> &pageList);
+	virtual ~WPSStylesListener();
+};
+
+#endif /* WPSSTYLESLISTENER_H */

@@ -15,30 +15,30 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
 /* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef WPXCONTENTLISTENER_H
-#define WPXCONTENTLISTENER_H
+#ifndef WPSCONTENTLISTENER_H
+#define WPSCONTENTLISTENER_H
 
-#include "libwpd_internal.h"
-#include "WPXPageSpan.h"
-#include "WPXListener.h"
+#include "libwps_internal.h"
+#include "WPSPageSpan.h"
+#include "WPSListener.h"
 #include <libwpd/WPXHLListenerImpl.h>
 #include <libwpd/WPXPropertyListVector.h>
 #include <vector>
 #include <list>
 #include <set>
 
-typedef struct _WPXContentParsingState WPXContentParsingState;
-struct _WPXContentParsingState
+typedef struct _WPSContentParsingState WPSContentParsingState;
+struct _WPSContentParsingState
 {
-	_WPXContentParsingState();
-	~_WPXContentParsingState();
+	_WPSContentParsingState();
+	~_WPSContentParsingState();
 
 	uint32_t m_textAttributeBits;
 	float m_fontSize;
@@ -68,17 +68,17 @@ struct _WPXContentParsingState
 	uint32_t m_cellAttributeBits;
 	uint8_t m_paragraphJustificationBeforeColumns;
 	
-	std::list<WPXPageSpan>::iterator m_nextPageSpanIter;
+	std::list<WPSPageSpan>::iterator m_nextPageSpanIter;
 	int m_numPagesRemainingInSpan;
 
 	bool m_sectionAttributesChanged;
 	int m_numColumns;
-	std::vector < WPXColumnDefinition > m_textColumns;
+	std::vector < WPSColumnDefinition > m_textColumns;
 	bool m_isTextColumnWithoutParagraph;
 
 	float m_pageFormLength;
 	float m_pageFormWidth;
-	WPXFormOrientation m_pageFormOrientation;
+	WPSFormOrientation m_pageFormOrientation;
 
 	float m_pageMarginLeft;
 	float m_pageMarginRight;
@@ -105,17 +105,17 @@ struct _WPXContentParsingState
 	uint8_t m_currentListLevel;
 	
 	uint16_t m_alignmentCharacter;
-	std::vector<WPXTabStop> m_tabStops;
+	std::vector<WPSTabStop> m_tabStops;
 	bool m_isTabPositionRelative;
 
 	bool m_isNote;
 };
 
-class WPXContentListener : public WPXListener
+class WPSContentListener : public WPSListener
 {
 protected:
-	WPXContentListener(std::list<WPXPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
-	virtual ~WPXContentListener();
+	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
+	virtual ~WPSContentListener();
 
 	void startDocument();
 	void endDocument();
@@ -123,7 +123,7 @@ protected:
 	void lineSpacingChange(const float lineSpacing);
 	void justificationChange(const uint8_t justification);
 
-	WPXContentParsingState *m_ps; // parse state
+	WPSContentParsingState *m_ps; // parse state
 	WPXHLListenerImpl * m_listenerImpl;
 	WPXPropertyList m_metaData;
 
@@ -156,4 +156,4 @@ private:
 	WPXString _mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor);
 };
 
-#endif /* WPXCONTENTLISTENER_H */
+#endif /* WPSCONTENTLISTENER_H */

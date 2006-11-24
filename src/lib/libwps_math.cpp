@@ -1,6 +1,6 @@
 /* libwpd
- * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
- * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2003 David Mandelin (mandelin@cs.wisc.edu)
+ * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
  *  
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -16,20 +16,37 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
 /* "This product is not manufactured, approved, or supported by 
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef WPXFILESTRUCTURE_H
-#define WPXFILESTRUCTURE_H
+#include "libwps_math.h"
 
-// header defines
+#if defined(_WIN32) && !defined(__MINGW32__)
 
-#define WPX_NUM_HEADER_FOOTER_TYPES 6
-#define WPX_FOOTER_A 0x02
-#define WPX_FOOTER_B 0x03
+double rint(double x) 
+{
+	double y, z;
+	int n;
 
-#endif /* WPXFILESTRUCTURE_H */
+	if(x >= 0) 
+	{
+		y = x + 0.5;
+		z = floor(y);
+		n = static_cast<int>(z);
+		if (y == z && n % 2) --z;
+	} 
+	else 
+	{
+		y = x - 0.5;
+		z = ceil(y);
+		n = static_cast<int>(z);
+		if(y == z && n % 2) ++z;
+	}
+	return z;
+}
+
+#endif

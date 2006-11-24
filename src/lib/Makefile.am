@@ -25,7 +25,7 @@ endif
 
 lib_LTLIBRARIES = libwps-0.1.la
 libwps_0_1_includedir = $(includedir)/libwps-0.1/libwps
-libwps_0_1_include_HEADERS = libwps.h libwpd_types.h \
+libwps_0_1_include_HEADERS = libwps.h libwps_types.h \
 WPSDocument.h WPSStream.h
 
 INCLUDES = -I$(srcdir)
@@ -36,31 +36,31 @@ libwps_0_1_la_LIBADD  = @LIBWPS_WIN32_RESOURCE@
 libwps_0_1_la_DEPENDENCIES = @LIBWPS_WIN32_RESOURCE@
 libwps_0_1_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
 libwps_0_1_la_SOURCES = \
-	libwpd_internal.cpp \
-	libwpd_math.cpp \
+	libwps_internal.cpp \
+	libwps_math.cpp \
 	WPS4.cpp \
 	WPS8.cpp \
 	WPSDocument.cpp \
 	WPSOLEStream.cpp \
 	WPSStreamImplementation.cpp \
-	WPXContentListener.cpp \
-	WPXHeader.cpp \
-	WPXListener.cpp \
-	WPXPageSpan.cpp \
-	WPXParser.cpp \
-	WPXStylesListener.cpp \
+	WPSContentListener.cpp \
+	WPSHeader.cpp \
+	WPSListener.cpp \
+	WPSPageSpan.cpp \
+	WPSParser.cpp \
+	WPSStylesListener.cpp \
 	libwps.h \
-	libwpd_internal.h \
-	libwpd_math.h \
-	libwpd_types.h \
+	libwps_internal.h \
+	libwps_math.h \
+	libwps_types.h \
 	WPSDocument.h \
-	WPXContentListener.h \
-	WPXHeader.h \
-	WPXFileStructure.h \
-	WPXListener.h \
-	WPXPageSpan.h \
-	WPXParser.h \
-	WPXStylesListener.h
+	WPSContentListener.h \
+	WPSHeader.h \
+	WPSFileStructure.h \
+	WPSListener.h \
+	WPSPageSpan.h \
+	WPSParser.h \
+	WPSStylesListener.h
 
 if OS_WIN32
 

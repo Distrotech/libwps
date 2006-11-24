@@ -1,7 +1,9 @@
 /* libwpd
- * Copyright (C) 2003 David Mandelin (mandelin@cs.wisc.edu)
- * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
- *  
+ * Copyright (C) 2002-2005 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2004 Net Integration Technologies (http://www.net-itech.com)
+ * Copyright (C) 2002-2003 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -16,21 +18,20 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by 
+/* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
 
+#include "WPSStylesListener.h"
 
-#ifndef LIBWPD_MATH_H
-#define LIBWPD_MATH_H
+WPSStylesListener::WPSStylesListener(std::list<WPSPageSpan> &pageList) :
+	WPSListener(pageList)
+{
+}
 
-#include <math.h>
-
-#if defined(_WIN32) && !defined(__MINGW32__)
-double rint(double x);
-#endif /* _WIN32 */
-
-#endif /* LIBWPD_MATH_H */
+WPSStylesListener::~WPSStylesListener()
+{
+}

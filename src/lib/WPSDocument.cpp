@@ -26,9 +26,9 @@
 #include "WPSDocument.h"
 #include "WPS4.h"
 #include "WPS8.h"
-#include "WPXHeader.h"
-#include "WPXParser.h"
-#include "libwpd_internal.h"
+#include "WPSHeader.h"
+#include "WPSParser.h"
+#include "libwps_internal.h"
 
 /**
 \mainpage libwps documentation
@@ -55,7 +55,7 @@ WPDConfidence WPSDocument::isFileFormatSupportedWPS(libwps::WPSInputStream *inpu
 	//fixme: catch exceptions
 	if (document_mn0)
 	{
-		WPD_DEBUG_MSG(("Microsoft Works v4 format detected\n"));	
+		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));	
 		DELETEP(document_mn0);		
 		return WPD_CONFIDENCE_EXCELLENT;
 	}	
@@ -77,21 +77,21 @@ WPDConfidence WPSDocument::isFileFormatSupportedWPS(libwps::WPSInputStream *inpu
 		/* Works 7/8 */
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
 		{
-			WPD_DEBUG_MSG(("Microsoft Works v8 (maybe 7) format detected\n"));
+			WPS_DEBUG_MSG(("Microsoft Works v8 (maybe 7) format detected\n"));
 			return WPD_CONFIDENCE_EXCELLENT;
 		}
 		
 		/* Works 2000 */		
 		if (0 == strcmp(fileMagic, "CHNKINK"))
 		{
-			WPD_DEBUG_MSG(("Microsoft Works 2000 (v5) format detected\n"));
+			WPS_DEBUG_MSG(("Microsoft Works 2000 (v5) format detected\n"));
 		}	
 	}
 
 	input->seek(0);
 	if (readU8(input) < 6 && 0xFE == readU8(input))
 	{
-		WPD_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
+		WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
 		return WPD_CONFIDENCE_EXCELLENT;
 	}	
 
@@ -111,7 +111,7 @@ WPDConfidence WPSDocument::isFileFormatSupported(libwps::WPSInputStream *input, 
 {
 	WPDConfidence confidence = WPD_CONFIDENCE_NONE;
 
-	WPD_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
+	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
 	
 	confidence = isFileFormatSupportedWPS(input, partialContent);
 
@@ -135,14 +135,14 @@ WPDResult WPSDocument::parseWPS(libwps::WPSInputStream *input, WPXHLListenerImpl
 	//fixme: catch exceptions
 	if (document_mn0)
 	{
-		WPD_DEBUG_MSG(("Microsoft Works v4 format detected\n"));	
+		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));	
 		WPS4Parser *parser = new WPS4Parser(document_mn0, NULL);
 		parser->parse(listenerImpl);
 		DELETEP(parser);	
 	}
 	else if (0xFE == byte2 && byte1 < 7)
 	{
-		WPD_DEBUG_MSG(("Microsoft Works v2 format detected\n"));	
+		WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));	
 		WPS4Parser *parser = new WPS4Parser(input, NULL);
 		parser->parse(listenerImpl);
 		DELETEP(parser);	
@@ -160,7 +160,7 @@ WPDResult WPSDocument::parseWPS(libwps::WPSInputStream *input, WPXHLListenerImpl
 		/* Works 7/8 */
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
 		{
-			WPD_DEBUG_MSG(("Microsoft Works v8 (maybe 7) format detected\n"));
+			WPS_DEBUG_MSG(("Microsoft Works v8 (maybe 7) format detected\n"));
 			WPS8Parser *parser = new WPS8Parser(document_contents, NULL);
 			parser->parse(listenerImpl);
 			DELETEP(parser);		
@@ -183,7 +183,7 @@ Parses the input stream content. It will make callbacks to the functions provide
 WPXHLListenerImpl class implementation when needed. This is often commonly called the
 'main parsing routine'.
 \param input The input stream
-\param listenerImpl A WPXListener implementation
+\param listenerImpl A WPSListener implementation
 */
 WPDResult WPSDocument::parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl)
 {

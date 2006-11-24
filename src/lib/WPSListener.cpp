@@ -1,7 +1,9 @@
 /* libwpd
- * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
- * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
- *  
+ * Copyright (C) 2002-2005 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2004 Net Integration Technologies (http://www.net-itech.com)
+ * Copyright (C) 2002-2003 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -16,25 +18,21 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
-/* "This product is not manufactured, approved, or supported by 
+/* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "WPXParser.h"
-#include "libwpd_internal.h"
+#include "WPSListener.h"
 
-WPXParser::WPXParser(libwps::WPSInputStream *input, WPXHeader *header) :
-	m_input(input),
-	m_header(header)
+WPSListener::WPSListener(std::list<WPSPageSpan> &pageList) :
+	m_isUndoOn(false),
+	m_pageList(pageList)
 {
 }
 
-WPXParser::~WPXParser()
+WPSListener::~WPSListener()
 {
-	DELETEP(m_header);
 }

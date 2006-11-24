@@ -15,16 +15,16 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwpd.sourceforge.net
+ * For further information visit http://libwps.sourceforge.net
  */
 
 /* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#include "WPXContentListener.h"
-#include "WPXPageSpan.h"
-#include "libwpd_internal.h"
+#include "WPSContentListener.h"
+#include "WPSPageSpan.h"
+#include "libwps_internal.h"
 #include <libwpd/WPXProperty.h>
 #ifdef _MSC_VER
 #include <minmax.h>
@@ -35,7 +35,7 @@
 #define LIBWPD_MAX std::max
 #endif
 
-_WPXContentParsingState::_WPXContentParsingState() :
+_WPSContentParsingState::_WPSContentParsingState() :
 	m_textAttributeBits(0),
 	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/), // FIXME ME!!!!!!!!!!!!!!!!!!! HELP WP6_DEFAULT_FONT_SIZE
 	m_fontName(new WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")), // EN PAS DEFAULT FONT AAN VOOR WP5/6/etc
@@ -44,7 +44,7 @@ _WPXContentParsingState::_WPXContentParsingState() :
 
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
-	m_paragraphJustification(WPX_PARAGRAPH_JUSTIFICATION_LEFT),
+	m_paragraphJustification(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
 	m_tempParagraphJustification(0),
 	m_paragraphLineSpacing(1.0f),
 
@@ -58,7 +58,7 @@ _WPXContentParsingState::_WPXContentParsingState() :
 	m_isParagraphOpened(false),
 	m_isListElementOpened(false),
 
-	m_paragraphJustificationBeforeColumns(WPX_PARAGRAPH_JUSTIFICATION_LEFT),
+	m_paragraphJustificationBeforeColumns(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
 
 	m_numPagesRemainingInSpan(0),
 
@@ -100,27 +100,27 @@ _WPXContentParsingState::_WPXContentParsingState() :
 {
 }
 
-_WPXContentParsingState::~_WPXContentParsingState()
+_WPSContentParsingState::~_WPSContentParsingState()
 {
 	DELETEP(m_fontName);
 	DELETEP(m_fontColor);
 	DELETEP(m_highlightColor);
 }
 
-WPXContentListener::WPXContentListener(std::list<WPXPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
-	WPXListener(pageList),
-	m_ps(new WPXContentParsingState),
+WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
+	WPSListener(pageList),
+	m_ps(new WPSContentParsingState),
 	m_listenerImpl(listenerImpl)
 {
 	m_ps->m_nextPageSpanIter = pageList.begin();
 }
 
-WPXContentListener::~WPXContentListener()
+WPSContentListener::~WPSContentListener()
 {
 	DELETEP(m_ps);
 }
 
-void WPXContentListener::startDocument()
+void WPSContentListener::startDocument()
 {
 	if (!m_ps->m_isDocumentStarted)
 	{
@@ -135,7 +135,7 @@ void WPXContentListener::startDocument()
 	m_ps->m_isDocumentStarted = true;
 }
 
-void WPXContentListener::endDocument()
+void WPSContentListener::endDocument()
 {
 	if (!m_ps->m_isPageSpanOpened)
 		_openSpan();
@@ -154,7 +154,7 @@ void WPXContentListener::endDocument()
 	m_listenerImpl->endDocument();
 }
 
-void WPXContentListener::_openSection()
+void WPSContentListener::_openSection()
 {
 	if (!m_ps->m_isSectionOpened)
 	{
@@ -174,7 +174,7 @@ void WPXContentListener::_openSection()
 			propList.insert("fo:margin-bottom", 0.0f);
 
 		WPXPropertyListVector columns;
- 		typedef std::vector<WPXColumnDefinition>::const_iterator CDVIter;
+ 		typedef std::vector<WPSColumnDefinition>::const_iterator CDVIter;
 	 	for (CDVIter iter = m_ps->m_textColumns.begin(); iter != m_ps->m_textColumns.end(); iter++)
 		{
 			WPXPropertyList column;
@@ -192,7 +192,7 @@ void WPXContentListener::_openSection()
 	}
 }
 
-void WPXContentListener::_closeSection()
+void WPSContentListener::_closeSection()
 {
 	if (m_ps->m_isSectionOpened)
 	{
@@ -209,7 +209,7 @@ void WPXContentListener::_closeSection()
 	}
 }
 
-void WPXContentListener::_openPageSpan()
+void WPSContentListener::_openPageSpan()
 {
 	if (m_ps->m_isPageSpanOpened)
 		return;
@@ -231,17 +231,17 @@ void WPXContentListener::_openPageSpan()
 	
 	if ( m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end()))
 	{
-		WPD_DEBUG_MSG(("m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end())\n"));
+		WPS_DEBUG_MSG(("m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end())\n"));
 		throw ParseException();
 	}
 
-	WPXPageSpan currentPage = (*m_ps->m_nextPageSpanIter);
+	WPSPageSpan currentPage = (*m_ps->m_nextPageSpanIter);
 	currentPage.makeConsistent(1);
 	
 	WPXPropertyList propList;
 	propList.insert("libwpd:num-pages", currentPage.getPageSpan());
 
-	std::list<WPXPageSpan>::iterator lastPageSpan = --m_pageList.end(); 
+	std::list<WPSPageSpan>::iterator lastPageSpan = --m_pageList.end(); 
 	propList.insert("libwpd:is-last-page-span", ((m_ps->m_nextPageSpanIter == lastPageSpan) ? true : false));
 	propList.insert("fo:page-height", currentPage.getFormLength());
 	propList.insert("fo:page-width", currentPage.getFormWidth());
@@ -281,8 +281,8 @@ void WPXContentListener::_openPageSpan()
 	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange
 			+ m_ps->m_rightMarginByTabs;
 
-	std::vector<WPXHeaderFooter> headerFooterList = currentPage.getHeaderFooterList();
-	for (std::vector<WPXHeaderFooter>::iterator iter = headerFooterList.begin(); iter != headerFooterList.end(); iter++)
+	std::vector<WPSHeaderFooter> headerFooterList = currentPage.getHeaderFooterList();
+	for (std::vector<WPSHeaderFooter>::iterator iter = headerFooterList.begin(); iter != headerFooterList.end(); iter++)
 	{
 		if (!currentPage.getHeaderFooterSuppression((*iter).getInternalType()))
 		{
@@ -310,7 +310,7 @@ void WPXContentListener::_openPageSpan()
 			else
 				m_listenerImpl->closeFooter(); 
 
-			WPD_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
+			WPS_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
 				       (*iter).getType(), (*iter).getOccurence()));
 		}
 	}
@@ -334,7 +334,7 @@ void WPXContentListener::_openPageSpan()
 	m_ps->m_nextPageSpanIter++;
 }
 
-void WPXContentListener::_closePageSpan()
+void WPSContentListener::_closePageSpan()
 {
 	if (m_ps->m_isPageSpanOpened)
 	{
@@ -348,7 +348,7 @@ void WPXContentListener::_closePageSpan()
 	m_ps->m_isPageSpanBreakDeferred = false;
 }
 
-void WPXContentListener::_openParagraph()
+void WPSContentListener::_openParagraph()
 {
 	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
 	{
@@ -371,7 +371,7 @@ void WPXContentListener::_openParagraph()
 	}
 }
 
-void WPXContentListener::_resetParagraphState(const bool isListElement)
+void WPSContentListener::_resetParagraphState(const bool isListElement)
 {
 	m_ps->m_isParagraphColumnBreak = false;
 	m_ps->m_isParagraphPageBreak = false;
@@ -399,31 +399,31 @@ void WPXContentListener::_resetParagraphState(const bool isListElement)
 	m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
 }
 
-void WPXContentListener::_appendJustification(WPXPropertyList &propList, int justification)
+void WPSContentListener::_appendJustification(WPXPropertyList &propList, int justification)
 {
 	switch (justification)
 	{
-	case WPX_PARAGRAPH_JUSTIFICATION_LEFT:
+	case WPS_PARAGRAPH_JUSTIFICATION_LEFT:
 		// doesn't require a paragraph prop - it is the default
 		propList.insert("fo:text-align", "left");
 		break;
-	case WPX_PARAGRAPH_JUSTIFICATION_CENTER:
+	case WPS_PARAGRAPH_JUSTIFICATION_CENTER:
 		propList.insert("fo:text-align", "center");
 		break;
-	case WPX_PARAGRAPH_JUSTIFICATION_RIGHT:
+	case WPS_PARAGRAPH_JUSTIFICATION_RIGHT:
 		propList.insert("fo:text-align", "end");
 		break;
-	case WPX_PARAGRAPH_JUSTIFICATION_FULL:
+	case WPS_PARAGRAPH_JUSTIFICATION_FULL:
 		propList.insert("fo:text-align", "justify");
 		break;
-	case WPX_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES:
+	case WPS_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES:
 		propList.insert("fo:text-align", "justify");
 		propList.insert("fo:text-align-last", "justify");
 		break;
 	}
 }
 
-void WPXContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
+void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
 {
 	int justification;
 	if (m_ps->m_tempParagraphJustification) 
@@ -453,7 +453,7 @@ void WPXContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 		propList.insert("fo:break-before", "page");
 }
 
-void WPXContentListener::_getTabStops(WPXPropertyListVector &tabStops)
+void WPSContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 {
 	for (int i=0; i<m_ps->m_tabStops.size(); i++)
 	{
@@ -500,7 +500,7 @@ void WPXContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 	}
 }
 
-void WPXContentListener::_closeParagraph()
+void WPSContentListener::_closeParagraph()
 {
 	if (m_ps->m_isParagraphOpened)
 	{
@@ -517,7 +517,7 @@ void WPXContentListener::_closeParagraph()
 		_closePageSpan();
 }
 
-void WPXContentListener::_openListElement()
+void WPSContentListener::_openListElement()
 {
 	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
 	{
@@ -536,7 +536,7 @@ void WPXContentListener::_openListElement()
 	}
 }
 
-void WPXContentListener::_closeListElement()
+void WPSContentListener::_closeListElement()
 {
 	if (m_ps->m_isListElementOpened)
 	{
@@ -553,9 +553,9 @@ void WPXContentListener::_closeListElement()
 		_closePageSpan();
 }
 
-const float WPX_DEFAULT_SUPER_SUB_SCRIPT = 58.0f; 
+const float WPS_DEFAULT_SUPER_SUB_SCRIPT = 58.0f; 
 
-void WPXContentListener::_openSpan()
+void WPSContentListener::_openSpan()
 {
 	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
 		_changeList();
@@ -597,33 +597,33 @@ void WPXContentListener::_openSpan()
 	}
 
 	WPXPropertyList propList;
- 	if (attributeBits & WPX_SUPERSCRIPT_BIT) {
+ 	if (attributeBits & WPS_SUPERSCRIPT_BIT) {
 		WPXString sSuperScript;
-		sSuperScript.sprintf("super %f%%", WPX_DEFAULT_SUPER_SUB_SCRIPT);
+		sSuperScript.sprintf("super %f%%", WPS_DEFAULT_SUPER_SUB_SCRIPT);
 		propList.insert("style:text-position", sSuperScript);
 	}
- 	else if (attributeBits & WPX_SUBSCRIPT_BIT) {
+ 	else if (attributeBits & WPS_SUBSCRIPT_BIT) {
 		WPXString sSubScript;
-		sSubScript.sprintf("sub %f%%", WPX_DEFAULT_SUPER_SUB_SCRIPT);
+		sSubScript.sprintf("sub %f%%", WPS_DEFAULT_SUPER_SUB_SCRIPT);
 		propList.insert("style:text-position", sSubScript);
 	}
-	if (attributeBits & WPX_ITALICS_BIT)
+	if (attributeBits & WPS_ITALICS_BIT)
 		propList.insert("fo:font-style", "italic");
-	if (attributeBits & WPX_BOLD_BIT)
+	if (attributeBits & WPS_BOLD_BIT)
 		propList.insert("fo:font-weight", "bold");
-	if (attributeBits & WPX_STRIKEOUT_BIT)
+	if (attributeBits & WPS_STRIKEOUT_BIT)
 		propList.insert("style:text-crossing-out", "single-line");
-	if (attributeBits & WPX_DOUBLE_UNDERLINE_BIT) 
+	if (attributeBits & WPS_DOUBLE_UNDERLINE_BIT) 
 		propList.insert("style:text-underline", "double");
- 	else if (attributeBits & WPX_UNDERLINE_BIT) 
+ 	else if (attributeBits & WPS_UNDERLINE_BIT) 
 		propList.insert("style:text-underline", "single");
-	if (attributeBits & WPX_OUTLINE_BIT) 
+	if (attributeBits & WPS_OUTLINE_BIT) 
 		propList.insert("style:text-outline", "true");
-	if (attributeBits & WPX_SMALL_CAPS_BIT) 
+	if (attributeBits & WPS_SMALL_CAPS_BIT) 
 		propList.insert("fo:font-variant", "small-caps");
-	if (attributeBits & WPX_BLINK_BIT) 
+	if (attributeBits & WPS_BLINK_BIT) 
 		propList.insert("style:text-blinking", "true");
-	if (attributeBits & WPX_SHADOW_BIT) 
+	if (attributeBits & WPS_SHADOW_BIT) 
 		propList.insert("fo:text-shadow", "1pt 1pt");
 
 	if (m_ps->m_fontName)
@@ -633,7 +633,7 @@ void WPXContentListener::_openSpan()
 	// Here we give the priority to the redline bit over the font color. This is how WordPerfect behaves:
 	// redline overrides font color even if the color is changed when redline was already defined.
 	// When redline finishes, the color is back.
-	if (attributeBits & WPX_REDLINE_BIT)
+	if (attributeBits & WPS_REDLINE_BIT)
 		propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
 	else if (m_ps->m_fontColor)
 		propList.insert("fo:color", _colorToString(m_ps->m_fontColor));
@@ -646,7 +646,7 @@ void WPXContentListener::_openSpan()
 	m_ps->m_isSpanOpened = true;
 }
 
-void WPXContentListener::_closeSpan()
+void WPSContentListener::_closeSpan()
 {
 	if (m_ps->m_isSpanOpened)
 	{
@@ -658,13 +658,13 @@ void WPXContentListener::_closeSpan()
 	m_ps->m_isSpanOpened = false;
 }
 
-void WPXContentListener::insertBreak(const uint8_t breakType)
+void WPSContentListener::insertBreak(const uint8_t breakType)
 {
 	if (!isUndoOn())
 	{
 		switch (breakType)
 		{
-		case WPX_COLUMN_BREAK:
+		case WPS_COLUMN_BREAK:
 			if (!m_ps->m_isPageSpanOpened)
 				_openSpan();				
 			if (m_ps->m_isParagraphOpened)
@@ -674,7 +674,7 @@ void WPXContentListener::insertBreak(const uint8_t breakType)
 			m_ps->m_isParagraphColumnBreak = true;
 			m_ps->m_isTextColumnWithoutParagraph = true;
 			break;
-		case WPX_PAGE_BREAK:
+		case WPS_PAGE_BREAK:
 			if (!m_ps->m_isPageSpanOpened)
 				_openSpan();				
 			if (m_ps->m_isParagraphOpened)
@@ -688,8 +688,8 @@ void WPXContentListener::insertBreak(const uint8_t breakType)
 
 		switch (breakType)
 		{
-		case WPX_PAGE_BREAK:
-		case WPX_SOFT_PAGE_BREAK:
+		case WPS_PAGE_BREAK:
+		case WPS_SOFT_PAGE_BREAK:
 			if (m_ps->m_numPagesRemainingInSpan > 0)
 				m_ps->m_numPagesRemainingInSpan--;
 			else
@@ -705,7 +705,7 @@ void WPXContentListener::insertBreak(const uint8_t breakType)
 	}
 }
 
-void WPXContentListener::lineSpacingChange(const float lineSpacing)
+void WPSContentListener::lineSpacingChange(const float lineSpacing)
 {
 	if (!isUndoOn())
 	{
@@ -713,7 +713,7 @@ void WPXContentListener::lineSpacingChange(const float lineSpacing)
 	}
 }
 
-void WPXContentListener::justificationChange(const uint8_t justification)
+void WPSContentListener::justificationChange(const uint8_t justification)
 {
 	if (!isUndoOn())
 	{
@@ -730,28 +730,28 @@ void WPXContentListener::justificationChange(const uint8_t justification)
 		switch (justification)
 		{
 		case 0x00:
-			m_ps->m_paragraphJustification = WPX_PARAGRAPH_JUSTIFICATION_LEFT;
+			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_LEFT;
 			break;
 		case 0x01:
-			m_ps->m_paragraphJustification = WPX_PARAGRAPH_JUSTIFICATION_FULL;
+			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_FULL;
 			break;
 		case 0x02:
-			m_ps->m_paragraphJustification = WPX_PARAGRAPH_JUSTIFICATION_CENTER;
+			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_CENTER;
 			break;
 		case 0x03:
-			m_ps->m_paragraphJustification = WPX_PARAGRAPH_JUSTIFICATION_RIGHT;
+			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_RIGHT;
 			break;
 		case 0x04:
-			m_ps->m_paragraphJustification = WPX_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES;
+			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES;
 			break;
 		case 0x05:
-			m_ps->m_paragraphJustification = WPX_PARAGRAPH_JUSTIFICATION_DECIMAL_ALIGNED;
+			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_DECIMAL_ALIGNED;
 			break;
 		}
 	}
 }
 
-WPXString WPXContentListener::_colorToString(const RGBSColor * color)
+WPXString WPSContentListener::_colorToString(const RGBSColor * color)
 {
 	WPXString tmpString;
 
@@ -770,7 +770,7 @@ WPXString WPXContentListener::_colorToString(const RGBSColor * color)
 	return tmpString;
 }
 
-WPXString WPXContentListener::_mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor)
+WPXString WPSContentListener::_mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor)
 {
 	WPXString tmpColor;
 	RGBSColor tmpFgColor, tmpBgColor;
@@ -808,7 +808,7 @@ WPXString WPXContentListener::_mergeColorsToString(const RGBSColor *fgColor, con
 	return tmpColor;
 }
 
-float WPXContentListener::_movePositionToFirstColumn(float position)
+float WPSContentListener::_movePositionToFirstColumn(float position)
 {
 	if (m_ps->m_numColumns <= 1)
 		return position;

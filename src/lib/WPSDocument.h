@@ -40,8 +40,8 @@ class WPSDocument
 public:
 	static WPDConfidence isFileFormatSupported(libwps::WPSInputStream *input, bool partialContent);
 	static WPDResult parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl);
-	//static void parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl, WPXFileType fileType);
-	//WPXFileType getFileType(libwps::WPSInputStream *input)
+	//static void parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl, WPSFileType fileType);
+	//WPSFileType getFileType(libwps::WPSInputStream *input)
 private:
 	static WPDConfidence isFileFormatSupportedWPS(libwps::WPSInputStream *input, bool partialContent);
 	static WPDResult parseWPS(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl);	
