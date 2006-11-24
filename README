@@ -11,7 +11,7 @@ dependencies as follows:
 - libwpd <http://libwpd.sourceforge.net/>
 - iconv <http://www.gnu.org/software/libiconv/>
 
-On Fedora Core 5, the iconv header is included in the glibc-devel package.
+On Fedora Core 5, the iconv header is included in the glibc-headers package.
 
 Furthermore, libwps does not require libgsf (though libwpd may use it).
 
@@ -23,13 +23,6 @@ Installation on Unix/Linux should be simple. Simply execute the following
 sequence of commands:
 
 ./configure ; make ; su -c 'make install'
-
-Note that this assumes that you have development versions of glib (>=
-2.0.0).
-
-LINKS:
-
-glib is available at ftp://ftp.gnome.org/pub/gnome/sources/glib/
 
 Extensive installation instructions can be found in the INSTALL file.
 
@@ -62,8 +55,8 @@ http://www.mingw.org. Because the build system of libwpd uses autotools, you
 must install also the MSys packages. It is advisable to install all recent
 packages into a path that does not contain spaces. Besides the MinGW
 distribution, you have to install the _runtime_ and _development_ packages of 
-_ALL_ dependencies, namely: GNU libiconv, GNU gettext, zlib, glib2, pkg-config,
-libxml2 and libgsf. All these packages are linked to from Tor Lillqvist's
+_ALL_ dependencies, namely: GNU libiconv, GNU gettext, zlib, pkg-config,
+libxml2. All these packages are linked to from Tor Lillqvist's
 "GTK+ and GIMP for Windows" web-site. Go directly to the download section
 (http://www.gimp.org/~tml/gimp/win32/downloads.html).
 

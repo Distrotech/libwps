@@ -46,9 +46,10 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
 dnl ***********************************************************************************
 
 PKG_CHECK_MODULES(LIBWPS,[
-    glib-2.0 >= 2.0.0
     libwpd-0.8
     ])
+
+AC_CHECK_HEADER([iconv.h])
 
 test_docs=true
 AC_ARG_WITH(docs,
