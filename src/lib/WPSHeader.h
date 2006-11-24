@@ -29,23 +29,17 @@
 class WPSHeader
 {
  public:	
-	WPSHeader(libwps::WPSInputStream *input, uint32_t documentOffset, uint8_t productType, uint8_t fileType, uint8_t majorVersion, uint8_t minorVersion);
+	WPSHeader(libwps::WPSInputStream *input, uint8_t majorVersion);
 	virtual ~WPSHeader();
 
 	static WPSHeader * constructHeader(libwps::WPSInputStream *input);
 		
-	const uint32_t getDocumentOffset() const { return m_documentOffset; }
-	const uint8_t getProductType() const { return m_productType; }
-	const uint8_t getFileType() const { return m_fileType; }
+	libwps::WPSInputStream * getInput() const { return m_input; }
 	const uint8_t getMajorVersion() const { return m_majorVersion; }
-	const uint8_t getMinorVersion() const { return m_minorVersion; }
 
- private:	
-	uint32_t m_documentOffset;
-	uint8_t m_productType;
-	uint8_t m_fileType;
+ private:
+	libwps::WPSInputStream * m_input;
 	uint8_t m_majorVersion;
-	uint8_t m_minorVersion;
 };
 
 #endif /* WPSHEADER_H */
