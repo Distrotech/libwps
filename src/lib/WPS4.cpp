@@ -555,7 +555,7 @@ void WPS4Parser::parsePages(std::list<WPSPageSpan> &pageList, libwps::WPSInputSt
 	/* process page breaks */
 	input->seek(0x100);
 	uint8_t ch;
-	while (0x00 != (ch = readU8(input)))
+	while (!input->atEnd() && 0x00 != (ch = readU8(input)))
 	{
 		if (ch = 0x0C)
 			pageList.push_back(ps);			
@@ -601,7 +601,8 @@ void WPS4Parser::parse(libwps::WPSInputStream *input, WPS4Listener *listener)
 	}		
 	
 	/* read fonts table */
-	readFontsTable(input);
+	if ( getHeader()->getMajorVersion() > 2)
+		readFontsTable(input);
 	
 	/* process text file using previously-read character formatting */
 	readText(input, listener);

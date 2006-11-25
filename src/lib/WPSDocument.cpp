@@ -146,10 +146,20 @@ WPDResult WPSDocument::parseWPS(libwps::WPSInputStream *input, WPXHLListenerImpl
 			}
 		}
 	}
+	catch (FileException)
+	{
+		WPS_DEBUG_MSG(("File exception trapped\n"));
+		error = WPD_FILE_ACCESS_ERROR;
+        }
+	catch (ParseException)
+	{
+		WPS_DEBUG_MSG(("Parse exception trapped\n"));
+                error = WPD_PARSE_ERROR;
+	}
 	catch (...)
 	{
 		//fixme: too generic
-		WPS_DEBUG_MSG(("Unknown Exception trapped\n"));
+		WPS_DEBUG_MSG(("Unknown exception trapped\n"));
 		error = WPD_UNKNOWN_ERROR;
 	}
 
