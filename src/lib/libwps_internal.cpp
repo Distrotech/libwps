@@ -48,10 +48,10 @@ uint16_t readU16(libwps::WPSInputStream *input, bool bigendian)
 
 uint32_t readU32(libwps::WPSInputStream *input, bool bigendian)
 {
-	unsigned long p0 = (unsigned short)readU8(input);
-	unsigned long p1 = (unsigned short)readU8(input);
-	unsigned long p2 = (unsigned short)readU8(input);
-	unsigned long p3 = (unsigned short)readU8(input);
+	uint8_t p0 = readU8(input);
+	uint8_t p1 = readU8(input);
+	uint8_t p2 = readU8(input);
+	uint8_t p3 = readU8(input);
         return p0|(p1<<8)|(p2<<16)|(p3<<24);
 }
 

@@ -574,16 +574,23 @@ void WPS4Parser::parse(libwps::WPSInputStream *input, WPS4Listener *listener)
 	/* find beginning of character FODs */
 	input->seek(WPS4_FCMAC_OFFSET);
 	offset_eot = readU32(input); /* stream offset to end of text */
-	WPS_DEBUG_MSG(("Works: info: offset_eot at WPS4_FCMAC_OFFSET = %x (%i)\n", offset_eot, offset_eot));			
+	WPS_DEBUG_MSG(("Works: info: location WPS4_FCMAC_OFFSET (0x%X) has offset_eot = 0x%X (%i)\n", 
+		WPS4_FCMAC_OFFSET, offset_eot, offset_eot));			
 	uint32_t pnChar = (offset_eot+127)/128; /* page number of character information */
-	WPS_DEBUG_MSG(("Works: info: 128*pnChar = %x (%i)\n", pnChar*128, pnChar*128));
+	WPS_DEBUG_MSG(("Works: info: 128*pnChar = 0x%X (%i)\n", pnChar*128, pnChar*128));
 	
 	/* sanity check */
+	if (0 == pnChar)
+	{
+		WPS_DEBUG_MSG(("Works: error: pnChar is 0, so file may be corrupt\n"));
+		throw ParseException();
+	}
 	input->seek(128*pnChar);
 	uint32_t v = readU32(input);
 	if (0x0100 != v)
 	{
-		WPS_DEBUG_MSG(("Works: warning: expected value 0x0100 at location %x but got %x (%i)\n", 128*pnChar, v, v));
+		WPS_DEBUG_MSG(("Works: warning: expected value 0x0100 at location 0x%X but got 0x%X (%i)\n", 
+			128*pnChar, v, v));
 	}
 	
 	/* go to beginning of character FODs */
