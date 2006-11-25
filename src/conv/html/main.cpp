@@ -49,10 +49,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERROR: File Exception!\n");
 	else if (error == WPD_PARSE_ERROR)
 		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == WPD_UNSUPPORTED_ENCRYPTION_ERROR)
-		fprintf(stderr, "ERROR: File is password protected!\n");
 	else if (error == WPD_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a WordPerfect stream!\n");
+		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
 	else if (error != WPD_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 

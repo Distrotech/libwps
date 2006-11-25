@@ -269,6 +269,42 @@ void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener
 	oldTextAttributeBits = newTextAttributeBits;
 }
 
+char * WPS2FontNameFromIndex(uint8_t font_n)
+{
+	switch (font_n)
+	{
+		case 0:
+			return "Courier";
+
+		case 1:
+			return "Courier PC";
+
+		case 3:
+			return "Univers_Scale";
+
+		case 4:
+			return "Universe";
+
+		case 6:
+			return "LinePrinterPC";
+
+		case 7:
+			return "LinePrinter";
+
+		case 16:
+			return "CGTimes_Scale";
+
+		case 24:
+			return "CGTimes";
+			break;
+	}
+
+	WPS_DEBUG_MSG(("Works: error: encountered unknown font %i (0x%02x)ed\n", 
+		font_n,font_n ));
+	return "Courier"; //temporary fixme
+	throw ParseException();
+}
+
 /**
  * Process a character property change.  The Works format supplies
  * all the character formatting each time there is any change (as
@@ -301,16 +337,22 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 	if (rgchProp.length() >= 3)
 	{
 		uint8_t font_n = (uint8_t)rgchProp[2];
-		if (fonts.find(font_n) == fonts.end())
+
+		if (3 == getHeader()->getMajorVersion())
 		{
-			WPS_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n", 
-				font_n,font_n ));
-#if 0
-			throw ParseException();
-#endif
+			if (fonts.find(font_n) == fonts.end())
+			{
+				WPS_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n", 
+					font_n,font_n ));
+				throw ParseException();
+			}
+			else
+				listener->setTextFont(fonts[font_n].c_str());
 		}
-		else
-			listener->setTextFont(fonts[font_n].c_str());
+		if (2 == getHeader()->getMajorVersion())
+		{
+			listener->setTextFont(WPS2FontNameFromIndex(font_n));
+		}
 	}
 	if (rgchProp.length() >= 4)
 	{
