@@ -41,28 +41,18 @@ int8_t read8(libwps::WPSInputStream *input)
 
 uint16_t readU16(libwps::WPSInputStream *input, bool bigendian)
 {
-	unsigned char buffer[2];
-	size_t numBytesRead = input->read(sizeof(uint16_t), (char *)buffer);
-
-	if (numBytesRead != sizeof(uint16_t))
-  		throw FileException();
-
-	if (bigendian)
-		return WPD_BE_GET_GUINT16(buffer);
-	return WPD_LE_GET_GUINT16(buffer);
+	unsigned short p0 = (unsigned short)readU8(input);
+	unsigned short p1 = (unsigned short)readU8(input);
+	return p0|(p1<<8);
 }
 
 uint32_t readU32(libwps::WPSInputStream *input, bool bigendian)
 {
-	char buffer[4];
-	size_t numBytesRead = input->read(sizeof(uint32_t), (char *) buffer);
-
-	if (numBytesRead != sizeof(uint32_t))
-  		throw FileException();
-
-	if (bigendian)
-		return WPD_BE_GET_GUINT32(buffer);
-	return WPD_LE_GET_GUINT32(buffer);
+	unsigned long p0 = (unsigned short)readU8(input);
+	unsigned long p1 = (unsigned short)readU8(input);
+	unsigned long p2 = (unsigned short)readU8(input);
+	unsigned long p3 = (unsigned short)readU8(input);
+        return p0|(p1<<8)|(p2<<16)|(p3<<24);
 }
 
 WPXString readPascalString(libwps::WPSInputStream *input)
