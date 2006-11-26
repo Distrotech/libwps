@@ -15,8 +15,7 @@ EXTRA_DIST = \
 	CREDITS		\
 	HACKING		\
 	INSTALL		\
-	README		\
-	TODO
+	README
 
 distclean-local:
 	rm -rf *.cache *~
@@ -28,6 +27,9 @@ rpm: dist
 zip: all install
 	sh libwps-zip
 
+check: all
+	cd src/test && make check
+
 if WITH_LIBWPS_DOCS
 install-data-local:
 	mkdir -p $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@
@@ -37,7 +39,6 @@ install-data-local:
 	$(INSTALL) $(srcdir)/HACKING $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
 	$(INSTALL) $(srcdir)/INSTALL $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
 	$(INSTALL) $(srcdir)/README $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
-	$(INSTALL) $(srcdir)/TODO $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
 uninstall-local:
 	-rm -rf $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@
 endif
