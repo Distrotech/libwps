@@ -19,6 +19,11 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/conv/raw/RawListener.cpp 1.51
+ */
+
 #include <stdio.h>
 #include <stdarg.h>
 #include "RawListener.h"
@@ -50,7 +55,7 @@ RawListenerImpl::RawListenerImpl(bool printCallgraphScore) :
 RawListenerImpl::~RawListenerImpl()
 {
 	if (m_printCallgraphScore)
-		printf("%d\n", m_callStack.size() + m_callbackMisses);
+		printf("%d\n", (int)(m_callStack.size() + m_callbackMisses));
 }
 
 void RawListenerImpl::__iprintf(const char *format, ...)
@@ -96,7 +101,7 @@ WPXString getPropString(const WPXPropertyList &propList)
 		WPXString prop;
 		prop.sprintf("%s: %s", i.key(), i()->getStr().cstr());
 		propString.append(prop);
-		for (i; i.next(); )
+		for (; i.next(); )
 		{
 			prop.sprintf(", %s: %s", i.key(), i()->getStr().cstr());
 			propString.append(prop);
@@ -119,7 +124,7 @@ WPXString getPropString(const WPXPropertyListVector &itemList)
 		propString.append(getPropString(i()));
 		propString.append(")");
 
-		for (i; i.next();)
+		for (; i.next();)
 		{
 			propString.append(", (");
 			propString.append(getPropString(i()));
