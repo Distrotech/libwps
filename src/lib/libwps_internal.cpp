@@ -44,15 +44,6 @@ uint32_t readU32(libwps::WPSInputStream *input, bool bigendian)
         return (uint32_t) ((p0<<0)|(p1<<8)|(p2<<16)|(p3<<24));
 }
 
-WPXString readPascalString(libwps::WPSInputStream *input)
-{
-	int pascalStringLength = readU8(input);
-	WPXString tmpString;
-	for (int i=0; i<pascalStringLength; i++)
-		tmpString.append((char)readU8(input));
-	return tmpString;
-}
-
 _WPSTabStop::_WPSTabStop(float position, WPSTabAlignment alignment, uint16_t leaderCharacter, uint8_t leaderNumSpaces)
 	:	m_position(position),
 		m_alignment(alignment),

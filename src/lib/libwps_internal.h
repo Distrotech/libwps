@@ -25,8 +25,8 @@
 #include <bitset>
 #endif
 #include "WPSStream.h"
-#include <stdio.h>
-#include <string>
+//#include <stdio.h>
+//#include <string>
 #include <libwpd/WPXString.h>
 
 /* Various functions/defines that need not/should not be exported externally */
@@ -50,27 +50,14 @@
 
 // add more of these as needed for byteswapping
 // (the 8-bit functions are just there to make things consistent)
-int8_t read8(libwps::WPSInputStream *input); 
 uint8_t readU8(libwps::WPSInputStream *input); 
 uint16_t readU16(libwps::WPSInputStream *input, bool bigendian=false);
 uint32_t readU32(libwps::WPSInputStream *input, bool bigendian=false);
 
-WPXString readPascalString(libwps::WPSInputStream *input);
-WPXString readCString(libwps::WPSInputStream *input);
-
-void appendUCS4(WPXString &str, uint32_t ucs4);
-
 // Various helper structures for the parser..
-
-int extendedCharacterWP6ToUCS2(uint8_t character, uint8_t characterSet,
-			    const uint16_t **chars);
-
-int extendedCharacterWP5ToUCS2(uint8_t character, uint8_t characterSet,
-			    const uint16_t **chars);
 
 uint16_t fixedPointToWPUs(const uint32_t fixedPointNumber);
 
-enum WPSFileType { WP6_DOCUMENT, WP5_DOCUMENT, WP42_DOCUMENT, OTHER };
 enum WPSNumberingType { ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
 enum WPSNoteType { FOOTNOTE, ENDNOTE };
 enum WPSHeaderFooterType { HEADER, FOOTER };
@@ -102,7 +89,7 @@ enum WPSTextColumnType { NEWSPAPER, NEWSPAPER_VERTICAL_BALANCE, PARALLEL, PARALL
 #define WPS_BLINK_BIT 65536
 #define WPS_REVERSEVIDEO_BIT 131072
 
-// JUSTIFICATION bits.
+// JUSTIFICATION bits
 #define WPS_PARAGRAPH_JUSTIFICATION_LEFT 0x00
 #define WPS_PARAGRAPH_JUSTIFICATION_FULL 0x01
 #define WPS_PARAGRAPH_JUSTIFICATION_CENTER 0x02
@@ -185,12 +172,7 @@ class GenericException
 	// needless to say, we could flesh this class out a bit
 };
 
-// Various usefull, but cheesey functions
-
-int _extractNumericValueFromRoman(const char romanChar);
-int _extractDisplayReferenceNumberFromBuf(const WPXString &buf, const WPSNumberingType listType);
-WPSNumberingType _extractWPSNumberingTypeFromBuf(const WPXString &buf, const WPSNumberingType putativeWPSNumberingType);
-WPXString _numberingTypeToString(WPSNumberingType t);
+// Various functions
 
 std::string to_bits(std::string s);
 
