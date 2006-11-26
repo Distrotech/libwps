@@ -19,11 +19,13 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#include <stdlib.h>
-#include <string.h>
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/lib/WPXHeader.cpp 1.29
+ */
+
 #include "WPSHeader.h"
 #include "WPSFileStructure.h"
-#include "libwps.h"
 #include "libwps_internal.h"
 	
 WPSHeader::WPSHeader(libwps::WPSInputStream *input, uint8_t majorVersion) :

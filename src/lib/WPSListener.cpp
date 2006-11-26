@@ -21,6 +21,11 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/lib/WPXListener.cpp 1.12
+ */
+
 #include "WPSListener.h"
 
 WPSListener::WPSListener(std::list<WPSPageSpan> &pageList) :

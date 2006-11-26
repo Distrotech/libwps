@@ -20,9 +20,13 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/lib/WPXPageSpan.h 1.21
+ */
+
 #ifndef WPSPAGE_H
 #define WPSPAGE_H
-#include "libwps.h"
 #include "WPSFileStructure.h"
 #include <vector>
 #include "libwps_internal.h"

@@ -31,6 +31,7 @@
 #include "WPSPageSpan.h"
 #include "WPSListener.h"
 #include <libwpd/WPXPropertyListVector.h>
+#include <libwpd/WPXHLListenerImpl.h>
 #include <vector>
 #include <list>
 #include <set>

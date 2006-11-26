@@ -20,9 +20,11 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/lib/WPDocument.cpp 1.34
+ */
 
-#include <stdlib.h>
-#include <string.h>
 #include "WPSDocument.h"
 #include "WPS4.h"
 #include "WPS8.h"

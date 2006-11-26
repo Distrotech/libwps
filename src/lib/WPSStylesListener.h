@@ -18,14 +18,16 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/lib/WPXStylesListener.h 1.5
+ */
+
 #ifndef WPSSTYLESLISTENER_H
 #define WPSSTYLESLISTENER_H
 
-#include "libwps_internal.h"
 #include "WPSPageSpan.h"
 #include "WPSListener.h"
-#include "WPSPageSpan.h"
-#include <vector>
 #include <list>
 
 class WPSStylesListener : protected WPSListener

@@ -19,10 +19,14 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/lib/WPXHeader.cpp 1.17
+ */
+
 #ifndef WPSHEADER_H
 #define WPSHEADER_H
 
-#include <stdlib.h>
 #include "libwps_types.h"
 #include "WPSStream.h"
 

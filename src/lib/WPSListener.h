@@ -20,14 +20,16 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/lib/WPXContentListener.h 1.16
+ */
+
 #ifndef WPSLISTENER_H
 #define WPSLISTENER_H
 
-#include "libwps_internal.h"
 #include "WPSPageSpan.h"
-#include <vector>
 #include <list>
-#include <libwpd/WPXString.h>
 
 
 class WPSListener
