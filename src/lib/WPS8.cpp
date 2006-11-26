@@ -124,7 +124,7 @@ void WPS8Parser::insertCharacter(iconv_t cd, uint16_t readVal, WPS8Listener *lis
 	char *outchar;
 	size_t outbytesleft = 4;
 	size_t inbytesleft = 2;
-	int i;
+	size_t i;
 
 	inchar = (char *)&readVal;
 	outchar = (char *) outbuf;
@@ -175,7 +175,7 @@ void WPS8Parser::readText(libwps::WPSInputStream * input, WPS8Listener *listener
 
 		/* print rgchProp as hex bytes */
 		WPS_DEBUG_MSG(("rgch="));
-		for (int blah=0; blah < (*FODs_iter).fprop.rgchProp.length(); blah++)
+		for (unsigned int blah=0; blah < (*FODs_iter).fprop.rgchProp.length(); blah++)
 		{
 			WPS_DEBUG_MSG(("%02X ", (uint8_t) (*FODs_iter).fprop.rgchProp[blah]));
 		}
@@ -267,7 +267,7 @@ bool WPS8Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 	{
 		FOD fod;
 		fod.fcLim = readU32(input);
-//		WPS_DEBUG_MSG(("Works: info: fcLim = %i (%x)\n", fod.fcLim, fod.fcLim));			
+//		WPS_DEBUG_MSG(("Works: info: fcLim = %i (0x%X)\n", fod.fcLim, fod.fcLim));			
 		
 		/* check that fcLim is not too large */
 		if (fod.fcLim > offset_eot)
@@ -302,7 +302,7 @@ bool WPS8Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 			(*FODs_iter).bfprop  > (page_size - 1))
 		{
 			WPS_DEBUG_MSG(("Works: error: size of bfprop is bad "
-				"%i (0x%x)\n", (*FODs_iter).bfprop, (*FODs_iter).bfprop));
+				"%i (0x%X)\n", (*FODs_iter).bfprop, (*FODs_iter).bfprop));
 			throw ParseException();
 		}
 
@@ -329,7 +329,7 @@ bool WPS8Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 		(*FODs_iter).fprop.cch = readU8(input);
 		if (0 == (*FODs_iter).fprop.cch)
 		{
-			WPS_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%x", (input->tell())-1));
+			WPS_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%lx", (input->tell())-1));
 			throw ParseException();
 		}
 		// fixme: what is largest cch?
@@ -363,7 +363,7 @@ bool WPS8Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 
 void WPS8Parser::parseHeaderIndexEntry(libwps::WPSInputStream * input)
 {
-	WPS_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos 0x%X\n", input->tell()));
+	WPS_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos 0x%lX\n", input->tell()));
 
 	uint16_t cch = readU16(input);
 	if (0x18 != cch)
@@ -391,7 +391,6 @@ void WPS8Parser::parseHeaderIndexEntry(libwps::WPSInputStream * input)
 	}
 	name.append(1, 0);
 
-	size_t numBytesRead;
 	std::string unknown1;
 	for (int i = 0; i < 6; i ++)
 		unknown1.append(1, readU8(input));
@@ -438,7 +437,7 @@ void WPS8Parser::parseHeaderIndex(libwps::WPSInputStream * input)
 		uint16_t unknown1 = readU16(input);
 		if (0x01F8 != unknown1)
 		{
-			WPS_DEBUG_MSG(("Works8: error: unknown1=%x\n", unknown1));
+			WPS_DEBUG_MSG(("Works8: error: unknown1=0x%X\n", unknown1));
 #if 0
 			throw ParseException();
 #endif
@@ -470,7 +469,7 @@ void WPS8Parser::parseHeaderIndex(libwps::WPSInputStream * input)
 		if (0xFFFFFFFF == next_index_table)
 			break;
 
-		WPS_DEBUG_MSG(("Works8: debug: seeking to position %x\n", next_index_table));
+		WPS_DEBUG_MSG(("Works8: debug: seeking to position 0x%X\n", next_index_table));
 		input->seek(next_index_table);
 	} while (n_entries > 0);
 }
@@ -521,13 +520,13 @@ void WPS8Parser::parse(libwps::WPSInputStream *input, WPS8Listener *listener)
 		if (0 != strcmp("FDPC",pos->first.c_str()))
 			continue;
 
-		WPS_DEBUG_MSG(("Works: debug: FDPC (%s) offset=%x, length=0x%X\n",
+		WPS_DEBUG_MSG(("Works: debug: FDPC (%s) offset=0x%X, length=0x%X\n",
 				pos->first.c_str(), pos->second.offset, pos->second.length));
 
 		input->seek(pos->second.offset);
 		if (pos->second.length != 512)
 		{
-			WPS_DEBUG_MSG(("Works: warning: FDPC offset=%x, length=0x%X\n", 
+			WPS_DEBUG_MSG(("Works: warning: FDPC offset=0x%X, length=0x%X\n", 
 				pos->second.offset, pos->second.length));
 		}
 		readFODPage(input, &CHFODs, pos->second.length);
@@ -682,7 +681,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 			case 0x220C:
 			{
 				/* font size */
-				uint32_t font_size =  WPD_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
+				uint32_t font_size = WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 				listener->setFontSize(font_size/12700);
 				x += 4;
 				break;

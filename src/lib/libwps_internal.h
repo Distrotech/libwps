@@ -31,11 +31,6 @@
 
 /* Various functions/defines that need not/should not be exported externally */
 
-#define WPD_CHECK_FILE_ERROR(v) if (v==EOF) { WPS_DEBUG_MSG(("X_CheckFileError: %d\n", __LINE__)); throw FileException(); }
-#define WPD_CHECK_FILE_SEEK_ERROR(v) if (v) { WPS_DEBUG_MSG(("X_CheckFileSeekError: %d\n", __LINE__)); throw FileException(); }
-#define WPD_CHECK_FILE_READ_ERROR(v,num_elements) if (v != num_elements) {\
- WPS_DEBUG_MSG(("X_CheckFileReadElementError: %d\n", __LINE__)); throw FileException(); }
-
 #define DELETEP(m) if (m) { delete m; m = NULL; }
  
 #ifdef DEBUG
@@ -44,25 +39,14 @@
 #define WPS_DEBUG_MSG(M)
 #endif
 
-#define WPD_LE_GET_GUINT8(p) (*(uint8_t const *)(p))
-#define WPD_LE_GET_GUINT16(p)				  \
+#define WPS_LE_GET_GUINT16(p)				  \
         (uint16_t)((((uint8_t const *)(p))[0] << 0)  |    \
                   (((uint8_t const *)(p))[1] << 8))
-#define WPD_LE_GET_GUINT32(p) \
+#define WPS_LE_GET_GUINT32(p) \
         (uint32_t)((((uint8_t const *)(p))[0] << 0)  |    \
                   (((uint8_t const *)(p))[1] << 8)  |    \
                   (((uint8_t const *)(p))[2] << 16) |    \
                   (((uint8_t const *)(p))[3] << 24))
-
-#define WPD_BE_GET_GUINT8(p) (*(uint8_t const *)(p))
-#define WPD_BE_GET_GUINT16(p)                           \
-        (uint16_t)((((uint8_t const *)(p))[1] << 0)  |    \
-                  (((uint8_t const *)(p))[0] << 8))
-#define WPD_BE_GET_GUINT32(p)                           \
-        (uint32_t)((((uint8_t const *)(p))[3] << 0)  |    \
-                  (((uint8_t const *)(p))[2] << 8)  |    \
-                  (((uint8_t const *)(p))[1] << 16) |    \
-                  (((uint8_t const *)(p))[0] << 24))
 
 // add more of these as needed for byteswapping
 // (the 8-bit functions are just there to make things consistent)
@@ -76,7 +60,7 @@ WPXString readCString(libwps::WPSInputStream *input);
 
 void appendUCS4(WPXString &str, uint32_t ucs4);
 
-// Various helper structures for the libwpd parser..
+// Various helper structures for the parser..
 
 int extendedCharacterWP6ToUCS2(uint8_t character, uint8_t characterSet,
 			    const uint16_t **chars);
@@ -179,7 +163,7 @@ struct _WPSTabStop
 	uint8_t m_leaderNumSpaces;
 };
 
-// Various exceptions: libwpd does not propagate exceptions externally..
+// Various exceptions
 
 class VersionException
 {

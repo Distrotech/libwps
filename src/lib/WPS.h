@@ -29,6 +29,7 @@
 class FPROP
 {
 public:
+	FPROP() { cch = 0; };
 	uint8_t	cch; /* number of bytes in this FPROP */
 	std::string rgchProp; /* Prefix for a CHP or PAP sufficient to handle differing bits from default */
 };

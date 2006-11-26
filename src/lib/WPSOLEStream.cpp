@@ -198,7 +198,7 @@ class StreamIO
     void updateCache();
 };
 
-}; // namespace libwps
+} // namespace libwps
 
 static inline unsigned long readU16( const unsigned char* ptr )
 {
@@ -564,7 +564,7 @@ void libwps::DirTree::load( unsigned char* buffer, unsigned size )
     // 2 = file (aka stream), 1 = directory (aka storage), 5 = root
     unsigned type = buffer[ 0x42 + p];
     
-    libwps:DirEntry e;
+    libwps::DirEntry e;
     e.valid = true;
     e.name = name;
     e.start = readU32( buffer + 0x74+p );

@@ -24,8 +24,8 @@
 #include "WPSListener.h"
 
 WPSListener::WPSListener(std::list<WPSPageSpan> &pageList) :
-	m_isUndoOn(false),
-	m_pageList(pageList)
+	m_pageList(pageList),
+	m_isUndoOn(false)
 {
 }
 

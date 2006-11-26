@@ -86,7 +86,7 @@ void WPS4Parser::readFontsTable(libwps::WPSInputStream * input)
 	input->seek(0x62);	
 	uint32_t len_FFNTB = readU16(input);	
 	uint32_t offset_end_FFNTB = offset_FFNTB + len_FFNTB;		
-	WPS_DEBUG_MSG(("Works: info: offset_FFNTB=0x%x, len_FFNTB=0x%x, offset_end_FFNTB=0x%x\n",
+	WPS_DEBUG_MSG(("Works: info: offset_FFNTB=0x%X, len_FFNTB=0x%X, offset_end_FFNTB=0x%X\n",
 		offset_FFNTB, len_FFNTB, offset_end_FFNTB));
 		
 	input->seek(offset_FFNTB);
@@ -101,7 +101,7 @@ void WPS4Parser::readFontsTable(libwps::WPSInputStream * input)
 		
 		if (fonts.find(font_number) != fonts.end())
 		{
-			WPS_DEBUG_MSG(("Works: error: at position 0x%x: font number %i (0x%x) duplicated\n",
+			WPS_DEBUG_MSG(("Works: error: at position 0x%lx: font number %i (0x%X) duplicated\n",
 				(input->tell())-2, font_number, font_number));		
 			throw ParseException();		
 		}
@@ -134,7 +134,7 @@ bool WPS4Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 
 	input->seek(page_offset + 127);	
 	uint8_t cfod = readU8(input); /* number of FODs on this page */
-//	WPS_DEBUG_MSG(("Works: info: at position 0x%02x, cfod = %i (%x)\n", (input->tell())-1,cfod, cfod));				
+//	WPS_DEBUG_MSG(("Works: info: at position 0x%02x, cfod = %i (%X)\n", (input->tell())-1,cfod, cfod));				
 	if (cfod > 0x18)
 	{
 		WPS_DEBUG_MSG(("Works4: error: cfod = %i ", cfod));
@@ -155,7 +155,7 @@ bool WPS4Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 	{
 		FOD fod;
 		fod.fcLim = readU32(input);
-//		WPS_DEBUG_MSG(("Works: info: fcLim = %i (%x)\n", fod.fcLim, fod.fcLim));			
+//		WPS_DEBUG_MSG(("Works: info: fcLim = %i (0x%X)\n", fod.fcLim, fod.fcLim));			
 		
 		/* check that fcLim is not too large */
 		if (fod.fcLim > offset_eot)
@@ -190,13 +190,13 @@ bool WPS4Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 			 (*FODs_iter).bfprop  > (128 - 1))
 		{
 			WPS_DEBUG_MSG(("Works: error: size of bfprop is bad "
-				"%i (0x%x)\n", (*FODs_iter).bfprop, (*FODs_iter).bfprop));		
+				"%i (0x%X)\n", (*FODs_iter).bfprop, (*FODs_iter).bfprop));		
 			throw ParseException();
 		}
 		
 		(*FODs_iter).bfprop_abs = (*FODs_iter).bfprop + page_offset;
 //		WPS_DEBUG_MSG(("Works: info: bfprop_abs = "
-//			"%i (%x)\n", (*FODs_iter).bfprop_abs, (*FODs_iter).bfprop_abs));		
+//			"%i (0x%X)\n", (*FODs_iter).bfprop_abs, (*FODs_iter).bfprop_abs));		
 	}
 	
 	/* Read array of FPROPs.  These contain the actual formatting
@@ -216,7 +216,7 @@ bool WPS4Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 		(*FODs_iter).fprop.cch = readU8(input);
 		if (0 == (*FODs_iter).fprop.cch)
 		{
-			WPS_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%x", (input->tell())-1));
+			WPS_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%lx", (input->tell())-1));
 			throw ParseException();
 		}
 		// fixme: what is largest cch?
@@ -259,7 +259,7 @@ void WPS4Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits
  */
 void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener *listener)
 {
-	WPS_DEBUG_MSG(("WPS4Parser::propertyChangeDelta(%i, %p)\n", newTextAttributeBits, listener));	
+	WPS_DEBUG_MSG(("WPS4Parser::propertyChangeDelta(%i, %p)\n", newTextAttributeBits, (void *)listener));	
 	propertyChangeTextAttribute(newTextAttributeBits, WPS4_ATTRIBUTE_BOLD, WPS_BOLD_BIT, listener);
 	propertyChangeTextAttribute(newTextAttributeBits, WPS4_ATTRIBUTE_ITALICS, WPS_ITALICS_BIT, listener);	
 	propertyChangeTextAttribute(newTextAttributeBits, WPS4_ATTRIBUTE_UNDERLINE, WPS_UNDERLINE_BIT, listener);		
@@ -389,14 +389,14 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
  * given iconv conversion descriptor.
  *
  */
-void WPS4Parser::insertCharacter(iconv_t cd, char readVal, WPS4Listener *listener)
+void WPS4Parser::insertCharacter(iconv_t cd, uint8_t readVal, WPS4Listener *listener)
 {
 	char *inchar;
 	char outbuf[4];
 	char *outchar;
 	size_t outbytesleft = 4;
 	size_t inbytesleft = 1;
-	int i;
+	size_t i;
 
 	switch (readVal)
 	{
@@ -557,16 +557,13 @@ void WPS4Parser::parsePages(std::list<WPSPageSpan> &pageList, libwps::WPSInputSt
 	uint8_t ch;
 	while (!input->atEnd() && 0x00 != (ch = readU8(input)))
 	{
-		if (ch = 0x0C)
+		if (0x0C == ch)
 			pageList.push_back(ps);			
 	}
 }
 
 void WPS4Parser::parse(libwps::WPSInputStream *input, WPS4Listener *listener)
 {
-	uint8_t readVal;
-	size_t text_length;
-	
 	WPS_DEBUG_MSG(("WPS4Parser::parse()\n"));	
 
 	listener->startDocument();

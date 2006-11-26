@@ -144,6 +144,7 @@ WPDResult WPSDocument::parseWPS(libwps::WPSInputStream *input, WPXHLListenerImpl
 				DELETEP(parser);	
 				break;
 			}
+			DELETEP(header);
 		}
 	}
 	catch (FileException)

@@ -18,6 +18,11 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/lib/WPXContentListener.cpp 1.12
+ */
+
 #include "WPSContentListener.h"
 #include "WPSPageSpan.h"
 #include "libwps_internal.h"
@@ -36,7 +41,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/), // FIXME ME!!!!!!!!!!!!!!!!!!! HELP WP6_DEFAULT_FONT_SIZE
 	m_fontName(new WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")), // EN PAS DEFAULT FONT AAN VOOR WP5/6/etc
 	m_fontColor(new RGBSColor(0x00,0x00,0x00,0x64)), //Set default to black. Maybe once it will change, but for the while...
-	m_highlightColor(NULL),
+	m_highlightColor(0),
 
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
@@ -53,7 +58,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_isSpanOpened(false),
 	m_isParagraphOpened(false),
 	m_isListElementOpened(false),
-
+	m_cellAttributeBits(0),
 	m_paragraphJustificationBeforeColumns(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
 
 	m_numPagesRemainingInSpan(0),
@@ -282,7 +287,7 @@ void WPSContentListener::_openPageSpan()
 	{
 		if (!currentPage.getHeaderFooterSuppression((*iter).getInternalType()))
 		{
-			WPXPropertyList propList;
+			propList.clear();
 			switch ((*iter).getOccurence())
 			{
 			case ODD:
@@ -293,6 +298,9 @@ void WPSContentListener::_openPageSpan()
 				break;
 			case ALL:
 				propList.insert("libwpd:occurence", "all");
+				break;
+			case NEVER:
+			default:
 				break;
 			}
 
@@ -451,7 +459,7 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 
 void WPSContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 {
-	for (int i=0; i<m_ps->m_tabStops.size(); i++)
+	for (unsigned int i=0; i<m_ps->m_tabStops.size(); i++)
 	{
 		WPXPropertyList tmpTabStop;
 
@@ -771,7 +779,7 @@ WPXString WPSContentListener::_mergeColorsToString(const RGBSColor *fgColor, con
 	WPXString tmpColor;
 	RGBSColor tmpFgColor, tmpBgColor;
 
-	if (fgColor != NULL) {
+	if (fgColor) {
 		tmpFgColor.m_r = fgColor->m_r;
 		tmpFgColor.m_g = fgColor->m_g;
 		tmpFgColor.m_b = fgColor->m_b;
@@ -781,7 +789,7 @@ WPXString WPSContentListener::_mergeColorsToString(const RGBSColor *fgColor, con
 		tmpFgColor.m_r = tmpFgColor.m_g = tmpFgColor.m_b = 0xFF;
 		tmpFgColor.m_s = 0x64; // 100%
 	}
-	if (bgColor != NULL) {
+	if (bgColor) {
 		tmpBgColor.m_r = bgColor->m_r;
 		tmpBgColor.m_g = bgColor->m_g;
 		tmpBgColor.m_b = bgColor->m_b;
@@ -810,7 +818,7 @@ float WPSContentListener::_movePositionToFirstColumn(float position)
 		return position;
 	float tempSpaceRemaining = position - m_ps->m_pageMarginLeft - m_ps->m_sectionMarginLeft;
 	position -= m_ps->m_textColumns[0].m_leftGutter;
-	for (int i = 0; i < (m_ps->m_textColumns.size() - 1); i++)
+	for (unsigned int i = 0; i < (m_ps->m_textColumns.size() - 1); i++)
 	{
 		if ((tempSpaceRemaining -= m_ps->m_textColumns[i].m_width - m_ps->m_textColumns[i].m_rightGutter) > 0)
 		{

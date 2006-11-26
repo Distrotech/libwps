@@ -18,13 +18,18 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
+/*
+ * This file is in sync with CVS
+ * /libwpd2/src/lib/WPXContentListener.h 1.9
+ */
+
+
 #ifndef WPSCONTENTLISTENER_H
 #define WPSCONTENTLISTENER_H
 
 #include "libwps_internal.h"
 #include "WPSPageSpan.h"
 #include "WPSListener.h"
-#include <libwpd/WPXHLListenerImpl.h>
 #include <libwpd/WPXPropertyListVector.h>
 #include <vector>
 #include <list>
