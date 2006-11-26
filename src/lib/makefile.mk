@@ -1,7 +1,7 @@
 PRJ=..$/..$/..$/..$/..$/..
 
-PRJNAME=libwpd
-TARGET=wpdlib
+PRJNAME=libwps
+TARGET=wpslib
 ENABLE_EXCEPTIONS=TRUE
 LIBTARGET=NO
 
@@ -17,17 +17,20 @@ CFLAGSCXX+=-frtti
 .ENDIF
 
 SLOFILES= \
-	$(SLO)$/libwpd_internal.obj \
-	$(SLO)$/libwpd_math.obj \
-	$(SLO)$/WPXPageSpan.obj \
-	$(SLO)$/WPXContentListener.obj \
-	$(SLO)$/WPXHeader.obj \
-	$(SLO)$/WPXListener.obj \
-	$(SLO)$/WPXParser.obj \
-	$(SLO)$/WPXStylesListener.obj \
-	$(SLO)$/WPDocument.obj
+	$(SLO)$/libwps_internal.obj \
+	$(SLO)$/WPS4.obj \
+	$(SLO)$/WPS8.obj \
+	$(SLO)$/WPSDocument.obj \
+	$(SLO)$/WPSOLEStream.obj \
+	$(SLO)$/WPSStreamImplementation.obj \
+	$(SLO)$/WPSContentListener.obj \
+	$(SLO)$/WPSHeader.obj \
+	$(SLO)$/WPSListener.obj \
+	$(SLO)$/WPSPageSpan.obj \
+	$(SLO)$/WPSParser.obj \
+	$(SLO)$/WPSStylesListener.obj
 
-LIB1ARCHIV=$(LB)$/libwpdlib.a
+LIB1ARCHIV=$(LB)$/libwpslib.a
 LIB1TARGET=$(SLB)$/$(TARGET).lib
 LIB1OBJFILES= $(SLOFILES)
 
