@@ -107,7 +107,11 @@ void WPS4Parser::readFontsTable(libwps::WPSInputStream * input)
 		}
 
 		//fixme: what is this byte? maybe a font class
-		uint8_t unknown_byte = readU8(input);				
+#ifdef DEBUG
+		uint8_t unknown_byte = readU8(input);
+#else
+		readU8(input);
+#else
 
 		std::string s;
 		for (uint8_t i = readU8(input); i>0; i--)
