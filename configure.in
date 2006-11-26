@@ -49,7 +49,7 @@ PKG_CHECK_MODULES(LIBWPS,[
     libwpd-0.8
     ])
 
-AC_CHECK_HEADER([iconv.h])
+AC_CHECK_HEADERS(iconv.h, , AC_MSG_ERROR(Required header iconv.h not found.))
 
 test_docs=true
 AC_ARG_WITH(docs,
