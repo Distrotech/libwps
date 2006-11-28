@@ -117,10 +117,10 @@ void Test::testStream(void)
 	CPPUNIT_ASSERT_EQUAL ( (long int) 8 , input->tell() );
 
 	input->seek(0);
-	CPPUNIT_ASSERT_EQUAL ( (long int) 0, input->tell() );
 	//fixme: should 9 be 8?
 	for (int i = 0; i < 9; i++)
 		readU8(input);
+	CPPUNIT_ASSERT_EQUAL ( true, input->atEnd() );
 
 #if 1
 	input->seek(8);
