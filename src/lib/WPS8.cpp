@@ -96,7 +96,7 @@ void WPS8Parser::readFontsTable(libwps::WPSInputStream * input)
 		std::string s;
 		for (; string_size>0; string_size--)
 			s.append(1, (uint16_t)readU16(input));
-		s.append(1, 0);
+		s.append(1, (char)0);
 		if (s.empty())
 			continue;
 		WPS_DEBUG_MSG(("Works: debug: unknown={0x%08X}, name=%s\n",
@@ -389,7 +389,7 @@ void WPS8Parser::parseHeaderIndexEntry(libwps::WPSInputStream * input)
 			throw ParseException();
 		}
 	}
-	name.append(1, 0);
+	name.append(1, (char)0);
 
 	std::string unknown1;
 	for (int i = 0; i < 6; i ++)
@@ -398,7 +398,7 @@ void WPS8Parser::parseHeaderIndexEntry(libwps::WPSInputStream * input)
 	std::string name2;
 	for (int i =0; i < 4; i++)
 		name2.append(1, readU8(input));
-	name2.append(1, 0);
+	name2.append(1, (char)0);
 
 	if (name != name2)
 	{

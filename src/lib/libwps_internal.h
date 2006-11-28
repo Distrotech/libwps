@@ -25,9 +25,8 @@
 #include <bitset>
 #endif
 #include "WPSStream.h"
-//#include <stdio.h>
-//#include <string>
 #include <libwpd/WPXString.h>
+#include "libwps_types.h"
 
 /* Various functions/defines that need not/should not be exported externally */
 

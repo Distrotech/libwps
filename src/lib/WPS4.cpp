@@ -120,7 +120,7 @@ void WPS4Parser::readFontsTable(libwps::WPSInputStream * input)
 		}
 		WPS_DEBUG_MSG(("Works: info: count=%i, font_number=%i, unknown=%i, name=%s\n",
 			 fonts.size(), font_number, unknown_byte, s.c_str()));
-		s.append(1, 0);
+		s.append(1, (char)0);
 		fonts[font_number] = s;
 	}
 }
@@ -238,7 +238,7 @@ bool WPS4Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 	/* go to end of page */
 	input->seek(page_offset	+ 128);
 
-	return (offset_eot > FODs->back().fcLim);
+	return (!FODs->empty() && (offset_eot > FODs->back().fcLim));
 }
 
 #define WPS4_ATTRIBUTE_BOLD 0
