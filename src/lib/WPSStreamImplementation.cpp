@@ -78,15 +78,23 @@ unsigned char libwps::WPSFileStream::getchar()
 
 long libwps::WPSFileStream::read(long nbytes, char* buffer)
 {
+	if (!buffer)
+		return 0;
+	if (nbytes < 0)
+	{
+		buffer[0] = '\0';
+		return 0;
+	}
+
 	long nread = 0;
 	
 	if(d->file.good())
 	{
 	long curpos = d->file.tellg();
-	d->file.read(buffer, nbytes); 
+	d->file.readsome(buffer, nbytes); 
 	nread = (long)d->file.tellg() - curpos;
 	}
-	
+
 	return nread;
 }
 
@@ -97,6 +105,8 @@ long libwps::WPSFileStream::tell()
 
 void libwps::WPSFileStream::seek(long offset)
 {
+	if (offset < 0)
+		offset = 0;
 	if(d->file.good())
 		d->file.seekg(offset);
 }
@@ -165,12 +175,20 @@ unsigned char libwps::WPSMemoryStream::getchar()
 
 long libwps::WPSMemoryStream::read(long nbytes, char* buffer)
 {
+	if (!buffer)
+		return 0;
+	if (nbytes < 0)
+	{
+		buffer[0] = '\0';
+		return 0;
+	}
+
 	long nread = 0;
 	
 	if(d->buffer.good())
 	{
 	long curpos = d->buffer.tellg();
-	d->buffer.read(buffer, nbytes); 
+	d->buffer.readsome(buffer, nbytes); 
 	nread = (long)d->buffer.tellg() - curpos;
 	}
 	
@@ -184,6 +202,8 @@ long libwps::WPSMemoryStream::tell()
 
 void libwps::WPSMemoryStream::seek(long offset)
 {
+	if (offset < 0)
+		offset = 0;
 	if(d->buffer.good())
 		d->buffer.seekg(offset);
 }
