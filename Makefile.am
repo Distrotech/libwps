@@ -1,6 +1,6 @@
 pkgconfdir = $(libdir)/pkgconfig
 
-pkgconf_DATA = libwps-0.8.pc
+pkgconf_DATA = libwps-0.1.pc
 
 SUBDIRS = src build docs autopackage
 

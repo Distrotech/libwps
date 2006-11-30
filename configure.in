@@ -192,7 +192,7 @@ docs/Makefile
 docs/doxygen/Makefile
 build/Makefile
 build/win32/Makefile
-libwps-0.8.pc
+libwps-0.1.pc
 libwps.spec
 libwps-zip
 autopackage/Makefile
