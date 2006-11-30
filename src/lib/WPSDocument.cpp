@@ -48,18 +48,25 @@ the full 100%.
 */
 
 /**
-Check for Microsoft Works support.
-**/
-WPDConfidence WPSDocument::isFileFormatSupportedWPS(libwps::WPSInputStream *input, bool partialContent)
+Analyzes the content of an input stream to see if it can be parsed
+\param input The input stream
+\param partialContent A boolean which states if the content from the input stream
+represents the full contents of a WordPerfect file, or just the first X bytes
+\return A confidence value which represents the likelyhood that the content from
+the input stream can be parsed
+*/
+WPSConfidence WPSDocument::isFileFormatSupported(libwps::WPSInputStream *input, bool partialContent)
 {
-	WPDConfidence confidence = WPD_CONFIDENCE_NONE;
+	WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 
+	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
+	
 	try
 	{
 		WPSHeader *header = WPSHeader::constructHeader(input);
 
 		if (!header)
-			return WPD_CONFIDENCE_NONE;
+			return WPS_CONFIDENCE_NONE;
 
 		switch (header->getMajorVersion())
 		{
@@ -67,12 +74,12 @@ WPDConfidence WPSDocument::isFileFormatSupportedWPS(libwps::WPSInputStream *inpu
 			case 8:
 			case 7:
 			case 4:
-				confidence = WPD_CONFIDENCE_EXCELLENT;
+				confidence = WPS_CONFIDENCE_EXCELLENT;
 				break;
 
 			case 5:
 			case 2:
-				confidence = WPD_CONFIDENCE_GOOD;
+				confidence = WPS_CONFIDENCE_GOOD;
 				break;
 		}
 		DELETEP(header);
@@ -85,43 +92,26 @@ WPDConfidence WPSDocument::isFileFormatSupportedWPS(libwps::WPSInputStream *inpu
 		WPS_DEBUG_MSG(("Unknown Exception trapped\n"));
 	}
 
-	return WPD_CONFIDENCE_NONE;
-
+	return WPS_CONFIDENCE_NONE;
 }
 
 /**
-Analyzes the content of an input stream to see if it can be parsed
+Parses the input stream content. It will make callbacks to the functions provided by a
+WPXHLListenerImpl class implementation when needed. This is often commonly called the
+'main parsing routine'.
 \param input The input stream
-\param partialContent A boolean which states if the content from the input stream
-represents the full contents of a WordPerfect file, or just the first X bytes
-\return A confidence value which represents the likelyhood that the content from
-the input stream can be parsed
+\param listenerImpl A WPSListener implementation
 */
-WPDConfidence WPSDocument::isFileFormatSupported(libwps::WPSInputStream *input, bool partialContent)
+WPSResult WPSDocument::parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl)
 {
-	WPDConfidence confidence = WPD_CONFIDENCE_NONE;
-
-	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
-	
-	confidence = isFileFormatSupportedWPS(input, partialContent);
-
-	return confidence;
-}
-
-
-/**
-Parse a Works document.
-*/
-WPDResult WPSDocument::parseWPS(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl)
-{
-	WPDResult error = WPD_OK;
+	WPSResult error = WPS_OK;
 
 	try
 	{
 		WPSHeader *header = WPSHeader::constructHeader(input);
 
 		if (!header)
-			return WPD_UNKNOWN_ERROR;
+			return WPS_UNKNOWN_ERROR;
 
 		switch (header->getMajorVersion())
 		{
@@ -152,33 +142,19 @@ WPDResult WPSDocument::parseWPS(libwps::WPSInputStream *input, WPXHLListenerImpl
 	catch (FileException)
 	{
 		WPS_DEBUG_MSG(("File exception trapped\n"));
-		error = WPD_FILE_ACCESS_ERROR;
+		error = WPS_FILE_ACCESS_ERROR;
         }
 	catch (ParseException)
 	{
 		WPS_DEBUG_MSG(("Parse exception trapped\n"));
-                error = WPD_PARSE_ERROR;
+                error = WPS_PARSE_ERROR;
 	}
 	catch (...)
 	{
 		//fixme: too generic
 		WPS_DEBUG_MSG(("Unknown exception trapped\n"));
-		error = WPD_UNKNOWN_ERROR;
+		error = WPS_UNKNOWN_ERROR;
 	}
 
-	return error;
-}
-
-/**
-Parses the input stream content. It will make callbacks to the functions provided by a
-WPXHLListenerImpl class implementation when needed. This is often commonly called the
-'main parsing routine'.
-\param input The input stream
-\param listenerImpl A WPSListener implementation
-*/
-WPDResult WPSDocument::parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl)
-{
-	WPDResult error = parseWPS(input, listenerImpl);
-	
 	return error;
 }

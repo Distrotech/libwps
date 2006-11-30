@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
 
 	libwps::WPSInputStream* input = new libwps::WPSFileStream(argv[1]);
 
-	WPDConfidence confidence = WPSDocument::isFileFormatSupported(input, false);
-	if (confidence == WPD_CONFIDENCE_NONE || confidence == WPD_CONFIDENCE_POOR)
+	WPSConfidence confidence = WPSDocument::isFileFormatSupported(input, false);
+	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)
 	{
 		printf("ERROR: Unsupported file format!\n");
 		delete input;
@@ -44,20 +44,20 @@ int main(int argc, char *argv[])
 	}
 	
 	TextListenerImpl listenerImpl;
-	WPDResult error = WPSDocument::parse(input, static_cast<WPXHLListenerImpl *>(&listenerImpl));
+	WPSResult error = WPSDocument::parse(input, static_cast<WPXHLListenerImpl *>(&listenerImpl));
 
-	if (error == WPD_FILE_ACCESS_ERROR)
+	if (error == WPS_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == WPD_PARSE_ERROR)
+	else if (error == WPS_PARSE_ERROR)
 		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == WPD_OLE_ERROR)
+	else if (error == WPS_OLE_ERROR)
 		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
-	else if (error != WPD_OK)
+	else if (error != WPS_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 
 	delete input;
 
-	if (error != WPD_OK)
+	if (error != WPS_OK)
 		return 1;
 
 
