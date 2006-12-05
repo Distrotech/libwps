@@ -1,6 +1,6 @@
 target_test = test
 
-bin_PROGRAMS = $(target_test)
+noinst_PROGRAMS = $(target_test)
 
 AM_CXXFLAGS = $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS) -I$(top_srcdir)/src/lib/
 

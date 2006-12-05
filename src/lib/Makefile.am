@@ -26,7 +26,7 @@ endif
 lib_LTLIBRARIES = libwps-0.1.la
 libwps_0_1_includedir = $(includedir)/libwps-0.1/libwps
 libwps_0_1_include_HEADERS = libwps.h libwps_types.h \
-WPSDocument.h WPSStream.h
+WPSDocument.h WPSStream.h WPSStreamImplementation.h
 
 INCLUDES = -I$(srcdir)
 
@@ -50,9 +50,12 @@ libwps_0_1_la_SOURCES = \
 	WPSStylesListener.cpp \
 	libwps.h \
 	libwps_internal.h \
-	libwps_math.h \
 	libwps_types.h \
+	WPS.h \
+	WPS4.h \
+	WPS8.h \
 	WPSDocument.h \
+	WPSOLEStream.h \
 	WPSContentListener.h \
 	WPSHeader.h \
 	WPSFileStructure.h \
