@@ -96,11 +96,12 @@ long WPSFileStream::tell()
 
 int WPSFileStream::seek(long offset, WPX_SEEK_TYPE seekType)
 {
-// TODO: implement WPX_SEEK_TYPE seekType (now WPX_SEEK_SET is assumed)
-	if (offset < 0)
+	if (seekType == WPX_SEEK_SET && offset < 0)
 		offset = 0;
+	if (seekType == WPX_SEEK_CUR && (tell() + offset < 0))
+		offset = -tell();
 	if(d->file.good())
-		d->file.seekg(offset);
+		d->file.seekg((seekType == WPX_SEEK_SET) ? offset : (offset + tell()));
 }
 
 bool WPSFileStream::atEOS()
@@ -118,7 +119,7 @@ bool WPSFileStream::isOLEStream()
 	return false;
 }
 
-WPSInputStream* WPSFileStream::getDocumentOLEStream(char * name)
+WPSInputStream* WPSFileStream::getDocumentOLEStream(const char * name)
 {
 	if (d->buffer.str().empty())
 		d->buffer << d->file.rdbuf();
@@ -188,11 +189,12 @@ long WPSMemoryStream::tell()
 
 int WPSMemoryStream::seek(long offset, WPX_SEEK_TYPE seekType)
 {
-// TODO: implement WPX_SEEK_TYPE seekType (now WPX_SEEK_SET is assumed)
-	if (offset < 0)
+	if (seekType == WPX_SEEK_SET && offset < 0)
 		offset = 0;
+	if (seekType == WPX_SEEK_CUR && (tell() + offset < 0))
+		offset = -tell();
 	if(d->buffer.good())
-		d->buffer.seekg(offset);
+		d->buffer.seekg((seekType == WPX_SEEK_SET) ? offset : (offset + tell()));
 }
 
 bool WPSMemoryStream::atEOS()
@@ -208,7 +210,7 @@ bool WPSMemoryStream::isOLEStream()
 	return false;
 }
 
-WPSInputStream* WPSMemoryStream::getDocumentOLEStream(char * name)
+WPSInputStream* WPSMemoryStream::getDocumentOLEStream(const char * name)
 {
 	Storage *tmpStorage = new Storage( d->buffer );
 	Stream tmpStream( tmpStorage, name );

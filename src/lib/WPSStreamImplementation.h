@@ -38,7 +38,7 @@ public:
 	bool atEOS();
 
 	bool isOLEStream();
-	WPSInputStream *getDocumentOLEStream(char * name);
+	WPSInputStream *getDocumentOLEStream(const char * name);
 
 private:
 	WPSFileStreamPrivate* d;
@@ -60,7 +60,7 @@ public:
 	bool atEOS();
 
 	bool isOLEStream();
-	WPSInputStream *getDocumentOLEStream(char * name);
+	WPSInputStream *getDocumentOLEStream(const char * name);
 
 private:
 	WPSMemoryStreamPrivate* d;
