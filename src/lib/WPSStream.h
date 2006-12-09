@@ -22,23 +22,19 @@
 #ifndef __WPSSTREAM_H__
 #define __WPSSTREAM_H__
 
-namespace libwps
-{
+#include <libwpd/WPXStream.h>
 
 class WPSInputStream
 {
 public:
 	virtual ~WPSInputStream() {}
-	virtual unsigned char getchar() = 0;
-	virtual long read(long n, char* buffer) = 0;
+//	virtual unsigned char getchar() = 0;
+	virtual const uint8_t *read(size_t numBytes, size_t &numBytesRead) = 0;;
 	virtual long tell() = 0;
-	virtual void seek(long offset) = 0;
-	virtual bool atEnd() = 0;
+	virtual int seek(long offset, WPX_SEEK_TYPE seekType) = 0;
+	virtual bool atEOS() = 0;
 
-	virtual bool isOle() = 0;
-	virtual WPSInputStream *getWPSOleStream(char * name) = 0;
+	virtual bool isOLEStream() = 0;
+	virtual WPSInputStream *getDocumentOLEStream(char * name) = 0;
 };
-
-} // namespace wps
-
 #endif // __WPSSTREAM_H__

@@ -38,15 +38,15 @@ class WPS4Listener;
 class WPS4PrefixDataPacket
 {
 public:
-	WPS4PrefixDataPacket(libwps::WPSInputStream * input);	
+	WPS4PrefixDataPacket(WPSInputStream * input);	
 	virtual ~WPS4PrefixDataPacket() {}
 	virtual void parse(WPS4Listener *listener) const {}
 
-//	static WPS4PrefixDataPacket * constructPrefixDataPacket(libwps::WPSInputStream * input, WPS4PrefixIndice *prefixIndice);
+//	static WPS4PrefixDataPacket * constructPrefixDataPacket(WPSInputStream * input, WPS4PrefixIndice *prefixIndice);
 
 protected:
-	virtual void _readContents(libwps::WPSInputStream *input) = 0;
- 	void _read(libwps::WPSInputStream *input, uint32_t dataOffset, uint32_t dataSize);
+	virtual void _readContents(WPSInputStream *input) = 0;
+ 	void _read(WPSInputStream *input, uint32_t dataOffset, uint32_t dataSize);
 };
 
 
@@ -84,20 +84,20 @@ public:
 class WPS4Parser : public WPSParser
 {
 public:
-	WPS4Parser(libwps::WPSInputStream *input, WPSHeader * header);
+	WPS4Parser(WPSInputStream *input, WPSHeader * header);
 	~WPS4Parser();
 
 	void parse(WPXHLListenerImpl *listenerImpl);
 private:
-	void parsePages(std::list<WPSPageSpan> &pageList, libwps::WPSInputStream *input);
-	void parse(libwps::WPSInputStream *stream, WPS4Listener *listener);
-	void readFontsTable(libwps::WPSInputStream * input);
-	bool readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * FODs);	
+	void parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *input);
+	void parse(WPSInputStream *stream, WPS4Listener *listener);
+	void readFontsTable(WPSInputStream * input);
+	bool readFODPage(WPSInputStream * input, std::vector<FOD> * FODs);	
 	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS4Listener *listener);
 	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener *listener);
 	void propertyChange(std::string rgchProp, WPS4Listener *listener);
 	void insertCharacter(iconv_t cd, uint8_t readVal, WPS4Listener *listener);
-	void readText(libwps::WPSInputStream * input, WPS4Listener *listener);
+	void readText(WPSInputStream * input, WPS4Listener *listener);
 	uint32_t oldTextAttributeBits;
 	uint32_t offset_eot; /* stream offset to end of text */
 	uint32_t offset_eos; /* stream offset to end of MN0 */	

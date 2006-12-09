@@ -27,8 +27,7 @@
 #include <sstream>
 #include <string>
 
-namespace libwps
-{
+using namespace libwps;
 
 class WPSFileStreamPrivate
 {
@@ -45,98 +44,91 @@ public:
 	std::stringstream buffer;
 };
 
-} // namespace libwps
-
-libwps::WPSFileStreamPrivate::WPSFileStreamPrivate() :
+WPSFileStreamPrivate::WPSFileStreamPrivate() :
 	file(),
 	buffer(std::ios::binary | std::ios::in | std::ios::out)
 {
 }
 
-libwps::WPSMemoryStreamPrivate::WPSMemoryStreamPrivate(const std::string str) :
+WPSMemoryStreamPrivate::WPSMemoryStreamPrivate(const std::string str) :
 	buffer(str, std::ios::binary | std::ios::in)
 {
 }
 
 
-libwps::WPSFileStream::WPSFileStream(const char* filename)
+WPSFileStream::WPSFileStream(const char* filename)
 {
-	d = new libwps::WPSFileStreamPrivate;
+	d = new WPSFileStreamPrivate;
 	
 	d->file.open( filename, std::ios::binary | std::ios::in );
 }
 
-libwps::WPSFileStream::~WPSFileStream()
+WPSFileStream::~WPSFileStream()
 {
 	delete d;
 }
 
-unsigned char libwps::WPSFileStream::getchar()
+const uint8_t *WPSFileStream::read(size_t numBytes, size_t &numBytesRead)
 {
-	return d->file.get();
-}
-
-long libwps::WPSFileStream::read(long nbytes, char* buffer)
-{
-	if (!buffer)
-		return 0;
-	if (nbytes < 0)
+	numBytesRead = 0;
+	
+	if (numBytes < 0)
 	{
-		buffer[0] = '\0';
 		return 0;
 	}
 
-	long nread = 0;
-	
+	uint8_t *buffer = new uint8_t[numBytes];
+
 	if(d->file.good())
 	{
-	long curpos = d->file.tellg();
-	d->file.readsome(buffer, nbytes); 
-	nread = (long)d->file.tellg() - curpos;
+		long curpos = d->file.tellg();
+		d->file.readsome((char *)buffer, numBytes); 
+		numBytesRead = (long)d->file.tellg() - curpos;
 	}
-
-	return nread;
+	
+	return buffer;
 }
 
-long libwps::WPSFileStream::tell()
+long WPSFileStream::tell()
 {
 	return d->file.good() ? (long)d->file.tellg() : -1L;
 }
 
-void libwps::WPSFileStream::seek(long offset)
+int WPSFileStream::seek(long offset, WPX_SEEK_TYPE seekType)
 {
+// TODO: implement WPX_SEEK_TYPE seekType (now WPX_SEEK_SET is assumed)
 	if (offset < 0)
 		offset = 0;
 	if(d->file.good())
 		d->file.seekg(offset);
 }
 
-bool libwps::WPSFileStream::atEnd()
+bool WPSFileStream::atEOS()
 {
 	return d->file.eof();
 }
 
-bool libwps::WPSFileStream::isOle()
+bool WPSFileStream::isOLEStream()
 {
 	if (d->buffer.str().empty())
 		d->buffer << d->file.rdbuf();
 	Storage tmpStorage( d->buffer );
-	if (tmpStorage.isOle())
+	if (tmpStorage.isOLEStream())
 		return true;
 	return false;
 }
 
-libwps::WPSInputStream* libwps::WPSFileStream::getWPSOleStream(char * name)
+WPSInputStream* WPSFileStream::getDocumentOLEStream(char * name)
 {
 	if (d->buffer.str().empty())
 		d->buffer << d->file.rdbuf();
-	libwps::Storage *tmpStorage = new libwps::Storage( d->buffer );
-	libwps::Stream tmpStream( tmpStorage, name );
+	Storage *tmpStorage = new Storage( d->buffer );
+	Stream tmpStream( tmpStorage, name );
 	if (!tmpStorage || (tmpStorage->result() != Storage::Ok)  || !tmpStream.size())
 	{
 		if (tmpStorage)
 			delete tmpStorage;
-		return (libwps::WPSInputStream*)0;
+		return (WPSInputStream*)0;
 	}
 	
 	unsigned char *tmpBuffer = new unsigned char[tmpStream.size()];
@@ -150,86 +142,81 @@ libwps::WPSInputStream* libwps::WPSFileStream::getWPSOleStream(char * name)
 	{
 		if (tmpStorage)
 			delete tmpStorage;
-		return (libwps::WPSInputStream*)0;
+		return (WPSInputStream*)0;
 	}
 
 	delete tmpStorage;
-	return new libwps::WPSMemoryStream((const char *)tmpBuffer, tmpLength);
+	return new WPSMemoryStream((const char *)tmpBuffer, tmpLength);
 }
 
 
-libwps::WPSMemoryStream::WPSMemoryStream(const char *data, const unsigned int dataSize)
+WPSMemoryStream::WPSMemoryStream(const char *data, const unsigned int dataSize)
 {
-	d = new libwps::WPSMemoryStreamPrivate(std::string(data, dataSize));
+	d = new WPSMemoryStreamPrivate(std::string(data, dataSize));
 }
 
-libwps::WPSMemoryStream::~WPSMemoryStream()
+WPSMemoryStream::~WPSMemoryStream()
 {
 	delete d;
 }
 
-unsigned char libwps::WPSMemoryStream::getchar()
+const uint8_t *WPSMemoryStream::read(size_t numBytes, size_t &numBytesRead)
 {
-	return d->buffer.get();
-}
-
-long libwps::WPSMemoryStream::read(long nbytes, char* buffer)
-{
-	if (!buffer)
-		return 0;
-	if (nbytes < 0)
+	numBytesRead = 0;
+	
+	if (numBytes < 0)
 	{
-		buffer[0] = '\0';
 		return 0;
 	}
 
-	long nread = 0;
-	
+	uint8_t *buffer = new uint8_t[numBytes];
+
 	if(d->buffer.good())
 	{
-	long curpos = d->buffer.tellg();
-	d->buffer.readsome(buffer, nbytes); 
-	nread = (long)d->buffer.tellg() - curpos;
+		long curpos = d->buffer.tellg();
+		d->buffer.readsome((char *)buffer, numBytes); 
+		numBytesRead = (long)d->buffer.tellg() - curpos;
 	}
 	
-	return nread;
+	return buffer;
 }
 
-long libwps::WPSMemoryStream::tell()
+long WPSMemoryStream::tell()
 {
 	return d->buffer.good() ? (long)d->buffer.tellg() : -1L;
 }
 
-void libwps::WPSMemoryStream::seek(long offset)
+int WPSMemoryStream::seek(long offset, WPX_SEEK_TYPE seekType)
 {
+// TODO: implement WPX_SEEK_TYPE seekType (now WPX_SEEK_SET is assumed)
 	if (offset < 0)
 		offset = 0;
 	if(d->buffer.good())
 		d->buffer.seekg(offset);
 }
 
-bool libwps::WPSMemoryStream::atEnd()
+bool WPSMemoryStream::atEOS()
 {
 	return d->buffer.eof();
 }
 
-bool libwps::WPSMemoryStream::isOle()
+bool WPSMemoryStream::isOLEStream()
 {
-	libwps::Storage tmpStorage( d->buffer );
-	if (tmpStorage.isOle())
+	Storage tmpStorage( d->buffer );
+	if (tmpStorage.isOLEStream())
 		return true;
 	return false;
 }
 
-libwps::WPSInputStream* libwps::WPSMemoryStream::getWPSOleStream(char * name)
+WPSInputStream* WPSMemoryStream::getDocumentOLEStream(char * name)
 {
-	libwps::Storage *tmpStorage = new libwps::Storage( d->buffer );
-	libwps::Stream tmpStream( tmpStorage, name );
-	if (!tmpStorage || (tmpStorage->result() != libwps::Storage::Ok)  || !tmpStream.size())
+	Storage *tmpStorage = new Storage( d->buffer );
+	Stream tmpStream( tmpStorage, name );
+	if (!tmpStorage || (tmpStorage->result() != Storage::Ok)  || !tmpStream.size())
 	{
 		if (tmpStorage)
 			delete tmpStorage;
-		return (libwps::WPSInputStream*)0;
+		return (WPSInputStream*)0;
 	}
 	
 	unsigned char *tmpBuffer = new unsigned char[tmpStream.size()];
@@ -243,9 +230,9 @@ libwps::WPSInputStream* libwps::WPSMemoryStream::getWPSOleStream(char * name)
 	{
 		if (tmpStorage)
 			delete tmpStorage;
-		return (libwps::WPSInputStream*)0;
+		return (WPSInputStream*)0;
 	}
 
 	delete tmpStorage;
-	return new libwps::WPSMemoryStream((const char *)tmpBuffer, tmpLength);
+	return new WPSMemoryStream((const char *)tmpBuffer, tmpLength);
 }

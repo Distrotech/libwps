@@ -39,8 +39,8 @@ Works documents.
 class WPSDocument
 {
 public:
-	static WPSConfidence isFileFormatSupported(libwps::WPSInputStream *input, bool partialContent);
-	static WPSResult parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl);
+	static WPSConfidence isFileFormatSupported(WPSInputStream *input, bool partialContent);
+	static WPSResult parse(WPSInputStream *input, WPXHLListenerImpl *listenerImpl);
 };
 
 #endif /* WPSDOCUMENT_H */

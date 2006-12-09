@@ -36,7 +36,7 @@ WPS8Parser public
 */
 
 
-WPS8Parser::WPS8Parser(libwps::WPSInputStream *input, WPSHeader * header) :
+WPS8Parser::WPS8Parser(WPSInputStream *input, WPSHeader * header) :
 	WPSParser(input, header)
 {
 }
@@ -51,7 +51,7 @@ void WPS8Parser::parse(WPXHLListenerImpl *listenerImpl)
 	
 	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));		
 
-	libwps::WPSInputStream *input = getInput();		
+	WPSInputStream *input = getInput();		
 
 	/* parse pages */
 	WPSPageSpan m_currentPage;
@@ -72,7 +72,7 @@ WPS8Parser private
  * Reads fonts table into memory.
  *
  */
-void WPS8Parser::readFontsTable(libwps::WPSInputStream * input)
+void WPS8Parser::readFontsTable(WPSInputStream * input)
 {
 	/* find the fonts page offset, fonts array offset, and ending offset */
 	HeaderIndexMultiMap::iterator pos;
@@ -82,9 +82,9 @@ void WPS8Parser::readFontsTable(libwps::WPSInputStream * input)
 		WPS_DEBUG_MSG(("Works8: error: no FONT in header index table\n"));
 		throw ParseException();
 	}
-	input->seek(pos->second.offset + 0x04);
+	input->seek(pos->second.offset + 0x04, WPX_SEEK_SET);
 	uint32_t n_fonts = readU32(input);
-	input->seek(pos->second.offset + 0x10 + (4*n_fonts));
+	input->seek(pos->second.offset + 0x10 + (4*n_fonts), WPX_SEEK_SET);
 	uint32_t offset_end_FFNTB = pos->second.offset + pos->second.length;
 	
 	/* read each font in the table */	
@@ -148,7 +148,7 @@ void WPS8Parser::insertCharacter(iconv_t cd, uint16_t readVal, WPS8Listener *lis
 
 // fixme: this method might turn out to be like WPS4Parser::readText()
 
-void WPS8Parser::readText(libwps::WPSInputStream * input, WPS8Listener *listener)
+void WPS8Parser::readText(WPSInputStream * input, WPS8Listener *listener)
 {
 	WPS_DEBUG_MSG(("WPS8Parser::readText()\n"));
 
@@ -186,7 +186,7 @@ void WPS8Parser::readText(libwps::WPSInputStream * input, WPS8Listener *listener
 			propertyChange((*FODs_iter).fprop.rgchProp, listener);
 
 		/* plain text */
-		input->seek(last_fcLim);			
+		input->seek(last_fcLim, WPX_SEEK_SET);			
 		for (uint32_t i = len; i>0; i--)
 		{
 			uint16_t readVal = readU16(input);
@@ -245,7 +245,7 @@ void WPS8Parser::readText(libwps::WPSInputStream * input, WPS8Listener *listener
 
 //fixme: this readFODPage is mostly the same as in WPS4
 
-bool WPS8Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * FODs, uint16_t page_size)
+bool WPS8Parser::readFODPage(WPSInputStream * input, std::vector<FOD> * FODs, uint16_t page_size)
 {
 	uint32_t page_offset = input->tell();
 	uint16_t cfod = readU16(input); /* number of FODs on this page */
@@ -257,7 +257,7 @@ bool WPS8Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 		throw ParseException();
 	}
 
-	input->seek(page_offset + 2 + 6);	// fixme: unknown
+	input->seek(page_offset + 2 + 6, WPX_SEEK_SET);	// fixme: unknown
 
 	int first_fod = FODs->size();
 
@@ -325,7 +325,7 @@ bool WPS8Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 			continue;
 		}
 
-		input->seek((*FODs_iter).bfprop_abs);
+		input->seek((*FODs_iter).bfprop_abs, WPX_SEEK_SET);
 		(*FODs_iter).fprop.cch = readU8(input);
 		if (0 == (*FODs_iter).fprop.cch)
 		{
@@ -346,7 +346,7 @@ bool WPS8Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
 	}
 	
 	/* go to end of page */
-	input->seek(page_offset	+ page_size);
+	input->seek(page_offset	+ page_size, WPX_SEEK_SET);
 
 	return (offset_eot > FODs->back().fcLim);
 
@@ -361,7 +361,7 @@ bool WPS8Parser::readFODPage(libwps::WPSInputStream * input, std::vector<FOD> * 
  *
  */
 
-void WPS8Parser::parseHeaderIndexEntry(libwps::WPSInputStream * input)
+void WPS8Parser::parseHeaderIndexEntry(WPSInputStream * input)
 {
 	WPS_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos 0x%lX\n", input->tell()));
 
@@ -417,7 +417,7 @@ void WPS8Parser::parseHeaderIndexEntry(libwps::WPSInputStream * input)
 
 	headerIndexTable.insert(make_pair(name, hie));
 
-	input->seek(input->tell() + 0x18 - cch);
+	input->seek(input->tell() + 0x18 - cch, WPX_SEEK_SET);
 }
 
 /**
@@ -425,13 +425,13 @@ void WPS8Parser::parseHeaderIndexEntry(libwps::WPSInputStream * input)
  * the CONTENTS stream.
  * 
  */
-void WPS8Parser::parseHeaderIndex(libwps::WPSInputStream * input)
+void WPS8Parser::parseHeaderIndex(WPSInputStream * input)
 {
-	input->seek(0x0C);		
+	input->seek(0x0C, WPX_SEEK_SET);		
 	uint16_t n_entries = readU16(input);
 	// fixme: sanity check n_entries
 
-	input->seek(0x18);		
+	input->seek(0x18, WPX_SEEK_SET);		
 	do
 	{
 		uint16_t unknown1 = readU16(input);
@@ -470,7 +470,7 @@ void WPS8Parser::parseHeaderIndex(libwps::WPSInputStream * input)
 			break;
 
 		WPS_DEBUG_MSG(("Works8: debug: seeking to position 0x%X\n", next_index_table));
-		input->seek(next_index_table);
+		input->seek(next_index_table, WPX_SEEK_SET);
 	} while (n_entries > 0);
 }
 
@@ -479,7 +479,7 @@ void WPS8Parser::parseHeaderIndex(libwps::WPSInputStream * input)
  * can only have one page format throughout the whole document.
  *
  */
-void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, libwps::WPSInputStream *input)
+void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *input)
 {
 	//fixme: this method doesn't do much
 
@@ -488,7 +488,7 @@ void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, libwps::WPSInputSt
 	pageList.push_back(ps);
 }
 
-void WPS8Parser::parse(libwps::WPSInputStream *input, WPS8Listener *listener)
+void WPS8Parser::parse(WPSInputStream *input, WPS8Listener *listener)
 {
 	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));	
 
@@ -523,7 +523,7 @@ void WPS8Parser::parse(libwps::WPSInputStream *input, WPS8Listener *listener)
 		WPS_DEBUG_MSG(("Works: debug: FDPC (%s) offset=0x%X, length=0x%X\n",
 				pos->first.c_str(), pos->second.offset, pos->second.length));
 
-		input->seek(pos->second.offset);
+		input->seek(pos->second.offset, WPX_SEEK_SET);
 		if (pos->second.length != 512)
 		{
 			WPS_DEBUG_MSG(("Works: warning: FDPC offset=0x%X, length=0x%X\n", 

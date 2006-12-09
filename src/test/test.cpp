@@ -65,12 +65,12 @@ void Test::tearDown(void)
 
 void Test::testStream(void)
 { 
-	libwps::WPSInputStream* input = new libwps::WPSFileStream(TMP_FILENAME);
+	WPSInputStream* input = new WPSFileStream(TMP_FILENAME);
 
 
 	// fixme: should isOle() move the cursor?
 	CPPUNIT_ASSERT_EQUAL ( false, input->isOle() );
-	CPPUNIT_ASSERT_EQUAL ( (libwps::WPSInputStream*) NULL, input->getWPSOleStream("foo") );
+	CPPUNIT_ASSERT_EQUAL ( (WPSInputStream*) NULL, input->getWPSOleStream("foo") );
 
 	// test read()
 	char buffer[100];

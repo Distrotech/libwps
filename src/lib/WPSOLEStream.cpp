@@ -143,7 +143,7 @@ class StorageIO
     StorageIO( Storage* storage, const std::stringstream &memorystream );
     ~StorageIO();
     
-    bool isOle();
+    bool isOLEStream();
     void load();
 
     unsigned long loadBigBlocks( std::vector<unsigned long> blocks, unsigned char* buffer, unsigned long maxlen );
@@ -612,7 +612,7 @@ libwps::StorageIO::~StorageIO()
     delete *it;
 }
 
-bool libwps::StorageIO::isOle()
+bool libwps::StorageIO::isOLEStream()
 {
   load();
   return (result == libwps::Storage::Ok);
@@ -967,9 +967,9 @@ int libwps::Storage::result()
   return io->result;
 }
 
-bool libwps::Storage::isOle()
+bool libwps::Storage::isOLEStream()
 {
-  return io->isOle();
+  return io->isOLEStream();
 }
 
 // =========== Stream ==========

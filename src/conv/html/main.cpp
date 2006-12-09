@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	libwps::WPSInputStream* input = new libwps::WPSFileStream(argv[1]);
+	WPSInputStream* input = new WPSFileStream(argv[1]);
 
 	WPSConfidence confidence = WPSDocument::isFileFormatSupported(input, false);
 	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)

@@ -63,7 +63,7 @@ public:
   /**
    * Checks whether the storage is OLE2 storage.
    **/
-  bool isOle();
+  bool isOLEStream();
 
   /**
    * Returns the error code of last operation.

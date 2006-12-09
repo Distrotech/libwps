@@ -27,7 +27,7 @@
 #include "WPSParser.h"
 #include "libwps_internal.h"
 
-WPSParser::WPSParser(libwps::WPSInputStream *input, WPSHeader *header) :
+WPSParser::WPSParser(WPSInputStream *input, WPSHeader *header) :
 	m_input(input),
 	m_header(header)
 {

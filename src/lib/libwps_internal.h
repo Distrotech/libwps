@@ -50,9 +50,9 @@
 
 // add more of these as needed for byteswapping
 // (the 8-bit functions are just there to make things consistent)
-uint8_t readU8(libwps::WPSInputStream *input); 
-uint16_t readU16(libwps::WPSInputStream *input, bool bigendian=false);
-uint32_t readU32(libwps::WPSInputStream *input, bool bigendian=false);
+uint8_t readU8(WPSInputStream *input); 
+uint16_t readU16(WPSInputStream *input, bool bigendian=false);
+uint32_t readU32(WPSInputStream *input, bool bigendian=false);
 
 // Various helper structures for the parser..
 

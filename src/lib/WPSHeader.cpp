@@ -28,7 +28,7 @@
 #include "WPSFileStructure.h"
 #include "libwps_internal.h"
 	
-WPSHeader::WPSHeader(libwps::WPSInputStream *input, uint8_t majorVersion) :
+WPSHeader::WPSHeader(WPSInputStream *input, uint8_t majorVersion) :
 	m_input(input),
 	m_majorVersion(majorVersion)
 {
@@ -38,11 +38,11 @@ WPSHeader::~WPSHeader()
 {
 }
 
-WPSHeader * WPSHeader::constructHeader(libwps::WPSInputStream *input)
+WPSHeader * WPSHeader::constructHeader(WPSInputStream *input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
 
-	libwps::WPSInputStream * document_mn0 = input->getWPSOleStream("MN0");	
+	WPSInputStream * document_mn0 = input->getDocumentOLEStream("MN0");	
 	if (document_mn0)
 	{
 		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));	
@@ -51,14 +51,14 @@ WPSHeader * WPSHeader::constructHeader(libwps::WPSInputStream *input)
 	else
 		DELETEP(document_mn0);
 	
-	libwps::WPSInputStream * document_contents = input->getWPSOleStream("CONTENTS");	
+	WPSInputStream * document_contents = input->getDocumentOLEStream("CONTENTS");	
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */
-		document_contents->seek(0);
+		document_contents->seek(0, WPX_SEEK_SET);
 		
 		char fileMagic[8];
-		for (int i=0; i<7 && !document_contents->atEnd(); i++)
+		for (int i=0; i<7 && !document_contents->atEOS(); i++)
 			fileMagic[i] = readU8(document_contents);		
 		fileMagic[7] = '\0';
 		
@@ -79,7 +79,7 @@ WPSHeader * WPSHeader::constructHeader(libwps::WPSInputStream *input)
 		DELETEP(document_contents);
 	}
 
-	input->seek(0);
+	input->seek(0, WPX_SEEK_SET);
 	if (readU8(input) < 6 && 0xFE == readU8(input))
 	{
 		WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));

@@ -55,7 +55,7 @@ represents the full contents of a WordPerfect file, or just the first X bytes
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-WPSConfidence WPSDocument::isFileFormatSupported(libwps::WPSInputStream *input, bool partialContent)
+WPSConfidence WPSDocument::isFileFormatSupported(WPSInputStream *input, bool partialContent)
 {
 	WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 
@@ -102,7 +102,7 @@ WPXHLListenerImpl class implementation when needed. This is often commonly calle
 \param input The input stream
 \param listenerImpl A WPSListener implementation
 */
-WPSResult WPSDocument::parse(libwps::WPSInputStream *input, WPXHLListenerImpl *listenerImpl)
+WPSResult WPSDocument::parse(WPSInputStream *input, WPXHLListenerImpl *listenerImpl)
 {
 	WPSResult error = WPS_OK;
 

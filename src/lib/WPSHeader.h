@@ -33,16 +33,16 @@
 class WPSHeader
 {
  public:	
-	WPSHeader(libwps::WPSInputStream *input, uint8_t majorVersion);
+	WPSHeader(WPSInputStream *input, uint8_t majorVersion);
 	virtual ~WPSHeader();
 
-	static WPSHeader * constructHeader(libwps::WPSInputStream *input);
+	static WPSHeader * constructHeader(WPSInputStream *input);
 		
-	libwps::WPSInputStream * getInput() const { return m_input; }
+	WPSInputStream * getInput() const { return m_input; }
 	const uint8_t getMajorVersion() const { return m_majorVersion; }
 
  private:
-	libwps::WPSInputStream * m_input;
+	WPSInputStream * m_input;
 	uint8_t m_majorVersion;
 };
 

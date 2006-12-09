@@ -22,19 +22,25 @@
 #include "libwps_internal.h"
 #include "WPSStream.h"
 
-uint8_t readU8(libwps::WPSInputStream *input)
+uint8_t readU8(WPSInputStream *input)
 {
-        return input->getchar();
+	size_t numBytesRead;
+	uint8_t const * p = input->read(sizeof(uint8_t), numBytesRead);
+	
+  	if (!p || numBytesRead != sizeof(uint8_t))
+  		throw FileException();
+
+	return *(uint8_t const *)(p);
 }
 
-uint16_t readU16(libwps::WPSInputStream *input, bool bigendian)
+uint16_t readU16(WPSInputStream *input, bool bigendian)
 {
 	unsigned short p0 = (unsigned short)readU8(input);
 	unsigned short p1 = (unsigned short)readU8(input);
 	return p0|(p1<<8);
 }
 
-uint32_t readU32(libwps::WPSInputStream *input, bool bigendian)
+uint32_t readU32(WPSInputStream *input, bool bigendian)
 {
 	uint8_t p0 = readU8(input);
 	uint8_t p1 = readU8(input);

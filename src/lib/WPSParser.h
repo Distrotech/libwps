@@ -35,17 +35,17 @@ class WPXHLListenerImpl;
 class WPSParser
 {
 public:
-	WPSParser(libwps::WPSInputStream * input, WPSHeader *header);
+	WPSParser(WPSInputStream * input, WPSHeader *header);
 	virtual ~WPSParser();
 
 	virtual void parse(WPXHLListenerImpl *listenerImpl) = 0;
 
 protected:
 	WPSHeader * getHeader() { return m_header; }
-	libwps::WPSInputStream * getInput() { return m_input; }
+	WPSInputStream * getInput() { return m_input; }
 	
 private:
-	libwps::WPSInputStream * m_input;
+	WPSInputStream * m_input;
 
 	WPSHeader * m_header;
 };

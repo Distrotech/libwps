@@ -24,9 +24,6 @@
 
 #include "WPSStream.h"
 
-namespace libwps
-{
-
 class WPSFileStreamPrivate;
 
 class WPSFileStream: public WPSInputStream
@@ -35,14 +32,13 @@ public:
 	explicit WPSFileStream(const char* filename);
 	~WPSFileStream();
 	
-	unsigned char getchar();
-	long read(long n, char* buffer);
+	const uint8_t *read(size_t numBytes, size_t &numBytesRead);
 	long tell();
-	void seek(long offset);
-	bool atEnd();
+	int seek(long offset, WPX_SEEK_TYPE seekType);
+	bool atEOS();
 
-	bool isOle();
-	WPSInputStream *getWPSOleStream(char * name);
+	bool isOLEStream();
+	WPSInputStream *getDocumentOLEStream(char * name);
 
 private:
 	WPSFileStreamPrivate* d;
@@ -58,21 +54,18 @@ public:
 	WPSMemoryStream(const char *data, const unsigned int dataSize);
 	~WPSMemoryStream();
 
-	unsigned char getchar();
-	long read(long n, char* buffer);
+	const uint8_t *read(size_t numBytes, size_t &numBytesRead);
 	long tell();
-	void seek(long offset);
-	bool atEnd();
+	int seek(long offset, WPX_SEEK_TYPE seekType);
+	bool atEOS();
 
-	bool isOle();
-	WPSInputStream *getWPSOleStream(char * name);
+	bool isOLEStream();
+	WPSInputStream *getDocumentOLEStream(char * name);
 
 private:
 	WPSMemoryStreamPrivate* d;
 	WPSMemoryStream(const WPSMemoryStream&); // copy is not allowed
 	WPSMemoryStream& operator=(const WPSMemoryStream&); // assignment is not allowed
 };
-
-} // namespace libwps
 
 #endif // __WPSSTREAMIMPLEMENTATION_H__
