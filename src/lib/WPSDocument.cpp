@@ -86,6 +86,14 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPSInputStream *input, bool par
 
 		return confidence;
 	}
+	catch (FileException)
+	{
+		WPS_DEBUG_MSG(("File exception trapped\n"));
+        }
+	catch (ParseException)
+	{
+		WPS_DEBUG_MSG(("Parse exception trapped\n"));
+	}
 	catch (...)
 	{
 		//fixme: too generic
