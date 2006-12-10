@@ -28,7 +28,7 @@ class WPSInputStream
 {
 public:
 	virtual ~WPSInputStream() {}
-	virtual const uint8_t *read(size_t numBytes, size_t &numBytesRead) = 0;;
+	virtual const uint8_t *read(size_t numBytes, size_t &numBytesRead) = 0;
 	virtual long tell() = 0;
 	virtual int seek(long offset, WPX_SEEK_TYPE seekType) = 0;
 	virtual bool atEOS() = 0;
