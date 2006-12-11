@@ -42,7 +42,7 @@ WPSHeader * WPSHeader::constructHeader(WPSInputStream *input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
 
-	WPSInputStream * document_mn0 = input->getDocumentOLEStream("MN0");	
+	WPSInputStream * document_mn0 = static_cast<WPSInputStream *>(input->getDocumentOLEStream("MN0"));	
 	if (document_mn0)
 	{
 		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));	
@@ -51,7 +51,7 @@ WPSHeader * WPSHeader::constructHeader(WPSInputStream *input)
 	else
 		DELETEP(document_mn0);
 	
-	WPSInputStream * document_contents = input->getDocumentOLEStream("CONTENTS");	
+	WPSInputStream * document_contents = static_cast<WPSInputStream *>(input->getDocumentOLEStream("CONTENTS"));	
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */

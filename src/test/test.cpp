@@ -75,7 +75,7 @@ void Test::testStream(void)
 	input = new WPSFileStream(TMP_FILENAME);
 
 	CPPUNIT_ASSERT_EQUAL ( false, input->isOLEStream() );
-	CPPUNIT_ASSERT_EQUAL ( (WPSInputStream*) NULL, input->getDocumentOLEStream("foo") );
+	CPPUNIT_ASSERT_EQUAL ( (WPXInputStream*) NULL, input->getDocumentOLEStream("foo") );
 
 	// test read()
 	input->seek(0, WPX_SEEK_SET);
@@ -141,7 +141,7 @@ void Test::testStream(void)
 	input = new WPSMemoryStream("\1\2\3\4\0\5\6\7", 8);
 
 	CPPUNIT_ASSERT_EQUAL ( false, input->isOLEStream() );
-	CPPUNIT_ASSERT_EQUAL ( (WPSInputStream*) NULL, input->getDocumentOLEStream("foo") );
+	CPPUNIT_ASSERT_EQUAL ( (WPXInputStream*) NULL, input->getDocumentOLEStream("foo") );
 
 	// test read()
 	input->seek(0, WPX_SEEK_SET);

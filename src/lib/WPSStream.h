@@ -24,9 +24,10 @@
 
 #include <libwpd/WPXStream.h>
 
-class WPSInputStream
+class WPSInputStream: public WPXInputStream
 {
 public:
+	WPSInputStream() : WPXInputStream(true) {}
 	virtual ~WPSInputStream() {}
 	virtual const uint8_t *read(size_t numBytes, size_t &numBytesRead) = 0;
 	virtual long tell() = 0;
@@ -34,6 +35,7 @@ public:
 	virtual bool atEOS() = 0;
 
 	virtual bool isOLEStream() = 0;
-	virtual WPSInputStream *getDocumentOLEStream(const char * name) = 0;
+	virtual WPXInputStream *getDocumentOLEStream(const char * name) = 0;
+	virtual WPXInputStream *getDocumentOLEStream() = 0;
 };
 #endif // __WPSSTREAM_H__

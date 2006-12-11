@@ -147,7 +147,7 @@ bool WPSFileStream::isOLEStream()
 	return false;
 }
 
-WPSInputStream* WPSFileStream::getDocumentOLEStream(const char * name)
+WPXInputStream* WPSFileStream::getDocumentOLEStream(const char * name)
 {
 	if (d->buffer.str().empty())
 		d->buffer << d->file.rdbuf();
@@ -178,6 +178,10 @@ WPSInputStream* WPSFileStream::getDocumentOLEStream(const char * name)
 	return new WPSMemoryStream((const char *)tmpBuffer, tmpLength);
 }
 
+WPXInputStream* WPSFileStream::getDocumentOLEStream()
+{
+	return getDocumentOLEStream("PerfectOffice_MAIN");
+}
 
 WPSMemoryStream::WPSMemoryStream(const char *data, const unsigned int dataSize)
 {
@@ -262,7 +266,7 @@ bool WPSMemoryStream::isOLEStream()
 	return false;
 }
 
-WPSInputStream* WPSMemoryStream::getDocumentOLEStream(const char * name)
+WPXInputStream* WPSMemoryStream::getDocumentOLEStream(const char * name)
 {
 	Storage *tmpStorage = new Storage( d->buffer );
 	Stream tmpStream( tmpStorage, name );
@@ -289,4 +293,9 @@ WPSInputStream* WPSMemoryStream::getDocumentOLEStream(const char * name)
 
 	delete tmpStorage;
 	return new WPSMemoryStream((const char *)tmpBuffer, tmpLength);
+}
+
+WPXInputStream* WPSMemoryStream::getDocumentOLEStream()
+{
+	return getDocumentOLEStream("PerfectOffice_MAIN");
 }
