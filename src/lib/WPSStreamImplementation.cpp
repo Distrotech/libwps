@@ -35,6 +35,7 @@ public:
 	WPSFileStreamPrivate();
 	std::fstream file;
 	std::stringstream buffer;
+	long streamSize;
 };
 
 class WPSMemoryStreamPrivate
@@ -42,16 +43,19 @@ class WPSMemoryStreamPrivate
 public:
 	WPSMemoryStreamPrivate(const std::string str);
 	std::stringstream buffer;
+	long streamSize;
 };
 
 WPSFileStreamPrivate::WPSFileStreamPrivate() :
 	file(),
-	buffer(std::ios::binary | std::ios::in | std::ios::out)
-{
+	buffer(std::ios::binary | std::ios::in | std::ios::out),
+	streamSize(0)
+{	
 }
 
 WPSMemoryStreamPrivate::WPSMemoryStreamPrivate(const std::string str) :
-	buffer(str, std::ios::binary | std::ios::in)
+	buffer(str, std::ios::binary | std::ios::in),
+	streamSize(0)
 {
 }
 
@@ -61,6 +65,9 @@ WPSFileStream::WPSFileStream(const char* filename)
 	d = new WPSFileStreamPrivate;
 	
 	d->file.open( filename, std::ios::binary | std::ios::in );
+	d->file.seekg( 0, std::ios::end );
+	d->streamSize = (d->file.good() ? (long)d->file.tellg() : -1L);
+	d->file.seekg( 0, std::ios::beg );
 }
 
 WPSFileStream::~WPSFileStream()
@@ -72,7 +79,7 @@ const uint8_t *WPSFileStream::read(size_t numBytes, size_t &numBytesRead)
 {
 	numBytesRead = 0;
 	
-	if (numBytes < 0)
+	if (numBytes < 0 || atEOS())
 	{
 		return 0;
 	}
@@ -96,17 +103,34 @@ long WPSFileStream::tell()
 
 int WPSFileStream::seek(long offset, WPX_SEEK_TYPE seekType)
 {
-	if (seekType == WPX_SEEK_SET && offset < 0)
-		offset = 0;
-	if (seekType == WPX_SEEK_CUR && (tell() + offset < 0))
-		offset = -tell();
+	if (seekType == WPX_SEEK_SET)
+	{
+		if (offset < 0)
+			offset = 0;
+		if (offset > d->streamSize)
+			offset = d->streamSize;
+	}
+
+	if (seekType == WPX_SEEK_CUR)
+	{
+		if (tell() + offset < 0)
+			offset = -tell();
+		if (tell() + offset > d->streamSize)
+			offset = d->streamSize - tell();
+	}
+
 	if(d->file.good())
-		d->file.seekg((seekType == WPX_SEEK_SET) ? offset : (offset + tell()));
+	{
+		d->file.seekg(offset, ((seekType == WPX_SEEK_SET) ? std::ios::beg : std::ios::cur));
+		return (int) d->file.tellg();
+	}
+	else
+		return -1;
 }
 
 bool WPSFileStream::atEOS()
 {
-	return d->file.eof();
+	return (d->file.tellg() >= d->streamSize);
 }
 
 bool WPSFileStream::isOLEStream()
@@ -115,7 +139,11 @@ bool WPSFileStream::isOLEStream()
 		d->buffer << d->file.rdbuf();
 	Storage tmpStorage( d->buffer );
 	if (tmpStorage.isOLEStream())
+	{
+		seek(0, WPX_SEEK_SET);
 		return true;
+	}
+	seek(0, WPX_SEEK_SET);
 	return false;
 }
 
@@ -154,6 +182,9 @@ WPSInputStream* WPSFileStream::getDocumentOLEStream(const char * name)
 WPSMemoryStream::WPSMemoryStream(const char *data, const unsigned int dataSize)
 {
 	d = new WPSMemoryStreamPrivate(std::string(data, dataSize));
+	d->buffer.seekg( 0, std::ios::end );
+	d->streamSize = (d->buffer.good() ? (long)d->buffer.tellg() : -1L);
+	d->buffer.seekg( 0, std::ios::beg );
 }
 
 WPSMemoryStream::~WPSMemoryStream()
@@ -165,7 +196,7 @@ const uint8_t *WPSMemoryStream::read(size_t numBytes, size_t &numBytesRead)
 {
 	numBytesRead = 0;
 	
-	if (numBytes < 0)
+	if (numBytes < 0 || atEOS())
 	{
 		return 0;
 	}
@@ -189,24 +220,45 @@ long WPSMemoryStream::tell()
 
 int WPSMemoryStream::seek(long offset, WPX_SEEK_TYPE seekType)
 {
-	if (seekType == WPX_SEEK_SET && offset < 0)
-		offset = 0;
-	if (seekType == WPX_SEEK_CUR && (tell() + offset < 0))
-		offset = -tell();
+	if (seekType == WPX_SEEK_SET)
+	{
+		if (offset < 0)
+			offset = 0;
+		if (offset > d->streamSize)
+			offset = d->streamSize;
+	}
+
+	if (seekType == WPX_SEEK_CUR)
+	{
+		if (tell() + offset < 0)
+			offset = -tell();
+		if (tell() + offset > d->streamSize)
+			offset = d->streamSize - tell();
+	}
+
 	if(d->buffer.good())
-		d->buffer.seekg((seekType == WPX_SEEK_SET) ? offset : (offset + tell()));
+	{
+		d->buffer.seekg(offset, ((seekType == WPX_SEEK_SET) ? std::ios::beg : std::ios::cur));
+		return (int) d->buffer.tellg();
+	}
+	else
+		return -1;
 }
 
 bool WPSMemoryStream::atEOS()
 {
-	return d->buffer.eof();
+	return (d->buffer.tellg() >= d->streamSize);
 }
 
 bool WPSMemoryStream::isOLEStream()
 {
 	Storage tmpStorage( d->buffer );
 	if (tmpStorage.isOLEStream())
+	{
+		seek(0, WPX_SEEK_SET);
 		return true;
+	}
+	seek(0, WPX_SEEK_SET);
 	return false;
 }
 

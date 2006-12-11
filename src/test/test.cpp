@@ -116,21 +116,19 @@ void Test::testStream(void)
 	input->seek(0, WPX_SEEK_SET);
 	for (int i = 0; i < 8; i++)
 		readU8(input);
-	CPPUNIT_ASSERT_EQUAL ( false, input->atEOS() );
+	CPPUNIT_ASSERT_EQUAL ( true, input->atEOS() );
 
 	CPPUNIT_ASSERT_THROW ( readU8(input), FileException );
 
 	input->seek(-1, WPX_SEEK_SET);
 	CPPUNIT_ASSERT_EQUAL ( (long int) 0, input->tell() );
 
-#if 0
 	input->seek(8, WPX_SEEK_SET);
 	CPPUNIT_ASSERT_EQUAL ( true, input->atEOS() );
 	
 	input->seek(10000, WPX_SEEK_SET);
 	CPPUNIT_ASSERT( 10000 != input->tell() );
 	CPPUNIT_ASSERT( input->atEOS() );
-#endif
 
 	delete input;
 }

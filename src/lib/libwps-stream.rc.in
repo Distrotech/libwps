@@ -16,9 +16,9 @@ VS_VERSION_INFO VERSIONINFO
 	VALUE "CompanyName", "The libwps developer community"
 	VALUE "FileDescription", "libwps-stream"
 	VALUE "FileVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@.BUILDNUMBER"
-	VALUE "InternalName", "libwps-1"
+	VALUE "InternalName", "libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@"
 	VALUE "LegalCopyright", "Copyright (C) 2006 Andrew Ziem, Fridrich Strba, other contributers"
-	VALUE "OriginalFilename", "libwps-stream-1-@LT_CURRENT_MINUS_AGE@.dll"
+	VALUE "OriginalFilename", "libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll"
 	VALUE "ProductName", "libwps"
 	VALUE "ProductVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@"
       END
