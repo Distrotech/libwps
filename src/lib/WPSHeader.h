@@ -27,7 +27,7 @@
 #ifndef WPSHEADER_H
 #define WPSHEADER_H
 
-#include "libwps_types.h"
+#include <libwpd/libwpd_types.h>
 #include "WPSStream.h"
 
 class WPSHeader

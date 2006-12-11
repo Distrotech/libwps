@@ -1,6 +1,13 @@
 pkgconfdir = $(libdir)/pkgconfig
 
-pkgconf_DATA = libwps-0.1.pc
+if WITH_LIBWPS_STREAM
+libwps_stream_pkgconf_data = libwps-stream-0.1.pc
+else
+libwps_stream_pkgconf_data =
+endif
+
+
+pkgconf_DATA = libwps-0.1.pc $(libwps_stream_pkgconf_data)
 
 SUBDIRS = src build docs autopackage
 

@@ -22,7 +22,7 @@
 #ifndef LIBWPS_H
 #define LIBWPS_H
 
-#include "libwpd/WPXHLListenerImpl.h"
 #include "WPSDocument.h"
+#include "WPSStream.h"
 
 #endif /* LIBWPS_H */

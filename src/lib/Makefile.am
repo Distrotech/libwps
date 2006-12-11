@@ -32,8 +32,7 @@ endif
 
 lib_LTLIBRARIES = libwps-0.1.la $(target_libwps_stream)
 libwps_0_1_includedir = $(includedir)/libwps-0.1/libwps
-libwps_0_1_include_HEADERS = libwps.h libwps_types.h \
-WPSDocument.h WPSStream.h
+libwps_0_1_include_HEADERS = libwps.h WPSDocument.h WPSStream.h
 
 INCLUDES = -I$(srcdir)
 
