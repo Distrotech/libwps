@@ -54,7 +54,6 @@ libwps_0_1_la_SOURCES = \
 	WPSStylesListener.cpp \
 	libwps.h \
 	libwps_internal.h \
-	libwps_types.h \
 	WPS.h \
 	WPS4.h \
 	WPS8.h \

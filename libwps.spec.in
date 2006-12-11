@@ -58,6 +58,7 @@ Documentation of libwps API for developing with libwps
 	%{?_without_docs:--without-docs}
 
 %__make
+%__make check
 
 %install
 umask 022

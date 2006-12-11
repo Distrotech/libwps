@@ -13,9 +13,6 @@ test_LDADD = \
 test_SOURCES = \
 	test.cpp
 
-EXTRA_DIST = \
-	$(wps2raw_SOURCES)
-
 .PHONY:		check
 
 check: test
