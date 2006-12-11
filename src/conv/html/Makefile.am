@@ -1,4 +1,8 @@
+if WITH_LIBWPS_STREAM
 target_wps2html = wps2html
+else
+target_wps2html =
+endif
 
 bin_PROGRAMS = $(target_wps2html)
 

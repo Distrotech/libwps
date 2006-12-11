@@ -17,7 +17,7 @@ VS_VERSION_INFO VERSIONINFO
 	VALUE "FileDescription", "wps2raw"
 	VALUE "FileVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@.BUILDNUMBER"
 	VALUE "InternalName", "wps2raw"
-	VALUE "LegalCopyright", "Copyright (C) 2002-2006 William Lachance, Marc Maurer, Fridrich Strba, other contributers"
+	VALUE "LegalCopyright", "Copyright (C) 2006 Andrew Ziem, Fridrich Strba, other contributers"
 	VALUE "OriginalFilename", "wps2raw.exe"
 	VALUE "ProductName", "libwps"
 	VALUE "ProductVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@"

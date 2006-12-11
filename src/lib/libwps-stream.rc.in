@@ -6,7 +6,7 @@ VS_VERSION_INFO VERSIONINFO
   FILEFLAGSMASK 0
   FILEFLAGS 0
   FILEOS VOS__WINDOWS32
-  FILETYPE VFT_APP
+  FILETYPE VFT_DLL
   FILESUBTYPE VFT2_UNKNOWN
   BEGIN
     BLOCK "StringFileInfo"
@@ -14,11 +14,11 @@ VS_VERSION_INFO VERSIONINFO
       BLOCK "040904B0"
       BEGIN
 	VALUE "CompanyName", "The libwps developer community"
-	VALUE "FileDescription", "wps2text"
+	VALUE "FileDescription", "libwps-stream"
 	VALUE "FileVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@.BUILDNUMBER"
-	VALUE "InternalName", "wps2text"
+	VALUE "InternalName", "libwps-1"
 	VALUE "LegalCopyright", "Copyright (C) 2006 Andrew Ziem, Fridrich Strba, other contributers"
-	VALUE "OriginalFilename", "wps2text.exe"
+	VALUE "OriginalFilename", "libwps-stream-1-@LT_CURRENT_MINUS_AGE@.dll"
 	VALUE "ProductName", "libwps"
 	VALUE "ProductVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@"
       END

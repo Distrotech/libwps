@@ -59,6 +59,18 @@ AC_ARG_WITH(docs,
 	fi
 )
 
+dnl stream
+dnl
+test_stream=true
+AC_ARG_WITH(stream,
+	[  --without-stream        Do not build input stream implementation],
+	if test "x$withval" = xno; then
+		test_stream=false
+	fi
+)
+
+AM_CONDITIONAL(WITH_LIBWPS_STREAM, $test_stream )
+
 if test "x$test_docs" = xtrue; then
 	AC_CHECK_TOOL(DOXYGEN, doxygen, no)
 	if test "$DOXYGEN" = no; then
@@ -76,6 +88,7 @@ case "$host" in
   *-*-mingw*)
     native_win32=yes
     LIBWPS_WIN32_RESOURCE=libwps-win32res.lo
+    LIBWPS_STREAM_WIN32_RESOURCE=libwps-stream-win32res.lo
     WPS2HTML_WIN32_RESOURCE=wps2html-win32res.lo
     WPS2TEXT_WIN32_RESOURCE=wps2text-win32res.lo
     WPS2RAW_WIN32_RESOURCE=wps2raw-win32res.lo
@@ -83,6 +96,7 @@ case "$host" in
   *)
     native_win32=no
     LIBWPS_WIN32_RESOURCE=
+    LIBWPS_STREAM_WIN32_RESOURCE=
     WPS2HTML_WIN32_RESOURCE=
     WPS2TEXT_WIN32_RESOURCE=
     WPS2RAW_WIN32_RESOURCE=
@@ -91,6 +105,7 @@ esac
 AC_MSG_RESULT([$native_win32])
 AM_CONDITIONAL(OS_WIN32, test "$native_win32" = yes)
 AC_SUBST(LIBWPS_WIN32_RESOURCE)
+AC_SUBST(LIBWPS_STREAM_WIN32_RESOURCE)
 AC_SUBST(WPS2HTML_WIN32_RESOURCE)
 AC_SUBST(WPS2TEXT_WIN32_RESOURCE)
 AC_SUBST(WPS2RAW_WIN32_RESOURCE)
@@ -187,12 +202,14 @@ src/conv/text/Makefile
 src/conv/text/wps2text.rc
 src/lib/Makefile
 src/lib/libwps.rc
+src/lib/libwps-stream.rc
 src/test/Makefile
 docs/Makefile
 docs/doxygen/Makefile
 build/Makefile
 build/win32/Makefile
 libwps-0.1.pc
+libwps-stream-0.1.pc
 libwps.spec
 libwps-zip
 autopackage/Makefile
