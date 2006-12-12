@@ -388,30 +388,27 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 
 
 /**
- * Read a character in CP1252 encoding, convert it
+ * Take a character in CP1252 encoding, convert it
  * and append it to the text buffer as UTF8.
  * Courtesy of glib2 and iconv
  *
  */
-void WPS4Parser::appendCP1252(WPSInputStream *input, WPS4Listener *listener)
+void WPS4Parser::appendCP1252(const uint8_t readVal, WPS4Listener *listener)
 {
+// Fridrich: I see some MS Works files with IBM850 encoding ???
 	static const uint16_t cp1252toUCS4[32] = {
 		0x20ac, 0xfffd, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021,
 		0x02c6, 0x2030, 0x0160, 0x2039, 0x0152, 0xfffd, 0x017d, 0xfffd,
 		0xfffd, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
 		0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0xfffd, 0x017e, 0x0178 };
 
-	uint16_t high_surrogate = 0;
-	bool fail = false;
-	uint32_t ucs4Character;
-	if (input->atEOS())
-		throw GenericException();
-	uint8_t readVal = readU8(input);
-	if (readVal < 0x80 && readVal >= 0xa0)
+	uint32_t ucs4Character = 0;
+	if (readVal < 0x80 || readVal >= 0xa0)
 		ucs4Character = (uint32_t) readVal;
 	else {
 		ucs4Character = (uint32_t) cp1252toUCS4[readVal - 0x80];
-		if (ucs4Character = 0xfffd)
+		if (ucs4Character == 0xfffd) // there are files out there that are using IBM850 encoding,
+		// so maybe the Works 2, 3, and 4 are not as equivalent as that
 			throw GenericException();
 	}
 
@@ -495,8 +492,7 @@ void WPS4Parser::readText(WPSInputStream * input, WPS4Listener *listener)
 					break;
 
 				default:
-					input->seek(-1, WPX_SEEK_CUR);
-					this->appendCP1252(input, listener);
+					this->appendCP1252(readVal, listener);
 					break;
 			}
 		}	
