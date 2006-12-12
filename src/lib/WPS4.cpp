@@ -390,6 +390,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 /**
  * Read a character in CP1252 encoding, convert it
  * and append it to the text buffer as UTF8.
+ * Courtesy of glib2 and iconv
  *
  */
 void WPS4Parser::appendCP1252(WPSInputStream *input, WPS4Listener *listener)

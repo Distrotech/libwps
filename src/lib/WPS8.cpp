@@ -113,7 +113,7 @@ void WPS8Parser::readFontsTable(WPSInputStream * input)
 
 /**
  * Read an UTF16 character in LE byte ordering, convert it
- * and append it to the text buffer as UTF8.
+ * and append it to the text buffer as UTF8. Courtesy of glib2
  *
  */
 
