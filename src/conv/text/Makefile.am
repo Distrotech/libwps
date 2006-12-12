@@ -4,21 +4,20 @@ else
 target_wps2text =
 endif
 
-
 bin_PROGRAMS = $(target_wps2text)
 
 AM_CXXFLAGS = $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS) -I$(top_srcdir)/src/lib/
 
 wps2text_LDFLAGS = -L../../lib/
-wps2text_DEPENDENCIES = @WPS2TEXT_WIN32_RESOURCE@ 
+wps2text_DEPENDENCIES = @WPS2TEXT_WIN32_RESOURCE@
 wps2text_LDADD = \
 	-lwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
 	-lwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
-	$(LIBWPS_LIBS) @WPS2RAW_WIN32_RESOURCE@
+	$(LIBWPS_LIBS) @WPS2TEXT_WIN32_RESOURCE@
 
 wps2text_SOURCES = \
-	TextListenerImpl.cpp \
-	TextListenerImpl.h \
+	TextListenerImpl.cpp	 \
+	TextListenerImpl.h	 \
 	main.cpp
 
 if OS_WIN32

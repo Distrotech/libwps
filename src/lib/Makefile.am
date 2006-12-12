@@ -91,6 +91,13 @@ if OS_WIN32
 @LIBWPS_WIN32_RESOURCE@ : libwps.rc
 	$(top_srcdir)/build/win32/lt-compile-resource libwps.rc @LIBWPS_WIN32_RESOURCE@
 
+if WITH_LIBWPS_STREAM
+
+@LIBWPS_STREAM_WIN32_RESOURCE@ : libwps-stream.rc
+	$(top_srcdir)/build/win32/lt-compile-resource libwps-stream.rc @LIBWPS_STREAM_WIN32_RESOURCE@
+
+endif
+
 endif
 
 

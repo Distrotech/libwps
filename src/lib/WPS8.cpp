@@ -422,7 +422,8 @@ void WPS8Parser::parseHeaderIndexEntry(WPSInputStream * input)
 	std::string name;
 
 	// sanity check
-	for (int i =0; i < 4; i++)
+    int i;
+	for (i =0; i < 4; i++)
 	{
 		name.append(1, readU8(input));
 
@@ -437,11 +438,11 @@ void WPS8Parser::parseHeaderIndexEntry(WPSInputStream * input)
 	name.append(1, (char)0);
 
 	std::string unknown1;
-	for (int i = 0; i < 6; i ++)
+	for (i = 0; i < 6; i ++)
 		unknown1.append(1, readU8(input));
 
 	std::string name2;
-	for (int i =0; i < 4; i++)
+	for (i =0; i < 4; i++)
 		name2.append(1, readU8(input));
 	name2.append(1, (char)0);
 
@@ -460,7 +461,7 @@ void WPS8Parser::parseHeaderIndexEntry(WPSInputStream * input)
 	WPS_DEBUG_MSG(("Works8: debug: header index entry %s with offset=0x%04X, length=0x%04X\n", 
 		name.c_str(), hie.offset, hie.length));
 
-	headerIndexTable.insert(make_pair(name, hie));
+	headerIndexTable.insert(std::pair<std::string, HeaderIndexEntries>(name, hie));
 
 	input->seek(input->tell() + 0x18 - cch, WPX_SEEK_SET);
 }
