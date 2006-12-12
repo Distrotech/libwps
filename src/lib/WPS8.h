@@ -102,7 +102,7 @@ public:
 	void parse(WPXHLListenerImpl *listenerImpl);
 private:
 	void readFontsTable(WPSInputStream * input);
-	void insertCharacter(iconv_t cd, uint16_t readVal, WPS8Listener *listener);
+	void appendUTF16LE(WPSInputStream *input, WPS8Listener *listener);
 	void readText(WPSInputStream * input, WPS8Listener *listener);
 	bool readFODPage(WPSInputStream * input, std::vector<FOD> * FODs, uint16_t page_size);
 	void parseHeaderIndexEntry(WPSInputStream * input);

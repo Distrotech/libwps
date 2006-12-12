@@ -20,7 +20,6 @@
  */
 
 #include <errno.h>
-#include <iconv.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -113,32 +112,85 @@ void WPS8Parser::readFontsTable(WPSInputStream * input)
 
 
 /**
- * Insert the given character converted using the
- * given iconv conversion descriptor.
+ * Read an UTF16 character in LE byte ordering, convert it
+ * and append it to the text buffer as UTF8.
  *
  */
-void WPS8Parser::insertCharacter(iconv_t cd, uint16_t readVal, WPS8Listener *listener)
-{
-	char *inchar;
-	char outbuf[4];
-	char *outchar;
-	size_t outbytesleft = 4;
-	size_t inbytesleft = 2;
-	size_t i;
 
-	inchar = (char *)&readVal;
-	outchar = (char *) outbuf;
-	size_t rc = iconv(cd, &inchar, &inbytesleft, &outchar, &outbytesleft);
-	if ((size_t) -1 == rc || inbytesleft != 0)
-	{
-		WPS_DEBUG_MSG(("Works: error: iconv() failed on readVal=(0x%02X); rc = %i, inbytesleft = %i\n", readVal, rc, inbytesleft));
+#define SURROGATE_VALUE(h,l) (((h) - 0xd800) * 0x400 + (l) - 0xdc00 + 0x10000)
+
+void WPS8Parser::appendUTF16LE(WPSInputStream *input, WPS8Listener *listener)
+{
+	uint16_t high_surrogate = 0;
+	bool fail = false;
+	uint16_t readVal;
+	uint32_t ucs4Character;
+	while (true) {
+		if (input->atEOS()) {
+			fail = true;
+			break;
+		}
+		readVal = readU16(input);
+		if (readVal >= 0xdc00 && readVal < 0xe000) /* low surrogate */ {
+			if (high_surrogate) {
+				ucs4Character = SURROGATE_VALUE(high_surrogate, readVal);
+				high_surrogate = 0;
+				break;
+			}
+			else {
+				fail = true;
+				break;
+			}
+		}
+		else {
+			if (high_surrogate) {
+				fail = true;
+				break;
+			}
+			if (readVal >= 0xd800 && readVal < 0xdc00) /* high surrogate */ {
+				high_surrogate = readVal;
+			}
+			else {
+				ucs4Character = readVal;
+				break;
+			}
+		}
+	}
+	if (fail)
 		throw GenericException();
+
+	uint8_t first;
+	int len;
+	if (ucs4Character < 0x80) {
+		first = 0; len = 1;
+	}
+	else if (ucs4Character < 0x800) {
+		first = 0xc0; len = 2;
+	}
+	else if (ucs4Character < 0x10000) {
+		first = 0xe0; len = 3;
+	}
+	else if (ucs4Character < 0x200000) {
+		first = 0xf0; len = 4;
+	}
+	else if (ucs4Character < 0x4000000) {
+		first = 0xf8; len = 5;
+	}
+	else {
+		first = 0xfc; len = 6;
 	}
 
-	for (i = 0; i <(4-outbytesleft); i++)
-		listener->insertCharacter( (uint8_t) outbuf[i]);
-}
+	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
+	int i;
+	for (i = len - 1; i > 0; --i) {
+		outbuf[i] = (ucs4Character & 0x3f) | 0x80;
+		ucs4Character >>= 6;
+	}
+	outbuf[0] = ucs4Character | first;
 
+	for (i = 0; i < len; i++)
+		listener->insertCharacter(outbuf[i]);
+}
 
 /**
  * Read the text of the document using previously-read
@@ -153,13 +205,6 @@ void WPS8Parser::readText(WPSInputStream * input, WPS8Listener *listener)
 	WPS_DEBUG_MSG(("WPS8Parser::readText()\n"));
 
 	std::vector<FOD>::iterator FODs_iter;	
-
-	iconv_t cd = iconv_open("UTF-8", "UTF-16LE");
-	if ((iconv_t)-1 == cd)
-	{
-		WPS_DEBUG_MSG(("Works: error: iconv_open() failed\n"));
-		throw GenericException();
-	}
 
 	uint32_t last_fcLim = 0x200; //fixme: start of text might vary according to header index table?
 	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
@@ -226,13 +271,13 @@ void WPS8Parser::readText(WPSInputStream * input, WPS8Listener *listener)
 
 				default:
 					// fixme: convert UTF-16LE to UTF-8
-					this->insertCharacter(cd, readVal, listener);
+					input->seek(-2, WPX_SEEK_CUR);
+					this->appendUTF16LE(input, listener);
 					break;
 			}
 		}
 		last_fcLim = (*FODs_iter).fcLim;
 	}
-	iconv_close(cd);
 }
 
 /**

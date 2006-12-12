@@ -19,7 +19,6 @@
  *
  */
 
-#include <iconv.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -389,40 +388,63 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 
 
 /**
- * Insert the given character converted using the
- * given iconv conversion descriptor.
+ * Read a character in CP1252 encoding, convert it
+ * and append it to the text buffer as UTF8.
  *
  */
-void WPS4Parser::insertCharacter(iconv_t cd, uint8_t readVal, WPS4Listener *listener)
+void WPS4Parser::appendCP1252(WPSInputStream *input, WPS4Listener *listener)
 {
-	char *inchar;
-	char outbuf[4];
-	char *outchar;
-	size_t outbytesleft = 4;
-	size_t inbytesleft = 1;
-	size_t i;
+	static const uint16_t cp1252toUCS4[32] = {
+		0x20ac, 0xfffd, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021,
+		0x02c6, 0x2030, 0x0160, 0x2039, 0x0152, 0xfffd, 0x017d, 0xfffd,
+		0xfffd, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
+		0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0xfffd, 0x017e, 0x0178 };
 
-	switch (readVal)
-	{
-		case 0x81:
-		case 0x8D:
-		case 0x8F:
-		case 0x90:
-		case 0x9D:
-			readVal = ' ';
-	}
-
-	inchar = (char *)&readVal;
-	outchar = (char *) outbuf;
-	size_t rc = iconv(cd, &inchar, &inbytesleft, &outchar, &outbytesleft);
-	if ((size_t) -1 == rc || inbytesleft != 0)
-	{
-		WPS_DEBUG_MSG(("Works: error: iconv() failed on readVal=(0x%02X); rc = %i, inbytesleft = %i\n", readVal, rc, inbytesleft));
+	uint16_t high_surrogate = 0;
+	bool fail = false;
+	uint32_t ucs4Character;
+	if (input->atEOS())
 		throw GenericException();
+	uint8_t readVal = readU8(input);
+	if (readVal < 0x80 && readVal >= 0xa0)
+		ucs4Character = (uint32_t) readVal;
+	else {
+		ucs4Character = (uint32_t) cp1252toUCS4[readVal - 0x80];
+		if (ucs4Character = 0xfffd)
+			throw GenericException();
 	}
 
-	for (i = 0; i <(4-outbytesleft); i++)
-		listener->insertCharacter( (uint8_t) outbuf[i]);
+	uint8_t first;
+	int len;
+	if (ucs4Character < 0x80) {
+		first = 0; len = 1;
+	}
+	else if (ucs4Character < 0x800) {
+		first = 0xc0; len = 2;
+	}
+	else if (ucs4Character < 0x10000) {
+		first = 0xe0; len = 3;
+	}
+	else if (ucs4Character < 0x200000) {
+		first = 0xf0; len = 4;
+	}
+	else if (ucs4Character < 0x4000000) {
+		first = 0xf8; len = 5;
+	}
+	else {
+		first = 0xfc; len = 6;
+	}
+
+	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
+	int i;
+	for (i = len - 1; i > 0; --i) {
+		outbuf[i] = (ucs4Character & 0x3f) | 0x80;
+		ucs4Character >>= 6;
+	}
+	outbuf[0] = ucs4Character | first;
+
+	for (i = 0; i < len; i++)
+		listener->insertCharacter(outbuf[i]);
 }
 
 /**
@@ -443,13 +465,6 @@ void WPS4Parser::readText(WPSInputStream * input, WPS4Listener *listener)
 	}	
 #endif
 
-	iconv_t cd = iconv_open("UTF-8", "WINDOWS-1252");
-	if ((iconv_t)-1 == cd)
-	{
-		WPS_DEBUG_MSG(("Works: error: iconv_open() failed\n"));
-		throw GenericException();
-	}
-	
 	uint32_t last_fcLim = 0x100;
 	for (FODs_iter = CHFODs.begin(); FODs_iter!= CHFODs.end(); FODs_iter++)
 	{
@@ -479,13 +494,13 @@ void WPS4Parser::readText(WPSInputStream * input, WPS4Listener *listener)
 					break;
 
 				default:
-					this->insertCharacter(cd, readVal, listener);
+					input->seek(-1, WPX_SEEK_CUR);
+					this->appendCP1252(input, listener);
 					break;
 			}
 		}	
 		last_fcLim = (*FODs_iter).fcLim;	
 	}
-	iconv_close(cd);
 }
 
 
