@@ -38,7 +38,8 @@ WPS4Parser public
 
 
 WPS4Parser::WPS4Parser(WPSInputStream *input, WPSHeader * header) :
-	WPSParser(input, header)
+	WPSParser(input, header),
+	m_worksVersion(header->getMajorVersion())
 {
 	//fixme: don't ask for a header that we don't use
 }
@@ -385,7 +386,72 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 	}
 	propertyChangeDelta(textAttributeBits, listener);
 }
+/**
+ * Take a character in CP850 encoding, convert it
+ * and append it to the text buffer as UTF8.
+ * Courtesy of glib2 and iconv
+ *
+ */
+void WPS4Parser::appendCP850(const uint8_t readVal, WPS4Listener *listener)
+{
+// Fridrich: I see some MS Works files with IBM850 encoding ???
+	static const uint16_t cp850toUCS4[128] = {
+		0x00c7, 0x00fc, 0x00e9, 0x00e2, 0x00e4, 0x00e0, 0x00e5, 0x00e7,
+		0x00ea, 0x00eb, 0x00e8, 0x00ef, 0x00ee, 0x00ec, 0x00c4, 0x00c5,
+		0x00c9, 0x00e6, 0x00c6, 0x00f4, 0x00f6, 0x00f2, 0x00fb, 0x00f9,
+		0x00ff, 0x00d6, 0x00dc, 0x00f8, 0x00a3, 0x00d8, 0x00d7, 0x0192,
+		0x00e1, 0x00ed, 0x00f3, 0x00fa, 0x00f1, 0x00d1, 0x00aa, 0x00ba,
+		0x00bf, 0x00ae, 0x00ac, 0x00bd, 0x00bc, 0x00a1, 0x00ab, 0x00bb,
+		0x2591, 0x2592, 0x2593, 0x2502, 0x2524, 0x00c1, 0x00c2, 0x00c0,
+		0x00a9, 0x2563, 0x2551, 0x2557, 0x255d, 0x00a2, 0x00a5, 0x2510,
+		0x2514, 0x2534, 0x252c, 0x251c, 0x2500, 0x253c, 0x00e3, 0x00c3,
+		0x255a, 0x2554, 0x2569, 0x2566, 0x2560, 0x2550, 0x256c, 0x00a4,
+		0x00f0, 0x00d0, 0x00ca, 0x00cb, 0x00c8, 0x0131, 0x00cd, 0x00ce,
+		0x00cf, 0x2518, 0x250c, 0x2588, 0x2584, 0x00a6, 0x00cc, 0x2580,
+		0x00d3, 0x00df, 0x00d4, 0x00d2, 0x00f5, 0x00d5, 0x00b5, 0x00fe,
+		0x00de, 0x00da, 0x00db, 0x00d9, 0x00fd, 0x00dd, 0x00af, 0x00b4,
+		0x00ad, 0x00b1, 0x2017, 0x00be, 0x00b6, 0x00a7, 0x00f7, 0x00b8,
+		0x00b0, 0x00a8, 0x00b7, 0x00b9, 0x00b3, 0x00b2, 0x25a0, 0x00a0 };
 
+	uint32_t ucs4Character = 0;
+	if (readVal < 0x80)
+		ucs4Character = (uint32_t) readVal;
+	else {
+		ucs4Character = (uint32_t) cp850toUCS4[readVal - 0x80];
+	}
+
+	uint8_t first;
+	int len;
+	if (ucs4Character < 0x80) {
+		first = 0; len = 1;
+	}
+	else if (ucs4Character < 0x800) {
+		first = 0xc0; len = 2;
+	}
+	else if (ucs4Character < 0x10000) {
+		first = 0xe0; len = 3;
+	}
+	else if (ucs4Character < 0x200000) {
+		first = 0xf0; len = 4;
+	}
+	else if (ucs4Character < 0x4000000) {
+		first = 0xf8; len = 5;
+	}
+	else {
+		first = 0xfc; len = 6;
+	}
+
+	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
+	int i;
+	for (i = len - 1; i > 0; --i) {
+		outbuf[i] = (ucs4Character & 0x3f) | 0x80;
+		ucs4Character >>= 6;
+	}
+	outbuf[0] = ucs4Character | first;
+
+	for (i = 0; i < len; i++)
+		listener->insertCharacter(outbuf[i]);
+}
 
 /**
  * Take a character in CP1252 encoding, convert it
@@ -395,7 +461,6 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
  */
 void WPS4Parser::appendCP1252(const uint8_t readVal, WPS4Listener *listener)
 {
-// Fridrich: I see some MS Works files with IBM850 encoding ???
 	static const uint16_t cp1252toUCS4[32] = {
 		0x20ac, 0xfffd, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021,
 		0x02c6, 0x2030, 0x0160, 0x2039, 0x0152, 0xfffd, 0x017d, 0xfffd,
@@ -407,8 +472,7 @@ void WPS4Parser::appendCP1252(const uint8_t readVal, WPS4Listener *listener)
 		ucs4Character = (uint32_t) readVal;
 	else {
 		ucs4Character = (uint32_t) cp1252toUCS4[readVal - 0x80];
-		if (ucs4Character == 0xfffd) // there are files out there that are using IBM850 encoding,
-		// so maybe the Works 2, 3, and 4 are not as equivalent as that
+		if (ucs4Character == 0xfffd)
 			throw GenericException();
 	}
 
@@ -492,7 +556,10 @@ void WPS4Parser::readText(WPSInputStream * input, WPS4Listener *listener)
 					break;
 
 				default:
-					this->appendCP1252(readVal, listener);
+					if (m_worksVersion == 2)
+						this->appendCP850(readVal, listener);
+					else
+						this->appendCP1252(readVal, listener);
 					break;
 			}
 		}	

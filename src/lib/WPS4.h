@@ -96,6 +96,7 @@ private:
 	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS4Listener *listener);
 	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener *listener);
 	void propertyChange(std::string rgchProp, WPS4Listener *listener);
+	void appendCP850(const uint8_t readVal, WPS4Listener *listener);
 	void appendCP1252(const uint8_t readVal, WPS4Listener *listener);
 	void readText(WPSInputStream * input, WPS4Listener *listener);
 	uint32_t oldTextAttributeBits;
@@ -104,6 +105,7 @@ private:
 	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */		
 	std::vector<FOD> PAFODs; /* PAragraph FOrmatting Descriptors */			
 	std::map<uint8_t, std::string> fonts; /* fonts in format <index code, font name>  */
+	const uint8_t m_worksVersion;
 };
 
 
