@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 {
 	if (argc < 2)
 	{
-		printf("Usage: wps2text [--info] <Works Document>\n");
+		printf("Usage: wps2text <Works Document>\n");
 		return -1;
 	}
 
