@@ -16,13 +16,17 @@ CFLAGS+=-GR
 CFLAGSCXX+=-frtti
 .ENDIF
 
+.IF "$(SYSTEM_LIBWPD)" == "YES"
+INCPRE+=$(LIBWPD_CFLAGS) -I..
+.ELSE
+INCPRE+=$(SOLARVER)$/$(UPD)$/$(INPATH)$/inc$/libwpd
+.ENDIF
+
 SLOFILES= \
 	$(SLO)$/libwps_internal.obj \
 	$(SLO)$/WPS4.obj \
 	$(SLO)$/WPS8.obj \
 	$(SLO)$/WPSDocument.obj \
-	$(SLO)$/WPSOLEStream.obj \
-	$(SLO)$/WPSStreamImplementation.obj \
 	$(SLO)$/WPSContentListener.obj \
 	$(SLO)$/WPSHeader.obj \
 	$(SLO)$/WPSListener.obj \
