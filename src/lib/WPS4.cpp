@@ -473,7 +473,8 @@ void WPS4Parser::appendCP1252(const uint8_t readVal, WPS4Listener *listener)
 	else {
 		ucs4Character = (uint32_t) cp1252toUCS4[readVal - 0x80];
 		if (ucs4Character == 0xfffd)
-			throw GenericException();
+//			throw GenericException();
+			return;
 	}
 
 	uint8_t first;
@@ -544,7 +545,35 @@ void WPS4Parser::readText(WPSInputStream * input, WPS4Listener *listener)
 				
 			switch (readVal)
 			{
+				case 0x01:
+				case 0x02:
+				case 0x03:
+				case 0x04:
+				case 0x05:
+				case 0x06:
+				case 0x07:
+				case 0x08:
+				case 0x09:
 				case 0x0A:
+				case 0x0B:
+				case 0x0E:
+				case 0x0F:
+				case 0x10:
+				case 0x11:
+				case 0x12:
+				case 0x13:
+				case 0x14:
+				case 0x15:
+				case 0x16:
+				case 0x17:
+				case 0x18:
+				case 0x19:
+				case 0x1A:
+				case 0x1B:
+				case 0x1C:
+				case 0x1D:
+				case 0x1E:
+				case 0x1F:
 					break;
 
 				case 0x0C:
