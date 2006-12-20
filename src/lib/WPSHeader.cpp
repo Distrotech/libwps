@@ -38,6 +38,15 @@ WPSHeader::~WPSHeader()
 {
 }
 
+
+/**
+ * So far, we have identified three categories of Works documents.
+ *
+ * Works documents versions 3 and later use a MS OLE container, so we detect
+ * their type by checking for OLE stream names.  Works version 2 is like
+ * Works 3 without OLE, so those two types use the same parser.
+ *
+ */
 WPSHeader * WPSHeader::constructHeader(WPSInputStream *input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));

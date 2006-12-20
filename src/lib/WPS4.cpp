@@ -37,11 +37,14 @@ WPS4Parser public
 */
 
 
+/**
+ * This class parses Works version 2 through 4.
+ *
+ */
 WPS4Parser::WPS4Parser(WPSInputStream *input, WPSHeader * header) :
 	WPSParser(input, header),
 	m_worksVersion(header->getMajorVersion())
 {
-	//fixme: don't ask for a header that we don't use
 }
 
 WPS4Parser::~WPS4Parser ()
@@ -126,8 +129,9 @@ void WPS4Parser::readFontsTable(WPSInputStream * input)
 }
 
 /**
- * Read a single page (128 bytes) that contains formatting descriptors for either
- * characters OR paragraphs.  Starts reading at current position in stream.
+ * Read a single "page" (128 bytes) that contains formatting descriptors (FODs)
+ * for either  characters OR paragraphs.  Starts reading at current position in
+ * stream.
  *
  * Return: true if more pages of this type exist, otherwise false
  *
@@ -273,6 +277,10 @@ void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener
 	oldTextAttributeBits = newTextAttributeBits;
 }
 
+/**
+ * Works version 2 for DOS supports only a specific set of fonts.
+ *
+ */
 char * WPS2FontNameFromIndex(uint8_t font_n)
 {
 	switch (font_n)
@@ -340,6 +348,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 	}
 	if (rgchProp.length() >= 3)
 	{
+		/* text font */
 		uint8_t font_n = (uint8_t)rgchProp[2];
 
 		if (3 == getHeader()->getMajorVersion())
@@ -369,6 +378,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 	}
 	else
 	{
+		/* default font size */
 		listener->setFontSize(12);
 	}
 	if (rgchProp.length() >= 6)
@@ -608,11 +618,11 @@ void WPS4Parser::parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *in
 	input->seek(0x64, WPX_SEEK_SET);
 	uint16_t margin_top = readU16(input);
 	input->seek(0x66, WPX_SEEK_SET);
-	uint16_t margin_bottom =readU16(input);
+	uint16_t margin_bottom = readU16(input);
 	input->seek(0x68, WPX_SEEK_SET);
-	uint16_t margin_left =readU16(input);
+	uint16_t margin_left = readU16(input);
 	input->seek(0x6A, WPX_SEEK_SET);
-	uint16_t margin_right =readU16(input);
+	uint16_t margin_right = readU16(input);
 	input->seek(0x6C, WPX_SEEK_SET);
 	uint16_t page_height = readU16(input);
 	input->seek(0x6E, WPX_SEEK_SET);
