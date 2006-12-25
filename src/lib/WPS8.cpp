@@ -378,7 +378,7 @@ bool WPS8Parser::readFODPage(WPSInputStream * input, std::vector<FOD> * FODs, ui
 			throw ParseException();
 		}
 		// fixme: what is largest cch?
-		if ((*FODs_iter).fprop.cch > 122)
+		if ((*FODs_iter).fprop.cch > 128)
 		{
 			WPS_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).fprop.cch));
 			throw ParseException();
