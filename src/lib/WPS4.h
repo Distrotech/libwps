@@ -1,5 +1,5 @@
 /* libwpd
- * Copyright (C) 2006 Andrew Ziem
+ * Copyright (C) 2006, 2007 Andrew Ziem
  * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
  *  

@@ -17,7 +17,7 @@ VS_VERSION_INFO VERSIONINFO
 	VALUE "FileDescription", "wps2text"
 	VALUE "FileVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@.BUILDNUMBER"
 	VALUE "InternalName", "wps2text"
-	VALUE "LegalCopyright", "Copyright (C) 2006 Andrew Ziem, Fridrich Strba, other contributers"
+	VALUE "LegalCopyright", "Copyright (C) 2006, 2007 Andrew Ziem, Fridrich Strba, other contributers"
 	VALUE "OriginalFilename", "wps2text.exe"
 	VALUE "ProductName", "libwps"
 	VALUE "ProductVersion", "@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.@WPS_MICRO_VERSION@"

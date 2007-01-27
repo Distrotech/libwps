@@ -1,5 +1,5 @@
 /* libwps
- * Copyright (C) 2006 Andrew Ziem
+ * Copyright (C) 2006, 2007 Andrew Ziem
  * Copyright (C) 2004 Marc Maurer (uwog@uwog.net)
  * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
  *

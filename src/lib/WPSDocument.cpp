@@ -1,7 +1,7 @@
 /* libwps
  * Copyright (C) 2003 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003-2004 Marc Maurer (uwog@uwog.net)
- * Copyright (C) 2006 Andrew Ziem (andrewziem users sourceforge net)
+ * Copyright (C) 2006, 2007 Andrew Ziem (andrewziem users sourceforge net)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
