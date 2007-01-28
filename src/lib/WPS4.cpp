@@ -372,7 +372,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
 		if ((rgchProp[1] &  0x20) && (rgchProp[3] & 0x20))
 			textAttributeBits |= WPS_UNDERLINE_BIT;
 	}
-	if (rgchProp.length() >= 5)
+	if (rgchProp.length() >= 4 && ((uint8_t)rgchProp[4]) > 0)
 	{
 		listener->setFontSize(((uint8_t)rgchProp[4])/2);
 	}
