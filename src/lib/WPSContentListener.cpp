@@ -634,8 +634,7 @@ void WPSContentListener::_openSpan()
 		propList.insert("style:font-name", m_ps->m_fontName->cstr());
 	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, POINT);
 
-	// Here we give the priority to the redline bit over the font color. This is how WordPerfect behaves:
-	// redline overrides font color even if the color is changed when redline was already defined.
+	// Here we give the priority to the redline bit over the font color.
 	// When redline finishes, the color is back.
 	if (attributeBits & WPS_REDLINE_BIT)
 		propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
@@ -721,9 +720,6 @@ void WPSContentListener::justificationChange(const uint8_t justification)
 {
 	if (!isUndoOn())
 	{
-		// We discovered that if there is not a paragraph break before justificationChange,
-		// newer versions of WordPerfect add a temporary hard return just before the code.
-		// So, we will mimick them!
 		if (m_ps->m_isParagraphOpened)
 			_closeParagraph();
 		if (m_ps->m_isListElementOpened)

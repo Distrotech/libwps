@@ -154,7 +154,7 @@ void WPSPageSpan::_removeHeaderFooter(WPSHeaderFooterType type, WPSHeaderFooterO
 	for (std::vector<WPSHeaderFooter>::iterator iter = m_headerFooterList.begin(); iter != m_headerFooterList.end(); iter++) 
 	{
 		if ((*iter).getType() == type && (*iter).getOccurence() == occurence) {
-			WPS_DEBUG_MSG(("WordPerfect: Removing header/footer element of type: %i since it is identical to %i\n",(*iter).getType(), type));
+			WPS_DEBUG_MSG(("MS Works: Removing header/footer element of type: %i since it is identical to %i\n",(*iter).getType(), type));
 			m_headerFooterList.erase(iter);
 			return;
 		}
@@ -215,7 +215,7 @@ bool operator==(const WPSPageSpan &page1, const WPSPageSpan &page2)
 	}
 
 	
-	WPS_DEBUG_MSG(("WordPerfect: WPSPageSpan == comparison finished, found no differences\n"));
+	WPS_DEBUG_MSG(("MS Works: WPSPageSpan == comparison finished, found no differences\n"));
 
 	return true;
 }

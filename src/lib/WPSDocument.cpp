@@ -38,8 +38,8 @@ This document contains both the libwps API specification and the normal libwps
 documentation.
 \section api_docs libwps API documentation
 The external libwps API is provided by the WPSDocument class. This class, combined
-with the WPXHLListenerImpl class, are the only two classes that will be of interest
-for the application programmer using libwps.
+with the libwpd's WPXHLListenerImpl class, are the only two classes that will be
+of interest for the application programmer using libwps.
 \section lib_docs libwps documentation
 If you are interrested in the structure of libwps itself, this whole document
 would be a good starting point for exploring the interals of libwps. Mind that
@@ -51,7 +51,7 @@ the full 100%.
 Analyzes the content of an input stream to see if it can be parsed
 \param input The input stream
 \param partialContent A boolean which states if the content from the input stream
-represents the full contents of a WordPerfect file, or just the first X bytes
+represents the full contents of a MS Works file, or just the first X bytes
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
