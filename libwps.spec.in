@@ -39,6 +39,7 @@ Includes and definitions for developing with libwps.
 %if %{!?_without_docs:1}%{?_without_docs:0}
 %package docs
 Requires: %{name}
+BuildRequires: doxygen
 Summary: Documentation of libwps API
 Group: Development/Documentation
 
@@ -53,6 +54,7 @@ Documentation of libwps API for developing with libwps
 
 %build
 ./configure --prefix=%{_prefix} --exec-prefix=%{_prefix} \
+	--libdir=%{_libdir} \
 	%{?_without_stream:--without-stream} \
 	%{?_with_debug:--enable-debug}  \
 	%{?_without_docs:--without-docs}
