@@ -179,9 +179,11 @@ WPXInputStream* WPSFileStream::getDocumentOLEStream(const char * name)
 		return (WPSInputStream*)0;
 	}
 	
-	unsigned char *tmpBuffer = new unsigned char[tmpStream.size()];
+	if (d->buf)
+		delete [] d->buf;
+	d->buf = new uint8_t[tmpStream.size()];
 	unsigned long tmpLength;
-	tmpLength = tmpStream.read(tmpBuffer, tmpStream.size());
+	tmpLength = tmpStream.read((unsigned char *)(d->buf), tmpStream.size());
 
 	// sanity check
 	if (tmpLength > tmpStream.size() || tmpLength < tmpStream.size())
@@ -194,7 +196,7 @@ WPXInputStream* WPSFileStream::getDocumentOLEStream(const char * name)
 	}
 
 	delete tmpStorage;
-	return new WPSMemoryStream((const char *)tmpBuffer, tmpLength);
+	return new WPSMemoryStream((const char *)(d->buf), tmpLength);
 }
 
 WPXInputStream* WPSFileStream::getDocumentOLEStream()
@@ -297,10 +299,12 @@ WPXInputStream* WPSMemoryStream::getDocumentOLEStream(const char * name)
 			delete tmpStorage;
 		return (WPSInputStream*)0;
 	}
-	
-	unsigned char *tmpBuffer = new unsigned char[tmpStream.size()];
+
+	if (d->buf)
+		delete [] d->buf;
+	d->buf = new uint8_t[tmpStream.size()];
 	unsigned long tmpLength;
-	tmpLength = tmpStream.read(tmpBuffer, tmpStream.size());
+	tmpLength = tmpStream.read((unsigned char *)(d->buf), tmpStream.size());
 
 	// sanity check
 	if (tmpLength > tmpStream.size() || tmpLength < tmpStream.size())
@@ -313,7 +317,7 @@ WPXInputStream* WPSMemoryStream::getDocumentOLEStream(const char * name)
 	}
 
 	delete tmpStorage;
-	return new WPSMemoryStream((const char *)tmpBuffer, tmpLength);
+	return new WPSMemoryStream((const char *)(d->buf), tmpLength);
 }
 
 WPXInputStream* WPSMemoryStream::getDocumentOLEStream()
