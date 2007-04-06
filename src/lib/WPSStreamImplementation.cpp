@@ -33,32 +33,49 @@ class WPSFileStreamPrivate
 {
 public:
 	WPSFileStreamPrivate();
+	~WPSFileStreamPrivate();
 	std::fstream file;
 	std::stringstream buffer;
 	long streamSize;
+	uint8_t *buf;
 };
 
 class WPSMemoryStreamPrivate
 {
 public:
 	WPSMemoryStreamPrivate(const std::string str);
+	~WPSMemoryStreamPrivate();
 	std::stringstream buffer;
 	long streamSize;
+	uint8_t *buf;
 };
 
 WPSFileStreamPrivate::WPSFileStreamPrivate() :
 	file(),
 	buffer(std::ios::binary | std::ios::in | std::ios::out),
-	streamSize(0)
+	streamSize(0),
+	buf(0)
 {	
+}
+
+WPSFileStreamPrivate::~WPSFileStreamPrivate()
+{
+	if (buf)
+		delete [] buf;
 }
 
 WPSMemoryStreamPrivate::WPSMemoryStreamPrivate(const std::string str) :
 	buffer(str, std::ios::binary | std::ios::in),
-	streamSize(0)
+	streamSize(0),
+	buf(0)
 {
 }
 
+WPSMemoryStreamPrivate::~WPSMemoryStreamPrivate()
+{
+	if (buf)
+		delete [] buf;
+}
 
 WPSFileStream::WPSFileStream(const char* filename)
 {
@@ -84,16 +101,18 @@ const uint8_t *WPSFileStream::read(size_t numBytes, size_t &numBytesRead)
 		return 0;
 	}
 
-	uint8_t *buffer = new uint8_t[numBytes];
+	if (d->buf)
+		delete [] d->buf;
+	d->buf = new uint8_t[numBytes];
 
 	if(d->file.good())
 	{
 		long curpos = d->file.tellg();
-		d->file.readsome((char *)buffer, numBytes); 
+		d->file.readsome((char *)(d->buf), numBytes); 
 		numBytesRead = (long)d->file.tellg() - curpos;
 	}
 	
-	return buffer;
+	return d->buf;
 }
 
 long WPSFileStream::tell()
@@ -122,7 +141,7 @@ int WPSFileStream::seek(long offset, WPX_SEEK_TYPE seekType)
 	if(d->file.good())
 	{
 		d->file.seekg(offset, ((seekType == WPX_SEEK_SET) ? std::ios::beg : std::ios::cur));
-		return (int) d->file.tellg();
+		return (int) ((long)d->file.tellg() == -1);
 	}
 	else
 		return -1;
@@ -205,16 +224,18 @@ const uint8_t *WPSMemoryStream::read(size_t numBytes, size_t &numBytesRead)
 		return 0;
 	}
 
-	uint8_t *buffer = new uint8_t[numBytes];
+	if (d->buf)
+		delete [] d->buf;
+	d->buf = new uint8_t[numBytes];
 
 	if(d->buffer.good())
 	{
 		long curpos = d->buffer.tellg();
-		d->buffer.readsome((char *)buffer, numBytes); 
+		d->buffer.readsome((char *)(d->buf), numBytes); 
 		numBytesRead = (long)d->buffer.tellg() - curpos;
 	}
 	
-	return buffer;
+	return d->buf;
 }
 
 long WPSMemoryStream::tell()
@@ -243,7 +264,7 @@ int WPSMemoryStream::seek(long offset, WPX_SEEK_TYPE seekType)
 	if(d->buffer.good())
 	{
 		d->buffer.seekg(offset, ((seekType == WPX_SEEK_SET) ? std::ios::beg : std::ios::cur));
-		return (int) d->buffer.tellg();
+		return (int) ( (long)d->buffer.tellg() == -1);
 	}
 	else
 		return -1;
