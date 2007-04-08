@@ -101,14 +101,20 @@ const uint8_t *WPSFileStream::read(size_t numBytes, size_t &numBytesRead)
 		return 0;
 	}
 
+	long curpos = d->file.tellg();
+	if ( (curpos + numBytes < curpos) /*overflow*/ ||
+		(curpos + numBytes > d->streamSize) ) /*reading more than available*/
+	{
+		numBytes = d->streamSize - curpos;
+	}
+
 	if (d->buf)
 		delete [] d->buf;
 	d->buf = new uint8_t[numBytes];
 
 	if(d->file.good())
 	{
-		long curpos = d->file.tellg();
-		d->file.readsome((char *)(d->buf), numBytes); 
+		d->file.read((char *)(d->buf), numBytes); 
 		numBytesRead = (long)d->file.tellg() - curpos;
 	}
 	
@@ -226,14 +232,20 @@ const uint8_t *WPSMemoryStream::read(size_t numBytes, size_t &numBytesRead)
 		return 0;
 	}
 
+	long curpos = d->buffer.tellg();
+	if ( (curpos + numBytes < curpos) /*overflow*/ ||
+		(curpos + numBytes > d->streamSize) ) /*reading more than available*/
+	{
+		numBytes = d->streamSize - curpos;
+	}
+
 	if (d->buf)
 		delete [] d->buf;
 	d->buf = new uint8_t[numBytes];
 
 	if(d->buffer.good())
 	{
-		long curpos = d->buffer.tellg();
-		d->buffer.readsome((char *)(d->buf), numBytes); 
+		d->buffer.read((char *)(d->buf), numBytes); 
 		numBytesRead = (long)d->buffer.tellg() - curpos;
 	}
 	
