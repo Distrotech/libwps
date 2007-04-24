@@ -65,6 +65,7 @@ Documentation of libwps API for developing with libwps
 umask 022
 
 %__make DESTDIR=$RPM_BUILD_ROOT install
+%__rm -rf $RPM_BUILD_ROOT%{_libdir}/*.la
 
 %clean
 %__rm -rf $RPM_BUILD_ROOT $RPM_BUILD_DIR/file.list.%{name}
@@ -82,7 +83,7 @@ umask 022
 %files devel
 %defattr(644,root,root,755)
 %{_libdir}/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.so
-%{_libdir}/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.*a
+#%{_libdir}/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.*a
 %{_libdir}/pkgconfig/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
 %{_includedir}/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@/libwps
 
