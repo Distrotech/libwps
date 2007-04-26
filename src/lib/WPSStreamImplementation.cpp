@@ -234,9 +234,7 @@ const uint8_t *WPSMemoryStream::read(size_t numBytes, size_t &numBytesRead)
 	numBytesRead = 0;
 	
 	if (numBytes < 0 || atEOS() || numBytes > (std::numeric_limits<unsigned long>::max)()/2)
-	{
 		return 0;
-	}
 
 	unsigned long curpos = d->buffer.tellg();
 	if (curpos == (unsigned long)-1) //tellg() returned ERROR
