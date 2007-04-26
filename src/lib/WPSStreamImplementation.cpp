@@ -26,6 +26,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <limits>
 
 using namespace libwps;
 
@@ -36,7 +37,7 @@ public:
 	~WPSFileStreamPrivate();
 	std::fstream file;
 	std::stringstream buffer;
-	long streamSize;
+	unsigned long streamSize;
 	uint8_t *buf;
 };
 
@@ -46,7 +47,7 @@ public:
 	WPSMemoryStreamPrivate(const std::string str);
 	~WPSMemoryStreamPrivate();
 	std::stringstream buffer;
-	long streamSize;
+	unsigned long streamSize;
 	uint8_t *buf;
 };
 
@@ -83,7 +84,9 @@ WPSFileStream::WPSFileStream(const char* filename)
 	
 	d->file.open( filename, std::ios::binary | std::ios::in );
 	d->file.seekg( 0, std::ios::end );
-	d->streamSize = (d->file.good() ? (long)d->file.tellg() : -1L);
+	d->streamSize = (d->file.good() ? (unsigned long)d->file.tellg() : (unsigned long)-1L);
+	if (d->streamSize == (unsigned long)-1) // tellg() returned ERROR
+		d->streamSize = 0;
 	d->file.seekg( 0, std::ios::beg );
 }
 
@@ -96,12 +99,13 @@ const uint8_t *WPSFileStream::read(size_t numBytes, size_t &numBytesRead)
 {
 	numBytesRead = 0;
 	
-	if (numBytes < 0 || atEOS())
-	{
+	if (numBytes < 0 || atEOS() || numBytes > (std::numeric_limits<unsigned long>::max)()/2)
 		return 0;
-	}
 
-	long curpos = d->file.tellg();
+	unsigned long curpos = d->file.tellg();
+	if (curpos == (unsigned long)-1)  // tellg() returned ERROR
+		return 0;
+
 	if ( (curpos + numBytes < curpos) /*overflow*/ ||
 		(curpos + numBytes > d->streamSize) ) /*reading more than available*/
 	{
@@ -214,7 +218,9 @@ WPSMemoryStream::WPSMemoryStream(const char *data, const unsigned int dataSize)
 {
 	d = new WPSMemoryStreamPrivate(std::string(data, dataSize));
 	d->buffer.seekg( 0, std::ios::end );
-	d->streamSize = (d->buffer.good() ? (long)d->buffer.tellg() : -1L);
+	d->streamSize = (d->buffer.good() ? (unsigned long)d->buffer.tellg() : (unsigned long)-1L);
+	if (d->streamSize == (unsigned long)-1L)
+		d->streamSize = 0;
 	d->buffer.seekg( 0, std::ios::beg );
 }
 
@@ -227,12 +233,15 @@ const uint8_t *WPSMemoryStream::read(size_t numBytes, size_t &numBytesRead)
 {
 	numBytesRead = 0;
 	
-	if (numBytes < 0 || atEOS())
+	if (numBytes < 0 || atEOS() || numBytes > (std::numeric_limits<unsigned long>::max)()/2)
 	{
 		return 0;
 	}
 
-	long curpos = d->buffer.tellg();
+	unsigned long curpos = d->buffer.tellg();
+	if (curpos == (unsigned long)-1) //tellg() returned ERROR
+		return 0;
+
 	if ( (curpos + numBytes < curpos) /*overflow*/ ||
 		(curpos + numBytes > d->streamSize) ) /*reading more than available*/
 	{
