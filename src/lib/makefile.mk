@@ -1,3 +1,5 @@
+EXTERNAL_WARNINGS_NOT_ERRORS := TRUE
+
 PRJ=..$/..$/..$/..$/..$/..
 
 PRJNAME=libwps
@@ -5,9 +7,7 @@ TARGET=wpslib
 ENABLE_EXCEPTIONS=TRUE
 LIBTARGET=NO
 
-.INCLUDE :  svpre.mk
 .INCLUDE :  settings.mk
-.INCLUDE :  sv.mk
 
 .IF "$(GUI)"=="WNT"
 CFLAGS+=-GR
