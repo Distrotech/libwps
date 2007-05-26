@@ -18,7 +18,7 @@ wps2raw_LDADD = \
 wps2raw_SOURCES = \
 	RawListener.cpp	 \
 	RawListener.h	 \
-	main.cpp
+	wps2raw.cpp
 
 if OS_WIN32
 

@@ -18,7 +18,7 @@ wps2html_LDADD = \
 wps2html_SOURCES = \
 	HtmlListenerImpl.cpp	\
 	HtmlListenerImpl.h	\
-	main.cpp
+	wps2html.cpp
 
 if OS_WIN32
 

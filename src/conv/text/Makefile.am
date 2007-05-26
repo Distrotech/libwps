@@ -18,7 +18,7 @@ wps2text_LDADD = \
 wps2text_SOURCES = \
 	TextListenerImpl.cpp	 \
 	TextListenerImpl.h	 \
-	main.cpp
+	wps2text.cpp
 
 if OS_WIN32
 
