@@ -29,7 +29,7 @@
 class FPROP
 {
 public:
-	FPROP() { cch = 0; };
+	FPROP() : cch(0), rgchProp() {};
 	uint8_t	cch; /* number of bytes in this FPROP */
 	std::string rgchProp; /* Prefix for a CHP or PAP sufficient to handle differing bits from default */
 };
@@ -40,7 +40,7 @@ public:
 class FOD
 {
 public:
-	FOD() { fcLim = bfprop = bfprop_abs = 0; }
+	FOD() : fcLim(0), bfprop(0), bfprop_abs(0), fprop() {}
 	uint32_t	fcLim; /* byte number of last character covered by this FOD */
 	uint16_t	bfprop; /* byte offset from beginning of FOD array to corresponding FPROP */
 	uint32_t        bfprop_abs; /* bfprop from beginning of stream offset */

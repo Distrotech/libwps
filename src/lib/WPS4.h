@@ -156,6 +156,8 @@ protected:
 	void _changeList() {};
 	
 private:
+	WPS4ContentListener(const WPS4ContentListener&);
+	WPS4ContentListener& operator=(const WPS4ContentListener&);
 	WPS4ContentParsingState *m_parseState;	
 };
 

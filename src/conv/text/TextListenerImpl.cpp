@@ -26,6 +26,7 @@
 #define UCS_TAB 0x0009 
 
 TextListenerImpl::TextListenerImpl(const bool isInfo) :
+	m_currentListLevel(0),
 	m_isInfo(isInfo)
 {
 }

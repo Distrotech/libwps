@@ -43,6 +43,12 @@ WPS4Parser public
  */
 WPS4Parser::WPS4Parser(WPSInputStream *input, WPSHeader * header) :
 	WPSParser(input, header),
+	oldTextAttributeBits(0),
+	offset_eot(0),
+	offset_eos(0),
+	CHFODs(),
+	PAFODs(),
+	fonts(),
 	m_worksVersion(header->getMajorVersion())
 {
 }
@@ -94,7 +100,7 @@ void WPS4Parser::readFontsTable(WPSInputStream * input)
 		
 	input->seek(offset_FFNTB, WPX_SEEK_SET);
 
-	while (input->tell() < offset_end_FFNTB)
+	while (input->tell() < (long)offset_end_FFNTB) //FIXME: be sure we are not overflowing here. Adding cast just to remove warnings
 	{
 
 		/* Sometimes the font numbers start at 0 and increment nicely.
@@ -750,15 +756,14 @@ WPS4Listener::WPS4Listener()
 WPS4ContentParsingState public
 */
 
-_WPS4ContentParsingState::_WPS4ContentParsingState()
+_WPS4ContentParsingState::_WPS4ContentParsingState() :
+	m_textBuffer()
 {
-	m_textBuffer.clear();
 }
 
 _WPS4ContentParsingState::~_WPS4ContentParsingState()
 {
 	WPS_DEBUG_MSG(("~WPS4ContentParsingState:: m_textBuffer.len() =%i\n", m_textBuffer.len()));		
-	m_textBuffer.clear();
 }
 
 

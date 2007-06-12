@@ -42,6 +42,8 @@ class WPSHeader
 	const uint8_t getMajorVersion() const { return m_majorVersion; }
 
  private:
+ 	WPSHeader(const WPSHeader&);
+ 	WPSHeader& operator=(const WPSHeader&);
 	WPSInputStream * m_input;
 	uint8_t m_majorVersion;
 };

@@ -101,6 +101,15 @@ class DirEntry
     unsigned prev;         // previous sibling
     unsigned next;         // next sibling
     unsigned child;        // first child
+    DirEntry() :
+	valid(false),
+	name(),
+	dir(false),
+	size(0),
+	start(0),
+	prev(0),
+	next(0),
+	child(0) {};
 };
 
 class DirTree
@@ -216,18 +225,17 @@ static const unsigned char wpsole_magic[] =
 
 // =========== Header ==========
 
-libwps::Header::Header()
+libwps::Header::Header() :
+	b_shift(9),
+	s_shift(6),
+	num_bat(0),
+	dirent_start(0),
+	threshold(4096),
+	sbat_start(0),
+	num_sbat(0),
+	mbat_start(0),
+	num_mbat(0)
 {
-  b_shift = 9;
-  s_shift = 6;
-  num_bat = 0;
-  dirent_start = 0;
-  threshold = 4096;
-  sbat_start = 0;
-  num_sbat = 0;
-  mbat_start = 0;
-  num_mbat = 0;
-
   for( unsigned i = 0; i < 8; i++ )
     id[i] = wpsole_magic[i];
   for( unsigned j=0; j<109; j++ )
@@ -274,10 +282,10 @@ const unsigned libwps::AllocTable::Eof = 0xfffffffe;
 const unsigned libwps::AllocTable::Bat = 0xfffffffd;
 const unsigned libwps::AllocTable::MetaBat = 0xfffffffc;
 
-libwps::AllocTable::AllocTable()
+libwps::AllocTable::AllocTable() :
+	blockSize(4096),
+	data()
 {
-  blockSize = 4096;
-  // initial size
   resize( 128 );
 }
 
@@ -382,7 +390,7 @@ void libwps::AllocTable::load( const unsigned char* buffer, unsigned len )
 
 const unsigned libwps::DirTree::End = 0xffffffff;
 
-libwps::DirTree::DirTree()
+libwps::DirTree::DirTree() : entries()
 {
   clear();
 }
@@ -595,17 +603,17 @@ void libwps::DirTree::load( unsigned char* buffer, unsigned size )
 // =========== StorageIO ==========
 
 libwps::StorageIO::StorageIO( libwps::Storage* st, const std::stringstream &memorystream ) :
-	buf( memorystream.str(), std::ios::binary | std::ios::in )
+	storage(st),
+	buf( memorystream.str(), std::ios::binary | std::ios::in ),
+	result(libwps::Storage::Ok),
+	bufsize(0),
+	header(new libwps::Header()),
+	dirtree(new libwps::DirTree()),
+	bbat(new libwps::AllocTable()),
+	sbat(new libwps::AllocTable()),
+	sb_blocks(),
+	streams()
 {
-  storage = st;
-  result = libwps::Storage::Ok;
-  
-  header = new libwps::Header();
-  dirtree = new libwps::DirTree();
-  bbat = new libwps::AllocTable();
-  sbat = new libwps::AllocTable();
-  
-  bufsize = 0;
   bbat->blockSize = 1 << header->b_shift;
   sbat->blockSize = 1 << header->s_shift;
 }
@@ -832,23 +840,24 @@ unsigned long libwps::StorageIO::loadSmallBlock( unsigned long block,
 
 // =========== StreamIO ==========
 
-libwps::StreamIO::StreamIO( libwps::StorageIO* s, libwps::DirEntry* e)
+libwps::StreamIO::StreamIO( libwps::StorageIO* s, libwps::DirEntry* e) :
+	io(s),
+	entry(e),
+	fullName(),
+	eof(false),
+	fail(false),
+	blocks(),
+	m_pos(0),
+	cache_data(0),
+	cache_size(4096),
+	cache_pos(0)
 {
-  io = s;
-  entry = e;
-  eof = false;
-  fail = false;
-  
-  m_pos = 0;
-
   if( entry->size >= io->header->threshold ) 
     blocks = io->bbat->follow( entry->start );
   else
     blocks = io->sbat->follow( entry->start );
 
   // prepare cache
-  cache_pos = 0;
-  cache_size = 4096; // optimal ?
   cache_data = new unsigned char[cache_size];
   updateCache();
 }
@@ -962,14 +971,16 @@ void libwps::StreamIO::updateCache()
 
 // =========== Storage ==========
 
-libwps::Storage::Storage( const std::stringstream &memorystream )
+libwps::Storage::Storage( const std::stringstream &memorystream ) :
+	io(NULL)
 {
   io = new StorageIO( this, memorystream );
 }
 
 libwps::Storage::~Storage()
 {
-  delete io;
+  if (io)
+    delete io;
 }
 
 int libwps::Storage::result()
@@ -984,9 +995,9 @@ bool libwps::Storage::isOLEStream()
 
 // =========== Stream ==========
 
-libwps::Stream::Stream( libwps::Storage* storage, const std::string& name )
+libwps::Stream::Stream( libwps::Storage* storage, const std::string& name ) :
+	io (storage->io->streamIO( name ))
 {
-  io = storage->io->streamIO( name );
 }
 
 // FIXME tell parent we're gone

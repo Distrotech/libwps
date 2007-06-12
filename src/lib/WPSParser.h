@@ -45,6 +45,8 @@ protected:
 	WPSInputStream * getInput() { return m_input; }
 	
 private:
+	WPSParser(const WPSParser&);
+	WPSParser& operator=(const WPSParser&);
 	WPSInputStream * m_input;
 
 	WPSHeader * m_header;

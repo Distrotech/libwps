@@ -111,6 +111,9 @@ struct _WPSContentParsingState
 	bool m_isTabPositionRelative;
 
 	bool m_isNote;
+private:
+	_WPSContentParsingState(const _WPSContentParsingState&);
+	_WPSContentParsingState& operator=(const _WPSContentParsingState&);
 };
 
 class WPSContentListener : public WPSListener
@@ -154,6 +157,8 @@ protected:
 	float _movePositionToFirstColumn(float position);
 
 private:
+	WPSContentListener(const WPSContentListener&);
+	WPSContentListener& operator=(const WPSContentListener&);
 	WPXString _colorToString(const RGBSColor * color);
 	WPXString _mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor);
 };
