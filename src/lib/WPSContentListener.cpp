@@ -602,13 +602,15 @@ void WPSContentListener::_openSpan()
 
 	WPXPropertyList propList;
  	if (attributeBits & WPS_SUPERSCRIPT_BIT) {
-		WPXString sSuperScript;
-		sSuperScript.sprintf("super %f%%", WPS_DEFAULT_SUPER_SUB_SCRIPT);
+		WPXString sSuperScript("super ");
+		sSuperScript.append(doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
+		sSuperScript.append("%");
 		propList.insert("style:text-position", sSuperScript);
 	}
  	else if (attributeBits & WPS_SUBSCRIPT_BIT) {
-		WPXString sSubScript;
-		sSubScript.sprintf("sub %f%%", WPS_DEFAULT_SUPER_SUB_SCRIPT);
+		WPXString sSubScript("sub ");
+		sSubScript.append(doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
+		sSubScript.append("%");
 		propList.insert("style:text-position", sSubScript);
 	}
 	if (attributeBits & WPS_ITALICS_BIT)
