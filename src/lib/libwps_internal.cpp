@@ -21,6 +21,8 @@
 
 #include "libwps_internal.h"
 #include "WPSStream.h"
+#include <string>
+#include <locale.h>
 
 uint8_t readU8(WPSInputStream *input)
 {

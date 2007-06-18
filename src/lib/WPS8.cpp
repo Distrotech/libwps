@@ -461,7 +461,7 @@ void WPS8Parser::parseHeaderIndexEntry(WPSInputStream * input)
 	WPS_DEBUG_MSG(("Works8: debug: header index entry %s with offset=0x%04X, length=0x%04X\n", 
 		name.c_str(), hie.offset, hie.length));
 
-	headerIndexTable.insert(std::pair<std::string, HeaderIndexEntries>(name, hie));
+	headerIndexTable.insert(std::multimap<std::string, HeaderIndexEntries>::value_type(name, hie));
 
 	input->seek(input->tell() + 0x18 - cch, WPX_SEEK_SET);
 }
