@@ -10,8 +10,8 @@ AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS)
 
 wps2text_DEPENDENCIES = @WPS2TEXT_WIN32_RESOURCE@
 wps2text_LDADD = \
-	../../lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
-	../../lib/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
+	../../lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la \
+	../../lib/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la \
 	$(LIBWPS_LIBS) @WPS2TEXT_WIN32_RESOURCE@
 
 wps2text_SOURCES = \
