@@ -6,13 +6,12 @@ endif
 
 bin_PROGRAMS = $(target_wps2html)
 
-AM_CXXFLAGS = $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS) -I$(top_srcdir)/src/lib/
+AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS)
 
-wps2html_LDFLAGS = -L../../lib/
 wps2html_DEPENDENCIES = @WPS2HTML_WIN32_RESOURCE@
 wps2html_LDADD = \
-	-lwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
-	-lwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
+	../../lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
+	../../lib/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@ \
 	$(LIBWPS_LIBS) @WPS2HTML_WIN32_RESOURCE@
 
 wps2html_SOURCES = \
