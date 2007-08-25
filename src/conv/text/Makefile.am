@@ -22,7 +22,8 @@ wps2text_SOURCES = \
 if OS_WIN32
 
 @WPS2TEXT_WIN32_RESOURCE@ : wps2text.rc
-	$(top_srcdir)/build/win32/lt-compile-resource wps2text.rc @WPS2TEXT_WIN32_RESOURCE@
+	chmod +x $(top_srcdir)/build/win32/*compile-resource
+	WINDRES=@WINDRES@ $(top_srcdir)/build/win32/lt-compile-resource wps2text.rc @WPS2TEXT_WIN32_RESOURCE@
 endif
 
 EXTRA_DIST = \
