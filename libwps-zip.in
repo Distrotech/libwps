@@ -2,8 +2,8 @@
 
 # Build runtime and developer zipfiles for libwps on Win32.
 
-ZIP=libwps-@WPS_VERSION@.zip
-DEVZIP=libwps-devel-@WPS_VERSION@.zip
+ZIP=libwps-@WPS_VERSION@-MinGW.zip
+DEVZIP=libwps-devel-@WPS_VERSION@-MinGW.zip
 
 cd $DESTDIR@prefix@
 
@@ -16,13 +16,14 @@ DLLDIR=bin
 $DLLDIR/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll \
 $DLLDIR/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll \
 
-upx --best \
+upx -qqq --best \
 $DLLDIR/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll \
 $DLLDIR/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll \
 
 rm $ZIP
 zip $ZIP -@ <<EOF
 $DLLDIR/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll
+$DLLDIR/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll
 EOF
 
 rm $DEVZIP
