@@ -70,14 +70,6 @@ PKG_CHECK_MODULES(LIBWPS,[
     libwpd-0.8
     ])
 
-test_docs=true
-AC_ARG_WITH(docs,
-	[  --without-docs          Do not build documentation],
-	if test "x$withval" = xno; then
-		test_docs=false
-	fi
-)
-
 dnl stream
 dnl
 test_stream=true
@@ -89,18 +81,6 @@ AC_ARG_WITH(stream,
 )
 
 AM_CONDITIONAL(WITH_LIBWPS_STREAM, $test_stream )
-
-if test "x$test_docs" = xtrue; then
-	AC_PATH_PROG(DOXYGEN, doxygen)
-	if test -z "$DOXYGEN"; then
-		AC_MSG_WARN([*** Could not find doxygen in your PATH.])
-		AC_MSG_WARN([*** The documentation will not be built.])
-		test_docs=false
-	fi
-fi
-
-AM_CONDITIONAL(WITH_LIBWPS_DOCS, $test_docs )
-
 
 AC_MSG_CHECKING([for native Win32])
 case "$host" in
@@ -128,6 +108,31 @@ AC_SUBST(LIBWPS_STREAM_WIN32_RESOURCE)
 AC_SUBST(WPS2HTML_WIN32_RESOURCE)
 AC_SUBST(WPS2TEXT_WIN32_RESOURCE)
 AC_SUBST(WPS2RAW_WIN32_RESOURCE)
+
+test_docs=true
+if test "x$native_win32" = xyes; then
+	test_docs=false
+fi
+AC_ARG_WITH(docs,
+	[  --without-docs          Do not build documentation],
+	if test "x$withval" = xno; then
+		test_docs=false
+	fi
+	if text "x$withval" = xyes; then
+		test_docs=true
+	fi
+)
+
+if test "x$test_docs" = xtrue; then
+	AC_PATH_PROG(DOXYGEN, doxygen)
+	if test -z "$DOXYGEN"; then
+		AC_MSG_WARN([*** Could not find doxygen in your PATH.])
+		AC_MSG_WARN([*** The documentation will not be built.])
+		test_docs=false
+	fi
+fi
+
+AM_CONDITIONAL(WITH_LIBWPS_DOCS, $test_docs )
 
 AC_MSG_CHECKING([for Win32 platform in general])
 case "$host" in

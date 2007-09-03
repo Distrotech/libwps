@@ -4,7 +4,7 @@ EXTRA_DIST =	doxygen.cfg \
 
 if WITH_LIBWPS_DOCS
 
-install-data-am:
+install-data-am: all
 	mkdir -p $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/html
 	$(INSTALL) html/*.html $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/html/
 	$(INSTALL) html/*.png $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/html/
