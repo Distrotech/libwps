@@ -603,13 +603,13 @@ void WPSContentListener::_openSpan()
 	WPXPropertyList propList;
  	if (attributeBits & WPS_SUPERSCRIPT_BIT) {
 		WPXString sSuperScript("super ");
-		sSuperScript.append(doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
+		sSuperScript.append(_doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
 		sSuperScript.append("%");
 		propList.insert("style:text-position", sSuperScript);
 	}
  	else if (attributeBits & WPS_SUBSCRIPT_BIT) {
 		WPXString sSubScript("sub ");
-		sSubScript.append(doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
+		sSubScript.append(_doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
 		sSubScript.append("%");
 		propList.insert("style:text-position", sSubScript);
 	}

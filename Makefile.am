@@ -1,27 +1,28 @@
 pkgconfdir = $(libdir)/pkgconfig
 
 if WITH_LIBWPS_STREAM
-libwps_stream_pkgconf_data = libwps-stream-0.1.pc
+libwps_stream_pkgconf_data = libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
 else
 libwps_stream_pkgconf_data =
 endif
 
 
-pkgconf_DATA = libwps-0.1.pc $(libwps_stream_pkgconf_data)
+pkgconf_DATA = libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc $(libwps_stream_pkgconf_data)
 
 SUBDIRS = src build docs autopackage
 
 EXTRA_DIST = \
-	autogen.sh	\
-	libwps.spec	\
-	libwps.spec.in	\
-	libwps-*.pc.in	\
-	libwps-zip.in	\
-	CHANGES		\
-	COPYING		\
-	CREDITS		\
-	HACKING		\
-	INSTALL		\
+	autogen.sh \
+	libwps.spec \
+	libwps.spec.in \
+	libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc.in \
+	libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc.in \
+	libwps-zip.in \
+	CHANGES \
+	COPYING \
+	CREDITS \
+	HACKING \
+	INSTALL \
 	README
 
 distclean-local:

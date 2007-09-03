@@ -79,7 +79,7 @@ void Test::testStream(void)
 
 	// test read()
 	input->seek(0, WPX_SEEK_SET);
-	CPPUNIT_ASSERT ( NULL != input->read(0, numBytesRead)  );
+	CPPUNIT_ASSERT ( NULL == input->read(0, numBytesRead)  );
 	CPPUNIT_ASSERT_EQUAL ( (size_t) 0, numBytesRead );
 	CPPUNIT_ASSERT_EQUAL ( (long int) 0 , input->tell() );
 	CPPUNIT_ASSERT ( NULL != input->read(1, numBytesRead)  );
@@ -145,7 +145,7 @@ void Test::testStream(void)
 
 	// test read()
 	input->seek(0, WPX_SEEK_SET);
-	CPPUNIT_ASSERT ( NULL != input->read(0, numBytesRead)  );
+	CPPUNIT_ASSERT ( NULL == input->read(0, numBytesRead)  );
 	CPPUNIT_ASSERT_EQUAL ( (size_t) 0, numBytesRead );
 	CPPUNIT_ASSERT_EQUAL ( (long int) 0 , input->tell() );
 	CPPUNIT_ASSERT ( NULL != input->read(1, numBytesRead)  );

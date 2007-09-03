@@ -99,6 +99,9 @@ const uint8_t *WPSFileStream::read(size_t numBytes, size_t &numBytesRead)
 {
 	numBytesRead = 0;
 	
+	if (0 == numBytes)
+		return 0;
+
 	if (numBytes < 0 || atEOS() || numBytes > (std::numeric_limits<unsigned long>::max)()/2)
 		return 0;
 
@@ -232,6 +235,9 @@ WPSMemoryStream::~WPSMemoryStream()
 const uint8_t *WPSMemoryStream::read(size_t numBytes, size_t &numBytesRead)
 {
 	numBytesRead = 0;
+	
+	if (0 == numBytes)
+		return 0;
 	
 	if (numBytes < 0 || atEOS() || numBytes > (std::numeric_limits<unsigned long>::max)()/2)
 		return 0;

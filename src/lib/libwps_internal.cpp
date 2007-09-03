@@ -96,7 +96,7 @@ std::string to_bits(std::string s)
 }
 #endif
 
-WPXString doubleToString(const double value)
+WPXString _doubleToString(const double value)
 {
   WPXString tempString;
   tempString.sprintf("%.4f", value);
