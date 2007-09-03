@@ -174,7 +174,8 @@ class GenericException
 
 // Various functions
 
+#ifdef DEBUG
 std::string to_bits(std::string s);
-WPXString _doubleToString(const double value);
+#endif
 
 #endif /* LIBWPS_INTERNAL_H */

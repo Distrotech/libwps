@@ -95,20 +95,3 @@ std::string to_bits(std::string s)
 	return r;
 }
 #endif
-
-WPXString _doubleToString(const double value)
-{
-  WPXString tempString;
-  tempString.sprintf("%.4f", value);
-  std::string decimalPoint(localeconv()->decimal_point);
-  if ((decimalPoint.size() == 0) || (decimalPoint == "."))
-    return tempString;
-  std::string stringValue(tempString.cstr());
-  if (!stringValue.empty())
-  {
-    std::string::size_type pos;
-    while ((pos = stringValue.find(decimalPoint)) != std::string::npos)
-          stringValue.replace(pos,decimalPoint.size(),".");
-  }
-  return WPXString(stringValue.c_str());
-}
