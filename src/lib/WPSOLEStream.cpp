@@ -37,7 +37,7 @@
 #include <vector>
 
 #include "WPSOLEStream.h"
-// #include "libwpg_utils.h"
+#include <string.h>
 
 namespace libwps
 {

@@ -27,6 +27,7 @@
 #include "WPSHeader.h"
 #include "WPSFileStructure.h"
 #include "libwps_internal.h"
+#include <string.h>
 	
 WPSHeader::WPSHeader(WPSInputStream *input, uint8_t majorVersion) :
 	m_input(input),

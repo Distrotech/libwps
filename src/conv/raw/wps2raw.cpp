@@ -23,7 +23,7 @@
 #include "libwps.h"
 #include "RawListener.h"
 #include "WPSStreamImplementation.h"
-
+#include <string.h>
 
 int main(int argc, char *argv[])
 {
