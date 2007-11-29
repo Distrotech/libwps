@@ -103,7 +103,6 @@ AC_SUBST(DEBUG_CXXFLAGS)
 AC_OUTPUT([
 Makefile
 wps2sxw.spec
-wps2sxw-zip
 build/Makefile
 build/win32/Makefile
 filter/Makefile
