@@ -44,13 +44,10 @@ struct _WPSContentParsingState
 	uint32_t m_textAttributeBits;
 	float m_fontSize;
 	WPXString *m_fontName;
-	RGBSColor *m_fontColor;
-	RGBSColor *m_highlightColor;
 
 	bool m_isParagraphColumnBreak;
 	bool m_isParagraphPageBreak;
 	uint8_t m_paragraphJustification;
-	uint8_t m_tempParagraphJustification; // TODO: remove this one after the tabs are properly implemented
 	float m_paragraphLineSpacing;
 
 	bool m_isDocumentStarted;
@@ -103,8 +100,7 @@ struct _WPSContentParsingState
 	float m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
 
 	uint8_t m_currentListLevel;
-	
-	bool m_isNote;
+
 private:
 	_WPSContentParsingState(const _WPSContentParsingState&);
 	_WPSContentParsingState& operator=(const _WPSContentParsingState&);
@@ -149,7 +145,6 @@ protected:
 private:
 	WPSContentListener(const WPSContentListener&);
 	WPSContentListener& operator=(const WPSContentListener&);
-	WPXString _colorToString(const RGBSColor * color);
 
 	bool isUndoOn() { return m_isUndoOn; }
 	void setUndoOn(bool isUndoOn) { m_isUndoOn = isUndoOn; }

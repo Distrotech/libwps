@@ -89,7 +89,11 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
 	/* read each font in the table */	
 	while ((input->tell()+8) < offset_end_FFNTB && fonts.size() < n_fonts)
 	{
+#ifdef DEBUG
 		uint32_t unknown = readU32(input);
+#else
+		input->seek(4, WPX_SEEK_CUR);
+#endif
 		uint16_t string_size = readU16(input);
 		
 		std::string s;

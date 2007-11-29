@@ -61,13 +61,10 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_textAttributeBits(0),
 	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/), // FIXME ME!!!!!!!!!!!!!!!!!!! HELP WP6_DEFAULT_FONT_SIZE
 	m_fontName(new WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")), // EN PAS DEFAULT FONT AAN VOOR WP5/6/etc
-	m_fontColor(new RGBSColor(0x00,0x00,0x00,0x64)), //Set default to black. Maybe once it will change, but for the while...
-	m_highlightColor(0),
 
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
 	m_paragraphJustification(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
-	m_tempParagraphJustification(0),
 	m_paragraphLineSpacing(1.0f),
 
 	m_isDocumentStarted(false),
@@ -115,16 +112,12 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_textIndentByParagraphIndentChange(0.0f),
 	m_textIndentByTabs(0.0f),
 	m_currentListLevel(0),
-
-	m_isNote(false)
 {
 }
 
 _WPSContentParsingState::~_WPSContentParsingState()
 {
 	DELETEP(m_fontName);
-	DELETEP(m_fontColor);
-	DELETEP(m_highlightColor);
 }
 
 WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
@@ -407,7 +400,6 @@ void WPSContentListener::_resetParagraphState(const bool isListElement)
 	m_ps->m_isCellWithoutParagraph = false;
 	m_ps->m_isTextColumnWithoutParagraph = false;
 	m_ps->m_isHeaderFooterWithoutParagraph = false;
-	m_ps->m_tempParagraphJustification = 0;
 	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
 	m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
 }
@@ -438,12 +430,7 @@ void WPSContentListener::_appendJustification(WPXPropertyList &propList, int jus
 
 void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
 {
-	int justification;
-	if (m_ps->m_tempParagraphJustification) 
-		justification = m_ps->m_tempParagraphJustification;
-	else
-		justification = m_ps->m_paragraphJustification;
-	_appendJustification(propList, justification);
+	_appendJustification(propList, m_ps->m_paragraphJustification);
 
 	if (isListElement)
 	{
@@ -601,10 +588,8 @@ void WPSContentListener::_openSpan()
 	// When redline finishes, the color is back.
 	if (attributeBits & WPS_REDLINE_BIT)
 		propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
-	else if (m_ps->m_fontColor)
-		propList.insert("fo:color", _colorToString(m_ps->m_fontColor));
-	if (m_ps->m_highlightColor)
-		propList.insert("style:text-background-color", _colorToString(m_ps->m_highlightColor));
+	else
+		propList.insert("fo:color", "#000000");
 
 	if (!m_ps->m_isSpanOpened)
 		m_documentInterface->openSpan(propList);
@@ -677,23 +662,4 @@ void WPSContentListener::lineSpacingChange(const float lineSpacing)
 	{
 		m_ps->m_paragraphLineSpacing = lineSpacing;
 	}
-}
-
-WPXString WPSContentListener::_colorToString(const RGBSColor * color)
-{
-	WPXString tmpString;
-
-	if (color) 
-	{
-		float fontShading = (float)((float)color->m_s/100.0f); //convert the percents to float between 0 and 1
-		// Mix fontShading amount of given color with (1-fontShading) of White (#ffffff)
-		int fontRed = (int)0xFF + (int)((float)color->m_r*fontShading) - (int)((float)0xFF*fontShading);
-		int fontGreen = (int)0xFF + (int)((float)color->m_g*fontShading) - (int)((float)0xFF*fontShading);
-		int fontBlue = (int)0xFF + (int)((float)color->m_b*fontShading) - (int)((float)0xFF*fontShading);
-		tmpString.sprintf("#%.2x%.2x%.2x", fontRed, fontGreen, fontBlue);
-	}
-	else
-		tmpString.sprintf("#%.2x%.2x%.2x", 0xFF, 0xFF, 0xFF); // default to white: we really shouldn't be calling this function in that case though
-
-	return tmpString;
 }
