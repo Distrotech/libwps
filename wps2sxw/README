@@ -1,0 +1,35 @@
+INSTALLATION:
+
+Installation on Unix/Linux should be simple. Simply execute the following 
+sequence of commands:
+
+./configure ; make ; su -c 'make install'
+
+Note that this assumes that you have development versions of glib (>= 2.0.0),
+libgsf (>= 1.6.0), and libwps (0.6.1) installed. I also assume that
+you have pkgconfig installed.
+
+This will make + install a single executable: wps2sxw. You may use it
+on the command line as follows:
+
+USAGE:
+
+wps2sxw <infile> <outfile>
+
+Where <infile> is a WordPerfect(tm) 6 (or greater document) and
+<outfile> is the name of the target sxw document, which wps2sxw will
+create.
+
+TROUBLESHOOTING:
+
+You may need to add libwps's pc to your pkgconfig path, if
+/usr/local/lib/pkgconfig is not present. Try setting this environment
+variable on the commandline (using bash):
+
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
+
+LINKS:
+
+glib is available at http://www.gtk.org
+libgsf is available at ftp://ftp.gnome.org/pub/GNOME/sources/libgsf
+libwps is available at http://libwps.sf.net

@@ -1,0 +1,67 @@
+%define name wps2sxw
+%define sourcename wps2sxw
+%define version @VERSION@
+%define  RELEASE 1
+%define  release     %{?CUSTOM_RELEASE} %{!?CUSTOM_RELEASE:%RELEASE}
+
+Name: %{name}
+Summary: Tool for converting MS Works documents into OpenOffice.org Writer format.
+Version: %{version}
+Release: %{release}
+Source: ftp://ftp.sourceforge.net/pub/sourceforge/libwps/%{sourcename}-%{version}.tar.gz
+Group: Applications
+URL: http://libwps.sf.net/
+BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
+License: LGPL
+Requires: libwps >= @LIBWPS_REQUIRED_VERSION@
+Requires: glib2 >= 2.0.0
+Requires: libgsf >= 1.6.0
+Requires: libwpd >= @LIBWPD_REQUIRED_VERSION@
+BuildRequires: libwps-devel >= @LIBWPS_REQUIRED_VERSION@
+BuildRequires: glib2-devel >= 2.0.0
+BuildRequires: libgsf-devel >= 1.6.0
+BuildRequires: libwpd-devel >= @LIBWPD_REQUIRED_VERSION@
+
+%description
+Tool for converting Word Perfect documents into OpenOffice.org Writer format.
+
+%prep
+%__rm -rf $RPM_BUILD_ROOT
+
+%setup -q -n %{sourcename}-%{version}
+
+%build
+./configure --prefix=%{_prefix} --exec-prefix=%{_prefix} \
+	%{?_with_debug:--enable-debug}  \
+
+%__make
+
+%install
+umask 022
+
+%__make DESTDIR=$RPM_BUILD_ROOT install
+
+%clean
+%__rm -rf $RPM_BUILD_ROOT $RPM_BUILD_DIR/file.list.%{name}
+
+%files
+%defattr(755,root,root,755)
+%{_bindir}/*
+
+%changelog
+* Thu Dec 21 2006 Fridrich Strba <fridrich.strba@bluewin.ch>
+- Clone the writerperfect spec.in for wps2sxw
+
+* Wed Nov 17 2004 Fridrich Strba <fridrich.strba@bluewin.ch>
+- Remove execution of autogen.sh
+- Source tarball is writerperfect-X.Y.Z.tar.gz
+
+* Tue Sep  9 2003 Fridrich Strba <fridrich.strba@bluewin.ch>
+- Add execution of autogen.sh before ./configure
+
+* Mon May 26 2003 Rui M. Seabra <rms@1407.org>
+- Change spec to spec.in
+- Remove Prefix: since we're using whatever the distribution uses by default
+
+* Thu May  8 2003 Fridrich Strba <fridrich.strba@bluewin.ch>
+- Create rpm spec using libwpd .spec of Rui M. Seabra

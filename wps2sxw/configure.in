@@ -1,0 +1,118 @@
+AC_INIT(filter/MSWorksCollector.cxx)
+
+AM_CONFIG_HEADER(config.h)
+
+WPS2SXW_MAJOR_VERSION=0
+WPS2SXW_MINOR_VERSION=1
+WPS2SXW_MICRO_VERSION=0
+
+LIBWPS_REQUIRED_VERSION=0.1.0
+LIBWPD_REQUIRED_VERSION=0.8.0
+
+WPS2SXW_VERSION="$WPS2SXW_MAJOR_VERSION.$WPS2SXW_MINOR_VERSION.$WPS2SXW_MICRO_VERSION"
+
+AC_SUBST(WPS2SXW_MAJOR_VERSION)
+AC_SUBST(WPS2SXW_MINOR_VERSION)
+AC_SUBST(WPS2SXW_MICRO_VERSION)
+AC_SUBST(WPS2SXW_VERSION)
+AC_SUBST(LIBWPS_REQUIRED_VERSION)
+AC_SUBST(LIBWPD_REQUIRED_VERSION)
+
+AM_INIT_AUTOMAKE(wps2sxw, $WPS2SXW_VERSION)
+
+AC_PROG_CC
+
+AC_PROG_CXX
+
+AC_PROG_INSTALL
+
+AC_ARG_ENABLE([static-tools],[  --enable-static-tools  Link tools statically],[
+       case "${enableval}" in
+          yes) enable_static_tools="yes" ;;
+          no)  enable_static_tools="no" ;;
+            *) AC_MSG_ERROR(bad value ${enableval} for --static-tools) ;;
+       esac
+],[
+       enable_static_tools="no"
+])
+
+AM_CONDITIONAL(STATIC_TOOLS, test x$enable_static_tools = xyes)
+
+if test x$enable_static_tools = xyes; then
+	enable_static="yes"
+	enable_shared="no"
+fi
+
+AC_PROG_LIBTOOL
+
+AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
+
+PKG_CHECK_MODULES(WPS2SXW,[
+libwps-0.1 >= $LIBWPS_REQUIRED_VERSION
+libwps-stream-0.1 >= $LIBWPS_REQUIRED_VERSION
+libwpd-0.8 >= $LIBWPD_REQUIRED_VERSION
+])
+
+AC_MSG_CHECKING([for native Win32])
+case "$host" in
+  *-*-mingw*)
+    native_win32=yes
+    AC_CHECK_TOOL(WINDRES, windres)
+    WPS2SXW_WIN32_RESOURCE=wps2sxw-win32res.lo
+    ;;
+   *)
+    native_win32=no
+    WPS2SXW_WIN32_RESOURCE=
+    ;;
+esac
+AC_MSG_RESULT([$native_win32])
+AM_CONDITIONAL(OS_WIN32, test "$native_win32" = yes)
+AC_SUBST(WPS2SXW_WIN32_RESOURCE)
+
+AC_MSG_CHECKING([for Win32 platform in general])
+case "$host" in
+  *-*-mingw*|*-*-cygwin*)
+    platform_win32=yes
+    ;;
+  *)
+    platform_win32=no
+    ;;
+esac
+AC_MSG_RESULT($platform_win32)
+AM_CONDITIONAL(PLATFORM_WIN32, test "$platform_win32" = yes)
+
+
+AC_ARG_ENABLE(debug,[  --enable-debug    Turn on debugging],[
+	case "${enableval}" in
+	   yes)	debug=true ;
+		DEBUG_CXXFLAGS="-DDEBUG -g" ;;
+	    no)	debug=false ;
+		DEBUG_CXXFLAGS="-DNDEBUG" ;;
+	     *)	AC_MSG_ERROR(bad value ${enableval} for --enable-debug) ;;
+	esac
+],[	debug=false
+	DEBUG_CXXFLAGS="-DNDEBUG" 
+])
+
+WPS2SXW_CXXFLAGS="$WPS2SXW_CFLAGS"
+
+AC_SUBST(WPS2SXW_CXXFLAGS)
+AC_SUBST(WPS2SXW_LIBS)
+AC_SUBST(DEBUG_CXXFLAGS)
+
+AC_OUTPUT([
+Makefile
+wps2sxw.spec
+wps2sxw-zip
+build/Makefile
+build/win32/Makefile
+filter/Makefile
+cmdline/Makefile
+cmdline/wps2sxw.rc
+])
+
+case "$debug" in
+     "true" )
+        AC_MSG_RESULT([Configured with debugging symbols.]) ;;
+esac
+
