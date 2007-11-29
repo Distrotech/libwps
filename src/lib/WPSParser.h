@@ -30,24 +30,24 @@
 
 #include "WPSHeader.h"
 
-class WPXHLListenerImpl;
+class WPXDocumentInterface;
 
 class WPSParser
 {
 public:
-	WPSParser(WPSInputStream * input, WPSHeader *header);
+	WPSParser(WPXInputStream * input, WPSHeader *header);
 	virtual ~WPSParser();
 
-	virtual void parse(WPXHLListenerImpl *listenerImpl) = 0;
+	virtual void parse(WPXDocumentInterface *listenerImpl) = 0;
 
 protected:
 	WPSHeader * getHeader() { return m_header; }
-	WPSInputStream * getInput() { return m_input; }
+	WPXInputStream * getInput() { return m_input; }
 	
 private:
 	WPSParser(const WPSParser&);
 	WPSParser& operator=(const WPSParser&);
-	WPSInputStream * m_input;
+	WPXInputStream * m_input;
 
 	WPSHeader * m_header;
 };

@@ -29,7 +29,7 @@
 #include "WPS.h"
 #include "WPSContentListener.h"
 #include "WPSHeader.h"
-#include "WPSStream.h"
+#include <libwpd-stream/WPXStream.h>
 #include <libwpd/WPXString.h>
 #include "WPSParser.h"
 
@@ -38,15 +38,15 @@ class WPS4Listener;
 class WPS4PrefixDataPacket
 {
 public:
-	WPS4PrefixDataPacket(WPSInputStream * input);	
+	WPS4PrefixDataPacket(WPXInputStream * input);	
 	virtual ~WPS4PrefixDataPacket() {}
 	virtual void parse(WPS4Listener *listener) const {}
 
-//	static WPS4PrefixDataPacket * constructPrefixDataPacket(WPSInputStream * input, WPS4PrefixIndice *prefixIndice);
+//	static WPS4PrefixDataPacket * constructPrefixDataPacket(WPXInputStream * input, WPS4PrefixIndice *prefixIndice);
 
 protected:
-	virtual void _readContents(WPSInputStream *input) = 0;
- 	void _read(WPSInputStream *input, uint32_t dataOffset, uint32_t dataSize);
+	virtual void _readContents(WPXInputStream *input) = 0;
+ 	void _read(WPXInputStream *input, uint32_t dataOffset, uint32_t dataSize);
 };
 
 
@@ -84,21 +84,21 @@ public:
 class WPS4Parser : public WPSParser
 {
 public:
-	WPS4Parser(WPSInputStream *input, WPSHeader * header);
+	WPS4Parser(WPXInputStream *input, WPSHeader * header);
 	~WPS4Parser();
 
-	void parse(WPXHLListenerImpl *listenerImpl);
+	void parse(WPXDocumentInterface *listenerImpl);
 private:
-	void parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *input);
-	void parse(WPSInputStream *stream, WPS4Listener *listener);
-	void readFontsTable(WPSInputStream * input);
-	bool readFODPage(WPSInputStream * input, std::vector<FOD> * FODs);	
+	void parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input);
+	void parse(WPXInputStream *stream, WPS4Listener *listener);
+	void readFontsTable(WPXInputStream * input);
+	bool readFODPage(WPXInputStream * input, std::vector<FOD> * FODs);	
 	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS4Listener *listener);
 	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener *listener);
 	void propertyChange(std::string rgchProp, WPS4Listener *listener);
 	void appendCP850(const uint8_t readVal, WPS4Listener *listener);
 	void appendCP1252(const uint8_t readVal, WPS4Listener *listener);
-	void readText(WPSInputStream * input, WPS4Listener *listener);
+	void readText(WPXInputStream * input, WPS4Listener *listener);
 	uint32_t oldTextAttributeBits;
 	uint32_t offset_eot; /* stream offset to end of text */
 	uint32_t offset_eos; /* stream offset to end of MN0 */	
@@ -121,7 +121,7 @@ struct _WPS4ContentParsingState
 class WPS4ContentListener : public WPS4Listener, protected WPSContentListener
 {
 public:
-	WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
+	WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl);
 	~WPS4ContentListener();
 
 	void startDocument() { WPSContentListener::startDocument(); };

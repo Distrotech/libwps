@@ -24,10 +24,10 @@
 #ifdef DEBUG
 #include <bitset>
 #endif
-#include "WPSStream.h"
+#include <libwpd-stream/WPXStream.h>
 #include <libwpd/WPXString.h>
-#include <libwpd/libwpd_types.h>
 #include <string>
+#include "libwps_types.h"
 
 /* Various functions/defines that need not/should not be exported externally */
 
@@ -50,9 +50,9 @@
 
 // add more of these as needed for byteswapping
 // (the 8-bit functions are just there to make things consistent)
-uint8_t readU8(WPSInputStream *input); 
-uint16_t readU16(WPSInputStream *input, bool bigendian=false);
-uint32_t readU32(WPSInputStream *input, bool bigendian=false);
+uint8_t readU8(WPXInputStream *input); 
+uint16_t readU16(WPXInputStream *input, bool bigendian=false);
+uint32_t readU32(WPXInputStream *input, bool bigendian=false);
 
 // Various helper structures for the parser..
 

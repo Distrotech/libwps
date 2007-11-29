@@ -23,9 +23,9 @@
 #ifndef HTMLLISTENERIMPL_H
 #define HTMLLISTENERIMPL_H
 
-#include <libwpd/WPXHLListenerImpl.h>
+#include <libwpd/WPXDocumentInterface.h>
 
-class HtmlListenerImpl : public WPXHLListenerImpl
+class HtmlListenerImpl : public WPXDocumentInterface
 {
 public:
 	HtmlListenerImpl();
@@ -67,7 +67,10 @@ public:
 	virtual void closeFootnote();
 	virtual void openEndnote(const WPXPropertyList &propList);
 	virtual void closeEndnote();
-
+	virtual void openComment(const WPXPropertyList &propList);
+	virtual void closeComment();
+	virtual void openTextBox(const WPXPropertyList &propList);
+	virtual void closeTextBox();
 
 	virtual void openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns);
 	virtual void openTableRow(const WPXPropertyList &propList);
@@ -76,6 +79,11 @@ public:
 	virtual void closeTableCell();
 	virtual void insertCoveredTableCell(const WPXPropertyList &propList) {}
 	virtual void closeTable();
+
+	virtual void openFrame(const WPXPropertyList & /* propList */) {}
+	virtual void closeFrame() {}
+	
+	virtual void insertBinaryObject(const WPXPropertyList & /* propList */, const WPXBinaryData * /* object */) {}
 
 private:
 	bool m_ignore;

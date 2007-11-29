@@ -23,6 +23,5 @@
 #define LIBWPS_H
 
 #include "WPSDocument.h"
-#include "WPSStream.h"
 
 #endif /* LIBWPS_H */

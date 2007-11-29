@@ -30,7 +30,7 @@
 #include "libwps_internal.h"
 #include "WPS.h"
 #include "WPSContentListener.h"
-#include "WPSStream.h"
+#include <libwpd-stream/WPXStream.h>
 #include "WPSParser.h"
 
 /**
@@ -51,13 +51,13 @@ class WPS8Listener;
 class WPS8PrefixDataPacket
 {
 public:
-	WPS8PrefixDataPacket(WPSInputStream * input);	
+	WPS8PrefixDataPacket(WPXInputStream * input);	
 	virtual ~WPS8PrefixDataPacket() {}
 	virtual void parse(WPS8Listener *listener) const {}
 
 protected:
-	virtual void _readContents(WPSInputStream *input) = 0;
- 	void _read(WPSInputStream *input, uint32_t dataOffset, uint32_t dataSize);
+	virtual void _readContents(WPXInputStream *input) = 0;
+ 	void _read(WPXInputStream *input, uint32_t dataOffset, uint32_t dataSize);
 };
 
 class WPS8Listener
@@ -96,19 +96,19 @@ typedef std::multimap <std::string, HeaderIndexEntries> HeaderIndexMultiMap; /* 
 class WPS8Parser : public WPSParser
 {
 public:
-	WPS8Parser(WPSInputStream *input, WPSHeader * header);
+	WPS8Parser(WPXInputStream *input, WPSHeader * header);
 	~WPS8Parser();
 
-	void parse(WPXHLListenerImpl *listenerImpl);
+	void parse(WPXDocumentInterface *listenerImpl);
 private:
-	void readFontsTable(WPSInputStream * input);
-	void appendUTF16LE(WPSInputStream *input, WPS8Listener *listener);
-	void readText(WPSInputStream * input, WPS8Listener *listener);
-	bool readFODPage(WPSInputStream * input, std::vector<FOD> * FODs, uint16_t page_size);
-	void parseHeaderIndexEntry(WPSInputStream * input);
-	void parseHeaderIndex(WPSInputStream * input);
-	void parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *input);
-	void parse(WPSInputStream *stream, WPS8Listener *listener);
+	void readFontsTable(WPXInputStream * input);
+	void appendUTF16LE(WPXInputStream *input, WPS8Listener *listener);
+	void readText(WPXInputStream * input, WPS8Listener *listener);
+	bool readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, uint16_t page_size);
+	void parseHeaderIndexEntry(WPXInputStream * input);
+	void parseHeaderIndex(WPXInputStream * input);
+	void parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input);
+	void parse(WPXInputStream *stream, WPS8Listener *listener);
 	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8Listener *listener);
 	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS8Listener *listener);
 	void propertyChange(std::string rgchProp, WPS8Listener *listener);
@@ -132,7 +132,7 @@ struct _WPS8ContentParsingState
 class WPS8ContentListener : public WPS8Listener, protected WPSContentListener
 {
 public:
-	WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
+	WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl);
 	~WPS8ContentListener();
 
 	void startDocument() { WPSContentListener::startDocument(); };

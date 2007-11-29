@@ -3,8 +3,8 @@ AC_INIT(src/lib/WPS8.cpp)
 AM_CONFIG_HEADER(config.h)
 
 WPS_MAJOR_VERSION=0
-WPS_MINOR_VERSION=1
-WPS_MICRO_VERSION=1
+WPS_MINOR_VERSION=2
+WPS_MICRO_VERSION=0
 
 WPS_VERSION="$WPS_MAJOR_VERSION.$WPS_MINOR_VERSION.$WPS_MICRO_VERSION"
 
@@ -67,20 +67,9 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
 dnl ***********************************************************************************
 
 PKG_CHECK_MODULES(LIBWPS,[
-    libwpd-0.8
+    libwpd-0.9
+	libwpd-stream-0.9
     ])
-
-dnl stream
-dnl
-test_stream=true
-AC_ARG_WITH(stream,
-	[  --without-stream        Do not build input stream implementation],
-	if test "x$withval" = xno; then
-		test_stream=false
-	fi
-)
-
-AM_CONDITIONAL(WITH_LIBWPS_STREAM, $test_stream )
 
 AC_MSG_CHECKING([for native Win32])
 case "$host" in
@@ -233,8 +222,7 @@ docs/Makefile
 docs/doxygen/Makefile
 build/Makefile
 build/win32/Makefile
-libwps-0.1.pc
-libwps-stream-0.1.pc
+libwps-0.2.pc
 libwps.spec
 libwps-zip
 autopackage/Makefile

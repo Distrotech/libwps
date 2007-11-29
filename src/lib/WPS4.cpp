@@ -24,7 +24,7 @@
 #include <string.h>
 #include "WPS4.h"
 #include "WPSDocument.h"
-#include "WPSStream.h"
+#include <libwpd-stream/WPXStream.h>
 #include "WPSHeader.h"
 #include "libwps_internal.h"
 
@@ -41,7 +41,7 @@ WPS4Parser public
  * This class parses Works version 2 through 4.
  *
  */
-WPS4Parser::WPS4Parser(WPSInputStream *input, WPSHeader * header) :
+WPS4Parser::WPS4Parser(WPXInputStream *input, WPSHeader * header) :
 	WPSParser(input, header),
 	oldTextAttributeBits(0),
 	offset_eot(0),
@@ -57,13 +57,13 @@ WPS4Parser::~WPS4Parser ()
 {
 }
 
-void WPS4Parser::parse(WPXHLListenerImpl *listenerImpl)
+void WPS4Parser::parse(WPXDocumentInterface *listenerImpl)
 {
 	std::list<WPSPageSpan> pageList;
 	
 	WPS_DEBUG_MSG(("WPS4Parser::parse()\n"));		
 
-	WPSInputStream *input = getInput();		
+	WPXInputStream *input = getInput();		
 
 	/* parse pages */
 	WPSPageSpan m_currentPage;
@@ -84,7 +84,7 @@ WPS4Parser private
  * Reads fonts table into memory.
  *
  */
-void WPS4Parser::readFontsTable(WPSInputStream * input)
+void WPS4Parser::readFontsTable(WPXInputStream * input)
 {
 	/* offset of FFNTB */
 	input->seek(0x5E, WPX_SEEK_SET);
@@ -142,7 +142,7 @@ void WPS4Parser::readFontsTable(WPSInputStream * input)
  * Return: true if more pages of this type exist, otherwise false
  *
  */
-bool WPS4Parser::readFODPage(WPSInputStream * input, std::vector<FOD> * FODs)
+bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 {
 	uint32_t page_offset = input->tell();
 
@@ -531,7 +531,7 @@ void WPS4Parser::appendCP1252(const uint8_t readVal, WPS4Listener *listener)
  * formatting information.
  *
  */
-void WPS4Parser::readText(WPSInputStream * input, WPS4Listener *listener)
+void WPS4Parser::readText(WPXInputStream * input, WPS4Listener *listener)
 {
 	oldTextAttributeBits = 0;
 	std::vector<FOD>::iterator FODs_iter;	
@@ -618,7 +618,7 @@ void WPS4Parser::readText(WPSInputStream * input, WPS4Listener *listener)
  * can only have one page format throughout the whole document.
  *
  */
-void WPS4Parser::parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *input)
+void WPS4Parser::parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input)
 {
 	/* read page format */
 	input->seek(0x64, WPX_SEEK_SET);
@@ -690,7 +690,7 @@ void WPS4Parser::parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *in
 	}
 }
 
-void WPS4Parser::parse(WPSInputStream *input, WPS4Listener *listener)
+void WPS4Parser::parse(WPXInputStream *input, WPS4Listener *listener)
 {
 	WPS_DEBUG_MSG(("WPS4Parser::parse()\n"));	
 
@@ -771,7 +771,7 @@ _WPS4ContentParsingState::~_WPS4ContentParsingState()
 WPS4ContentListener public
 */
 
-WPS4ContentListener::WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
+WPS4ContentListener::WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl) :
 	WPS4Listener(),
 	WPSContentListener(pageList, listenerImpl),
 	m_parseState(new WPS4ContentParsingState)
@@ -886,6 +886,6 @@ void WPS4ContentListener::_openParagraph()
 void WPS4ContentListener::_flushText()
 {
 	if (m_parseState->m_textBuffer.len())
-		m_listenerImpl->insertText(m_parseState->m_textBuffer);
+		m_documentInterface->insertText(m_parseState->m_textBuffer);
 	m_parseState->m_textBuffer.clear();
 }

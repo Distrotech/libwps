@@ -20,11 +20,10 @@
  */
 
 #include "libwps_internal.h"
-#include "WPSStream.h"
 #include <string>
 #include <locale.h>
 
-uint8_t readU8(WPSInputStream *input)
+uint8_t readU8(WPXInputStream *input)
 {
 	size_t numBytesRead;
 	uint8_t const * p = input->read(sizeof(uint8_t), numBytesRead);
@@ -35,14 +34,14 @@ uint8_t readU8(WPSInputStream *input)
 	return *(uint8_t const *)(p);
 }
 
-uint16_t readU16(WPSInputStream *input, bool bigendian)
+uint16_t readU16(WPXInputStream *input, bool bigendian)
 {
 	unsigned short p0 = (unsigned short)readU8(input);
 	unsigned short p1 = (unsigned short)readU8(input);
 	return p0|(p1<<8);
 }
 
-uint32_t readU32(WPSInputStream *input, bool bigendian)
+uint32_t readU32(WPXInputStream *input, bool bigendian)
 {
 	uint8_t p0 = readU8(input);
 	uint8_t p1 = readU8(input);

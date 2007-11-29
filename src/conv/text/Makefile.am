@@ -1,10 +1,4 @@
-if WITH_LIBWPS_STREAM
-target_wps2text = wps2text
-else
-target_wps2text =
-endif
-
-bin_PROGRAMS = $(target_wps2text)
+bin_PROGRAMS = wps2text
 
 AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS)
 
@@ -14,7 +8,6 @@ if STATIC_TOOLS
 
 wps2text_LDADD = \
 	../../lib/@WPS_OBJDIR@/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.a \
-	../../lib/@WPS_OBJDIR@/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.a \
 	$(LIBWPS_LIBS) @WPS2TEXT_WIN32_RESOURCE@
 wps2text_LDFLAGS = -all-static
 
@@ -22,7 +15,6 @@ else
 
 wps2text_LDADD = \
 	../../lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la \
-	../../lib/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la \
 	$(LIBWPS_LIBS) @WPS2TEXT_WIN32_RESOURCE@
 
 endif

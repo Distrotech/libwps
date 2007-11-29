@@ -23,12 +23,12 @@
 #ifndef WPSDOCUMENT_H
 #define WPSDOCUMENT_H
 
-#include "WPSStream.h"
+#include <libwpd-stream/WPXStream.h>
 
 enum WPSConfidence { WPS_CONFIDENCE_NONE=0, WPS_CONFIDENCE_POOR, WPS_CONFIDENCE_LIKELY, WPS_CONFIDENCE_GOOD, WPS_CONFIDENCE_EXCELLENT };
 enum WPSResult { WPS_OK, WPS_FILE_ACCESS_ERROR, WPS_PARSE_ERROR, WPS_OLE_ERROR, WPS_UNKNOWN_ERROR };
 
-class WPXHLListenerImpl;
+class WPXDocumentInterface;
 
 /**
 This class provides all the functions an application would need to parse 
@@ -38,8 +38,8 @@ Works documents.
 class WPSDocument
 {
 public:
-	static WPSConfidence isFileFormatSupported(WPSInputStream *input, bool partialContent);
-	static WPSResult parse(WPSInputStream *input, WPXHLListenerImpl *listenerImpl);
+	static WPSConfidence isFileFormatSupported(WPXInputStream *input, bool partialContent);
+	static WPSResult parse(WPXInputStream *input, WPXDocumentInterface *listenerImpl);
 };
 
 #endif /* WPSDOCUMENT_H */

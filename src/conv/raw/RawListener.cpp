@@ -307,6 +307,28 @@ void RawListenerImpl::closeEndnote()
 	_D(("closeEndnote()\n"), LC_OPEN_ENDNOTE);
 }
 
+void RawListenerImpl::openComment(const WPXPropertyList &propList)
+{
+	_U(("openComment(%s)\n", getPropString(propList).cstr()),
+	   LC_OPEN_COMMENT);
+}
+
+void RawListenerImpl::closeComment()
+{
+	_D(("closeComment()\n"), LC_OPEN_COMMENT);
+}
+
+void RawListenerImpl::openTextBox(const WPXPropertyList &propList)
+{
+	_U(("openTextBox(%s)\n", getPropString(propList).cstr()),
+	  LC_OPEN_TEXT_BOX);
+}
+
+void RawListenerImpl::closeTextBox()
+{
+	_D(("closeTextBox()\n"), LC_OPEN_TEXT_BOX);
+}
+	
 void RawListenerImpl::openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
 {
 	_U(("openTable(%s, columns: %s)\n", getPropString(propList).cstr(), getPropString(columns).cstr()), LC_OPEN_TABLE);
@@ -342,4 +364,20 @@ void RawListenerImpl::insertCoveredTableCell(const WPXPropertyList &propList)
 void RawListenerImpl::closeTable()
 {
 	_D(("closeTable()\n"), LC_OPEN_TABLE);
+}
+
+void RawListenerImpl::openFrame(const WPXPropertyList &propList)
+{
+	_U(("openFrame(%s)\n", getPropString(propList).cstr()),
+	  LC_OPEN_FRAME);
+}
+
+void RawListenerImpl::closeFrame()
+{
+	_D(("closeFrame()\n"), LC_OPEN_FRAME);
+}
+	
+void RawListenerImpl::insertBinaryObject(const WPXPropertyList & propList, const WPXBinaryData * /* object */)
+{
+	__iprintf("insertBinaryObject(%s)\n", getPropString(propList).cstr());
 }

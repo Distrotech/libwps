@@ -22,9 +22,9 @@
 #ifndef TEXTLISTENERIMPL_H
 #define TEXTLISTENERIMPL_H
 
-#include <libwpd/WPXHLListenerImpl.h>
+#include <libwpd/WPXDocumentInterface.h>
 
-class TextListenerImpl : public WPXHLListenerImpl
+class TextListenerImpl : public WPXDocumentInterface
 {
 public:
 	TextListenerImpl(const bool isInfo=false);
@@ -66,6 +66,10 @@ public:
 	virtual void closeFootnote() {}
 	virtual void openEndnote(const WPXPropertyList &propList) {}
 	virtual void closeEndnote() {}
+	virtual void openComment(const WPXPropertyList & /* propList */) {}
+	virtual void closeComment() {}
+	virtual void openTextBox(const WPXPropertyList & /* propList */) {}
+	virtual void closeTextBox() {}
 
 	virtual void openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns) {}
 	virtual void openTableRow(const WPXPropertyList &propList) {}
@@ -74,6 +78,11 @@ public:
 	virtual void closeTableCell() {}
 	virtual void insertCoveredTableCell(const WPXPropertyList &propList) {}
 	virtual void closeTable() {}
+
+	virtual void openFrame(const WPXPropertyList & /* propList */) {}
+	virtual void closeFrame() {}
+	
+	virtual void insertBinaryObject(const WPXPropertyList & /* propList */, const WPXBinaryData * /* object */) {}
 
 private:
 	unsigned int m_currentListLevel;

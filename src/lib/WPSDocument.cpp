@@ -38,7 +38,7 @@ This document contains both the libwps API specification and the normal libwps
 documentation.
 \section api_docs libwps API documentation
 The external libwps API is provided by the WPSDocument class. This class, combined
-with the libwpd's WPXHLListenerImpl class, are the only two classes that will be
+with the libwpd's WPXDocumentInterface class, are the only two classes that will be
 of interest for the application programmer using libwps.
 \section lib_docs libwps documentation
 If you are interrested in the structure of libwps itself, this whole document
@@ -55,7 +55,7 @@ represents the full contents of a MS Works file, or just the first X bytes
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-WPSConfidence WPSDocument::isFileFormatSupported(WPSInputStream *input, bool partialContent)
+WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input, bool partialContent)
 {
 	WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 
@@ -105,12 +105,12 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPSInputStream *input, bool par
 
 /**
 Parses the input stream content. It will make callbacks to the functions provided by a
-WPXHLListenerImpl class implementation when needed. This is often commonly called the
+WPXDocumentInterface class implementation when needed. This is often commonly called the
 'main parsing routine'.
 \param input The input stream
 \param listenerImpl A WPSListener implementation
 */
-WPSResult WPSDocument::parse(WPSInputStream *input, WPXHLListenerImpl *listenerImpl)
+WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *listenerImpl)
 {
 	WPSResult error = WPS_OK;
 

@@ -1,6 +1,5 @@
-/* libwps
- * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
- * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
+/* libwpd
+ * Copyright (C) 2005 William Lachance (wrlach@gmail.com)
  *  
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -16,24 +15,25 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwps.sourceforge.net
+ * For further information visit http://libwpd.sourceforge.net
  */
 
-/*
- * This file is in sync with CVS
- * /libwpd2/src/lib/WPXParser.cpp 1.18
+/* "This product is not manufactured, approved, or supported by 
+ * Corel Corporation or Corel Corporation Limited."
  */
 
-#include "WPSParser.h"
-#include "libwps_internal.h"
+#ifndef LIBWPS_TYPES_H
+#define LIBWPS_TYPES_H
 
-WPSParser::WPSParser(WPXInputStream *input, WPSHeader *header) :
-	m_input(input),
-	m_header(header)
-{
-}
+#ifdef _MSC_VER
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef signed short int16_t;
+typedef unsigned short uint16_t;
+typedef signed int int32_t;
+typedef unsigned int uint32_t;
+#else /* _MSC_VER */
+#include <inttypes.h>
+#endif /* _MSC_VER */
 
-WPSParser::~WPSParser()
-{
-	DELETEP(m_header);
-}
+#endif /* LIBWPS_TYPES_H */

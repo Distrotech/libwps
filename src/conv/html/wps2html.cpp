@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include "HtmlListenerImpl.h"
 #include "WPSDocument.h"
-#include "WPSStreamImplementation.h"
+#include <libwpd-stream/libwpd-stream.h>
 
 int main(int argc, char *argv[])
 {
@@ -32,18 +32,17 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	WPSInputStream* input = new WPSFileStream(argv[1]);
+	WPXFileStream input(argv[1]);
 
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(input, false);
+	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input, false);
 	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)
 	{
 		printf("ERROR: Unsupported file format!\n");
-		delete input;
 		return 1;
 	}
 	
 	HtmlListenerImpl listenerImpl;
-	WPSResult error = WPSDocument::parse(input, static_cast<WPXHLListenerImpl *>(&listenerImpl));
+	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
 
 	if (error == WPS_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
@@ -53,8 +52,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
 	else if (error != WPS_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
-
-	delete input;
 
 	if (error != WPS_OK)
 		return 1;

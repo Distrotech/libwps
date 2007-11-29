@@ -3,10 +3,10 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
+Name: libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
 Description: A library for reading Microsoft Works word processor documents
 Version: @VERSION@
-Requires: libwpd-0.8
-Libs: -L${libdir} -lwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
+Requires: libwpd-0.9 libwps-stream-0.9
+Libs: -L${libdir} -lwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
 Cflags: -I${includedir}/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
 

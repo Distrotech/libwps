@@ -129,10 +129,10 @@ _WPSContentParsingState::~_WPSContentParsingState()
 	DELETEP(m_highlightColor);
 }
 
-WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
+WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl) :
 	WPSListener(pageList),
 	m_ps(new WPSContentParsingState),
-	m_listenerImpl(listenerImpl)
+	m_documentInterface(listenerImpl)
 {
 	m_ps->m_nextPageSpanIter = pageList.begin();
 }
@@ -149,9 +149,9 @@ void WPSContentListener::startDocument()
 		// FIXME: this is stupid, we should store a property list filled with the relevant metadata
 		// and then pass that directly..
 
-		m_listenerImpl->setDocumentMetaData(m_metaData);
+		m_documentInterface->setDocumentMetaData(m_metaData);
 
-		m_listenerImpl->startDocument();
+		m_documentInterface->startDocument();
 	}
 	
 	m_ps->m_isDocumentStarted = true;
@@ -173,7 +173,7 @@ void WPSContentListener::endDocument()
 	// close the document nice and tight
 	_closeSection();
 	_closePageSpan();
-	m_listenerImpl->endDocument();
+	m_documentInterface->endDocument();
 }
 
 void WPSContentListener::_openSection()
@@ -201,13 +201,13 @@ void WPSContentListener::_openSection()
 		{
 			WPXPropertyList column;
 			// The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
-			column.insert("style:rel-width", (*iter).m_width * 1440.0f, TWIP);
+			column.insert("style:rel-width", (*iter).m_width * 1440.0f, WPX_TWIP);
 			column.insert("fo:margin-left", (*iter).m_leftGutter);
 			column.insert("fo:margin-right", (*iter).m_rightGutter);
 			columns.append(column);
 		}
 		if (!m_ps->m_isSectionOpened)
-			m_listenerImpl->openSection(propList, columns);
+			m_documentInterface->openSection(propList, columns);
 
 		m_ps->m_sectionAttributesChanged = false;
 		m_ps->m_isSectionOpened = true;
@@ -224,7 +224,7 @@ void WPSContentListener::_closeSection()
 			_closeListElement();
 		_changeList();
 
-		m_listenerImpl->closeSection();
+		m_documentInterface->closeSection();
 
 		m_ps->m_sectionAttributesChanged = false;
 		m_ps->m_isSectionOpened = false;
@@ -277,7 +277,7 @@ void WPSContentListener::_openPageSpan()
 	propList.insert("fo:margin-bottom", currentPage.getMarginBottom());
 	
 	if (!m_ps->m_isPageSpanOpened)
-		m_listenerImpl->openPageSpan(propList);
+		m_documentInterface->openPageSpan(propList);
 
 	m_ps->m_isPageSpanOpened = true;
 
@@ -326,14 +326,14 @@ void WPSContentListener::_openPageSpan()
 			}
 
 			if ((*iter).getType() == HEADER)
-				m_listenerImpl->openHeader(propList); 
+				m_documentInterface->openHeader(propList); 
 			else
-				m_listenerImpl->openFooter(propList); 
+				m_documentInterface->openFooter(propList); 
 
 			if ((*iter).getType() == HEADER)
-				m_listenerImpl->closeHeader();
+				m_documentInterface->closeHeader();
 			else
-				m_listenerImpl->closeFooter(); 
+				m_documentInterface->closeFooter(); 
 
 			WPS_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
 				       (*iter).getType(), (*iter).getOccurence()));
@@ -366,7 +366,7 @@ void WPSContentListener::_closePageSpan()
 		if (m_ps->m_isSectionOpened)
 			_closeSection();
 
-		m_listenerImpl->closePageSpan();
+		m_documentInterface->closePageSpan();
 	}
 	
 	m_ps->m_isPageSpanOpened = false;
@@ -390,7 +390,7 @@ void WPSContentListener::_openParagraph()
 		_appendParagraphProperties(propList);
 
 		if (!m_ps->m_isParagraphOpened)
-			m_listenerImpl->openParagraph(propList, tabStops);
+			m_documentInterface->openParagraph(propList, tabStops);
 
 		_resetParagraphState();
 	}
@@ -471,7 +471,7 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 	propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
 	propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
 	propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom);
-	propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, PERCENT);
+	propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, WPX_PERCENT);
 	if (m_ps->m_isParagraphColumnBreak)
 		propList.insert("fo:break-before", "column");
 	else if (m_ps->m_isParagraphPageBreak)
@@ -532,7 +532,7 @@ void WPSContentListener::_closeParagraph()
 		if (m_ps->m_isSpanOpened)
 			_closeSpan();
 
-		m_listenerImpl->closeParagraph();
+		m_documentInterface->closeParagraph();
 	}
 
 	m_ps->m_isParagraphOpened = false;
@@ -556,7 +556,7 @@ void WPSContentListener::_openListElement()
 		_getTabStops(tabStops);
 
 		if (!m_ps->m_isListElementOpened)
-			m_listenerImpl->openListElement(propList, tabStops);
+			m_documentInterface->openListElement(propList, tabStops);
 		_resetParagraphState(true);
 	}
 }
@@ -568,7 +568,7 @@ void WPSContentListener::_closeListElement()
 		if (m_ps->m_isSpanOpened)
 			_closeSpan();
 
-		m_listenerImpl->closeListElement();
+		m_documentInterface->closeListElement();
 	}
 	
 	m_ps->m_isListElementOpened = false;
@@ -655,7 +655,7 @@ void WPSContentListener::_openSpan()
 
 	if (m_ps->m_fontName)
 		propList.insert("style:font-name", m_ps->m_fontName->cstr());
-	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, POINT);
+	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, WPX_POINT);
 
 	// Here we give the priority to the redline bit over the font color.
 	// When redline finishes, the color is back.
@@ -667,7 +667,7 @@ void WPSContentListener::_openSpan()
 		propList.insert("style:text-background-color", _colorToString(m_ps->m_highlightColor));
 
 	if (!m_ps->m_isSpanOpened)
-		m_listenerImpl->openSpan(propList);
+		m_documentInterface->openSpan(propList);
 
 	m_ps->m_isSpanOpened = true;
 }
@@ -678,7 +678,7 @@ void WPSContentListener::_closeSpan()
 	{
 		_flushText();
 
-		m_listenerImpl->closeSpan();
+		m_documentInterface->closeSpan();
 	}
 	
 	m_ps->m_isSpanOpened = false;

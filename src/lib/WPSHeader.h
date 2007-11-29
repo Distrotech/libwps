@@ -27,24 +27,24 @@
 #ifndef WPSHEADER_H
 #define WPSHEADER_H
 
-#include <libwpd/libwpd_types.h>
-#include "WPSStream.h"
+#include "libwps_types.h"
+#include <libwpd-stream/WPXStream.h>
 
 class WPSHeader
 {
  public:	
-	WPSHeader(WPSInputStream *input, uint8_t majorVersion);
+	WPSHeader(WPXInputStream *input, uint8_t majorVersion);
 	virtual ~WPSHeader();
 
-	static WPSHeader * constructHeader(WPSInputStream *input);
+	static WPSHeader * constructHeader(WPXInputStream *input);
 		
-	WPSInputStream * getInput() const { return m_input; }
+	WPXInputStream * getInput() const { return m_input; }
 	const uint8_t getMajorVersion() const { return m_majorVersion; }
 
  private:
  	WPSHeader(const WPSHeader&);
  	WPSHeader& operator=(const WPSHeader&);
-	WPSInputStream * m_input;
+	WPXInputStream * m_input;
 	uint8_t m_majorVersion;
 };
 

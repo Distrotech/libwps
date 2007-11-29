@@ -29,7 +29,7 @@
 #include "libwps_internal.h"
 #include <string.h>
 	
-WPSHeader::WPSHeader(WPSInputStream *input, uint8_t majorVersion) :
+WPSHeader::WPSHeader(WPXInputStream *input, uint8_t majorVersion) :
 	m_input(input),
 	m_majorVersion(majorVersion)
 {
@@ -48,11 +48,11 @@ WPSHeader::~WPSHeader()
  * Works 3 without OLE, so those two types use the same parser.
  *
  */
-WPSHeader * WPSHeader::constructHeader(WPSInputStream *input)
+WPSHeader * WPSHeader::constructHeader(WPXInputStream *input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
 
-	WPSInputStream * document_mn0 = static_cast<WPSInputStream *>(input->getDocumentOLEStream("MN0"));	
+	WPXInputStream * document_mn0 = input->getDocumentOLEStream("MN0");	
 	if (document_mn0)
 	{
 		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));	
@@ -61,7 +61,7 @@ WPSHeader * WPSHeader::constructHeader(WPSInputStream *input)
 	else
 		DELETEP(document_mn0);
 	
-	WPSInputStream * document_contents = static_cast<WPSInputStream *>(input->getDocumentOLEStream("CONTENTS"));	
+	WPXInputStream * document_contents = input->getDocumentOLEStream("CONTENTS");	
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */

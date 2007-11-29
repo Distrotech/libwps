@@ -35,7 +35,7 @@ WPS8Parser public
 */
 
 
-WPS8Parser::WPS8Parser(WPSInputStream *input, WPSHeader * header) :
+WPS8Parser::WPS8Parser(WPXInputStream *input, WPSHeader * header) :
 	WPSParser(input, header)
 {
 }
@@ -44,13 +44,13 @@ WPS8Parser::~WPS8Parser ()
 {
 }
 
-void WPS8Parser::parse(WPXHLListenerImpl *listenerImpl)
+void WPS8Parser::parse(WPXDocumentInterface *listenerImpl)
 {
 	std::list<WPSPageSpan> pageList;
 	
 	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));		
 
-	WPSInputStream *input = getInput();		
+	WPXInputStream *input = getInput();		
 
 	/* parse pages */
 	WPSPageSpan m_currentPage;
@@ -71,7 +71,7 @@ WPS8Parser private
  * Reads fonts table into memory.
  *
  */
-void WPS8Parser::readFontsTable(WPSInputStream * input)
+void WPS8Parser::readFontsTable(WPXInputStream * input)
 {
 	/* find the fonts page offset, fonts array offset, and ending offset */
 	HeaderIndexMultiMap::iterator pos;
@@ -119,7 +119,7 @@ void WPS8Parser::readFontsTable(WPSInputStream * input)
 
 #define SURROGATE_VALUE(h,l) (((h) - 0xd800) * 0x400 + (l) - 0xdc00 + 0x10000)
 
-void WPS8Parser::appendUTF16LE(WPSInputStream *input, WPS8Listener *listener)
+void WPS8Parser::appendUTF16LE(WPXInputStream *input, WPS8Listener *listener)
 {
 	uint16_t high_surrogate = 0;
 	bool fail = false;
@@ -200,7 +200,7 @@ void WPS8Parser::appendUTF16LE(WPSInputStream *input, WPS8Listener *listener)
 
 // fixme: this method might turn out to be like WPS4Parser::readText()
 
-void WPS8Parser::readText(WPSInputStream * input, WPS8Listener *listener)
+void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
 {
 	WPS_DEBUG_MSG(("WPS8Parser::readText()\n"));
 
@@ -290,7 +290,7 @@ void WPS8Parser::readText(WPSInputStream * input, WPS8Listener *listener)
 
 //fixme: this readFODPage is mostly the same as in WPS4
 
-bool WPS8Parser::readFODPage(WPSInputStream * input, std::vector<FOD> * FODs, uint16_t page_size)
+bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, uint16_t page_size)
 {
 	uint32_t page_offset = input->tell();
 	uint16_t cfod = readU16(input); /* number of FODs on this page */
@@ -406,7 +406,7 @@ bool WPS8Parser::readFODPage(WPSInputStream * input, std::vector<FOD> * FODs, ui
  *
  */
 
-void WPS8Parser::parseHeaderIndexEntry(WPSInputStream * input)
+void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 {
 	WPS_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos 0x%lX\n", input->tell()));
 
@@ -471,7 +471,7 @@ void WPS8Parser::parseHeaderIndexEntry(WPSInputStream * input)
  * the CONTENTS stream.
  * 
  */
-void WPS8Parser::parseHeaderIndex(WPSInputStream * input)
+void WPS8Parser::parseHeaderIndex(WPXInputStream * input)
 {
 	input->seek(0x0C, WPX_SEEK_SET);		
 	uint16_t n_entries = readU16(input);
@@ -525,7 +525,7 @@ void WPS8Parser::parseHeaderIndex(WPSInputStream * input)
  * can only have one page format throughout the whole document.
  *
  */
-void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *input)
+void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input)
 {
 	//fixme: this method doesn't do much
 
@@ -534,7 +534,7 @@ void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *in
 	pageList.push_back(ps);
 }
 
-void WPS8Parser::parse(WPSInputStream *input, WPS8Listener *listener)
+void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 {
 	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));	
 
@@ -818,7 +818,7 @@ _WPS8ContentParsingState::~_WPS8ContentParsingState()
 WPS8ContentListener public
 */
 
-WPS8ContentListener::WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
+WPS8ContentListener::WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl) :
 	WPS8Listener(),
 	WPSContentListener(pageList, listenerImpl),
 	m_parseState(new WPS8ContentParsingState)
@@ -926,6 +926,6 @@ void WPS8ContentListener::_openParagraph()
 void WPS8ContentListener::_flushText()
 {
 	if (m_parseState->m_textBuffer.len())
-		m_listenerImpl->insertText(m_parseState->m_textBuffer);
+		m_documentInterface->insertText(m_parseState->m_textBuffer);
 	m_parseState->m_textBuffer.clear();
 }

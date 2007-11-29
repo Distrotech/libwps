@@ -31,7 +31,7 @@
 #include "WPSPageSpan.h"
 #include "WPSListener.h"
 #include <libwpd/WPXPropertyListVector.h>
-#include <libwpd/WPXHLListenerImpl.h>
+#include <libwpd/WPXDocumentInterface.h>
 #include <vector>
 #include <list>
 #include <set>
@@ -119,7 +119,7 @@ private:
 class WPSContentListener : public WPSListener
 {
 protected:
-	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
+	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl);
 	virtual ~WPSContentListener();
 
 	void startDocument();
@@ -129,7 +129,7 @@ protected:
 	void justificationChange(const uint8_t justification);
 
 	WPSContentParsingState *m_ps; // parse state
-	WPXHLListenerImpl * m_listenerImpl;
+	WPXDocumentInterface * m_documentInterface;
 	WPXPropertyList m_metaData;
 
 	virtual void _flushText() = 0;
