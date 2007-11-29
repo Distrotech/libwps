@@ -99,7 +99,7 @@ public:
 	WPS8Parser(WPXInputStream *input, WPSHeader * header);
 	~WPS8Parser();
 
-	void parse(WPXDocumentInterface *listenerImpl);
+	void parse(WPXDocumentInterface *documentInterface);
 private:
 	void readFontsTable(WPXInputStream * input);
 	void appendUTF16LE(WPXInputStream *input, WPS8Listener *listener);
@@ -132,7 +132,7 @@ struct _WPS8ContentParsingState
 class WPS8ContentListener : public WPS8Listener, protected WPSContentListener
 {
 public:
-	WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl);
+	WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
 	~WPS8ContentListener();
 
 	void startDocument() { WPSContentListener::startDocument(); };

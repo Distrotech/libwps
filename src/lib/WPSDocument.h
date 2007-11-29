@@ -39,7 +39,7 @@ class WPSDocument
 {
 public:
 	static WPSConfidence isFileFormatSupported(WPXInputStream *input, bool partialContent);
-	static WPSResult parse(WPXInputStream *input, WPXDocumentInterface *listenerImpl);
+	static WPSResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
 };
 
 #endif /* WPSDOCUMENT_H */

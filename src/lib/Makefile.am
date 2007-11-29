@@ -41,10 +41,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSDocument.cpp \
 	WPSContentListener.cpp \
 	WPSHeader.cpp \
-	WPSListener.cpp \
 	WPSPageSpan.cpp \
 	WPSParser.cpp \
-	WPSStylesListener.cpp \
 	libwps.h \
 	libwps_internal.h \
 	libwps_types.h \
@@ -55,10 +53,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSContentListener.h \
 	WPSHeader.h \
 	WPSFileStructure.h \
-	WPSListener.h \
 	WPSPageSpan.h \
-	WPSParser.h \
-	WPSStylesListener.h
+	WPSParser.h
 
 if OS_WIN32
 

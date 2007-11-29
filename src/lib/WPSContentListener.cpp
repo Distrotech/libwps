@@ -129,10 +129,11 @@ _WPSContentParsingState::~_WPSContentParsingState()
 	DELETEP(m_highlightColor);
 }
 
-WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl) :
-	WPSListener(pageList),
+WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
 	m_ps(new WPSContentParsingState),
-	m_documentInterface(listenerImpl)
+	m_documentInterface(documentInterface),
+	m_pageList(pageList),
+	m_isUndoOn(false)
 {
 	m_ps->m_nextPageSpanIter = pageList.begin();
 }

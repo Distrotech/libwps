@@ -87,7 +87,7 @@ public:
 	WPS4Parser(WPXInputStream *input, WPSHeader * header);
 	~WPS4Parser();
 
-	void parse(WPXDocumentInterface *listenerImpl);
+	void parse(WPXDocumentInterface *documentInterface);
 private:
 	void parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input);
 	void parse(WPXInputStream *stream, WPS4Listener *listener);
@@ -121,7 +121,7 @@ struct _WPS4ContentParsingState
 class WPS4ContentListener : public WPS4Listener, protected WPSContentListener
 {
 public:
-	WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl);
+	WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
 	~WPS4ContentListener();
 
 	void startDocument() { WPSContentListener::startDocument(); };

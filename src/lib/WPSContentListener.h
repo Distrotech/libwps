@@ -29,7 +29,6 @@
 
 #include "libwps_internal.h"
 #include "WPSPageSpan.h"
-#include "WPSListener.h"
 #include <libwpd/WPXPropertyListVector.h>
 #include <libwpd/WPXDocumentInterface.h>
 #include <vector>
@@ -116,10 +115,10 @@ private:
 	_WPSContentParsingState& operator=(const _WPSContentParsingState&);
 };
 
-class WPSContentListener : public WPSListener
+class WPSContentListener
 {
 protected:
-	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl);
+	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
 	virtual ~WPSContentListener();
 
 	void startDocument();
@@ -161,6 +160,13 @@ private:
 	WPSContentListener& operator=(const WPSContentListener&);
 	WPXString _colorToString(const RGBSColor * color);
 	WPXString _mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor);
+
+	bool isUndoOn() { return m_isUndoOn; }
+	void setUndoOn(bool isUndoOn) { m_isUndoOn = isUndoOn; }
+
+	std::list<WPSPageSpan> &m_pageList;
+	
+	bool m_isUndoOn;
 };
 
 #endif /* WPSCONTENTLISTENER_H */

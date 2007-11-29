@@ -108,9 +108,9 @@ Parses the input stream content. It will make callbacks to the functions provide
 WPXDocumentInterface class implementation when needed. This is often commonly called the
 'main parsing routine'.
 \param input The input stream
-\param listenerImpl A WPSListener implementation
+\param documentInterface A WPSListener implementation
 */
-WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *listenerImpl)
+WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *documentInterface)
 {
 	WPSResult error = WPS_OK;
 
@@ -130,7 +130,7 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *listen
 			case 5:
 			{
 				WPS8Parser *parser = new WPS8Parser(header->getInput(), header);
-				parser->parse(listenerImpl);
+				parser->parse(documentInterface);
 				DELETEP(parser);		
 				break;
 			}
@@ -140,7 +140,7 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *listen
 			case 2:
 			{
 				WPS4Parser *parser = new WPS4Parser(header->getInput(), header);
-				parser->parse(listenerImpl);
+				parser->parse(documentInterface);
 				DELETEP(parser);	
 				break;
 			}

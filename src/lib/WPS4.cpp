@@ -57,7 +57,7 @@ WPS4Parser::~WPS4Parser ()
 {
 }
 
-void WPS4Parser::parse(WPXDocumentInterface *listenerImpl)
+void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
 {
 	std::list<WPSPageSpan> pageList;
 	
@@ -70,7 +70,7 @@ void WPS4Parser::parse(WPXDocumentInterface *listenerImpl)
 	parsePages(pageList, input);		
 	
 	/* parse document */
-	WPS4ContentListener listener(pageList, listenerImpl);
+	WPS4ContentListener listener(pageList, documentInterface);
 	parse(input, &listener);	
 }
 
@@ -771,9 +771,9 @@ _WPS4ContentParsingState::~_WPS4ContentParsingState()
 WPS4ContentListener public
 */
 
-WPS4ContentListener::WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *listenerImpl) :
+WPS4ContentListener::WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
 	WPS4Listener(),
-	WPSContentListener(pageList, listenerImpl),
+	WPSContentListener(pageList, documentInterface),
 	m_parseState(new WPS4ContentParsingState)
 {
 }
