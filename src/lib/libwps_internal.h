@@ -24,10 +24,20 @@
 #ifdef DEBUG
 #include <bitset>
 #endif
-#include <libwpd-stream/WPXStream.h>
-#include <libwpd/WPXString.h>
+#include <libwpd-stream/libwpd-stream.h>
+#include <libwpd/libwpd.h>
 #include <string>
-#include "libwps_types.h"
+
+#ifdef _MSC_VER
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef signed short int16_t;
+typedef unsigned short uint16_t;
+typedef signed int int32_t;
+typedef unsigned int uint32_t;
+#else /* _MSC_VER */
+#include <inttypes.h>
+#endif /* _MSC_VER */
 
 /* Various functions/defines that need not/should not be exported externally */
 
@@ -48,26 +58,16 @@
                   (((uint8_t const *)(p))[2] << 16) |    \
                   (((uint8_t const *)(p))[3] << 24))
 
-// add more of these as needed for byteswapping
-// (the 8-bit functions are just there to make things consistent)
 uint8_t readU8(WPXInputStream *input); 
 uint16_t readU16(WPXInputStream *input, bool bigendian=false);
 uint32_t readU32(WPXInputStream *input, bool bigendian=false);
 
 // Various helper structures for the parser..
 
-uint16_t fixedPointToWPUs(const uint32_t fixedPointNumber);
-
-enum WPSNumberingType { ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
-enum WPSNoteType { FOOTNOTE, ENDNOTE };
 enum WPSHeaderFooterType { HEADER, FOOTER };
 enum WPSHeaderFooterInternalType { HEADER_A, HEADER_B, FOOTER_A, FOOTER_B, DUMMY };
 enum WPSHeaderFooterOccurence { ODD, EVEN, ALL, NEVER };
 enum WPSFormOrientation { PORTRAIT, LANDSCAPE };
-enum WPSTabAlignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
-enum WPSVerticalAlignment { TOP, MIDDLE, BOTTOM, FULL };
-
-enum WPSTextColumnType { NEWSPAPER, NEWSPAPER_VERTICAL_BALANCE, PARALLEL, PARALLEL_PROTECT };
 
 // ATTRIBUTE bits
 #define WPS_EXTRA_LARGE_BIT 1
