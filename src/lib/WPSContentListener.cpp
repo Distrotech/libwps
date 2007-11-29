@@ -75,15 +75,11 @@ _WPSContentParsingState::_WPSContentParsingState() :
 
 	m_isSpanOpened(false),
 	m_isParagraphOpened(false),
-	m_isListElementOpened(false),
-	m_cellAttributeBits(0),
 	m_paragraphJustificationBeforeColumns(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
 
 	m_numPagesRemainingInSpan(0),
 
 	m_sectionAttributesChanged(false),
-	m_numColumns(1),
-	m_isTextColumnWithoutParagraph(false),
 
 	m_pageFormLength(11.0f),
 	m_pageFormWidth(8.5f),
@@ -102,16 +98,12 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_sectionMarginRight(0.0f),
 	m_leftMarginByParagraphMarginChange(0.0f),
 	m_rightMarginByParagraphMarginChange(0.0f),
-	m_leftMarginByTabs(0.0f),
-	m_rightMarginByTabs(0.0f),
 	
 	m_listReferencePosition(0.0f),
 	m_listBeginPosition(0.0f),
 
 	m_paragraphTextIndent(0.0f),
-	m_textIndentByParagraphIndentChange(0.0f),
-	m_textIndentByTabs(0.0f),
-	m_currentListLevel(0),
+	m_textIndentByParagraphIndentChange(0.0f)
 {
 }
 
@@ -156,11 +148,6 @@ void WPSContentListener::endDocument()
 
 	if (m_ps->m_isParagraphOpened)
 		_closeParagraph();
-	if (m_ps->m_isListElementOpened)
-		_closeListElement();
-
-	m_ps->m_currentListLevel = 0;
-	_changeList(); // flush the list exterior
 
 	// close the document nice and tight
 	_closeSection();
@@ -179,13 +166,6 @@ void WPSContentListener::_openSection()
 
 		propList.insert("fo:margin-left", m_ps->m_sectionMarginLeft);
 		propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
-		if (m_ps->m_numColumns > 1)
-		{
-			propList.insert("fo:margin-bottom", 1.0f);
-			propList.insert("text:dont-balance-text-columns", false);
-		}
-		else
-			propList.insert("fo:margin-bottom", 0.0f);
 
 		WPXPropertyListVector columns;
 		if (!m_ps->m_isSectionOpened)
@@ -202,9 +182,6 @@ void WPSContentListener::_closeSection()
 	{
 		if (m_ps->m_isParagraphOpened)
 			_closeParagraph();
-		if (m_ps->m_isListElementOpened)
-			_closeListElement();
-		_changeList();
 
 		m_documentInterface->closeSection();
 
@@ -280,10 +257,8 @@ void WPSContentListener::_openPageSpan()
 	m_ps->m_listReferencePosition -= m_ps->m_pageMarginLeft;
 	m_ps->m_listBeginPosition -= m_ps->m_pageMarginLeft;
 
-	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange
-			+ m_ps->m_leftMarginByTabs;
-	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange
-			+ m_ps->m_rightMarginByTabs;
+	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange;
+	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange;
 
 	std::vector<WPSHeaderFooter> headerFooterList = currentPage.getHeaderFooterList();
 	for (std::vector<WPSHeaderFooter>::iterator iter = headerFooterList.begin(); iter != headerFooterList.end(); iter++)
@@ -330,12 +305,10 @@ void WPSContentListener::_openPageSpan()
 	m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
 	m_ps->m_pageMarginRight = currentPage.getMarginRight();
 
-	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange
-			+ m_ps->m_leftMarginByTabs;
-	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange
-			+ m_ps->m_rightMarginByTabs;
+	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange;
+	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange;
 
-	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
+	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange;
 
 	m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
 	m_ps->m_nextPageSpanIter++;
@@ -357,7 +330,7 @@ void WPSContentListener::_closePageSpan()
 
 void WPSContentListener::_openParagraph()
 {
-	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+	if (!m_ps->m_isParagraphOpened)
 	{
 		if (m_ps->m_sectionAttributesChanged)
 			_closeSection();
@@ -377,28 +350,14 @@ void WPSContentListener::_openParagraph()
 	}
 }
 
-void WPSContentListener::_resetParagraphState(const bool isListElement)
+void WPSContentListener::_resetParagraphState()
 {
 	m_ps->m_isParagraphColumnBreak = false;
 	m_ps->m_isParagraphPageBreak = false;
-	if (isListElement)
-	{
-		m_ps->m_isListElementOpened = true;
-		m_ps->m_isParagraphOpened = false;
-	}
-	else
-	{
-		m_ps->m_isListElementOpened = false;
-		m_ps->m_isParagraphOpened = true;
-	}
+	m_ps->m_isParagraphOpened = true;
 	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange;
 	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange;
-	m_ps->m_leftMarginByTabs = 0.0f;
-	m_ps->m_rightMarginByTabs = 0.0f;
 	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange;
-	m_ps->m_textIndentByTabs = 0.0f;
-	m_ps->m_isCellWithoutParagraph = false;
-	m_ps->m_isTextColumnWithoutParagraph = false;
 	m_ps->m_isHeaderFooterWithoutParagraph = false;
 	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
 	m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
@@ -428,20 +387,12 @@ void WPSContentListener::_appendJustification(WPXPropertyList &propList, int jus
 	}
 }
 
-void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
+void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList)
 {
 	_appendJustification(propList, m_ps->m_paragraphJustification);
 
-	if (isListElement)
-	{
-		propList.insert("fo:margin-left", (m_ps->m_listBeginPosition - m_ps->m_paragraphTextIndent));
-		propList.insert("fo:text-indent", m_ps->m_paragraphTextIndent);
-	}
-	else
-	{
-		propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
-		propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
-	}
+	propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
+	propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
 
 	propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
 	propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
@@ -464,42 +415,6 @@ void WPSContentListener::_closeParagraph()
 	}
 
 	m_ps->m_isParagraphOpened = false;
-	m_ps->m_currentListLevel = 0;
-
-	if (m_ps->m_isPageSpanBreakDeferred)
-		_closePageSpan();
-}
-
-void WPSContentListener::_openListElement()
-{
-	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
-	{
-		if (!m_ps->m_isSectionOpened)
-			_openSection();
-
-		WPXPropertyList propList;
-		_appendParagraphProperties(propList, true);
-
-		WPXPropertyListVector tabStops;
-
-		if (!m_ps->m_isListElementOpened)
-			m_documentInterface->openListElement(propList, tabStops);
-		_resetParagraphState(true);
-	}
-}
-
-void WPSContentListener::_closeListElement()
-{
-	if (m_ps->m_isListElementOpened)
-	{
-		if (m_ps->m_isSpanOpened)
-			_closeSpan();
-
-		m_documentInterface->closeListElement();
-	}
-	
-	m_ps->m_isListElementOpened = false;
-	m_ps->m_currentListLevel = 0;
 
 	if (m_ps->m_isPageSpanBreakDeferred)
 		_closePageSpan();
@@ -509,23 +424,11 @@ const float WPS_DEFAULT_SUPER_SUB_SCRIPT = 58.0f;
 
 void WPSContentListener::_openSpan()
 {
-	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
-		_changeList();
-		if (m_ps->m_currentListLevel == 0)
-			_openParagraph();
-		else
-			_openListElement();
+	if (!m_ps->m_isParagraphOpened)
+		_openParagraph();
 	
-	// The behaviour of WP6+ is following: if an attribute bit is set in the cell attributes, we cannot
-	// unset it; if it is set, we can set or unset it
-	uint32_t attributeBits = (m_ps->m_textAttributeBits | m_ps->m_cellAttributeBits);
-	uint8_t fontSizeAttributes;
-	float fontSizeChange;
-	// the font size attribute bits are mutually exclusive and the cell attributes prevail
-	if ((m_ps->m_cellAttributeBits & 0x0000001f) != 0x00000000)
-		fontSizeAttributes = (uint8_t)(m_ps->m_cellAttributeBits & 0x0000001f);
-	else
-		fontSizeAttributes = (uint8_t)(m_ps->m_textAttributeBits & 0x0000001f);
+	uint8_t fontSizeAttributes = (uint8_t)(m_ps->m_textAttributeBits & 0x0000001f);
+	float fontSizeChange = 0.0f;
 	switch (fontSizeAttributes)
 	{
 	case 0x01:  // Extra large
@@ -549,35 +452,35 @@ void WPSContentListener::_openSpan()
 	}
 
 	WPXPropertyList propList;
- 	if (attributeBits & WPS_SUPERSCRIPT_BIT) {
+ 	if (m_ps->m_textAttributeBits & WPS_SUPERSCRIPT_BIT) {
 		WPXString sSuperScript("super ");
 		sSuperScript.append(doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
 		sSuperScript.append("%");
 		propList.insert("style:text-position", sSuperScript);
 	}
- 	else if (attributeBits & WPS_SUBSCRIPT_BIT) {
+ 	else if (m_ps->m_textAttributeBits & WPS_SUBSCRIPT_BIT) {
 		WPXString sSubScript("sub ");
 		sSubScript.append(doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
 		sSubScript.append("%");
 		propList.insert("style:text-position", sSubScript);
 	}
-	if (attributeBits & WPS_ITALICS_BIT)
+	if (m_ps->m_textAttributeBits & WPS_ITALICS_BIT)
 		propList.insert("fo:font-style", "italic");
-	if (attributeBits & WPS_BOLD_BIT)
+	if (m_ps->m_textAttributeBits & WPS_BOLD_BIT)
 		propList.insert("fo:font-weight", "bold");
-	if (attributeBits & WPS_STRIKEOUT_BIT)
+	if (m_ps->m_textAttributeBits & WPS_STRIKEOUT_BIT)
 		propList.insert("style:text-crossing-out", "single-line");
-	if (attributeBits & WPS_DOUBLE_UNDERLINE_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_DOUBLE_UNDERLINE_BIT) 
 		propList.insert("style:text-underline", "double");
- 	else if (attributeBits & WPS_UNDERLINE_BIT) 
+ 	else if (m_ps->m_textAttributeBits & WPS_UNDERLINE_BIT) 
 		propList.insert("style:text-underline", "single");
-	if (attributeBits & WPS_OUTLINE_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_OUTLINE_BIT) 
 		propList.insert("style:text-outline", "true");
-	if (attributeBits & WPS_SMALL_CAPS_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_SMALL_CAPS_BIT) 
 		propList.insert("fo:font-variant", "small-caps");
-	if (attributeBits & WPS_BLINK_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_BLINK_BIT) 
 		propList.insert("style:text-blinking", "true");
-	if (attributeBits & WPS_SHADOW_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_SHADOW_BIT) 
 		propList.insert("fo:text-shadow", "1pt 1pt");
 
 	if (m_ps->m_fontName)
@@ -586,7 +489,7 @@ void WPSContentListener::_openSpan()
 
 	// Here we give the priority to the redline bit over the font color.
 	// When redline finishes, the color is back.
-	if (attributeBits & WPS_REDLINE_BIT)
+	if (m_ps->m_textAttributeBits & WPS_REDLINE_BIT)
 		propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
 	else
 		propList.insert("fo:color", "#000000");
@@ -620,18 +523,13 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 				_openSpan();				
 			if (m_ps->m_isParagraphOpened)
 				_closeParagraph();
-			if (m_ps->m_isListElementOpened)
-				_closeListElement();
 			m_ps->m_isParagraphColumnBreak = true;
-			m_ps->m_isTextColumnWithoutParagraph = true;
 			break;
 		case WPS_PAGE_BREAK:
 			if (!m_ps->m_isPageSpanOpened)
 				_openSpan();				
 			if (m_ps->m_isParagraphOpened)
 				_closeParagraph();
-			if (m_ps->m_isListElementOpened)
-				_closeListElement();
 			m_ps->m_isParagraphPageBreak = true;
 			break;
 			// TODO: (.. line break?)
@@ -645,10 +543,10 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 				m_ps->m_numPagesRemainingInSpan--;
 			else
 			{
-			    if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
-				_closePageSpan();
+				if (!m_ps->m_isParagraphOpened)
+					_closePageSpan();
 			    else
-				m_ps->m_isPageSpanBreakDeferred = true;
+					m_ps->m_isPageSpanBreakDeferred = true;
 			}
 		default:
 			break;

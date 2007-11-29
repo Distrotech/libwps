@@ -70,8 +70,7 @@ uninstall-local: uninstall-libtool-import-lib
 
 EXTRA_DIST = \
 	makefile.mk \
-	libwps.rc.in \
-	libwps-stream.rc.in
+	libwps.rc.in
 
 # These may be in the builddir too
 BUILD_EXTRA_DIST = \

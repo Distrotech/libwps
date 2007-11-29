@@ -58,20 +58,14 @@ struct _WPSContentParsingState
 
 	bool m_isSpanOpened;
 	bool m_isParagraphOpened;
-	bool m_isListElementOpened;
 
 	std::vector<unsigned int> m_numRowsToSkip;
-	bool m_wasHeaderRow;
-	bool m_isCellWithoutParagraph;
-	uint32_t m_cellAttributeBits;
 	uint8_t m_paragraphJustificationBeforeColumns;
 	
 	std::list<WPSPageSpan>::iterator m_nextPageSpanIter;
 	int m_numPagesRemainingInSpan;
 
 	bool m_sectionAttributesChanged;
-	int m_numColumns;
-	bool m_isTextColumnWithoutParagraph;
 
 	float m_pageFormLength;
 	float m_pageFormWidth;
@@ -89,17 +83,12 @@ struct _WPSContentParsingState
 	float m_sectionMarginRight; // as section margin change 
 	float m_leftMarginByParagraphMarginChange;  // part of the margin due to the PARAGRAPH
 	float m_rightMarginByParagraphMarginChange; // margin change (in WP6)
-	float m_leftMarginByTabs;  // part of the margin due to the LEFT or LEFT/RIGHT Indent; the
-	float m_rightMarginByTabs; // only part of the margin that is reset at the end of a paragraph
 
 	float m_listReferencePosition; // position from the left page margin of the list number/bullet
 	float m_listBeginPosition; // position from the left page margin of the beginning of the list
 
 	float m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
 	float m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
-	float m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
-
-	uint8_t m_currentListLevel;
 
 private:
 	_WPSContentParsingState(const _WPSContentParsingState&);
@@ -122,7 +111,6 @@ protected:
 	WPXPropertyList m_metaData;
 
 	virtual void _flushText() = 0;
-	virtual void _changeList() = 0;
 
 	void _openSection();
 	void _closeSection();
@@ -130,14 +118,11 @@ protected:
 	void _openPageSpan();
 	void _closePageSpan();
 
-	void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
+	void _appendParagraphProperties(WPXPropertyList &propList);
 	void _appendJustification(WPXPropertyList &propList, int justification);
-	void _resetParagraphState(const bool isListElement=false);
+	void _resetParagraphState();
 	virtual void _openParagraph();
 	void _closeParagraph();
-
-	void _openListElement();
-	void _closeListElement();
 
 	void _openSpan();
 	void _closeSpan();

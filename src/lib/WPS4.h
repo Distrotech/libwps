@@ -63,8 +63,6 @@ public:
 	virtual void insertEOL() = 0;
 	virtual void lineSpacingChange(const float lineSpacing) = 0;
 	virtual void attributeChange(const bool isOn, const uint8_t attribute) = 0;
-	virtual void pageMarginChange(const uint8_t side, const uint16_t margin) = 0;
-	virtual void pageFormChange(const uint16_t length, const uint16_t width, const WPSFormOrientation orientation, const bool isPersistent) = 0;
 	virtual void endDocument() = 0;
 
 	virtual void setTextFont(const WPXString fontName) = 0;
@@ -121,8 +119,6 @@ public:
 	void insertEOL();
 	void attributeChange(const bool isOn, const uint8_t attribute);
 	void lineSpacingChange(const float lineSpacing) { WPSContentListener::lineSpacingChange(lineSpacing); };
-	void pageMarginChange(const uint8_t side, const uint16_t margin) {};
-	void pageFormChange(const uint16_t length, const uint16_t width, const WPSFormOrientation orientation, const bool isPersistent) {};
 	void endDocument() { WPSContentListener::endDocument(); };
 
 	void setTextFont(const WPXString fontName);
@@ -132,7 +128,6 @@ protected:
 	void _openParagraph();
 
 	void _flushText();
-	void _changeList() {};
 	
 private:
 	WPS4ContentListener(const WPS4ContentListener&);
