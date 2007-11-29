@@ -6,7 +6,7 @@ includedir=@includedir@
 Name: libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
 Description: A library for reading Microsoft Works word processor documents
 Version: @VERSION@
-Requires: libwpd-0.9 libwps-stream-0.9
+Requires: libwpd-0.9 libwpd-stream-0.9
 Libs: -L${libdir} -lwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
 Cflags: -I${includedir}/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
 
