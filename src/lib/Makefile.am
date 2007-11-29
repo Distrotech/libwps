@@ -47,6 +47,7 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSStylesListener.cpp \
 	libwps.h \
 	libwps_internal.h \
+	libwps_types.h \
 	WPS.h \
 	WPS4.h \
 	WPS8.h \

@@ -217,7 +217,6 @@ src/conv/text/wps2text.rc
 src/lib/Makefile
 src/lib/libwps.rc
 src/lib/libwps-stream.rc
-src/test/Makefile
 docs/Makefile
 docs/doxygen/Makefile
 build/Makefile

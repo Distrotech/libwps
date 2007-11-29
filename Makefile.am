@@ -9,7 +9,6 @@ EXTRA_DIST = \
 	libwps.spec \
 	libwps.spec.in \
 	libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc.in \
-	libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc.in \
 	libwps-zip.in \
 	CHANGES \
 	COPYING \
@@ -27,9 +26,6 @@ rpm: dist
 
 zip: install
 	sh libwps-zip
-
-check: all
-	cd src/test && make check
 
 if WITH_LIBWPS_DOCS
 install-data-local:
