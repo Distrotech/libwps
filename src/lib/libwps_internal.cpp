@@ -50,35 +50,6 @@ uint32_t readU32(WPXInputStream *input, bool bigendian)
         return (uint32_t) ((p0<<0)|(p1<<8)|(p2<<16)|(p3<<24));
 }
 
-_WPSTabStop::_WPSTabStop(float position, WPSTabAlignment alignment, uint16_t leaderCharacter, uint8_t leaderNumSpaces)
-	:	m_position(position),
-		m_alignment(alignment),
-		m_leaderCharacter(leaderCharacter),
-		m_leaderNumSpaces(leaderNumSpaces)
-{
-}
-
-_WPSTabStop::_WPSTabStop()
-	:	m_position(0.0f),
-		m_alignment(LEFT),
-		m_leaderCharacter('\0'),
-		m_leaderNumSpaces(0)
-{
-}
-
-_WPSColumnDefinition::_WPSColumnDefinition()
-	:	m_width(0.0f),
-		m_leftGutter(0.0f),
-		m_rightGutter(0.0f)
-{
-}
-
-_WPSColumnProperties::_WPSColumnProperties()
-	:	m_attributes(0x00000000),
-		m_alignment(0x00)
-{
-}
-
 #ifdef DEBUG
 std::string to_bits(std::string s)
 {

@@ -846,15 +846,6 @@ void WPS4ContentListener::attributeChange(const uint32_t attributeBits)
 }
 #endif
 
-void WPS4ContentListener::marginChange(const uint8_t side, const uint16_t margin) {}
-void WPS4ContentListener::indentFirstLineChange(const int16_t offset) {}
-void WPS4ContentListener::columnChange(const WPSTextColumnType columnType, const uint8_t numColumns, const std::vector<float> &columnWidth,
-				const std::vector<bool> &isFixedWidth) {}
-
-void WPS4ContentListener::undoChange(const uint8_t undoType, const uint16_t undoLevel) {}
-void WPS4ContentListener::justificationChange(const uint8_t justification) {}
-void WPS4ContentListener::setTextColor(const RGBSColor * fontColor) { }
-
 void WPS4ContentListener::setTextFont(const WPXString fontName)
 {
 	_closeSpan();
@@ -866,12 +857,6 @@ void WPS4ContentListener::setFontSize(const uint16_t fontSize)
 	_closeSpan();
 	m_ps->m_fontSize=float(fontSize);
 }
-
-void WPS4ContentListener::insertPageNumber(const WPXString &pageNumber) {}
-void WPS4ContentListener::insertNoteReference(const WPXString &noteReference) {}
-void WPS4ContentListener::insertNote(const WPSNoteType noteType) {}
-void WPS4ContentListener::suppressPage(const uint16_t suppressCode) {}
-
 
 /*
 WPS4ContentListener protected 

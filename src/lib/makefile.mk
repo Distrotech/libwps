@@ -29,10 +29,8 @@ SLOFILES= \
 	$(SLO)$/WPSDocument.obj \
 	$(SLO)$/WPSContentListener.obj \
 	$(SLO)$/WPSHeader.obj \
-	$(SLO)$/WPSListener.obj \
 	$(SLO)$/WPSPageSpan.obj \
-	$(SLO)$/WPSParser.obj \
-	$(SLO)$/WPSStylesListener.obj
+	$(SLO)$/WPSParser.obj
 
 LIB1ARCHIV=$(LB)$/libwpslib.a
 LIB1TARGET=$(SLB)$/$(TARGET).lib

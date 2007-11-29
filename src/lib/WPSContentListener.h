@@ -74,7 +74,6 @@ struct _WPSContentParsingState
 
 	bool m_sectionAttributesChanged;
 	int m_numColumns;
-	std::vector < WPSColumnDefinition > m_textColumns;
 	bool m_isTextColumnWithoutParagraph;
 
 	float m_pageFormLength;
@@ -105,10 +104,6 @@ struct _WPSContentParsingState
 
 	uint8_t m_currentListLevel;
 	
-	uint16_t m_alignmentCharacter;
-	std::vector<WPSTabStop> m_tabStops;
-	bool m_isTabPositionRelative;
-
 	bool m_isNote;
 private:
 	_WPSContentParsingState(const _WPSContentParsingState&);
@@ -125,7 +120,6 @@ protected:
 	void endDocument();
 	void insertBreak(const uint8_t breakType);
 	void lineSpacingChange(const float lineSpacing);
-	void justificationChange(const uint8_t justification);
 
 	WPSContentParsingState *m_ps; // parse state
 	WPXDocumentInterface * m_documentInterface;
@@ -141,7 +135,6 @@ protected:
 	void _closePageSpan();
 
 	void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
-	void _getTabStops(WPXPropertyListVector &tabStops);
 	void _appendJustification(WPXPropertyList &propList, int justification);
 	void _resetParagraphState(const bool isListElement=false);
 	virtual void _openParagraph();
@@ -153,13 +146,10 @@ protected:
 	void _openSpan();
 	void _closeSpan();
 
-	float _movePositionToFirstColumn(float position);
-
 private:
 	WPSContentListener(const WPSContentListener&);
 	WPSContentListener& operator=(const WPSContentListener&);
 	WPXString _colorToString(const RGBSColor * color);
-	WPXString _mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor);
 
 	bool isUndoOn() { return m_isUndoOn; }
 	void setUndoOn(bool isUndoOn) { m_isUndoOn = isUndoOn; }
