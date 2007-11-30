@@ -3,3 +3,8 @@ beginning -> 0.1.0
 - libwps based on libwpd.
 - Read Works 2 through 8 documents (except maybe Mac) with basic formatting.
 
+0.1.0 -> 0.1.1
+- build fixes for SUN studio
+- win32 packaging implemented
+- crosscompilation for win32 rendered smooth
+- compile fixed for gcc 4.3
