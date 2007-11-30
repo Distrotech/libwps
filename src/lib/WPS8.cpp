@@ -123,7 +123,7 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
 
 #define SURROGATE_VALUE(h,l) (((h) - 0xd800) * 0x400 + (l) - 0xdc00 + 0x10000)
 
-void WPS8Parser::appendUTF16LE(WPXInputStream *input, WPS8Listener *listener)
+void WPS8Parser::appendUTF16LE(WPXInputStream *input, WPS8ContentListener *listener)
 {
 	uint16_t high_surrogate = 0;
 	bool fail = false;
@@ -204,7 +204,7 @@ void WPS8Parser::appendUTF16LE(WPXInputStream *input, WPS8Listener *listener)
 
 // fixme: this method might turn out to be like WPS4Parser::readText()
 
-void WPS8Parser::readText(WPXInputStream * input, WPS8Listener *listener)
+void WPS8Parser::readText(WPXInputStream * input, WPS8ContentListener *listener)
 {
 	WPS_DEBUG_MSG(("WPS8Parser::readText()\n"));
 
@@ -538,7 +538,7 @@ void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *in
 	pageList.push_back(ps);
 }
 
-void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
+void WPS8Parser::parse(WPXInputStream *input, WPS8ContentListener *listener)
 {
 	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));	
 
@@ -600,7 +600,7 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8Listener *listener)
 #define WPS8_ATTRIBUTE_SUBSCRIPT 4
 #define WPS8_ATTRIBUTE_SUPERSCRIPT 5
 
-void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8Listener *listener)
+void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8ContentListener *listener)
 {
 	if ((oldTextAttributeBits ^ newTextAttributeBits) & bit)
 		listener->attributeChange(newTextAttributeBits & bit, attribute);
@@ -610,7 +610,7 @@ void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits
  * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
  *
  */
-void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8Listener *listener)
+void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8ContentListener *listener)
 {
 	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_BOLD, WPS_BOLD_BIT, listener);
 	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_ITALICS, WPS_ITALICS_BIT, listener);
@@ -631,7 +631,7 @@ void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8Listener
  * codes.
  *
  */
-void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
+void WPS8Parser::propertyChange(std::string rgchProp, WPS8ContentListener *listener)
 {
 	//fixme: this method is immature
 	/* check */
@@ -672,28 +672,28 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 					textAttributeBits |= WPS_ITALICS_BIT;
 					break;
 				case 0x04:
-					//fixme: outline
+					textAttributeBits |= WPS_OUTLINE_BIT;
 					break;
 				case 0x05:
-					//fixme: shadow
+					textAttributeBits |= WPS_SHADOW_BIT;
 					break;
 				case 0x10:
 					textAttributeBits |= WPS_STRIKEOUT_BIT;
 					break;
 				case 0x13:
-					//fixme: small caps
+					textAttributeBits |= WPS_SMALL_CAPS_BIT;
 					break;
 				case 0x15:
 					//fixme: unknown
 					break;
 				case 0x14:
-					//fixme: all caps
+					textAttributeBits |= WPS_ALL_CAPS_BIT;
 					break;
 				case 0x16:
-					//fixme: emboss
+					textAttributeBits |= WPS_EMBOSS_BIT;
 					break;
 				case 0x17:
-					//fixme: engrave
+					textAttributeBits |= WPS_ENGRAVE_BIT;
 					break;
 				default:
 					WPS_DEBUG_MSG(("Works8: error: unknown 0x0A format code 0x%04X\n", rgchProp[x]));
@@ -791,17 +791,6 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 	propertyChangeDelta(textAttributeBits, listener);
 }
 
-
-
-/*
-WPS8Listener public
-*/
-
-WPS8Listener::WPS8Listener()
-{
-}
-
-
 /*
 WPS8ContentParsingState public
 */
@@ -823,7 +812,6 @@ WPS8ContentListener public
 */
 
 WPS8ContentListener::WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
-	WPS8Listener(),
 	WPSContentListener(pageList, documentInterface),
 	m_parseState(new WPS8ContentParsingState)
 {
@@ -839,11 +827,6 @@ void WPS8ContentListener::insertCharacter(const uint16_t character)
 	if (!m_ps->m_isSpanOpened)
 		_openSpan();
 	m_parseState->m_textBuffer.append(character);
-}
-
-void WPS8ContentListener::insertTab(const uint8_t tabType, float tabPosition) 
-{
-	WPS_DEBUG_MSG(("STUB WPS8ContentListener::insertTab()\n"));		
 }
 
 void WPS8ContentListener::insertEOL() 
@@ -890,7 +873,7 @@ void WPS8ContentListener::attributeChange(const bool isOn, const uint8_t attribu
 void WPS8ContentListener::setTextFont(const WPXString fontName)
 {
 	_closeSpan();
-	*(m_ps->m_fontName) = fontName;	
+	m_ps->m_fontName = fontName;	
 }
 
 void WPS8ContentListener::setFontSize(const uint16_t fontSize)
@@ -902,12 +885,6 @@ void WPS8ContentListener::setFontSize(const uint16_t fontSize)
 /*
 WPS8ContentListener protected 
 */
-
-void WPS8ContentListener::_openParagraph()
-{
-//	WPS_DEBUG_MSG(("STUB WPS8ContentListener::_openParagraph()\n"));		
-	WPSContentListener::_openParagraph();
-}
 
 void WPS8ContentListener::_flushText()
 {

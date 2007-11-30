@@ -45,7 +45,7 @@ public:
 	uint32_t length;
 };
 
-class WPS8Listener;
+class WPS8ContentListener;
 
 
 class WPS8PrefixDataPacket
@@ -53,30 +53,11 @@ class WPS8PrefixDataPacket
 public:
 	WPS8PrefixDataPacket(WPXInputStream * input);	
 	virtual ~WPS8PrefixDataPacket() {}
-	virtual void parse(WPS8Listener *listener) const {}
+	virtual void parse(WPS8ContentListener *listener) const {}
 
 protected:
 	virtual void _readContents(WPXInputStream *input) = 0;
  	void _read(WPXInputStream *input, uint32_t dataOffset, uint32_t dataSize);
-};
-
-class WPS8Listener
-{
-public:
-	WPS8Listener();
-	virtual ~WPS8Listener() {}
-
-	virtual void startDocument() = 0;
-	virtual void insertCharacter(const uint16_t character) = 0;
-	virtual void insertTab(const uint8_t tabType, float tabPosition) = 0;
-	virtual void insertBreak(const uint8_t breakType) = 0;
-	virtual void insertEOL() = 0;
-	virtual void lineSpacingChange(const float lineSpacing) = 0;
-	virtual void attributeChange(const bool isOn, const uint8_t attribute) = 0;
-	virtual void endDocument() = 0;
-
-	virtual void setTextFont(const WPXString fontName) = 0;
-	virtual void setFontSize(const uint16_t fontSize) = 0;
 };
 
 typedef std::multimap <std::string, HeaderIndexEntries> HeaderIndexMultiMap; /* string is name */
@@ -90,16 +71,16 @@ public:
 	void parse(WPXDocumentInterface *documentInterface);
 private:
 	void readFontsTable(WPXInputStream * input);
-	void appendUTF16LE(WPXInputStream *input, WPS8Listener *listener);
-	void readText(WPXInputStream * input, WPS8Listener *listener);
+	void appendUTF16LE(WPXInputStream *input, WPS8ContentListener *listener);
+	void readText(WPXInputStream * input, WPS8ContentListener *listener);
 	bool readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, uint16_t page_size);
 	void parseHeaderIndexEntry(WPXInputStream * input);
 	void parseHeaderIndex(WPXInputStream * input);
 	void parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input);
-	void parse(WPXInputStream *stream, WPS8Listener *listener);
-	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8Listener *listener);
-	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS8Listener *listener);
-	void propertyChange(std::string rgchProp, WPS8Listener *listener);
+	void parse(WPXInputStream *stream, WPS8ContentListener *listener);
+	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8ContentListener *listener);
+	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS8ContentListener *listener);
+	void propertyChange(std::string rgchProp, WPS8ContentListener *listener);
 	uint32_t offset_eot; /* stream offset to end of text */
 	uint32_t oldTextAttributeBits;
 	HeaderIndexMultiMap headerIndexTable;
@@ -117,20 +98,15 @@ struct _WPS8ContentParsingState
 };
 
 
-class WPS8ContentListener : public WPS8Listener, protected WPSContentListener
+class WPS8ContentListener : public WPSContentListener
 {
 public:
 	WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
 	~WPS8ContentListener();
 
-	void startDocument() { WPSContentListener::startDocument(); };
 	void insertCharacter(const uint16_t character);
-	void insertTab(const uint8_t tabType, float tabPosition);
-	void insertBreak(const uint8_t breakType) { WPSContentListener::insertBreak(breakType); };
 	void insertEOL();
 	void attributeChange(const bool isOn, const uint8_t attribute);
-	void lineSpacingChange(const float lineSpacing) { WPSContentListener::lineSpacingChange(lineSpacing); };
-	void endDocument() { WPSContentListener::endDocument(); };
 
 	void setTextFont(const WPXString fontName);
 	void setFontSize(const uint16_t fontSize);
@@ -139,8 +115,6 @@ public:
 	void suppressPage(const uint16_t suppressCode);
 	
 protected:
-	void _openParagraph();
-
 	void _flushText();
 	
 private:
