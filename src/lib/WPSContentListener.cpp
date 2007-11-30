@@ -395,11 +395,11 @@ void WPSContentListener::_openSpan()
 	if (m_ps->m_textAttributeBits & WPS_BOLD_BIT)
 		propList.insert("fo:font-weight", "bold");
 	if (m_ps->m_textAttributeBits & WPS_STRIKEOUT_BIT)
-		propList.insert("style:text-crossing-out", "single-line");
+		propList.insert("style:text-line-through-type", "single");
 	if (m_ps->m_textAttributeBits & WPS_DOUBLE_UNDERLINE_BIT) 
-		propList.insert("style:text-underline", "double");
+		propList.insert("style:text-underline-type", "double");
  	else if (m_ps->m_textAttributeBits & WPS_UNDERLINE_BIT) 
-		propList.insert("style:text-underline", "single");
+		propList.insert("style:text-underline-type", "single");
 	if (m_ps->m_textAttributeBits & WPS_OUTLINE_BIT) 
 		propList.insert("style:text-outline", "true");
 	if (m_ps->m_textAttributeBits & WPS_SMALL_CAPS_BIT) 
@@ -410,7 +410,6 @@ void WPSContentListener::_openSpan()
 		propList.insert("style:text-blinking", "true");
 	if (m_ps->m_textAttributeBits & WPS_SHADOW_BIT) 
 		propList.insert("fo:text-shadow", "1pt 1pt");
-
 	if (m_ps->m_textAttributeBits & WPS_EMBOSS_BIT)
 		propList.insert("style:font-relief", "embossed");
 	else if (m_ps->m_textAttributeBits & WPS_ENGRAVE_BIT)
