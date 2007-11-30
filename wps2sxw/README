@@ -5,8 +5,8 @@ sequence of commands:
 
 ./configure ; make ; su -c 'make install'
 
-Note that this assumes that you have development versions of glib (>= 2.0.0),
-libgsf (>= 1.6.0), and libwps (0.6.1) installed. I also assume that
+Note that this assumes that you have development versions of libwpd
+(>= 0.8.0), and libwps (>= 0.1.0) installed. I also assume that
 you have pkgconfig installed.
 
 This will make + install a single executable: wps2sxw. You may use it
@@ -30,6 +30,5 @@ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
 
 LINKS:
 
-glib is available at http://www.gtk.org
-libgsf is available at ftp://ftp.gnome.org/pub/GNOME/sources/libgsf
+libwpd is available at http://libwpd.sf.net
 libwps is available at http://libwps.sf.net
