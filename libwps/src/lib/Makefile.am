@@ -77,7 +77,7 @@ if WITH_LIBWPS_STREAM
 libwps_stream_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir = $(includedir)/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@/libwps
 libwps_stream_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS = $(libwps_stream_headers)
 
-libwps_stream_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LIBADD  = $(LIBWPS_LIBS) @LIBWPS_STREAM_WIN32_RESOURCE@
+libwps_stream_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LIBADD  = @LIBWPS_STREAM_WIN32_RESOURCE@
 libwps_stream_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_DEPENDENCIES = @LIBWPS_STREAM_WIN32_RESOURCE@
 libwps_stream_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
 libwps_stream_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = $(libwps_stream_sources)
