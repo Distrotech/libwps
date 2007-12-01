@@ -21,9 +21,10 @@ BuildRequires: libwps-devel >= @LIBWPS_REQUIRED_VERSION@
 BuildRequires: glib2-devel >= 2.0.0
 BuildRequires: libgsf-devel >= 1.6.0
 BuildRequires: libwpd-devel >= @LIBWPD_REQUIRED_VERSION@
+BuildRequires: gcc-c++, libstdc++-devel
 
 %description
-Tool for converting Word Perfect documents into OpenOffice.org Writer format.
+Tool for converting MS Works documents into OpenOffice.org Writer format.
 
 %prep
 %__rm -rf $RPM_BUILD_ROOT
