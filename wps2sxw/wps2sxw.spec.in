@@ -52,17 +52,3 @@ umask 022
 %changelog
 * Thu Dec 21 2006 Fridrich Strba <fridrich.strba@bluewin.ch>
 - Clone the writerperfect spec.in for wps2sxw
-
-* Wed Nov 17 2004 Fridrich Strba <fridrich.strba@bluewin.ch>
-- Remove execution of autogen.sh
-- Source tarball is writerperfect-X.Y.Z.tar.gz
-
-* Tue Sep  9 2003 Fridrich Strba <fridrich.strba@bluewin.ch>
-- Add execution of autogen.sh before ./configure
-
-* Mon May 26 2003 Rui M. Seabra <rms@1407.org>
-- Change spec to spec.in
-- Remove Prefix: since we're using whatever the distribution uses by default
-
-* Thu May  8 2003 Fridrich Strba <fridrich.strba@bluewin.ch>
-- Create rpm spec using libwpd .spec of Rui M. Seabra

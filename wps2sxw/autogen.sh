@@ -52,7 +52,7 @@ if [ "$AUTOCONFFOUND" = "0" -o "$AUTOHEADERFOUND" = "0" ]; then
 fi
 
 if [ "$LIBTOOLIZEFOUND" = "0" ]; then
-	echo "$0: need libtoolize tool to build writerperfect" >&2
+	echo "$0: need libtoolize tool to build wps2sxw" >&2
 	exit 1
 fi
 

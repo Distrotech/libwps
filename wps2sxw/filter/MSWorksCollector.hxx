@@ -1,5 +1,5 @@
 /* MSWorksCollector: Collects sections and runs of text from a
- * wordperfect file (and styles to go along with them) and writes them
+ * MS Works file (and styles to go along with them) and writes them
  * to a target file
  *
  * Copyright (C) 2002-2004 William Lachance (wrlach@gmail.com)
@@ -28,8 +28,8 @@
  * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef _WORDPERFECTCOLLECTOR_H
-#define _WORDPERFECTCOLLECTOR_H
+#ifndef _MSWORKSCOLLECTOR_H
+#define _MSWORKSCOLLECTOR_H
 #include "SectionStyle.hxx"
 
 #include <libwps/libwps.h>

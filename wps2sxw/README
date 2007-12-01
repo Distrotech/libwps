@@ -16,9 +16,8 @@ USAGE:
 
 wps2sxw <infile> <outfile>
 
-Where <infile> is a WordPerfect(tm) 6 (or greater document) and
-<outfile> is the name of the target sxw document, which wps2sxw will
-create.
+Where <infile> is a MS Works document and <outfile> is the name of
+the target sxw document, which wps2sxw will create.
 
 TROUBLESHOOTING:
 

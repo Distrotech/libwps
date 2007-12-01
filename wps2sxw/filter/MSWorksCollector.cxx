@@ -1,5 +1,5 @@
 /* MSWorksCollector: Collects sections and runs of text from a
- * wordperfect file (and styles to go along with them) and writes them
+ * MS Works file (and styles to go along with them) and writes them
  * to a Writer target document
  *
  * Copyright (C) 2002-2004 William Lachance (wrlach@gmail.com)
@@ -92,7 +92,7 @@ bool MSWorksCollector::filter()
 		return false;
 
  	// clean up the mess we made
- 	WRITER_DEBUG_MSG(("WriterWordPerfect: Cleaning up our mess..\n"));
+ 	WRITER_DEBUG_MSG(("WriterMSWorks: Cleaning up our mess..\n"));
 
 	WRITER_DEBUG_MSG(("Destroying the body elements\n"));
 	for (std::vector<DocumentElement *>::iterator iterBody = mBodyElements.begin(); iterBody != mBodyElements.end(); iterBody++) {
@@ -235,13 +235,13 @@ void MSWorksCollector::_writePageMasters(DocumentHandler *pHandler)
 
 bool MSWorksCollector::_writeTargetDocument(DocumentHandler *pHandler)
 {        
-	WRITER_DEBUG_MSG(("WriterWordPerfect: Document Body: Printing out the header stuff..\n"));
+	WRITER_DEBUG_MSG(("WriterMSWorks: Document Body: Printing out the header stuff..\n"));
 	WPXPropertyList xBlankAttrList;
 
-	WRITER_DEBUG_MSG(("WriterWordPerfect: Document Body: Start Document\n"));
+	WRITER_DEBUG_MSG(("WriterMSWorks: Document Body: Start Document\n"));
 	mpHandler->startDocument();
 
-	WRITER_DEBUG_MSG(("WriterWordPerfect: Document Body: preamble\n"));
+	WRITER_DEBUG_MSG(("WriterMSWorks: Document Body: preamble\n"));
         WPXPropertyList docContentPropList;
 	docContentPropList.insert("xmlns:office", "http://openoffice.org/2000/office");
 	docContentPropList.insert("xmlns:style", "http://openoffice.org/2000/style");
@@ -276,7 +276,7 @@ bool MSWorksCollector::_writeTargetDocument(DocumentHandler *pHandler)
 	mpHandler->endElement("office:font-decls");
 
 
- 	WRITER_DEBUG_MSG(("WriterWordPerfect: Document Body: Writing out the styles..\n"));
+ 	WRITER_DEBUG_MSG(("WriterMSWorks: Document Body: Writing out the styles..\n"));
 
 	// write default styles
 	_writeDefaultStyles(mpHandler);
@@ -324,14 +324,14 @@ bool MSWorksCollector::_writeTargetDocument(DocumentHandler *pHandler)
 
 	_writeMasterPages(pHandler);
 
- 	WRITER_DEBUG_MSG(("WriterWordPerfect: Document Body: Writing out the document..\n"));
+ 	WRITER_DEBUG_MSG(("WriterMSWorks: Document Body: Writing out the document..\n"));
  	// writing out the document
 	pHandler->startElement("office:body", xBlankAttrList);
 
 	for (std::vector<DocumentElement *>::iterator iterBodyElements = mBodyElements.begin(); iterBodyElements != mBodyElements.end(); iterBodyElements++) {
 		(*iterBodyElements)->write(pHandler);
 	}
- 	WRITER_DEBUG_MSG(("WriterWordPerfect: Document Body: Finished writing all doc els..\n"));
+ 	WRITER_DEBUG_MSG(("WriterMSWorks: Document Body: Finished writing all doc els..\n"));
 
 	pHandler->endElement("office:body");
 	pHandler->endElement("office:document-content");
@@ -539,7 +539,7 @@ void MSWorksCollector::openSpan(const WPXPropertyList &propList)
         if (propList["style:font-name"])
                 _allocateFontName(propList["style:font-name"]->getStr());
 	WPXString sSpanHashKey = propListToStyleKey(propList);
-	WRITER_DEBUG_MSG(("WriterWordPerfect: Span Hash Key: %s\n", sSpanHashKey.cstr()));
+	WRITER_DEBUG_MSG(("WriterMSWorks: Span Hash Key: %s\n", sSpanHashKey.cstr()));
 
 	// Get the style
         WPXString sName;
@@ -598,7 +598,7 @@ void MSWorksCollector::defineOrderedListLevel(const WPXPropertyList &propList)
 	else
 		mbListContinueNumbering = true;
 
-	// Iterate through ALL list styles with the same WordPerfect list id and define a level if it is not already defined
+	// Iterate through ALL list styles with the same MSWorks list id and define a level if it is not already defined
 	// This solves certain problems with lists that start and finish without reaching certain levels and then begin again
 	// and reach those levels. See gradguide0405_PC.wps in the regression suite
 	for (std::vector<ListStyle *>::iterator iterOrderedListStyles = mListStyles.begin(); iterOrderedListStyles != mListStyles.end(); iterOrderedListStyles++)
@@ -825,9 +825,6 @@ void MSWorksCollector::openTable(const WPXPropertyList &propList, const WPXPrope
 		WPXString sTableName;
 		sTableName.sprintf("Table%i", mTableStyles.size());
 
-		// FIXME: we base the table style off of the page's margin left, ignoring (potential) wordperfect margin
-		// state which is transmitted inside the page. could this lead to unacceptable behaviour?
-        	// WLACH_REFACTORING: characterize this behaviour, probably should nip it at the bud within libwps
 		TableStyle *pTableStyle = new TableStyle(propList, columns, sTableName.cstr());
 
 		if (mWriterDocumentState.mbFirstElement && mpCurrentContentElements == &mBodyElements)
