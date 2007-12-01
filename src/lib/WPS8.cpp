@@ -87,7 +87,7 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
 	uint32_t offset_end_FFNTB = pos->second.offset + pos->second.length;
 	
 	/* read each font in the table */	
-	while ((input->tell()+8) < offset_end_FFNTB && fonts.size() < n_fonts)
+	while (input->tell() > 0 && (unsigned long)(input->tell()+8) < offset_end_FFNTB && fonts.size() < n_fonts)
 	{
 #ifdef DEBUG
 		uint32_t unknown = readU32(input);
