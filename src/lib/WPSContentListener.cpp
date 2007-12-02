@@ -36,27 +36,6 @@
 #define LIBWPS_MAX std::max
 #endif
 
-namespace {
-
-WPXString doubleToString(const double value)
-{
-  WPXString tempString;
-  tempString.sprintf("%.4f", value);
-  std::string decimalPoint(localeconv()->decimal_point);
-  if ((decimalPoint.size() == 0) || (decimalPoint == "."))
-    return tempString;
-  std::string stringValue(tempString.cstr());
-  if (!stringValue.empty())
-  {
-    std::string::size_type pos;
-    while ((pos = stringValue.find(decimalPoint)) != std::string::npos)
-          stringValue.replace(pos,decimalPoint.size(),".");
-  }
-  return WPXString(stringValue.c_str());
-}
-
-} // namespace
-
 _WPSContentParsingState::_WPSContentParsingState() :
 	m_textAttributeBits(0),
 	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/),
@@ -346,8 +325,6 @@ void WPSContentListener::_closeParagraph()
 		_closePageSpan();
 }
 
-const float WPS_DEFAULT_SUPER_SUB_SCRIPT = 58.0f; 
-
 void WPSContentListener::_openSpan()
 {
 	if (!m_ps->m_isParagraphOpened)
@@ -378,18 +355,10 @@ void WPSContentListener::_openSpan()
 	}
 
 	WPXPropertyList propList;
- 	if (m_ps->m_textAttributeBits & WPS_SUPERSCRIPT_BIT) {
-		WPXString sSuperScript("super ");
-		sSuperScript.append(doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
-		sSuperScript.append("%");
-		propList.insert("style:text-position", sSuperScript);
-	}
- 	else if (m_ps->m_textAttributeBits & WPS_SUBSCRIPT_BIT) {
-		WPXString sSubScript("sub ");
-		sSubScript.append(doubleToString(WPS_DEFAULT_SUPER_SUB_SCRIPT));
-		sSubScript.append("%");
-		propList.insert("style:text-position", sSubScript);
-	}
+ 	if (m_ps->m_textAttributeBits & WPS_SUPERSCRIPT_BIT)
+		propList.insert("style:text-position", "58%");
+ 	else if (m_ps->m_textAttributeBits & WPS_SUBSCRIPT_BIT)
+		propList.insert("style:text-position", "58%");
 	if (m_ps->m_textAttributeBits & WPS_ITALICS_BIT)
 		propList.insert("fo:font-style", "italic");
 	if (m_ps->m_textAttributeBits & WPS_BOLD_BIT)
