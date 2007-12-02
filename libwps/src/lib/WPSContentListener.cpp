@@ -40,8 +40,6 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_textAttributeBits(0),
 	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/), // FIXME ME!!!!!!!!!!!!!!!!!!! HELP WP6_DEFAULT_FONT_SIZE
 	m_fontName(new WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")), // EN PAS DEFAULT FONT AAN VOOR WP5/6/etc
-	m_fontColor(new RGBSColor(0x00,0x00,0x00,0x64)), //Set default to black. Maybe once it will change, but for the while...
-	m_highlightColor(0),
 
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
@@ -57,7 +55,6 @@ _WPSContentParsingState::_WPSContentParsingState() :
 
 	m_isSpanOpened(false),
 	m_isParagraphOpened(false),
-	m_isListElementOpened(false),
 	m_cellAttributeBits(0),
 	m_paragraphJustificationBeforeColumns(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
 
@@ -102,14 +99,12 @@ _WPSContentParsingState::_WPSContentParsingState() :
 _WPSContentParsingState::~_WPSContentParsingState()
 {
 	DELETEP(m_fontName);
-	DELETEP(m_fontColor);
-	DELETEP(m_highlightColor);
 }
 
 WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
-	WPSListener(pageList),
 	m_ps(new WPSContentParsingState),
-	m_listenerImpl(listenerImpl)
+	m_listenerImpl(listenerImpl),
+	m_pageList(pageList)
 {
 	m_ps->m_nextPageSpanIter = pageList.begin();
 }
@@ -141,11 +136,6 @@ void WPSContentListener::endDocument()
 
 	if (m_ps->m_isParagraphOpened)
 		_closeParagraph();
-	if (m_ps->m_isListElementOpened)
-		_closeListElement();
-
-	m_ps->m_currentListLevel = 0;
-	_changeList(); // flush the list exterior
 
 	// close the document nice and tight
 	_closeSection();
@@ -181,9 +171,6 @@ void WPSContentListener::_closeSection()
 	{
 		if (m_ps->m_isParagraphOpened)
 			_closeParagraph();
-		if (m_ps->m_isListElementOpened)
-			_closeListElement();
-		_changeList();
 
 		m_listenerImpl->closeSection();
 
@@ -336,7 +323,7 @@ void WPSContentListener::_closePageSpan()
 
 void WPSContentListener::_openParagraph()
 {
-	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+	if (!m_ps->m_isParagraphOpened)
 	{
 		if (m_ps->m_sectionAttributesChanged)
 			_closeSection();
@@ -356,20 +343,11 @@ void WPSContentListener::_openParagraph()
 	}
 }
 
-void WPSContentListener::_resetParagraphState(const bool isListElement)
+void WPSContentListener::_resetParagraphState()
 {
 	m_ps->m_isParagraphColumnBreak = false;
 	m_ps->m_isParagraphPageBreak = false;
-	if (isListElement)
-	{
-		m_ps->m_isListElementOpened = true;
-		m_ps->m_isParagraphOpened = false;
-	}
-	else
-	{
-		m_ps->m_isListElementOpened = false;
-		m_ps->m_isParagraphOpened = true;
-	}
+	m_ps->m_isParagraphOpened = true;
 	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange;
 	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange;
 	m_ps->m_leftMarginByTabs = 0.0f;
@@ -407,7 +385,7 @@ void WPSContentListener::_appendJustification(WPXPropertyList &propList, int jus
 	}
 }
 
-void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
+void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList)
 {
 	int justification;
 	if (m_ps->m_tempParagraphJustification) 
@@ -416,16 +394,8 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 		justification = m_ps->m_paragraphJustification;
 	_appendJustification(propList, justification);
 
-	if (isListElement)
-	{
-		propList.insert("fo:margin-left", (m_ps->m_listBeginPosition - m_ps->m_paragraphTextIndent));
-		propList.insert("fo:text-indent", m_ps->m_paragraphTextIndent);
-	}
-	else
-	{
-		propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
-		propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
-	}
+	propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
+	propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
 
 	propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
 	propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
@@ -454,49 +424,10 @@ void WPSContentListener::_closeParagraph()
 		_closePageSpan();
 }
 
-void WPSContentListener::_openListElement()
-{
-	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
-	{
-		if (!m_ps->m_isSectionOpened)
-			_openSection();
-
-		WPXPropertyList propList;
-		_appendParagraphProperties(propList, true);
-
-		WPXPropertyListVector tabStops;
-
-		if (!m_ps->m_isListElementOpened)
-			m_listenerImpl->openListElement(propList, tabStops);
-		_resetParagraphState(true);
-	}
-}
-
-void WPSContentListener::_closeListElement()
-{
-	if (m_ps->m_isListElementOpened)
-	{
-		if (m_ps->m_isSpanOpened)
-			_closeSpan();
-
-		m_listenerImpl->closeListElement();
-	}
-	
-	m_ps->m_isListElementOpened = false;
-	m_ps->m_currentListLevel = 0;
-
-	if (m_ps->m_isPageSpanBreakDeferred)
-		_closePageSpan();
-}
-
 void WPSContentListener::_openSpan()
 {
-	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
-		_changeList();
-		if (m_ps->m_currentListLevel == 0)
-			_openParagraph();
-		else
-			_openListElement();
+	if (!m_ps->m_isParagraphOpened)
+		_openParagraph();
 	
 	// The behaviour of WP6+ is following: if an attribute bit is set in the cell attributes, we cannot
 	// unset it; if it is set, we can set or unset it
@@ -562,10 +493,8 @@ void WPSContentListener::_openSpan()
 	// When redline finishes, the color is back.
 	if (attributeBits & WPS_REDLINE_BIT)
 		propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
-	else if (m_ps->m_fontColor)
-		propList.insert("fo:color", _colorToString(m_ps->m_fontColor));
-	if (m_ps->m_highlightColor)
-		propList.insert("style:text-background-color", _colorToString(m_ps->m_highlightColor));
+	else
+		propList.insert("fo:color", "#000000");
 
 	if (!m_ps->m_isSpanOpened)
 		m_listenerImpl->openSpan(propList);
@@ -587,73 +516,44 @@ void WPSContentListener::_closeSpan()
 
 void WPSContentListener::insertBreak(const uint8_t breakType)
 {
-	if (!isUndoOn())
+	switch (breakType)
 	{
-		switch (breakType)
-		{
-		case WPS_COLUMN_BREAK:
-			if (!m_ps->m_isPageSpanOpened)
-				_openSpan();				
-			if (m_ps->m_isParagraphOpened)
-				_closeParagraph();
-			if (m_ps->m_isListElementOpened)
-				_closeListElement();
-			m_ps->m_isParagraphColumnBreak = true;
-			break;
-		case WPS_PAGE_BREAK:
-			if (!m_ps->m_isPageSpanOpened)
-				_openSpan();				
-			if (m_ps->m_isParagraphOpened)
-				_closeParagraph();
-			if (m_ps->m_isListElementOpened)
-				_closeListElement();
-			m_ps->m_isParagraphPageBreak = true;
-			break;
-			// TODO: (.. line break?)
-		}
+	case WPS_COLUMN_BREAK:
+		if (!m_ps->m_isPageSpanOpened)
+			_openSpan();				
+		if (m_ps->m_isParagraphOpened)
+			_closeParagraph();
+		m_ps->m_isParagraphColumnBreak = true;
+		break;
+	case WPS_PAGE_BREAK:
+		if (!m_ps->m_isPageSpanOpened)
+			_openSpan();				
+		if (m_ps->m_isParagraphOpened)
+			_closeParagraph();
+		m_ps->m_isParagraphPageBreak = true;
+		break;
+		// TODO: (.. line break?)
+	}
 
-		switch (breakType)
+	switch (breakType)
+	{
+	case WPS_PAGE_BREAK:
+	case WPS_SOFT_PAGE_BREAK:
+		if (m_ps->m_numPagesRemainingInSpan > 0)
+			m_ps->m_numPagesRemainingInSpan--;
+		else
 		{
-		case WPS_PAGE_BREAK:
-		case WPS_SOFT_PAGE_BREAK:
-			if (m_ps->m_numPagesRemainingInSpan > 0)
-				m_ps->m_numPagesRemainingInSpan--;
-			else
-			{
-			    if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
-				_closePageSpan();
-			    else
-				m_ps->m_isPageSpanBreakDeferred = true;
-			}
-		default:
-			break;
+		    if (!m_ps->m_isParagraphOpened)
+			_closePageSpan();
+		    else
+			m_ps->m_isPageSpanBreakDeferred = true;
 		}
+	default:
+		break;
 	}
 }
 
 void WPSContentListener::lineSpacingChange(const float lineSpacing)
 {
-	if (!isUndoOn())
-	{
-		m_ps->m_paragraphLineSpacing = lineSpacing;
-	}
-}
-
-WPXString WPSContentListener::_colorToString(const RGBSColor * color)
-{
-	WPXString tmpString;
-
-	if (color) 
-	{
-		float fontShading = (float)((float)color->m_s/100.0f); //convert the percents to float between 0 and 1
-		// Mix fontShading amount of given color with (1-fontShading) of White (#ffffff)
-		int fontRed = (int)0xFF + (int)((float)color->m_r*fontShading) - (int)((float)0xFF*fontShading);
-		int fontGreen = (int)0xFF + (int)((float)color->m_g*fontShading) - (int)((float)0xFF*fontShading);
-		int fontBlue = (int)0xFF + (int)((float)color->m_b*fontShading) - (int)((float)0xFF*fontShading);
-		tmpString.sprintf("#%.2x%.2x%.2x", fontRed, fontGreen, fontBlue);
-	}
-	else
-		tmpString.sprintf("#%.2x%.2x%.2x", 0xFF, 0xFF, 0xFF); // default to white: we really shouldn't be calling this function in that case though
-
-	return tmpString;
+	m_ps->m_paragraphLineSpacing = lineSpacing;
 }

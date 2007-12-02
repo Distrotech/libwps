@@ -108,7 +108,7 @@ Parses the input stream content. It will make callbacks to the functions provide
 WPXHLListenerImpl class implementation when needed. This is often commonly called the
 'main parsing routine'.
 \param input The input stream
-\param listenerImpl A WPSListener implementation
+\param listenerImpl A WPSContentListener implementation
 */
 WPSResult WPSDocument::parse(WPSInputStream *input, WPXHLListenerImpl *listenerImpl)
 {

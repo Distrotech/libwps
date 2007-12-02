@@ -29,7 +29,7 @@
 
 #include "libwps_internal.h"
 #include "WPSPageSpan.h"
-#include "WPSListener.h"
+#include "WPSContentListener.h"
 #include <libwpd/WPXPropertyListVector.h>
 #include <libwpd/WPXHLListenerImpl.h>
 #include <vector>
@@ -45,8 +45,6 @@ struct _WPSContentParsingState
 	uint32_t m_textAttributeBits;
 	float m_fontSize;
 	WPXString *m_fontName;
-	RGBSColor *m_fontColor;
-	RGBSColor *m_highlightColor;
 
 	bool m_isParagraphColumnBreak;
 	bool m_isParagraphPageBreak;
@@ -62,7 +60,6 @@ struct _WPSContentParsingState
 
 	bool m_isSpanOpened;
 	bool m_isParagraphOpened;
-	bool m_isListElementOpened;
 
 	std::vector<unsigned int> m_numRowsToSkip;
 	bool m_wasHeaderRow;
@@ -112,7 +109,7 @@ private:
 	_WPSContentParsingState& operator=(const _WPSContentParsingState&);
 };
 
-class WPSContentListener : public WPSListener
+class WPSContentListener
 {
 protected:
 	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
@@ -128,7 +125,6 @@ protected:
 	WPXPropertyList m_metaData;
 
 	virtual void _flushText() = 0;
-	virtual void _changeList() = 0;
 
 	void _openSection();
 	void _closeSection();
@@ -136,14 +132,11 @@ protected:
 	void _openPageSpan();
 	void _closePageSpan();
 
-	void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
+	void _appendParagraphProperties(WPXPropertyList &propList);
 	void _appendJustification(WPXPropertyList &propList, int justification);
-	void _resetParagraphState(const bool isListElement=false);
+	void _resetParagraphState();
 	virtual void _openParagraph();
 	void _closeParagraph();
-
-	void _openListElement();
-	void _closeListElement();
 
 	void _openSpan();
 	void _closeSpan();
@@ -151,7 +144,8 @@ protected:
 private:
 	WPSContentListener(const WPSContentListener&);
 	WPSContentListener& operator=(const WPSContentListener&);
-	WPXString _colorToString(const RGBSColor * color);
+
+	std::list<WPSPageSpan> &m_pageList;
 };
 
 #endif /* WPSCONTENTLISTENER_H */

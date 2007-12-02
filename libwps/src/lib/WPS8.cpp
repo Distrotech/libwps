@@ -844,12 +844,10 @@ void WPS8ContentListener::insertTab(const uint8_t tabType, float tabPosition)
 
 void WPS8ContentListener::insertEOL() 
 {
-	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+	if (!m_ps->m_isParagraphOpened)
 		_openSpan();
 	if (m_ps->m_isParagraphOpened)
 		_closeParagraph();
-	if (m_ps->m_isListElementOpened)
-		_closeListElement();
 }
 
 void WPS8ContentListener::attributeChange(const bool isOn, const uint8_t attribute)
