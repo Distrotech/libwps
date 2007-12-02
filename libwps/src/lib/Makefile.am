@@ -51,7 +51,6 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSListener.cpp \
 	WPSPageSpan.cpp \
 	WPSParser.cpp \
-	WPSStylesListener.cpp \
 	libwps.h \
 	libwps_internal.h \
 	WPS.h \
@@ -63,8 +62,7 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSFileStructure.h \
 	WPSListener.h \
 	WPSPageSpan.h \
-	WPSParser.h \
-	WPSStylesListener.h
+	WPSParser.h
 
 libwps_stream_headers = WPSStreamImplementation.h
 libwps_stream_sources = \

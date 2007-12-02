@@ -64,8 +64,6 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_numPagesRemainingInSpan(0),
 
 	m_sectionAttributesChanged(false),
-	m_numColumns(1),
-	m_isTextColumnWithoutParagraph(false),
 
 	m_pageFormLength(11.0f),
 	m_pageFormWidth(8.5f),
@@ -166,25 +164,9 @@ void WPSContentListener::_openSection()
 
 		propList.insert("fo:margin-left", m_ps->m_sectionMarginLeft);
 		propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
-		if (m_ps->m_numColumns > 1)
-		{
-			propList.insert("fo:margin-bottom", 1.0f);
-			propList.insert("text:dont-balance-text-columns", false);
-		}
-		else
-			propList.insert("fo:margin-bottom", 0.0f);
+		propList.insert("fo:margin-bottom", 0.0f);
 
 		WPXPropertyListVector columns;
- 		typedef std::vector<WPSColumnDefinition>::const_iterator CDVIter;
-	 	for (CDVIter iter = m_ps->m_textColumns.begin(); iter != m_ps->m_textColumns.end(); iter++)
-		{
-			WPXPropertyList column;
-			// The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
-			column.insert("style:rel-width", (*iter).m_width * 1440.0f, TWIP);
-			column.insert("fo:margin-left", (*iter).m_leftGutter);
-			column.insert("fo:margin-right", (*iter).m_rightGutter);
-			columns.append(column);
-		}
 		if (!m_ps->m_isSectionOpened)
 			m_listenerImpl->openSection(propList, columns);
 
@@ -363,7 +345,6 @@ void WPSContentListener::_openParagraph()
 			_openSection();
 
 		WPXPropertyListVector tabStops;
-		_getTabStops(tabStops);
 
 		WPXPropertyList propList;
 		_appendParagraphProperties(propList);
@@ -396,7 +377,6 @@ void WPSContentListener::_resetParagraphState(const bool isListElement)
 	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange;
 	m_ps->m_textIndentByTabs = 0.0f;
 	m_ps->m_isCellWithoutParagraph = false;
-	m_ps->m_isTextColumnWithoutParagraph = false;
 	m_ps->m_isHeaderFooterWithoutParagraph = false;
 	m_ps->m_tempParagraphJustification = 0;
 	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
@@ -457,53 +437,6 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 		propList.insert("fo:break-before", "page");
 }
 
-void WPSContentListener::_getTabStops(WPXPropertyListVector &tabStops)
-{
-	for (unsigned int i=0; i<m_ps->m_tabStops.size(); i++)
-	{
-		WPXPropertyList tmpTabStop;
-
-		// type
-		switch (m_ps->m_tabStops[i].m_alignment)
-		{
-		case RIGHT:
-			tmpTabStop.insert("style:type", "right");
-			break;
-		case CENTER:
-			tmpTabStop.insert("style:type", "center");
-			break;
-		case DECIMAL:
-			tmpTabStop.insert("style:type", "char");
-			tmpTabStop.insert("style:char", "."); // Assume a decimal point for now
-			break;
-		default:  // Left alignment is the default and BAR is not handled in OOo
-			break;
-		}
-		
-		// leader character
-		if (m_ps->m_tabStops[i].m_leaderCharacter != 0x0000)
-		{
-			WPXString sLeader;
-			sLeader.sprintf("%c", m_ps->m_tabStops[i].m_leaderCharacter);
-			tmpTabStop.insert("style:leader-char", sLeader);
-		}
-
-		// position
-		float position = m_ps->m_tabStops[i].m_position;
-		if (m_ps->m_isTabPositionRelative)
-			position -= m_ps->m_leftMarginByTabs;
-		else
-			position -= m_ps->m_paragraphMarginLeft + m_ps->m_sectionMarginLeft + m_ps->m_pageMarginLeft;
-		tmpTabStop.insert("style:position", position);
-		
-
-		/* TODO: fix situations where we have several columns or are inside a table and the tab stop
-		 *       positions are absolute (relative to the paper edge). In this case, they have to be
-		 *       computed for each column or each cell in table. (Fridrich) */
-		tabStops.append(tmpTabStop);
-	}
-}
-
 void WPSContentListener::_closeParagraph()
 {
 	if (m_ps->m_isParagraphOpened)
@@ -532,7 +465,6 @@ void WPSContentListener::_openListElement()
 		_appendParagraphProperties(propList, true);
 
 		WPXPropertyListVector tabStops;
-		_getTabStops(tabStops);
 
 		if (!m_ps->m_isListElementOpened)
 			m_listenerImpl->openListElement(propList, tabStops);
@@ -667,7 +599,6 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 			if (m_ps->m_isListElementOpened)
 				_closeListElement();
 			m_ps->m_isParagraphColumnBreak = true;
-			m_ps->m_isTextColumnWithoutParagraph = true;
 			break;
 		case WPS_PAGE_BREAK:
 			if (!m_ps->m_isPageSpanOpened)
@@ -708,41 +639,6 @@ void WPSContentListener::lineSpacingChange(const float lineSpacing)
 	}
 }
 
-void WPSContentListener::justificationChange(const uint8_t justification)
-{
-	if (!isUndoOn())
-	{
-		if (m_ps->m_isParagraphOpened)
-			_closeParagraph();
-		if (m_ps->m_isListElementOpened)
-			_closeListElement();
-
-		m_ps->m_currentListLevel = 0;
-
-		switch (justification)
-		{
-		case 0x00:
-			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_LEFT;
-			break;
-		case 0x01:
-			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_FULL;
-			break;
-		case 0x02:
-			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_CENTER;
-			break;
-		case 0x03:
-			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_RIGHT;
-			break;
-		case 0x04:
-			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES;
-			break;
-		case 0x05:
-			m_ps->m_paragraphJustification = WPS_PARAGRAPH_JUSTIFICATION_DECIMAL_ALIGNED;
-			break;
-		}
-	}
-}
-
 WPXString WPSContentListener::_colorToString(const RGBSColor * color)
 {
 	WPXString tmpString;
@@ -760,62 +656,4 @@ WPXString WPSContentListener::_colorToString(const RGBSColor * color)
 		tmpString.sprintf("#%.2x%.2x%.2x", 0xFF, 0xFF, 0xFF); // default to white: we really shouldn't be calling this function in that case though
 
 	return tmpString;
-}
-
-WPXString WPSContentListener::_mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor)
-{
-	WPXString tmpColor;
-	RGBSColor tmpFgColor, tmpBgColor;
-
-	if (fgColor) {
-		tmpFgColor.m_r = fgColor->m_r;
-		tmpFgColor.m_g = fgColor->m_g;
-		tmpFgColor.m_b = fgColor->m_b;
-		tmpFgColor.m_s = fgColor->m_s;
-	}
-	else {
-		tmpFgColor.m_r = tmpFgColor.m_g = tmpFgColor.m_b = 0xFF;
-		tmpFgColor.m_s = 0x64; // 100%
-	}
-	if (bgColor) {
-		tmpBgColor.m_r = bgColor->m_r;
-		tmpBgColor.m_g = bgColor->m_g;
-		tmpBgColor.m_b = bgColor->m_b;
-		tmpBgColor.m_s = bgColor->m_s;
-	}
-	else {
-		tmpBgColor.m_r = tmpBgColor.m_g = tmpBgColor.m_b = 0xFF;
-		tmpBgColor.m_s = 0x64; // 100%
-	}
-
-	float fgAmount = (float)tmpFgColor.m_s/100.0f;
-	float bgAmount = LIBWPS_MAX(((float)tmpBgColor.m_s-(float)tmpFgColor.m_s)/100.0f, 0.0f);
-
-	int bgRed = LIBWPS_MIN((int)(((float)tmpFgColor.m_r*fgAmount)+((float)tmpBgColor.m_r*bgAmount)), 255);
-	int bgGreen = LIBWPS_MIN((int)(((float)tmpFgColor.m_g*fgAmount)+((float)tmpBgColor.m_g*bgAmount)), 255);
-	int bgBlue = LIBWPS_MIN((int)(((float)tmpFgColor.m_b*fgAmount)+((float)tmpBgColor.m_b*bgAmount)), 255);
-
-	tmpColor.sprintf("#%.2x%.2x%.2x", bgRed, bgGreen, bgBlue);
-
-	return tmpColor;
-}
-
-float WPSContentListener::_movePositionToFirstColumn(float position)
-{
-	if (m_ps->m_numColumns <= 1)
-		return position;
-	float tempSpaceRemaining = position - m_ps->m_pageMarginLeft - m_ps->m_sectionMarginLeft;
-	position -= m_ps->m_textColumns[0].m_leftGutter;
-	for (unsigned int i = 0; i < (m_ps->m_textColumns.size() - 1); i++)
-	{
-		if ((tempSpaceRemaining -= m_ps->m_textColumns[i].m_width - m_ps->m_textColumns[i].m_rightGutter) > 0)
-		{
-			position -= m_ps->m_textColumns[i].m_width - m_ps->m_textColumns[i].m_leftGutter
-					+ m_ps->m_textColumns[i+1].m_leftGutter;
-			tempSpaceRemaining -= m_ps->m_textColumns[i].m_rightGutter;
-		}
-		else
-			return position;
-	}
-	return position;
 }

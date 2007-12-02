@@ -122,34 +122,6 @@ struct _RGBSColor
 	uint8_t m_s;
 };
 
-typedef struct _WPSColumnDefinition WPSColumnDefinition;
-struct _WPSColumnDefinition
-{
-	_WPSColumnDefinition(); // initializes all values to 0
-	float m_width;
-	float m_leftGutter;
-	float m_rightGutter;
-};
-
-typedef struct _WPSColumnProperties WPSColumnProperties;
-struct _WPSColumnProperties
-{
-	_WPSColumnProperties();
-	uint32_t m_attributes;
-	uint8_t m_alignment;
-};
-
-typedef struct _WPSTabStop WPSTabStop;
-struct _WPSTabStop
-{
-	_WPSTabStop(float position, WPSTabAlignment alignment, uint16_t leaderCharacter, uint8_t leaderNumSpaces);
-	_WPSTabStop();
-	float m_position;
-	WPSTabAlignment m_alignment;
-	uint16_t m_leaderCharacter;
-	uint8_t m_leaderNumSpaces;
-};
-
 // Various exceptions
 
 class VersionException

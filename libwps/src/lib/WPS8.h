@@ -75,20 +75,10 @@ public:
 	virtual void attributeChange(const bool isOn, const uint8_t attribute) = 0;
 	virtual void pageMarginChange(const uint8_t side, const uint16_t margin) = 0;
 	virtual void pageFormChange(const uint16_t length, const uint16_t width, const WPSFormOrientation orientation, const bool isPersistent) = 0;
-	virtual void marginChange(const uint8_t side, const uint16_t margin) = 0;
-	virtual void indentFirstLineChange(const int16_t offset) = 0;
-	virtual void columnChange(const WPSTextColumnType columnType, const uint8_t numColumns, const std::vector<float> &columnWidth,
-					const std::vector<bool> &isFixedWidth) = 0;
 	virtual void endDocument() = 0;
 
-	virtual void undoChange(const uint8_t undoType, const uint16_t undoLevel) = 0;
-	virtual void justificationChange(const uint8_t justification) = 0;
-	virtual void setTextColor(const RGBSColor * fontColor) = 0;
 	virtual void setTextFont(const WPXString fontName) = 0;
 	virtual void setFontSize(const uint16_t fontSize) = 0;
-	virtual void insertPageNumber(const WPXString &pageNumber) = 0;
-	virtual void insertNoteReference(const WPXString &noteReference) = 0;
-	virtual void suppressPage(const uint16_t suppressCode) = 0;
 };
 
 typedef std::multimap <std::string, HeaderIndexEntries> HeaderIndexMultiMap; /* string is name */
@@ -144,21 +134,10 @@ public:
 	void lineSpacingChange(const float lineSpacing) { WPSContentListener::lineSpacingChange(lineSpacing); };
 	void pageMarginChange(const uint8_t side, const uint16_t margin) {};
 	void pageFormChange(const uint16_t length, const uint16_t width, const WPSFormOrientation orientation, const bool isPersistent) {};
-	void marginChange(const uint8_t side, const uint16_t margin);
-	void indentFirstLineChange(const int16_t offset);
-	void columnChange(const WPSTextColumnType columnType, const uint8_t numColumns, const std::vector<float> &columnWidth,
-					const std::vector<bool> &isFixedWidth);
 	void endDocument() { WPSContentListener::endDocument(); };
 
-	void undoChange(const uint8_t undoType, const uint16_t undoLevel);
-	void justificationChange(const uint8_t justification);
-	void setTextColor(const RGBSColor * fontColor);
 	void setTextFont(const WPXString fontName);
 	void setFontSize(const uint16_t fontSize);
-	void insertPageNumber(const WPXString &pageNumber);
-	void insertNoteReference(const WPXString &noteReference);
-	void insertNote(const WPSNoteType noteType);
-	void suppressPage(const uint16_t suppressCode);
 	
 protected:
 	void _openParagraph();
