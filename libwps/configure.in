@@ -4,7 +4,7 @@ AM_CONFIG_HEADER(config.h)
 
 WPS_MAJOR_VERSION=0
 WPS_MINOR_VERSION=1
-WPS_MICRO_VERSION=1
+WPS_MICRO_VERSION=2
 
 WPS_VERSION="$WPS_MAJOR_VERSION.$WPS_MINOR_VERSION.$WPS_MICRO_VERSION"
 
@@ -118,7 +118,7 @@ AC_ARG_WITH(docs,
 	if test "x$withval" = xno; then
 		test_docs=false
 	fi
-	if text "x$withval" = xyes; then
+	if test "x$withval" = xyes; then
 		test_docs=true
 	fi
 )

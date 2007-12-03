@@ -32,9 +32,7 @@
 #include "WPSContentListener.h"
 #include <libwpd/WPXPropertyListVector.h>
 #include <libwpd/WPXHLListenerImpl.h>
-#include <vector>
 #include <list>
-#include <set>
 
 typedef struct _WPSContentParsingState WPSContentParsingState;
 struct _WPSContentParsingState
@@ -44,7 +42,7 @@ struct _WPSContentParsingState
 
 	uint32_t m_textAttributeBits;
 	float m_fontSize;
-	WPXString *m_fontName;
+	WPXString m_fontName;
 
 	bool m_isParagraphColumnBreak;
 	bool m_isParagraphPageBreak;
@@ -55,7 +53,6 @@ struct _WPSContentParsingState
 	bool m_isPageSpanOpened;
 	bool m_isSectionOpened;
 	bool m_isPageSpanBreakDeferred;
-	bool m_isHeaderFooterWithoutParagraph;
 
 	bool m_isSpanOpened;
 	bool m_isParagraphOpened;
@@ -75,6 +72,8 @@ struct _WPSContentParsingState
 	float m_paragraphMarginRight;
 	float m_paragraphMarginTop;
 	float m_paragraphMarginBottom;
+	
+	WPXString m_textBuffer;
 private:
 	_WPSContentParsingState(const _WPSContentParsingState&);
 	_WPSContentParsingState& operator=(const _WPSContentParsingState&);
@@ -90,11 +89,18 @@ public:
 	void endDocument();
 	void insertBreak(const uint8_t breakType);
 
+	void setTextFont(const WPXString fontName);
+	void setFontSize(const uint16_t fontSize);
+	
+	void insertCharacter(const uint16_t character);
+	void insertEOL();
+
+protected:
 	WPSContentParsingState *m_ps; // parse state
 	WPXHLListenerImpl * m_listenerImpl;
 	WPXPropertyList m_metaData;
 
-	virtual void _flushText() = 0;
+	void _flushText();
 
 	void _openSection();
 	void _closeSection();
@@ -102,7 +108,7 @@ public:
 	void _openPageSpan();
 	void _closePageSpan();
 
-	virtual void _openParagraph();
+	void _openParagraph();
 	void _closeParagraph();
 
 	void _openSpan();

@@ -744,48 +744,16 @@ void WPS4Parser::parse(WPSInputStream *input, WPS4ContentListener *listener)
 
 
 /*
-WPS4ContentParsingState public
-*/
-
-_WPS4ContentParsingState::_WPS4ContentParsingState() :
-	m_textBuffer()
-{
-}
-
-_WPS4ContentParsingState::~_WPS4ContentParsingState()
-{
-	WPS_DEBUG_MSG(("~WPS4ContentParsingState:: m_textBuffer.len() =%i\n", m_textBuffer.len()));		
-}
-
-
-/*
 WPS4ContentListener public
 */
 
 WPS4ContentListener::WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
-	WPSContentListener(pageList, listenerImpl),
-	m_parseState(new WPS4ContentParsingState)
+	WPSContentListener(pageList, listenerImpl)
 {
 }
 
 WPS4ContentListener::~WPS4ContentListener()
 {
-	delete m_parseState;
-}
-
-void WPS4ContentListener::insertCharacter(const uint16_t character) 
-{
-	if (!m_ps->m_isSpanOpened)
-		_openSpan();
-	m_parseState->m_textBuffer.append(character);
-}
-
-void WPS4ContentListener::insertEOL() 
-{
-	if (!m_ps->m_isParagraphOpened)
-		_openSpan();
-	if (m_ps->m_isParagraphOpened)
-		_closeParagraph();
 }
 
 void WPS4ContentListener::attributeChange(const bool isOn, const uint8_t attribute)
@@ -819,33 +787,4 @@ void WPS4ContentListener::attributeChange(const bool isOn, const uint8_t attribu
 		m_ps->m_textAttributeBits |= textAttributeBit;
 	else
 		m_ps->m_textAttributeBits ^= textAttributeBit;
-}
-
-void WPS4ContentListener::setTextFont(const WPXString fontName)
-{
-	_closeSpan();
-	*(m_ps->m_fontName) = fontName;	
-}
-
-void WPS4ContentListener::setFontSize(const uint16_t fontSize)
-{
-	_closeSpan();
-	m_ps->m_fontSize=float(fontSize);
-}
-
-/*
-WPS4ContentListener protected 
-*/
-
-void WPS4ContentListener::_openParagraph()
-{
-//	WPS_DEBUG_MSG(("STUB WPS4ContentListener::_openParagraph()\n"));		
-	WPSContentListener::_openParagraph();
-}
-
-void WPS4ContentListener::_flushText()
-{
-	if (m_parseState->m_textBuffer.len())
-		m_listenerImpl->insertText(m_parseState->m_textBuffer);
-	m_parseState->m_textBuffer.clear();
 }

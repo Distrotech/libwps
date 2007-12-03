@@ -36,10 +36,12 @@
 #define LIBWPS_MAX std::max
 #endif
 
+#include <vector>
+
 _WPSContentParsingState::_WPSContentParsingState() :
 	m_textAttributeBits(0),
-	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/), // FIXME ME!!!!!!!!!!!!!!!!!!! HELP WP6_DEFAULT_FONT_SIZE
-	m_fontName(new WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")), // EN PAS DEFAULT FONT AAN VOOR WP5/6/etc
+	m_fontSize(12.0f),
+	m_fontName(WPXString("Times New Roman")),
 
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
@@ -50,7 +52,6 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_isPageSpanOpened(false),
 	m_isSectionOpened(false),
 	m_isPageSpanBreakDeferred(false),
-	m_isHeaderFooterWithoutParagraph(false),
 
 	m_isSpanOpened(false),
 	m_isParagraphOpened(false),
@@ -69,13 +70,14 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_paragraphMarginLeft(0.0f),
 	m_paragraphMarginRight(0.0f),
 	m_paragraphMarginTop(0.0f),
-	m_paragraphMarginBottom(0.0f)
+	m_paragraphMarginBottom(0.0f),
+	
+	m_textBuffer()
 {
 }
 
 _WPSContentParsingState::~_WPSContentParsingState()
 {
-	DELETEP(m_fontName);
 }
 
 WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
@@ -95,9 +97,6 @@ void WPSContentListener::startDocument()
 {
 	if (!m_ps->m_isDocumentStarted)
 	{
-		// FIXME: this is stupid, we should store a property list filled with the relevant metadata
-		// and then pass that directly..
-
 		m_listenerImpl->setDocumentMetaData(m_metaData);
 
 		m_listenerImpl->startDocument();
@@ -313,7 +312,6 @@ void WPSContentListener::_openParagraph()
 		m_ps->m_isParagraphColumnBreak = false;
 		m_ps->m_isParagraphPageBreak = false;
 		m_ps->m_isParagraphOpened = true;
-		m_ps->m_isHeaderFooterWithoutParagraph = false;
 	}
 }
 
@@ -389,8 +387,8 @@ void WPSContentListener::_openSpan()
 	if (m_ps->m_textAttributeBits & WPS_SHADOW_BIT) 
 		propList.insert("fo:text-shadow", "1pt 1pt");
 
-	if (m_ps->m_fontName)
-		propList.insert("style:font-name", m_ps->m_fontName->cstr());
+	if (m_ps->m_fontName.len())
+		propList.insert("style:font-name", m_ps->m_fontName.cstr());
 	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, POINT);
 
 	// Here we give the priority to the redline bit over the font color.
@@ -456,3 +454,38 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 		break;
 	}
 }
+
+void WPSContentListener::setTextFont(const WPXString fontName)
+{
+	_closeSpan();
+	m_ps->m_fontName.sprintf("%s", fontName.cstr()); // not all libwpd-0.8.x have a safe assignment operator for WPXString
+}
+
+void WPSContentListener::setFontSize(const uint16_t fontSize)
+{
+	_closeSpan();
+	m_ps->m_fontSize=float(fontSize);
+}
+
+void WPSContentListener::insertEOL() 
+{
+	if (!m_ps->m_isParagraphOpened)
+		_openSpan();
+	if (m_ps->m_isParagraphOpened)
+		_closeParagraph();
+}
+
+void WPSContentListener::insertCharacter(const uint16_t character) 
+{
+	if (!m_ps->m_isSpanOpened)
+		_openSpan();
+	m_ps->m_textBuffer.append(character);
+}
+
+void WPSContentListener::_flushText()
+{
+	if (m_ps->m_textBuffer.len())
+		m_listenerImpl->insertText(m_ps->m_textBuffer);
+	m_ps->m_textBuffer.clear();
+}
+

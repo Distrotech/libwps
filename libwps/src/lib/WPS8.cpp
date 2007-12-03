@@ -790,49 +790,16 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8ContentListener *liste
 
 
 /*
-WPS8ContentParsingState public
-*/
-
-_WPS8ContentParsingState::_WPS8ContentParsingState()
-{
-	m_textBuffer.clear();
-}
-
-_WPS8ContentParsingState::~_WPS8ContentParsingState()
-{
-	WPS_DEBUG_MSG(("~WPS8ContentParsingState:: m_textBuffer.len() =%i\n", m_textBuffer.len()));		
-	m_textBuffer.clear();
-}
-
-
-/*
 WPS8ContentListener public
 */
 
 WPS8ContentListener::WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
-	WPSContentListener(pageList, listenerImpl),
-	m_parseState(new WPS8ContentParsingState)
+	WPSContentListener(pageList, listenerImpl)
 {
 }
 
 WPS8ContentListener::~WPS8ContentListener()
 {
-	delete m_parseState;
-}
-
-void WPS8ContentListener::insertCharacter(const uint16_t character) 
-{
-	if (!m_ps->m_isSpanOpened)
-		_openSpan();
-	m_parseState->m_textBuffer.append(character);
-}
-
-void WPS8ContentListener::insertEOL() 
-{
-	if (!m_ps->m_isParagraphOpened)
-		_openSpan();
-	if (m_ps->m_isParagraphOpened)
-		_closeParagraph();
 }
 
 void WPS8ContentListener::attributeChange(const bool isOn, const uint8_t attribute)
@@ -866,33 +833,4 @@ void WPS8ContentListener::attributeChange(const bool isOn, const uint8_t attribu
 		m_ps->m_textAttributeBits |= textAttributeBit;
 	else
 		m_ps->m_textAttributeBits ^= textAttributeBit;
-}
-
-void WPS8ContentListener::setTextFont(const WPXString fontName)
-{
-	_closeSpan();
-	*(m_ps->m_fontName) = fontName;	
-}
-
-void WPS8ContentListener::setFontSize(const uint16_t fontSize)
-{
-	_closeSpan();
-	m_ps->m_fontSize=float(fontSize);
-}
-
-/*
-WPS8ContentListener protected 
-*/
-
-void WPS8ContentListener::_openParagraph()
-{
-//	WPS_DEBUG_MSG(("STUB WPS8ContentListener::_openParagraph()\n"));		
-	WPSContentListener::_openParagraph();
-}
-
-void WPS8ContentListener::_flushText()
-{
-	if (m_parseState->m_textBuffer.len())
-		m_listenerImpl->insertText(m_parseState->m_textBuffer);
-	m_parseState->m_textBuffer.clear();
 }

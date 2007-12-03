@@ -33,20 +33,18 @@
 #include <libwpd/WPXString.h>
 #include "WPSParser.h"
 
-class WPS4ContentListener;
 
-class WPS4PrefixDataPacket
+class WPS4ContentListener : public WPSContentListener
 {
 public:
-	WPS4PrefixDataPacket(WPSInputStream * input);	
-	virtual ~WPS4PrefixDataPacket() {}
-	virtual void parse(WPS4ContentListener *listener) const {}
+	WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
+	~WPS4ContentListener();
 
-//	static WPS4PrefixDataPacket * constructPrefixDataPacket(WPSInputStream * input, WPS4PrefixIndice *prefixIndice);
+	void attributeChange(const bool isOn, const uint8_t attribute);
 
-protected:
-	virtual void _readContents(WPSInputStream *input) = 0;
- 	void _read(WPSInputStream *input, uint32_t dataOffset, uint32_t dataSize);
+private:
+	WPS4ContentListener(const WPS4ContentListener&);
+	WPS4ContentListener& operator=(const WPS4ContentListener&);
 };
 
 class WPS4Parser : public WPSParser
@@ -56,6 +54,7 @@ public:
 	~WPS4Parser();
 
 	void parse(WPXHLListenerImpl *listenerImpl);
+
 private:
 	void parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *input);
 	void parse(WPSInputStream *stream, WPS4ContentListener *listener);
@@ -74,40 +73,6 @@ private:
 	std::vector<FOD> PAFODs; /* PAragraph FOrmatting Descriptors */			
 	std::map<uint8_t, std::string> fonts; /* fonts in format <index code, font name>  */
 	const uint8_t m_worksVersion;
-};
-
-
-typedef struct _WPS4ContentParsingState WPS4ContentParsingState;
-struct _WPS4ContentParsingState
-{
-	_WPS4ContentParsingState();
-	~_WPS4ContentParsingState();
-	WPXString m_textBuffer;
-};
-
-
-class WPS4ContentListener : public WPSContentListener
-{
-public:
-	WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
-	~WPS4ContentListener();
-
-	void insertCharacter(const uint16_t character);
-	void insertEOL();
-	void attributeChange(const bool isOn, const uint8_t attribute);
-
-	void setTextFont(const WPXString fontName);
-	void setFontSize(const uint16_t fontSize);
-	
-protected:
-	void _openParagraph();
-
-	void _flushText();
-	
-private:
-	WPS4ContentListener(const WPS4ContentListener&);
-	WPS4ContentListener& operator=(const WPS4ContentListener&);
-	WPS4ContentParsingState *m_parseState;	
 };
 
 #endif /* WPS6_H */

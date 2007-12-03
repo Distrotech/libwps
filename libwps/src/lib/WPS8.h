@@ -45,22 +45,20 @@ public:
 	uint32_t length;
 };
 
-class WPS8ContentListener;
+typedef std::multimap <std::string, HeaderIndexEntries> HeaderIndexMultiMap; /* string is name */
 
-
-class WPS8PrefixDataPacket
+class WPS8ContentListener : public WPSContentListener
 {
 public:
-	WPS8PrefixDataPacket(WPSInputStream * input);	
-	virtual ~WPS8PrefixDataPacket() {}
-	virtual void parse(WPS8ContentListener *listener) const {}
+	WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
+	~WPS8ContentListener();
 
-protected:
-	virtual void _readContents(WPSInputStream *input) = 0;
- 	void _read(WPSInputStream *input, uint32_t dataOffset, uint32_t dataSize);
+	void attributeChange(const bool isOn, const uint8_t attribute);
+
+private:
+	WPS8ContentListener(const WPS8ContentListener&);
+	WPS8ContentListener& operator=(const WPS8ContentListener&);
 };
-
-typedef std::multimap <std::string, HeaderIndexEntries> HeaderIndexMultiMap; /* string is name */
 
 class WPS8Parser : public WPSParser
 {
@@ -88,36 +86,5 @@ private:
 	std::vector<std::string> fonts;
 };
 
-
-typedef struct _WPS8ContentParsingState WPS8ContentParsingState;
-struct _WPS8ContentParsingState
-{
-	_WPS8ContentParsingState();
-	~_WPS8ContentParsingState();
-	WPXString m_textBuffer;
-};
-
-
-class WPS8ContentListener : public WPSContentListener
-{
-public:
-	WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
-	~WPS8ContentListener();
-
-	void insertCharacter(const uint16_t character);
-	void insertEOL();
-	void attributeChange(const bool isOn, const uint8_t attribute);
-
-	void setTextFont(const WPXString fontName);
-	void setFontSize(const uint16_t fontSize);
-	
-protected:
-	void _openParagraph();
-
-	void _flushText();
-	
-private:
-	WPS8ContentParsingState *m_parseState;	
-};
 
 #endif /* WPS8_H */
