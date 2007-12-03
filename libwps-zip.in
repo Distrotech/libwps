@@ -14,14 +14,12 @@ DLLDIR=bin
 
 @STRIP@ --strip-all \
 $DLLDIR/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll \
-$DLLDIR/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll \
 bin/wps2html.exe \
 bin/wps2raw.exe \
 bin/wps2text.exe
 
 upx -qqq --best \
 $DLLDIR/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll \
-$DLLDIR/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll \
 bin/wps2html.exe \
 bin/wps2raw.exe \
 bin/wps2text.exe
@@ -29,18 +27,14 @@ bin/wps2text.exe
 rm $ZIP
 zip -q $ZIP -@ <<EOF
 $DLLDIR/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll
-$DLLDIR/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll
 EOF
 
 rm $DEVZIP
 zip -q -r $DEVZIP -@ <<EOF
 include/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@
 lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll.a
-lib/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll.a
 lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.a
-lib/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.a
 lib/pkgconfig/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
-lib/pkgconfig/libwps-stream-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
 EOF
 
 rm $TOOLSZIP

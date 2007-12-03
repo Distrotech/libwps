@@ -356,9 +356,9 @@ void WPSContentListener::_openSpan()
 
 	WPXPropertyList propList;
  	if (m_ps->m_textAttributeBits & WPS_SUPERSCRIPT_BIT)
-		propList.insert("style:text-position", "58%");
+		propList.insert("style:text-position", "super 58%");
  	else if (m_ps->m_textAttributeBits & WPS_SUBSCRIPT_BIT)
-		propList.insert("style:text-position", "58%");
+		propList.insert("style:text-position", "sub 58%");
 	if (m_ps->m_textAttributeBits & WPS_ITALICS_BIT)
 		propList.insert("fo:font-style", "italic");
 	if (m_ps->m_textAttributeBits & WPS_BOLD_BIT)
