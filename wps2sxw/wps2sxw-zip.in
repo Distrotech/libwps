@@ -1,0 +1,16 @@
+#!/bin/sh
+
+ZIP=wpsd2sxw-@WPS2SXW_VERSION@.zip
+
+cd $DESTDIR@prefix@
+
+@STRIP@ --strip-all \
+bin/wps2sxw.exe
+
+upx -qqq --best \
+bin/wps2sxw.exe
+
+rm -f $ZIP
+zip -q -r -j $ZIP -@ <<EOF
+bin/wps2sxw.exe
+EOF
