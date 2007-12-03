@@ -49,7 +49,6 @@ struct _WPSContentParsingState
 	bool m_isParagraphColumnBreak;
 	bool m_isParagraphPageBreak;
 	uint8_t m_paragraphJustification;
-	uint8_t m_tempParagraphJustification; // TODO: remove this one after the tabs are properly implemented
 	float m_paragraphLineSpacing;
 
 	bool m_isDocumentStarted;
@@ -61,12 +60,6 @@ struct _WPSContentParsingState
 	bool m_isSpanOpened;
 	bool m_isParagraphOpened;
 
-	std::vector<unsigned int> m_numRowsToSkip;
-	bool m_wasHeaderRow;
-	bool m_isCellWithoutParagraph;
-	uint32_t m_cellAttributeBits;
-	uint8_t m_paragraphJustificationBeforeColumns;
-	
 	std::list<WPSPageSpan>::iterator m_nextPageSpanIter;
 	int m_numPagesRemainingInSpan;
 
@@ -78,32 +71,10 @@ struct _WPSContentParsingState
 
 	float m_pageMarginLeft;
 	float m_pageMarginRight;
-	float m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
-	float m_paragraphMarginRight; // properties
+	float m_paragraphMarginLeft;
+	float m_paragraphMarginRight;
 	float m_paragraphMarginTop;
 	float m_paragraphMarginBottom;
-	float m_leftMarginByPageMarginChange;  // part of the margin due to the PAGE margin change
-	float m_rightMarginByPageMarginChange; // inside a page that already has content.
-	float m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted
-	float m_sectionMarginRight; // as section margin change 
-	float m_leftMarginByParagraphMarginChange;  // part of the margin due to the PARAGRAPH
-	float m_rightMarginByParagraphMarginChange; // margin change (in WP6)
-	float m_leftMarginByTabs;  // part of the margin due to the LEFT or LEFT/RIGHT Indent; the
-	float m_rightMarginByTabs; // only part of the margin that is reset at the end of a paragraph
-
-	float m_listReferencePosition; // position from the left page margin of the list number/bullet
-	float m_listBeginPosition; // position from the left page margin of the beginning of the list
-
-	float m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
-	float m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
-	float m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
-
-	uint8_t m_currentListLevel;
-	
-	uint16_t m_alignmentCharacter;
-	bool m_isTabPositionRelative;
-
-	bool m_isNote;
 private:
 	_WPSContentParsingState(const _WPSContentParsingState&);
 	_WPSContentParsingState& operator=(const _WPSContentParsingState&);
@@ -111,14 +82,13 @@ private:
 
 class WPSContentListener
 {
-protected:
+public:
 	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl);
 	virtual ~WPSContentListener();
 
 	void startDocument();
 	void endDocument();
 	void insertBreak(const uint8_t breakType);
-	void lineSpacingChange(const float lineSpacing);
 
 	WPSContentParsingState *m_ps; // parse state
 	WPXHLListenerImpl * m_listenerImpl;
@@ -132,9 +102,6 @@ protected:
 	void _openPageSpan();
 	void _closePageSpan();
 
-	void _appendParagraphProperties(WPXPropertyList &propList);
-	void _appendJustification(WPXPropertyList &propList, int justification);
-	void _resetParagraphState();
 	virtual void _openParagraph();
 	void _closeParagraph();
 

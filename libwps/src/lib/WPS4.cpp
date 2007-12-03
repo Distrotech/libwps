@@ -258,7 +258,7 @@ bool WPS4Parser::readFODPage(WPSInputStream * input, std::vector<FOD> * FODs)
 #define WPS4_ATTRIBUTE_SUBSCRIPT 4
 #define WPS4_ATTRIBUTE_SUPERSCRIPT 5
 
-void WPS4Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS4Listener *listener)
+void WPS4Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS4ContentListener *listener)
 {
 	if ((oldTextAttributeBits ^ newTextAttributeBits) & bit)
 	{
@@ -271,7 +271,7 @@ void WPS4Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits
  * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
  *
  */
-void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4Listener *listener)
+void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4ContentListener *listener)
 {
 	WPS_DEBUG_MSG(("WPS4Parser::propertyChangeDelta(%i, %p)\n", newTextAttributeBits, (void *)listener));	
 	propertyChangeTextAttribute(newTextAttributeBits, WPS4_ATTRIBUTE_BOLD, WPS_BOLD_BIT, listener);
@@ -330,7 +330,7 @@ char * WPS2FontNameFromIndex(uint8_t font_n)
  * in rgchProp is significant (e.g., bold is always in the first byte).
  *
  */
-void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
+void WPS4Parser::propertyChange(std::string rgchProp, WPS4ContentListener *listener)
 {
 	if (0 == rgchProp.length())
 		return;
@@ -408,7 +408,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4Listener *listener)
  * Courtesy of glib2 and iconv
  *
  */
-void WPS4Parser::appendCP850(const uint8_t readVal, WPS4Listener *listener)
+void WPS4Parser::appendCP850(const uint8_t readVal, WPS4ContentListener *listener)
 {
 // Fridrich: I see some MS Works files with IBM850 encoding ???
 	static const uint16_t cp850toUCS4[128] = {
@@ -475,7 +475,7 @@ void WPS4Parser::appendCP850(const uint8_t readVal, WPS4Listener *listener)
  * Courtesy of glib2 and iconv
  *
  */
-void WPS4Parser::appendCP1252(const uint8_t readVal, WPS4Listener *listener)
+void WPS4Parser::appendCP1252(const uint8_t readVal, WPS4ContentListener *listener)
 {
 	static const uint16_t cp1252toUCS4[32] = {
 		0x20ac, 0xfffd, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021,
@@ -531,7 +531,7 @@ void WPS4Parser::appendCP1252(const uint8_t readVal, WPS4Listener *listener)
  * formatting information.
  *
  */
-void WPS4Parser::readText(WPSInputStream * input, WPS4Listener *listener)
+void WPS4Parser::readText(WPSInputStream * input, WPS4ContentListener *listener)
 {
 	oldTextAttributeBits = 0;
 	std::vector<FOD>::iterator FODs_iter;	
@@ -690,7 +690,7 @@ void WPS4Parser::parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *in
 	}
 }
 
-void WPS4Parser::parse(WPSInputStream *input, WPS4Listener *listener)
+void WPS4Parser::parse(WPSInputStream *input, WPS4ContentListener *listener)
 {
 	WPS_DEBUG_MSG(("WPS4Parser::parse()\n"));	
 
@@ -744,15 +744,6 @@ void WPS4Parser::parse(WPSInputStream *input, WPS4Listener *listener)
 
 
 /*
-WPS4Listener public
-*/
-
-WPS4Listener::WPS4Listener()
-{
-}
-
-
-/*
 WPS4ContentParsingState public
 */
 
@@ -772,7 +763,6 @@ WPS4ContentListener public
 */
 
 WPS4ContentListener::WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
-	WPS4Listener(),
 	WPSContentListener(pageList, listenerImpl),
 	m_parseState(new WPS4ContentParsingState)
 {
@@ -788,11 +778,6 @@ void WPS4ContentListener::insertCharacter(const uint16_t character)
 	if (!m_ps->m_isSpanOpened)
 		_openSpan();
 	m_parseState->m_textBuffer.append(character);
-}
-
-void WPS4ContentListener::insertTab(const uint8_t tabType, float tabPosition) 
-{
-	WPS_DEBUG_MSG(("STUB WPS4ContentListener::insertTab()\n"));		
 }
 
 void WPS4ContentListener::insertEOL() 
@@ -835,14 +820,6 @@ void WPS4ContentListener::attributeChange(const bool isOn, const uint8_t attribu
 	else
 		m_ps->m_textAttributeBits ^= textAttributeBit;
 }
-
-#if 0
-void WPS4ContentListener::attributeChange(const uint32_t attributeBits)
-{
-	_closeSpan();
-	m_ps->m_textAttributeBits = attributeBits;
-}
-#endif
 
 void WPS4ContentListener::setTextFont(const WPXString fontName)
 {

@@ -119,7 +119,7 @@ void WPS8Parser::readFontsTable(WPSInputStream * input)
 
 #define SURROGATE_VALUE(h,l) (((h) - 0xd800) * 0x400 + (l) - 0xdc00 + 0x10000)
 
-void WPS8Parser::appendUTF16LE(WPSInputStream *input, WPS8Listener *listener)
+void WPS8Parser::appendUTF16LE(WPSInputStream *input, WPS8ContentListener *listener)
 {
 	uint16_t high_surrogate = 0;
 	bool fail = false;
@@ -200,7 +200,7 @@ void WPS8Parser::appendUTF16LE(WPSInputStream *input, WPS8Listener *listener)
 
 // fixme: this method might turn out to be like WPS4Parser::readText()
 
-void WPS8Parser::readText(WPSInputStream * input, WPS8Listener *listener)
+void WPS8Parser::readText(WPSInputStream * input, WPS8ContentListener *listener)
 {
 	WPS_DEBUG_MSG(("WPS8Parser::readText()\n"));
 
@@ -534,7 +534,7 @@ void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPSInputStream *in
 	pageList.push_back(ps);
 }
 
-void WPS8Parser::parse(WPSInputStream *input, WPS8Listener *listener)
+void WPS8Parser::parse(WPSInputStream *input, WPS8ContentListener *listener)
 {
 	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));	
 
@@ -596,7 +596,7 @@ void WPS8Parser::parse(WPSInputStream *input, WPS8Listener *listener)
 #define WPS8_ATTRIBUTE_SUBSCRIPT 4
 #define WPS8_ATTRIBUTE_SUPERSCRIPT 5
 
-void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8Listener *listener)
+void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8ContentListener *listener)
 {
 	if ((oldTextAttributeBits ^ newTextAttributeBits) & bit)
 		listener->attributeChange(newTextAttributeBits & bit, attribute);
@@ -606,7 +606,7 @@ void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits
  * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
  *
  */
-void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8Listener *listener)
+void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8ContentListener *listener)
 {
 	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_BOLD, WPS_BOLD_BIT, listener);
 	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_ITALICS, WPS_ITALICS_BIT, listener);
@@ -627,7 +627,7 @@ void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8Listener
  * codes.
  *
  */
-void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
+void WPS8Parser::propertyChange(std::string rgchProp, WPS8ContentListener *listener)
 {
 	//fixme: this method is immature
 	/* check */
@@ -790,15 +790,6 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8Listener *listener)
 
 
 /*
-WPS8Listener public
-*/
-
-WPS8Listener::WPS8Listener()
-{
-}
-
-
-/*
 WPS8ContentParsingState public
 */
 
@@ -819,7 +810,6 @@ WPS8ContentListener public
 */
 
 WPS8ContentListener::WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXHLListenerImpl *listenerImpl) :
-	WPS8Listener(),
 	WPSContentListener(pageList, listenerImpl),
 	m_parseState(new WPS8ContentParsingState)
 {
@@ -835,11 +825,6 @@ void WPS8ContentListener::insertCharacter(const uint16_t character)
 	if (!m_ps->m_isSpanOpened)
 		_openSpan();
 	m_parseState->m_textBuffer.append(character);
-}
-
-void WPS8ContentListener::insertTab(const uint8_t tabType, float tabPosition) 
-{
-	WPS_DEBUG_MSG(("STUB WPS8ContentListener::insertTab()\n"));		
 }
 
 void WPS8ContentListener::insertEOL() 

@@ -44,7 +44,6 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
 	m_paragraphJustification(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
-	m_tempParagraphJustification(0),
 	m_paragraphLineSpacing(1.0f),
 
 	m_isDocumentStarted(false),
@@ -55,8 +54,6 @@ _WPSContentParsingState::_WPSContentParsingState() :
 
 	m_isSpanOpened(false),
 	m_isParagraphOpened(false),
-	m_cellAttributeBits(0),
-	m_paragraphJustificationBeforeColumns(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
 
 	m_numPagesRemainingInSpan(0),
 
@@ -72,27 +69,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_paragraphMarginLeft(0.0f),
 	m_paragraphMarginRight(0.0f),
 	m_paragraphMarginTop(0.0f),
-	m_paragraphMarginBottom(0.0f),
-	m_leftMarginByPageMarginChange(0.0f),
-	m_rightMarginByPageMarginChange(0.0f),
-	m_sectionMarginLeft(0.0f),
-	m_sectionMarginRight(0.0f),
-	m_leftMarginByParagraphMarginChange(0.0f),
-	m_rightMarginByParagraphMarginChange(0.0f),
-	m_leftMarginByTabs(0.0f),
-	m_rightMarginByTabs(0.0f),
-	
-	m_listReferencePosition(0.0f),
-	m_listBeginPosition(0.0f),
-
-	m_paragraphTextIndent(0.0f),
-	m_textIndentByParagraphIndentChange(0.0f),
-	m_textIndentByTabs(0.0f),
-	m_currentListLevel(0),
-
-	m_alignmentCharacter('.'),
-	m_isTabPositionRelative(false),
-	m_isNote(false)
+	m_paragraphMarginBottom(0.0f)
 {
 }
 
@@ -152,8 +129,8 @@ void WPSContentListener::_openSection()
 
 		WPXPropertyList propList;
 
-		propList.insert("fo:margin-left", m_ps->m_sectionMarginLeft);
-		propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
+		propList.insert("fo:margin-left", 0.0f);
+		propList.insert("fo:margin-right", 0.0f);
 		propList.insert("fo:margin-bottom", 0.0f);
 
 		WPXPropertyListVector columns;
@@ -187,18 +164,6 @@ void WPSContentListener::_openPageSpan()
 	if (!m_ps->m_isDocumentStarted)
 		startDocument();
 
-	// Hack to be sure that the paragraph margins are consistent even if the page margin changes
-	if (m_ps->m_leftMarginByPageMarginChange != 0)
-		m_ps->m_leftMarginByPageMarginChange += m_ps->m_pageMarginLeft;
-	if (m_ps->m_rightMarginByPageMarginChange != 0)
-		m_ps->m_rightMarginByPageMarginChange += m_ps->m_pageMarginRight;
-	if (m_ps->m_sectionMarginLeft != 0)
-		m_ps->m_sectionMarginLeft += m_ps->m_pageMarginLeft;
-	if (m_ps->m_sectionMarginRight != 0)
-		m_ps->m_sectionMarginRight += m_ps->m_pageMarginRight;
-	m_ps->m_listReferencePosition += m_ps->m_pageMarginLeft;
-	m_ps->m_listBeginPosition += m_ps->m_pageMarginLeft;
-	
 	if ( m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end()))
 	{
 		WPS_DEBUG_MSG(("m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end())\n"));
@@ -232,24 +197,6 @@ void WPSContentListener::_openPageSpan()
 	m_ps->m_pageFormWidth = currentPage.getFormWidth();
 	m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
 	m_ps->m_pageMarginRight = currentPage.getMarginRight();
-
-	// Hack to be sure that the paragraph margins are consistent even if the page margin changes
-	// Compute new values
-	if (m_ps->m_leftMarginByPageMarginChange != 0)
-		m_ps->m_leftMarginByPageMarginChange -= m_ps->m_pageMarginLeft;
-	if (m_ps->m_rightMarginByPageMarginChange != 0)
-		m_ps->m_rightMarginByPageMarginChange -= m_ps->m_pageMarginRight;
-	if (m_ps->m_sectionMarginLeft != 0)
-		m_ps->m_sectionMarginLeft -= m_ps->m_pageMarginLeft;
-	if (m_ps->m_sectionMarginRight != 0)
-		m_ps->m_sectionMarginRight -= m_ps->m_pageMarginRight;
-	m_ps->m_listReferencePosition -= m_ps->m_pageMarginLeft;
-	m_ps->m_listBeginPosition -= m_ps->m_pageMarginLeft;
-
-	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange
-			+ m_ps->m_leftMarginByTabs;
-	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange
-			+ m_ps->m_rightMarginByTabs;
 
 	std::vector<WPSHeaderFooter> headerFooterList = currentPage.getHeaderFooterList();
 	for (std::vector<WPSHeaderFooter>::iterator iter = headerFooterList.begin(); iter != headerFooterList.end(); iter++)
@@ -296,13 +243,6 @@ void WPSContentListener::_openPageSpan()
 	m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
 	m_ps->m_pageMarginRight = currentPage.getMarginRight();
 
-	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange
-			+ m_ps->m_leftMarginByTabs;
-	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange
-			+ m_ps->m_rightMarginByTabs;
-
-	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
-
 	m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
 	m_ps->m_nextPageSpanIter++;
 }
@@ -334,77 +274,47 @@ void WPSContentListener::_openParagraph()
 		WPXPropertyListVector tabStops;
 
 		WPXPropertyList propList;
-		_appendParagraphProperties(propList);
+
+		switch (m_ps->m_paragraphJustification)
+		{
+		case WPS_PARAGRAPH_JUSTIFICATION_LEFT:
+			// doesn't require a paragraph prop - it is the default
+			propList.insert("fo:text-align", "left");
+			break;
+		case WPS_PARAGRAPH_JUSTIFICATION_CENTER:
+			propList.insert("fo:text-align", "center");
+			break;
+		case WPS_PARAGRAPH_JUSTIFICATION_RIGHT:
+			propList.insert("fo:text-align", "end");
+			break;
+		case WPS_PARAGRAPH_JUSTIFICATION_FULL:
+			propList.insert("fo:text-align", "justify");
+			break;
+		case WPS_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES:
+			propList.insert("fo:text-align", "justify");
+			propList.insert("fo:text-align-last", "justify");
+			break;
+		}
+
+		propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
+
+		propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
+		propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
+		propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom);
+		propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, PERCENT);
+		if (m_ps->m_isParagraphColumnBreak)
+			propList.insert("fo:break-before", "column");
+		else if (m_ps->m_isParagraphPageBreak)
+			propList.insert("fo:break-before", "page");
 
 		if (!m_ps->m_isParagraphOpened)
 			m_listenerImpl->openParagraph(propList, tabStops);
 
-		_resetParagraphState();
+		m_ps->m_isParagraphColumnBreak = false;
+		m_ps->m_isParagraphPageBreak = false;
+		m_ps->m_isParagraphOpened = true;
+		m_ps->m_isHeaderFooterWithoutParagraph = false;
 	}
-}
-
-void WPSContentListener::_resetParagraphState()
-{
-	m_ps->m_isParagraphColumnBreak = false;
-	m_ps->m_isParagraphPageBreak = false;
-	m_ps->m_isParagraphOpened = true;
-	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange;
-	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange;
-	m_ps->m_leftMarginByTabs = 0.0f;
-	m_ps->m_rightMarginByTabs = 0.0f;
-	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange;
-	m_ps->m_textIndentByTabs = 0.0f;
-	m_ps->m_isCellWithoutParagraph = false;
-	m_ps->m_isHeaderFooterWithoutParagraph = false;
-	m_ps->m_tempParagraphJustification = 0;
-	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-	m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-}
-
-void WPSContentListener::_appendJustification(WPXPropertyList &propList, int justification)
-{
-	switch (justification)
-	{
-	case WPS_PARAGRAPH_JUSTIFICATION_LEFT:
-		// doesn't require a paragraph prop - it is the default
-		propList.insert("fo:text-align", "left");
-		break;
-	case WPS_PARAGRAPH_JUSTIFICATION_CENTER:
-		propList.insert("fo:text-align", "center");
-		break;
-	case WPS_PARAGRAPH_JUSTIFICATION_RIGHT:
-		propList.insert("fo:text-align", "end");
-		break;
-	case WPS_PARAGRAPH_JUSTIFICATION_FULL:
-		propList.insert("fo:text-align", "justify");
-		break;
-	case WPS_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES:
-		propList.insert("fo:text-align", "justify");
-		propList.insert("fo:text-align-last", "justify");
-		break;
-	}
-}
-
-void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList)
-{
-	int justification;
-	if (m_ps->m_tempParagraphJustification) 
-		justification = m_ps->m_tempParagraphJustification;
-	else
-		justification = m_ps->m_paragraphJustification;
-	_appendJustification(propList, justification);
-
-	propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
-	propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
-
-	propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
-	propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
-	propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom);
-	propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, PERCENT);
-	if (m_ps->m_isParagraphColumnBreak)
-		propList.insert("fo:break-before", "column");
-	else if (m_ps->m_isParagraphPageBreak)
-		propList.insert("fo:break-before", "page");
 }
 
 void WPSContentListener::_closeParagraph()
@@ -418,7 +328,6 @@ void WPSContentListener::_closeParagraph()
 	}
 
 	m_ps->m_isParagraphOpened = false;
-	m_ps->m_currentListLevel = 0;
 
 	if (m_ps->m_isPageSpanBreakDeferred)
 		_closePageSpan();
@@ -431,14 +340,10 @@ void WPSContentListener::_openSpan()
 	
 	// The behaviour of WP6+ is following: if an attribute bit is set in the cell attributes, we cannot
 	// unset it; if it is set, we can set or unset it
-	uint32_t attributeBits = (m_ps->m_textAttributeBits | m_ps->m_cellAttributeBits);
 	uint8_t fontSizeAttributes;
-	float fontSizeChange;
-	// the font size attribute bits are mutually exclusive and the cell attributes prevail
-	if ((m_ps->m_cellAttributeBits & 0x0000001f) != 0x00000000)
-		fontSizeAttributes = (uint8_t)(m_ps->m_cellAttributeBits & 0x0000001f);
-	else
-		fontSizeAttributes = (uint8_t)(m_ps->m_textAttributeBits & 0x0000001f);
+
+	float fontSizeChange = 1.0f;
+	fontSizeAttributes = (uint8_t)(m_ps->m_textAttributeBits & 0x0000001f);
 	switch (fontSizeAttributes)
 	{
 	case 0x01:  // Extra large
@@ -457,7 +362,6 @@ void WPSContentListener::_openSpan()
 		fontSizeChange = 0.6f;
 		break;
 	default: // Normal
-		fontSizeChange = 1.0f;
 		break;
 	}
 
@@ -466,23 +370,23 @@ void WPSContentListener::_openSpan()
 		propList.insert("style:text-position", "58%");
  	else if (m_ps->m_textAttributeBits & WPS_SUBSCRIPT_BIT)
 		propList.insert("style:text-position", "58%");
-	if (attributeBits & WPS_ITALICS_BIT)
+	if (m_ps->m_textAttributeBits & WPS_ITALICS_BIT)
 		propList.insert("fo:font-style", "italic");
-	if (attributeBits & WPS_BOLD_BIT)
+	if (m_ps->m_textAttributeBits & WPS_BOLD_BIT)
 		propList.insert("fo:font-weight", "bold");
-	if (attributeBits & WPS_STRIKEOUT_BIT)
+	if (m_ps->m_textAttributeBits & WPS_STRIKEOUT_BIT)
 		propList.insert("style:text-crossing-out", "single-line");
-	if (attributeBits & WPS_DOUBLE_UNDERLINE_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_DOUBLE_UNDERLINE_BIT) 
 		propList.insert("style:text-underline", "double");
- 	else if (attributeBits & WPS_UNDERLINE_BIT) 
+ 	else if (m_ps->m_textAttributeBits & WPS_UNDERLINE_BIT) 
 		propList.insert("style:text-underline", "single");
-	if (attributeBits & WPS_OUTLINE_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_OUTLINE_BIT) 
 		propList.insert("style:text-outline", "true");
-	if (attributeBits & WPS_SMALL_CAPS_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_SMALL_CAPS_BIT) 
 		propList.insert("fo:font-variant", "small-caps");
-	if (attributeBits & WPS_BLINK_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_BLINK_BIT) 
 		propList.insert("style:text-blinking", "true");
-	if (attributeBits & WPS_SHADOW_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_SHADOW_BIT) 
 		propList.insert("fo:text-shadow", "1pt 1pt");
 
 	if (m_ps->m_fontName)
@@ -491,7 +395,7 @@ void WPSContentListener::_openSpan()
 
 	// Here we give the priority to the redline bit over the font color.
 	// When redline finishes, the color is back.
-	if (attributeBits & WPS_REDLINE_BIT)
+	if (m_ps->m_textAttributeBits & WPS_REDLINE_BIT)
 		propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
 	else
 		propList.insert("fo:color", "#000000");
@@ -551,9 +455,4 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 	default:
 		break;
 	}
-}
-
-void WPSContentListener::lineSpacingChange(const float lineSpacing)
-{
-	m_ps->m_paragraphLineSpacing = lineSpacing;
 }
