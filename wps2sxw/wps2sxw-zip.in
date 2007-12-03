@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ZIP=wpsd2sxw-@WPS2SXW_VERSION@.zip
+ZIP=wps2sxw-@WPS2SXW_VERSION@.zip
 
 cd $DESTDIR@prefix@
 
