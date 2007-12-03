@@ -31,9 +31,7 @@
 #include "WPSPageSpan.h"
 #include <libwpd/WPXPropertyListVector.h>
 #include <libwpd/WPXDocumentInterface.h>
-#include <vector>
 #include <list>
-#include <set>
 
 typedef struct _WPSContentParsingState WPSContentParsingState;
 struct _WPSContentParsingState
@@ -74,6 +72,8 @@ struct _WPSContentParsingState
 	float m_paragraphMarginTop;
 	float m_paragraphMarginBottom;
 
+	WPXString m_textBuffer;
+
 private:
 	_WPSContentParsingState(const _WPSContentParsingState&);
 	_WPSContentParsingState& operator=(const _WPSContentParsingState&);
@@ -85,6 +85,12 @@ public:
 	void startDocument();
 	void endDocument();
 	void insertBreak(const uint8_t breakType);
+	void insertCharacter(const uint16_t character);
+
+	void setTextFont(const WPXString fontName);
+	void setFontSize(const uint16_t fontSize);
+	
+	void insertEOL();
 
 protected:
 	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
@@ -94,7 +100,7 @@ protected:
 	WPXDocumentInterface * m_documentInterface;
 	WPXPropertyList m_metaData;
 
-	virtual void _flushText() = 0;
+	void _flushText();
 
 	void _openSection();
 	void _closeSection();

@@ -26,8 +26,8 @@ SLOFILES= \
 	$(SLO)$/libwps_internal.obj \
 	$(SLO)$/WPS4.obj \
 	$(SLO)$/WPS8.obj \
-	$(SLO)$/WPSDocument.obj \
 	$(SLO)$/WPSContentListener.obj \
+	$(SLO)$/WPSDocument.obj \
 	$(SLO)$/WPSHeader.obj \
 	$(SLO)$/WPSPageSpan.obj \
 	$(SLO)$/WPSParser.obj

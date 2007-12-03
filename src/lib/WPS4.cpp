@@ -287,7 +287,7 @@ void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4ContentL
  * Works version 2 for DOS supports only a specific set of fonts.
  *
  */
-char * WPS2FontNameFromIndex(uint8_t font_n)
+const char * WPS2FontNameFromIndex(uint8_t font_n)
 {
 	switch (font_n)
 	{
@@ -744,48 +744,16 @@ void WPS4Parser::parse(WPXInputStream *input, WPS4ContentListener *listener)
 
 
 /*
-WPS4ContentParsingState public
-*/
-
-_WPS4ContentParsingState::_WPS4ContentParsingState() :
-	m_textBuffer()
-{
-}
-
-_WPS4ContentParsingState::~_WPS4ContentParsingState()
-{
-	WPS_DEBUG_MSG(("~WPS4ContentParsingState:: m_textBuffer.len() =%i\n", m_textBuffer.len()));		
-}
-
-
-/*
 WPS4ContentListener public
 */
 
 WPS4ContentListener::WPS4ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
-	WPSContentListener(pageList, documentInterface),
-	m_parseState(new WPS4ContentParsingState)
+	WPSContentListener(pageList, documentInterface)
 {
 }
 
 WPS4ContentListener::~WPS4ContentListener()
 {
-	delete m_parseState;
-}
-
-void WPS4ContentListener::insertCharacter(const uint16_t character) 
-{
-	if (!m_ps->m_isSpanOpened)
-		_openSpan();
-	m_parseState->m_textBuffer.append(character);
-}
-
-void WPS4ContentListener::insertEOL() 
-{
-	if (!m_ps->m_isParagraphOpened)
-		_openSpan();
-	if (m_ps->m_isParagraphOpened)
-		_closeParagraph();
 }
 
 void WPS4ContentListener::attributeChange(const bool isOn, const uint8_t attribute)
@@ -819,35 +787,4 @@ void WPS4ContentListener::attributeChange(const bool isOn, const uint8_t attribu
 		m_ps->m_textAttributeBits |= textAttributeBit;
 	else
 		m_ps->m_textAttributeBits ^= textAttributeBit;
-}
-
-#if 0
-void WPS4ContentListener::attributeChange(const uint32_t attributeBits)
-{
-	_closeSpan();
-	m_ps->m_textAttributeBits = attributeBits;
-}
-#endif
-
-void WPS4ContentListener::setTextFont(const WPXString fontName)
-{
-	_closeSpan();
-	m_ps->m_fontName = fontName;	
-}
-
-void WPS4ContentListener::setFontSize(const uint16_t fontSize)
-{
-	_closeSpan();
-	m_ps->m_fontSize=float(fontSize);
-}
-
-/*
-WPS4ContentListener protected 
-*/
-
-void WPS4ContentListener::_flushText()
-{
-	if (m_parseState->m_textBuffer.len())
-		m_documentInterface->insertText(m_parseState->m_textBuffer);
-	m_parseState->m_textBuffer.clear();
 }
