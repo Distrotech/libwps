@@ -1,10 +1,15 @@
 CHANGES:
-beginning -> 0.1.0
-- libwps based on libwpd.
-- Read Works 2 through 8 documents (except maybe Mac) with basic formatting.
+0.1.1 -> 0.1.2
+- removing unused code and simplifying class hierarchy.
+- Work around an issue with relative seeks backward and certain versions of libstdc++
+  in the buffered stream implementation.
 
 0.1.0 -> 0.1.1
 - build fixes for SUN studio
 - win32 packaging implemented
 - crosscompilation for win32 rendered smooth
 - compile fixed for gcc 4.3
+
+beginning -> 0.1.0
+- libwps based on libwpd.
+- Read Works 2 through 8 documents (except maybe Mac) with basic formatting.
