@@ -287,7 +287,7 @@ void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4ContentL
  * Works version 2 for DOS supports only a specific set of fonts.
  *
  */
-char * WPS2FontNameFromIndex(uint8_t font_n)
+const char * WPS2FontNameFromIndex(uint8_t font_n)
 {
 	switch (font_n)
 	{

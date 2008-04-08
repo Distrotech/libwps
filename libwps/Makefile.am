@@ -40,13 +40,13 @@ check: all
 
 if WITH_LIBWPS_DOCS
 install-data-local:
-	mkdir -p $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@
-	$(INSTALL) $(srcdir)/CHANGES $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
-	$(INSTALL) $(srcdir)/COPYING $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
-	$(INSTALL) $(srcdir)/CREDITS $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
-	$(INSTALL) $(srcdir)/HACKING $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
-	$(INSTALL) $(srcdir)/INSTALL $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
-	$(INSTALL) $(srcdir)/README $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@/
+	mkdir -p $(DESTDIR)$(docdir)
+	$(INSTALL_DATA) $(srcdir)/CHANGES $(DESTDIR)$(docdir)/
+	$(INSTALL_DATA) $(srcdir)/COPYING $(DESTDIR)$(docdir)/
+	$(INSTALL_DATA) $(srcdir)/CREDITS $(DESTDIR)$(docdir)/
+	$(INSTALL_DATA) $(srcdir)/HACKING $(DESTDIR)$(docdir)/
+	$(INSTALL_DATA) $(srcdir)/INSTALL $(DESTDIR)$(docdir)/
+	$(INSTALL_DATA) $(srcdir)/README $(DESTDIR)$(docdir)/
 uninstall-local:
-	-rm -rf $(DESTDIR)$(datadir)/doc/libwps-@WPS_VERSION@
+	-rm -rf $(DESTDIR)$(docdir)
 endif
