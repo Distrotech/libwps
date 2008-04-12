@@ -529,7 +529,7 @@ void WPS8Parser::parseHeaderIndex(WPXInputStream * input)
  * can only have one page format throughout the whole document.
  *
  */
-void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input)
+void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream * /* input */)
 {
 	//fixme: this method doesn't do much
 

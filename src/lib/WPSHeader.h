@@ -39,7 +39,7 @@ class WPSHeader
 	static WPSHeader * constructHeader(WPXInputStream *input);
 		
 	WPXInputStream * getInput() const { return m_input; }
-	const uint8_t getMajorVersion() const { return m_majorVersion; }
+	uint8_t getMajorVersion() const { return m_majorVersion; }
 
  private:
  	WPSHeader(const WPSHeader&);

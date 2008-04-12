@@ -59,8 +59,8 @@ typedef unsigned int uint32_t;
                   (((uint8_t const *)(p))[3] << 24))
 
 uint8_t readU8(WPXInputStream *input); 
-uint16_t readU16(WPXInputStream *input, bool bigendian=false);
-uint32_t readU32(WPXInputStream *input, bool bigendian=false);
+uint16_t readU16(WPXInputStream *input);
+uint32_t readU32(WPXInputStream *input);
 
 // Various helper structures for the parser..
 

@@ -34,14 +34,14 @@ uint8_t readU8(WPXInputStream *input)
 	return *(uint8_t const *)(p);
 }
 
-uint16_t readU16(WPXInputStream *input, bool bigendian)
+uint16_t readU16(WPXInputStream *input)
 {
 	unsigned short p0 = (unsigned short)readU8(input);
 	unsigned short p1 = (unsigned short)readU8(input);
 	return p0|(p1<<8);
 }
 
-uint32_t readU32(WPXInputStream *input, bool bigendian)
+uint32_t readU32(WPXInputStream *input)
 {
 	uint8_t p0 = readU8(input);
 	uint8_t p1 = readU8(input);

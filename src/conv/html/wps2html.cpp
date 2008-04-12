@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
 	WPXFileStream input(argv[1]);
 
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input, false);
+	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input);
 	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)
 	{
 		printf("ERROR: Unsupported file format!\n");

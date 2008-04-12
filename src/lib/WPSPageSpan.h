@@ -40,9 +40,9 @@ public:
 			const uint8_t internalType);
 	WPSHeaderFooter(const WPSHeaderFooter &headerFooter);
 	~WPSHeaderFooter();
-	const WPSHeaderFooterType getType() const { return m_type; }
-	const WPSHeaderFooterOccurence getOccurence() const { return m_occurence; }
-	const uint8_t getInternalType() const { return m_internalType; }
+	WPSHeaderFooterType getType() const { return m_type; }
+	WPSHeaderFooterOccurence getOccurence() const { return m_occurence; }
+	uint8_t getInternalType() const { return m_internalType; }
 
 private:
 	WPSHeaderFooterType m_type;
@@ -58,15 +58,15 @@ public:
 	WPSPageSpan(const WPSPageSpan &page);
 	virtual ~WPSPageSpan();
 
-	const bool getHeaderFooterSuppression(const uint8_t headerFooterType) const { if (headerFooterType <= WPS_FOOTER_B) return m_isHeaderFooterSuppressed[headerFooterType]; return false; }
-	const float getFormLength() const { return m_formLength; }
-	const float getFormWidth() const { return m_formWidth; }
-	const WPSFormOrientation getFormOrientation() const { return m_formOrientation; }
-	const float getMarginLeft() const { return m_marginLeft; }
- 	const float getMarginRight() const { return m_marginRight; }
- 	const float getMarginTop() const { return m_marginTop; }
- 	const float getMarginBottom() const { return m_marginBottom; }
-	const int getPageSpan() const { return m_pageSpan; }
+	bool getHeaderFooterSuppression(const uint8_t headerFooterType) const { if (headerFooterType <= WPS_FOOTER_B) return m_isHeaderFooterSuppressed[headerFooterType]; return false; }
+	float getFormLength() const { return m_formLength; }
+	float getFormWidth() const { return m_formWidth; }
+	WPSFormOrientation getFormOrientation() const { return m_formOrientation; }
+	float getMarginLeft() const { return m_marginLeft; }
+ 	float getMarginRight() const { return m_marginRight; }
+ 	float getMarginTop() const { return m_marginTop; }
+ 	float getMarginBottom() const { return m_marginBottom; }
+	int getPageSpan() const { return m_pageSpan; }
 	const std::vector<WPSHeaderFooter> & getHeaderFooterList() const { return m_headerFooterList; }
 
 	void setHeaderFooter(const WPSHeaderFooterType type, const uint8_t headerFooterType, const WPSHeaderFooterOccurence occurence);

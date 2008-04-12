@@ -55,7 +55,7 @@ represents the full contents of a MS Works file, or just the first X bytes
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input, bool partialContent)
+WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
 {
 	WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 

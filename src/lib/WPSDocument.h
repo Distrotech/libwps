@@ -38,7 +38,7 @@ Works documents.
 class WPSDocument
 {
 public:
-	static WPSConfidence isFileFormatSupported(WPXInputStream *input, bool partialContent);
+	static WPSConfidence isFileFormatSupported(WPXInputStream *input);
 	static WPSResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
 };
 
