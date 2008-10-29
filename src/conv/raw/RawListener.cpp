@@ -377,7 +377,7 @@ void RawListenerImpl::closeFrame()
 	_D(("closeFrame()\n"), LC_OPEN_FRAME);
 }
 	
-void RawListenerImpl::insertBinaryObject(const WPXPropertyList & propList, const WPXBinaryData * /* object */)
+void RawListenerImpl::insertBinaryObject(const WPXPropertyList & propList, const WPXBinaryData & /* object */)
 {
 	__iprintf("insertBinaryObject(%s)\n", getPropString(propList).cstr());
 }
