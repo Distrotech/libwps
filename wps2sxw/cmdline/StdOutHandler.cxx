@@ -25,6 +25,7 @@
 #include <iostream>
 
 #include <string.h>
+#include <stdio.h>
 
 StdOutHandler::StdOutHandler() :
 	mbIsTagOpened(false)
