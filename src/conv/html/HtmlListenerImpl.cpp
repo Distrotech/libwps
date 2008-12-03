@@ -119,8 +119,8 @@ void HtmlListenerImpl::openParagraph(const WPXPropertyList &propList, const WPXP
 		if (propList["fo:text-indent"])
 			printf("text-indent:%s;", propList["fo:text-indent"]->getStr().cstr());
 
-		if (propList["fo:line-height"] && propList["fo:line-height"]->getFloat() != 1.0f)
-			printf("line-height:%f;", propList["fo:line-height"]->getFloat());
+		if (propList["fo:line-height"] && propList["fo:line-height"]->getDouble() != 1.0f)
+			printf("line-height:%f;", propList["fo:line-height"]->getDouble());
 		printf("\">");
 	}
 }
