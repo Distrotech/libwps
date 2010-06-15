@@ -50,8 +50,6 @@ the full 100%.
 /**
 Analyzes the content of an input stream to see if it can be parsed
 \param input The input stream
-\param partialContent A boolean which states if the content from the input stream
-represents the full contents of a MS Works file, or just the first X bytes
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */

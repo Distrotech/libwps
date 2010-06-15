@@ -269,6 +269,7 @@ void WPS4Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits
 
 /**
  * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
+ * @param listener: 
  *
  */
 void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4ContentListener *listener)

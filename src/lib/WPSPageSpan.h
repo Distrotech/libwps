@@ -36,8 +36,6 @@
 class WPSHeaderFooter
 {
 public:
-	WPSHeaderFooter(const WPSHeaderFooterType headerFooterType, const WPSHeaderFooterOccurence occurence, 
-			const uint8_t internalType);
 	WPSHeaderFooter(const WPSHeaderFooter &headerFooter);
 	~WPSHeaderFooter();
 	WPSHeaderFooterType getType() const { return m_type; }
@@ -54,7 +52,6 @@ class WPSPageSpan
 {
 public:
 	WPSPageSpan();
-	WPSPageSpan(const WPSPageSpan &page, float paragraphMarginLeft, float paragraphMarginRight);
 	WPSPageSpan(const WPSPageSpan &page);
 	virtual ~WPSPageSpan();
 
@@ -69,7 +66,6 @@ public:
 	int getPageSpan() const { return m_pageSpan; }
 	const std::vector<WPSHeaderFooter> & getHeaderFooterList() const { return m_headerFooterList; }
 
-	void setHeaderFooter(const WPSHeaderFooterType type, const uint8_t headerFooterType, const WPSHeaderFooterOccurence occurence);
 	void setHeadFooterSuppression(const uint8_t headerFooterType, const bool suppress) { m_isHeaderFooterSuppressed[headerFooterType] = suppress; }
 	void setFormLength(const float formLength) { m_formLength = formLength; }
 	void setFormWidth(const float formWidth) { m_formWidth = formWidth; }
@@ -84,7 +80,6 @@ public:
 	
 protected:
 	void _removeHeaderFooter(WPSHeaderFooterType type, WPSHeaderFooterOccurence occurence);
-	bool _containsHeaderFooter(WPSHeaderFooterType type, WPSHeaderFooterOccurence occurence);
 
 private:
 	bool m_isHeaderFooterSuppressed[WPS_NUM_HEADER_FOOTER_TYPES];

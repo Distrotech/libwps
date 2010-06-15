@@ -85,6 +85,12 @@ public:
 	
 	virtual void insertBinaryObject(const WPXPropertyList & /* propList */, const WPXBinaryData & /* object */) {}
 
+	virtual void definePageStyle(const WPXPropertyList&) {}
+	virtual void defineParagraphStyle(const WPXPropertyList&, const WPXPropertyListVector&) {}
+	virtual void defineCharacterStyle(const WPXPropertyList&) {}
+	virtual void defineSectionStyle(const WPXPropertyList&, const WPXPropertyListVector&) {}
+	virtual void insertEquation(const WPXPropertyList&, const WPXString&) {}
+
 private:
 	bool m_ignore;
 

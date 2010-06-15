@@ -156,6 +156,11 @@ void RawListenerImpl::endDocument()
 	_D(("endDocument()\n"), LC_START_DOCUMENT);
 }
 
+void RawListenerImpl::definePageStyle(const WPXPropertyList &propList)
+{
+	__iprintf("definePageStyle(%s)\n", getPropString(propList).cstr());
+}
+
 void RawListenerImpl::openPageSpan(const WPXPropertyList &propList)
 {
 	_U(("openPageSpan(%s)\n", getPropString(propList).cstr()),
@@ -194,6 +199,11 @@ void RawListenerImpl::closeFooter()
 	   LC_OPEN_HEADER_FOOTER);
 }
 
+void RawListenerImpl::defineParagraphStyle(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
+{
+	__iprintf("defineParagraphStyle(%s, tab-stops: %s)\n", getPropString(propList).cstr(), getPropString(tabStops).cstr());
+}
+
 void RawListenerImpl::openParagraph(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
 {
 	_U(("openParagraph(%s, tab-stops: %s)\n", getPropString(propList).cstr(), getPropString(tabStops).cstr()),
@@ -205,6 +215,11 @@ void RawListenerImpl::closeParagraph()
 	_D(("closeParagraph()\n"), LC_OPEN_PARAGRAPH);
 }
 
+void RawListenerImpl::defineCharacterStyle(const WPXPropertyList &propList)
+{
+	__iprintf("defineCharacterStyle(%s)\n", getPropString(propList).cstr());
+}
+
 void RawListenerImpl::openSpan(const WPXPropertyList &propList)
 {
 	_U(("openSpan(%s)\n", getPropString(propList).cstr()), LC_OPEN_SPAN);
@@ -213,6 +228,11 @@ void RawListenerImpl::openSpan(const WPXPropertyList &propList)
 void RawListenerImpl::closeSpan()
 {
 	_D(("closeSpan()\n"), LC_OPEN_SPAN);
+}
+
+void RawListenerImpl::defineSectionStyle(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
+{
+	__iprintf("defineSectionStyle(%s, columns: %s)\n", getPropString(propList).cstr(), getPropString(columns).cstr());
 }
 
 void RawListenerImpl::openSection(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
@@ -380,4 +400,9 @@ void RawListenerImpl::closeFrame()
 void RawListenerImpl::insertBinaryObject(const WPXPropertyList & propList, const WPXBinaryData & /* object */)
 {
 	__iprintf("insertBinaryObject(%s)\n", getPropString(propList).cstr());
+}
+	
+void RawListenerImpl::insertEquation(const WPXPropertyList &propList, const WPXString &data)
+{
+	__iprintf("insertEquation(%s, text: %s)\n", getPropString(propList).cstr(), data.cstr());
 }

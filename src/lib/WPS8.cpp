@@ -608,6 +608,7 @@ void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits
 
 /**
  * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
+ * @param listener: 
  *
  */
 void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8ContentListener *listener)
