@@ -261,6 +261,11 @@ void RawListenerImpl::insertLineBreak()
 	__iprintf("insertLineBreak()\n");
 }
 
+void RawListenerImpl::insertField(const WPXPropertyList &propList)
+{
+	__iprintf("insertField(%s)\n", getPropString(propList).cstr());
+}
+
 void RawListenerImpl::defineOrderedListLevel(const WPXPropertyList &propList)
 {
 	__iprintf("defineOrderedListLevel(%s)\n", getPropString(propList).cstr());
