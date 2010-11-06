@@ -25,8 +25,8 @@
 
 uint8_t readU8(WPXInputStream *input)
 {
-	size_t numBytesRead;
-	uint8_t const * p = input->read(sizeof(uint8_t), numBytesRead);
+	unsigned long numBytesRead;
+	unsigned char const * p = input->read(sizeof(uint8_t), numBytesRead);
 	
   	if (!p || numBytesRead != sizeof(uint8_t))
   		throw FileException();

@@ -60,6 +60,13 @@ void TextListenerImpl::insertTab()
 	printf("%c", UCS_TAB);
 }
 
+void TextListenerImpl::insertSpace()
+{
+	if (m_isInfo)
+		return;
+	printf(" ");
+}
+
 void TextListenerImpl::insertText(const WPXString &text)
 {
 	if (m_isInfo)

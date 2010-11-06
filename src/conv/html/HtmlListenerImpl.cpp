@@ -188,6 +188,14 @@ void HtmlListenerImpl::insertLineBreak()
 	}
 }
 
+void HtmlListenerImpl::insertSpace()
+{
+	if (!m_ignore)
+	{
+            printf("&nbsp;");
+        }
+}
+
 void HtmlListenerImpl::insertText(const WPXString &text)
 {
 	if (!m_ignore)

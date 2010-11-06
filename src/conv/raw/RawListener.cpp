@@ -250,6 +250,11 @@ void RawListenerImpl::insertTab()
 	__iprintf("insertTab()\n");
 }
 
+void RawListenerImpl::insertSpace()
+{
+	__iprintf("insertSpace()\n");
+}
+
 void RawListenerImpl::insertText(const WPXString &text)
 {
 	WPXString textUTF8(text);
@@ -261,9 +266,9 @@ void RawListenerImpl::insertLineBreak()
 	__iprintf("insertLineBreak()\n");
 }
 
-void RawListenerImpl::insertField(const WPXPropertyList &propList)
+void RawListenerImpl::insertField(const WPXString &type, const WPXPropertyList &propList)
 {
-	__iprintf("insertField(%s)\n", getPropString(propList).cstr());
+	__iprintf("insertField(type: %s, %s)\n", type.cstr(), getPropString(propList).cstr());
 }
 
 void RawListenerImpl::defineOrderedListLevel(const WPXPropertyList &propList)
