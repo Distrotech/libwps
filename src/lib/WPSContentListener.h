@@ -114,7 +114,7 @@ protected:
 	void _openSpan();
 	void _closeSpan();
 
-        void _insertText(const WPXString &textBuffer);
+	void _insertText(const WPXString &textBuffer);
 
 private:
 	WPSContentListener(const WPSContentListener&);

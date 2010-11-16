@@ -500,7 +500,7 @@ void WPSContentListener::_insertText(const WPXString &textBuffer)
 	int numConsecutiveSpaces = 0;
         WPXString::Iter i(textBuffer);
 	for (i.rewind(); i.next();) 
-        {
+	{
 		if (*(i()) == ASCII_SPACE)
 			numConsecutiveSpaces++;
 		else
@@ -518,7 +518,7 @@ void WPSContentListener::_insertText(const WPXString &textBuffer)
 		}
 		else 
 		{
-                        tmpText.append(i());
+			tmpText.append(i());
 		}
 	}
 

@@ -27,15 +27,3 @@ rpm: dist
 zip: install
 	sh libwps-zip
 
-if WITH_LIBWPS_DOCS
-install-data-local:
-	mkdir -p $(DESTDIR)$(docdir)
-	$(INSTALL_DATA) $(srcdir)/CHANGES $(DESTDIR)$(docdir)/
-	$(INSTALL_DATA) $(srcdir)/COPYING $(DESTDIR)$(docdir)/
-	$(INSTALL_DATA) $(srcdir)/CREDITS $(DESTDIR)$(docdir)/
-	$(INSTALL_DATA) $(srcdir)/HACKING $(DESTDIR)$(docdir)/
-	$(INSTALL_DATA) $(srcdir)/INSTALL $(DESTDIR)$(docdir)/
-	$(INSTALL_DATA) $(srcdir)/README $(DESTDIR)$(docdir)/
-uninstall-local:
-	-rm -rf $(DESTDIR)$(docdir)
-endif
