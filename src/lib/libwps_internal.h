@@ -23,6 +23,7 @@
 #define LIBWPS_INTERNAL_H
 #ifdef DEBUG
 #include <bitset>
+#include <stdio.h>
 #endif
 #include <libwpd-stream/libwpd-stream.h>
 #include <libwpd/libwpd.h>
