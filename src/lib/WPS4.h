@@ -42,9 +42,17 @@ public:
 
 	void attributeChange(const bool isOn, const uint8_t attribute);
 
+	int getCodepage();
+
 private:
 	WPS4ContentListener(const WPS4ContentListener&);
 	WPS4ContentListener& operator=(const WPS4ContentListener&);
+};
+
+struct wpsfont
+{
+	std::string name;
+	int cp;
 };
 
 class WPS4Parser : public WPSParser
@@ -62,6 +70,9 @@ private:
 	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS4ContentListener *listener);
 	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS4ContentListener *listener);
 	void propertyChange(std::string rgchProp, WPS4ContentListener *listener);
+	void propertyChangePara(std::string rgchProp, WPS4ContentListener *listener);
+	void appendCP(const uint8_t readVal, int codepage, WPS4ContentListener *listener);
+	void appendUCS(const uint16_t readVal, WPS4ContentListener *listener);
 	void appendCP850(const uint8_t readVal, WPS4ContentListener *listener);
 	void appendCP1252(const uint8_t readVal, WPS4ContentListener *listener);
 	void readText(WPXInputStream * input, WPS4ContentListener *listener);
@@ -70,7 +81,7 @@ private:
 	uint32_t offset_eos; /* stream offset to end of MN0 */	
 	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */		
 	std::vector<FOD> PAFODs; /* PAragraph FOrmatting Descriptors */			
-	std::map<uint8_t, std::string> fonts; /* fonts in format <index code, font name>  */
+	std::map<uint8_t, wpsfont> fonts; /* fonts in format <index code, <font name, codepage>>  */
 	const uint8_t m_worksVersion;
 };
 

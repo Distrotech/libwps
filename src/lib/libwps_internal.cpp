@@ -21,6 +21,7 @@
 
 #include "libwps_internal.h"
 #include <string>
+#include <stdlib.h>
 #include <locale.h>
 
 uint8_t readU8(WPXInputStream *input)
@@ -58,10 +59,39 @@ std::string to_bits(std::string s)
 	{
 		std::bitset<8> b(s[i]);	
 		r.append(b.to_string<char,std::char_traits<char>,std::allocator<char> >());
-		char buf[10];
+		char buf[20];
 		sprintf(buf, "(%02u,0x%02x)  ", (uint8_t)s[i],(uint8_t)s[i]);
 		r.append(buf);
 	}
 	return r;
 }
 #endif
+
+/* Not troubling ourselves with extra dependencies */
+/* TODO: extend */
+
+static const struct _lange
+{
+	uint32_t id;
+	const char *name;
+} s_lang_table[] = {
+	{0x409,"en-US"},
+	{0x419,"ru-RU"}
+};
+
+static int _ltcomp(const void *k1, const void *k2)
+{
+	int r = (int)((ssize_t)k1) - ((_lange*)k2)->id;
+	return r;
+}
+
+const char *getLangFromLCID(uint32_t lcid)
+{
+	_lange *c = (_lange*) bsearch((const void*)lcid,s_lang_table,
+		sizeof(s_lang_table)/sizeof(_lange),
+		sizeof(_lange),_ltcomp);
+	if (c) return c->name;
+	return "-none-";
+}
+
+

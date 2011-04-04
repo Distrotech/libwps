@@ -40,13 +40,31 @@ struct _WPSContentParsingState
 	~_WPSContentParsingState();
 
 	uint32_t m_textAttributeBits;
+	uint16_t m_spec;
 	float m_fontSize;
 	WPXString m_fontName;
+	uint32_t m_lcid;
+	uint32_t m_textcolor;
+
+	uint16_t m_fieldcode;
+
+	int m_codepage;
 
 	bool m_isParagraphColumnBreak;
 	bool m_isParagraphPageBreak;
 	uint8_t m_paragraphJustification;
 	float m_paragraphLineSpacing;
+	uint32_t m_paraLayoutFlags;
+
+	uint16_t m_footnoteId;
+	uint16_t m_endnoteId;
+
+	uint8_t m_numbering;
+	uint16_t m_numstyle;
+	uint16_t m_numsep;
+
+	int m_curListType;
+	bool m_isOrdered;
 
 	bool m_isDocumentStarted;
 	bool m_isPageSpanOpened;
@@ -55,6 +73,10 @@ struct _WPSContentParsingState
 
 	bool m_isSpanOpened;
 	bool m_isParagraphOpened;
+
+	bool m_isFootEndNote;
+
+	bool m_isParaListItem;
 
 	std::list<WPSPageSpan>::iterator m_nextPageSpanIter;
 	int m_numPagesRemainingInSpan;
@@ -72,11 +94,30 @@ struct _WPSContentParsingState
 	float m_paragraphMarginTop;
 	float m_paragraphMarginBottom;
 
+	float m_paragraphIndentFirst;
+
 	WPXString m_textBuffer;
 
 private:
 	_WPSContentParsingState(const _WPSContentParsingState&);
 	_WPSContentParsingState& operator=(const _WPSContentParsingState&);
+};
+
+struct ListSignature
+{
+	uint16_t a,b,c;
+
+	bool operator == (ListSignature &y)
+	{
+		return (a == y.a) && (b == y.b) && (c == y.c);
+	}
+};
+
+struct TabPos
+{
+	float pos;
+	char  align;
+	char  leader;
 };
 
 class WPSContentListener
@@ -86,12 +127,34 @@ public:
 	void endDocument();
 	void insertBreak(const uint8_t breakType);
 	void insertCharacter(const uint16_t character);
+	void insertField();
 
+	void openFootnote();
+	void closeFootnote();
+	void openEndnote();
+	void closeEndnote();
+
+	void setSpec(const uint16_t specCode);
 	void setTextFont(const WPXString fontName);
 	void setFontSize(const uint16_t fontSize);
-	
+	void setLCID(const uint32_t lcid);
+	void setCodepage(const int codepage);
+	void setColor(const unsigned int rgb);
+	void setFieldType(uint16_t code);
+	void setFieldFormat(uint16_t code);
+
+	void setAlign(const uint8_t align);
+	void setParaFlags(const uint32_t flags);
+	void setMargins(const float first=0.0, const float left=0.0, const float right=0.0,
+			const float before=0.0, const float after=0.0);
+	void setTabs(std::vector<TabPos> &tabs);
+
+	void setNumberingType(const uint8_t style);
+	void setNumberingProp(const uint16_t type, const uint16_t sep);
+
 	void insertEOL();
 
+	const uint16_t getSpec() const;
 protected:
 	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
 	virtual ~WPSContentListener();
@@ -116,11 +179,14 @@ protected:
 
 	void _insertText(const WPXString &textBuffer);
 
+	int  _getListId();
 private:
 	WPSContentListener(const WPSContentListener&);
 	WPSContentListener& operator=(const WPSContentListener&);
 
+	std::vector<TabPos> m_tabs;
 	std::list<WPSPageSpan> &m_pageList;
+	std::vector<ListSignature> m_listFormats;
 };
 
 #endif /* WPSCONTENTLISTENER_H */

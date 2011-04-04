@@ -23,6 +23,16 @@
 #ifndef WPSDOCUMENT_H
 #define WPSDOCUMENT_H
 
+#ifdef _WINDLL
+#ifdef BUILD_WPS
+#define WPSLIB _declspec(dllexport)
+#else
+#define WPSLIB _declspec(dllimport)
+#endif
+#else
+#define WPSLIB
+#endif
+
 #include <libwpd-stream/WPXStream.h>
 
 enum WPSConfidence { WPS_CONFIDENCE_NONE=0, WPS_CONFIDENCE_POOR, WPS_CONFIDENCE_LIKELY, WPS_CONFIDENCE_GOOD, WPS_CONFIDENCE_EXCELLENT };
@@ -38,8 +48,8 @@ Works documents.
 class WPSDocument
 {
 public:
-	static WPSConfidence isFileFormatSupported(WPXInputStream *input);
-	static WPSResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
+	static WPSLIB WPSConfidence isFileFormatSupported(WPXInputStream *input);
+	static WPSLIB WPSResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
 };
 
 #endif /* WPSDOCUMENT_H */

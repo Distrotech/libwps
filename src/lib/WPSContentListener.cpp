@@ -27,6 +27,7 @@
 #include "WPSPageSpan.h"
 #include "libwps_internal.h"
 #include <libwpd/WPXProperty.h>
+#include <stdio.h>
 #ifdef _MSC_VER
 #include <minmax.h>
 #define LIBWPS_MIN min
@@ -40,13 +41,30 @@
 
 _WPSContentParsingState::_WPSContentParsingState() :
 	m_textAttributeBits(0),
+	m_spec(0),
 	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/),
 	m_fontName(WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")),
+	m_lcid(0x409/*en-US*/),
+	m_textcolor(0),
+
+	m_fieldcode(0),
+
+	m_codepage(0),
 
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
 	m_paragraphJustification(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
 	m_paragraphLineSpacing(1.0f),
+	m_paraLayoutFlags(0),
+
+	m_footnoteId(1),
+	m_endnoteId(1),
+
+	m_numbering(0),
+	m_numstyle(0),
+	m_numsep(0),
+
+	m_curListType(0),
 
 	m_isDocumentStarted(false),
 	m_isPageSpanOpened(false),
@@ -55,6 +73,10 @@ _WPSContentParsingState::_WPSContentParsingState() :
 
 	m_isSpanOpened(false),
 	m_isParagraphOpened(false),
+
+	m_isFootEndNote(false),
+
+	m_isParaListItem(false),
 
 	m_numPagesRemainingInSpan(0),
 
@@ -71,6 +93,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_paragraphMarginRight(0.0f),
 	m_paragraphMarginTop(0.0f),
 	m_paragraphMarginBottom(0.0f),
+	m_paragraphIndentFirst(0.0f),
 	
 	m_textBuffer()
 {
@@ -299,13 +322,61 @@ void WPSContentListener::_openParagraph()
 		propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom);
 		propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, WPX_PERCENT);
 
+		propList.insert("fo:text-indent", m_ps->m_paragraphIndentFirst);
+
 		if (m_ps->m_isParagraphColumnBreak)
 			propList.insert("fo:break-before", "column");
 		else if (m_ps->m_isParagraphPageBreak)
 			propList.insert("fo:break-before", "page");
 
-		if (!m_ps->m_isParagraphOpened)
-			m_documentInterface->openParagraph(propList, tabStops);
+		for (unsigned i=0; i < m_tabs.size(); i++) {
+			WPXPropertyList wpx_td;
+			TabPos bpos = m_tabs[i];
+			wpx_td.insert("style:position",bpos.pos,WPX_INCH);
+			if (bpos.align == WPS_TAB_CENTER) wpx_td.insert("style:type","center");
+			else if (bpos.align == WPS_TAB_RIGHT) wpx_td.insert("style:type","right");
+			// TODO: Decimal tabs depend on locale, obviously.
+			tabStops.append(wpx_td);
+		}
+
+		if (m_ps->m_numbering) {
+			WPXPropertyList pl;
+			int list_type = _getListId();
+			if (list_type != m_ps->m_curListType) {
+				if (m_ps->m_curListType) {
+					if (m_ps->m_isOrdered)
+						m_documentInterface->closeOrderedListLevel();
+					else 
+						m_documentInterface->closeUnorderedListLevel();
+				}
+				/* and open new */
+				pl.insert("libwpd:id",list_type);
+				if (m_ps->m_numbering == WPS_NUMBERING_NUMBER) {
+					m_ps->m_isOrdered = true;
+					m_documentInterface->openOrderedListLevel(pl);
+				} else {
+					m_ps->m_isOrdered = false;
+					m_documentInterface->openUnorderedListLevel(pl);
+				}
+				m_ps->m_curListType = list_type;
+			}
+		} else {
+			if (m_ps->m_curListType != 0) {
+				if (m_ps->m_isOrdered)
+					m_documentInterface->closeOrderedListLevel();
+				else 
+					m_documentInterface->closeUnorderedListLevel();
+				m_ps->m_curListType = 0;
+			}
+		}
+
+		if (!m_ps->m_isParagraphOpened) {
+			if (m_ps->m_curListType) {
+				m_documentInterface->openListElement(propList, tabStops);
+				m_ps->m_isParaListItem = true;
+			} else 
+				m_documentInterface->openParagraph(propList, tabStops);
+		}
 
 		m_ps->m_isParagraphColumnBreak = false;
 		m_ps->m_isParagraphPageBreak = false;
@@ -320,7 +391,11 @@ void WPSContentListener::_closeParagraph()
 		if (m_ps->m_isSpanOpened)
 			_closeSpan();
 
-		m_documentInterface->closeParagraph();
+		if (m_ps->m_isParaListItem) {
+			m_documentInterface->closeListElement();
+			m_ps->m_isParaListItem = false;
+		} else
+			m_documentInterface->closeParagraph();
 	}
 
 	m_ps->m_isParagraphOpened = false;
@@ -387,17 +462,24 @@ void WPSContentListener::_openSpan()
 		propList.insert("style:font-relief", "embossed");
 	else if (m_ps->m_textAttributeBits & WPS_ENGRAVE_BIT)
 		propList.insert("style:font-relief", "engraved");
+	if (m_ps->m_lcid)
+		propList.insert("fo:language", getLangFromLCID(m_ps->m_lcid));
 
 	if (m_ps->m_fontName.len())
 		propList.insert("style:font-name", m_ps->m_fontName.cstr());
 	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, WPX_POINT);
+	/*if (m_ps->m_lcid)
+		propList.insert("fo:lang",lcid2code(m_ps->lcid));*/
 
 	// Here we give the priority to the redline bit over the font color.
 	// When redline finishes, the color is back.
 	if (m_ps->m_textAttributeBits & WPS_REDLINE_BIT)
 		propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
-	else
-		propList.insert("fo:color", "#000000");
+	else {
+		char color[20];
+		sprintf(color,"%06x",m_ps->m_textcolor);
+		propList.insert("fo:color", color);
+	}
 
 	if (!m_ps->m_isSpanOpened)
 		m_documentInterface->openSpan(propList);
@@ -456,6 +538,12 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 	}
 }
 
+void WPSContentListener::setSpec(const uint16_t specCode)
+{
+	_closeSpan();
+	m_ps->m_spec = specCode;
+}
+
 void WPSContentListener::setTextFont(const WPXString fontName)
 {
 	_closeSpan();
@@ -468,6 +556,63 @@ void WPSContentListener::setFontSize(const uint16_t fontSize)
 	m_ps->m_fontSize=float(fontSize);
 }
 
+void WPSContentListener::setLCID(const uint32_t lcid)
+{
+	_closeSpan();
+	m_ps->m_lcid=lcid;
+}
+
+void WPSContentListener::setCodepage(const int codepage)
+{
+	if (codepage == 0) return;
+	m_ps->m_codepage = codepage;
+}
+
+void WPSContentListener::setColor(const unsigned int rgb)
+{
+	_closeSpan();
+	m_ps->m_textcolor = rgb;
+}
+
+void WPSContentListener::setAlign(const uint8_t align)
+{
+	m_ps->m_paragraphJustification = align;
+}
+
+void WPSContentListener::setParaFlags(const uint32_t flags)
+{
+	m_ps->m_paraLayoutFlags = flags;
+}
+
+void WPSContentListener::setMargins(const float first, const float left, 
+									const float right,const float before, const float after)
+{
+	m_ps->m_paragraphMarginLeft = left;
+	m_ps->m_paragraphMarginRight = right;
+	m_ps->m_paragraphIndentFirst = first;
+	m_ps->m_paragraphMarginTop = before;
+	m_ps->m_paragraphMarginBottom = after;
+}
+
+void WPSContentListener::setTabs(std::vector<TabPos> &tabs)
+{
+	m_tabs = tabs;
+}
+
+void WPSContentListener::setNumberingType(const uint8_t style)
+{
+	m_ps->m_numbering = style;
+}
+
+void WPSContentListener::setNumberingProp(const uint16_t type, const uint16_t sep)
+{
+	if (m_ps->m_numbering == WPS_NUMBERING_NONE)
+		m_ps->m_numbering = WPS_NUMBERING_NUMBER;
+	
+	m_ps->m_numstyle = type;
+	m_ps->m_numsep = sep;
+}
+
 void WPSContentListener::insertEOL() 
 {
 	if (!m_ps->m_isParagraphOpened)
@@ -476,11 +621,87 @@ void WPSContentListener::insertEOL()
 		_closeParagraph();
 }
 
+const uint16_t WPSContentListener::getSpec() const
+{
+	return m_ps->m_spec;
+}
+
+
 void WPSContentListener::insertCharacter(const uint16_t character) 
 {
 	if (!m_ps->m_isSpanOpened)
 		_openSpan();
 	m_ps->m_textBuffer.append(character);
+}
+
+void WPSContentListener::setFieldType(uint16_t code)
+{
+	m_ps->m_fieldcode = code;
+}
+
+void WPSContentListener::insertField()
+{
+	WPXPropertyList pl;
+
+	if (m_ps->m_fieldcode == WPS_FIELD_PAGE) {
+		_flushText();
+		pl.insert("style:num-format","1");
+		m_documentInterface->insertField("text:page-number",pl);
+	}
+}
+
+void WPSContentListener::openFootnote()
+{
+	WPXPropertyList pl;
+
+	if (m_ps->m_isFootEndNote) return; /* eventually should be gone*/
+
+	pl.insert("libwpd:number",m_ps->m_footnoteId++);
+
+	_closeSpan();
+	m_documentInterface->openFootnote(pl);
+	m_ps->m_isFootEndNote = true;
+	m_ps->m_isSpanOpened = false;
+}
+
+void WPSContentListener::closeFootnote()
+{
+	if (!m_ps->m_isFootEndNote) return;
+
+	//_closeParagraph();
+	m_documentInterface->closeFootnote();
+	m_ps->m_isFootEndNote = false;
+	/* ideally should push/pop here */
+	m_ps->m_isParagraphOpened = true;
+	m_ps->m_isSpanOpened = true;
+}
+
+void WPSContentListener::openEndnote()
+{
+	WPXPropertyList pl;
+
+	if (m_ps->m_isFootEndNote) return; /* eventually should be gone*/
+
+	pl.insert("libwpd:number",m_ps->m_endnoteId++);
+
+	_closeSpan();
+	m_documentInterface->openEndnote(pl);
+	m_ps->m_isFootEndNote = true;
+
+	m_ps->m_isSpanOpened = true;
+}
+
+void WPSContentListener::closeEndnote()
+{
+	if (!m_ps->m_isFootEndNote) return;
+
+	_closeParagraph();
+	m_documentInterface->closeEndnote();
+	m_ps->m_isFootEndNote = false;
+
+	/* ideally should push/pop here */
+	m_ps->m_isParagraphOpened = true;
+	m_ps->m_isSpanOpened = true;
 }
 
 void WPSContentListener::_flushText()
@@ -525,4 +746,53 @@ void WPSContentListener::_insertText(const WPXString &textBuffer)
 	m_documentInterface->insertText(tmpText);
 }
 
+int WPSContentListener::_getListId()
+{
+	ListSignature l;
+	l.a = m_ps->m_numbering;
+	l.b = m_ps->m_numstyle;
+	l.c = m_ps->m_numsep;
 
+	if (l.a == 0) return 0;
+
+	for (unsigned i=0; i < m_listFormats.size(); i++) {
+		if (m_listFormats[i]==l)
+			return i+1;
+	}
+	m_listFormats.push_back(l);
+	int listid = m_listFormats.size();
+	WPXPropertyList pl;
+
+	pl.insert("libwpd:id",listid);
+	//pl.insert("libwpd:level",1);
+
+	if (m_ps->m_numbering == WPS_NUMBERING_NUMBER) {
+		const char *nst = "1";
+		switch (m_ps->m_numstyle) {
+			case WPS_NUM_STYLE_LLATIN:
+				nst = "a";
+				break;
+			case WPS_NUM_STYLE_ULATIN:
+				nst = "A";
+				break;
+			case WPS_NUM_STYLE_LROMAN:
+				nst = "i";
+				break;
+			case WPS_NUM_STYLE_UROMAN:
+				nst = "I";
+				break;
+		};
+		pl.insert("style:num-format", nst);
+
+		pl.insert("style:num-suffix", (m_ps->m_numsep == 2)?".":")");
+
+		pl.insert("text:start-value",1);
+
+		m_documentInterface->defineOrderedListLevel(pl);
+	} else {
+		pl.insert("text:bullet-char","*");
+		m_documentInterface->defineUnorderedListLevel(pl);
+	}
+
+	return listid;
+}
