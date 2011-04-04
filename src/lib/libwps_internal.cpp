@@ -85,7 +85,7 @@ static int _ltcomp(const void *k1, const void *k2)
 	return r;
 }
 
-const char *getLangFromLCID(uint32_t lcid)
+std::string getLangFromLCID(uint32_t lcid)
 {
 	_lange *c = (_lange*) bsearch((const void*)lcid,s_lang_table,
 		sizeof(s_lang_table)/sizeof(_lange),

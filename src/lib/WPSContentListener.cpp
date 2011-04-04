@@ -463,7 +463,7 @@ void WPSContentListener::_openSpan()
 	else if (m_ps->m_textAttributeBits & WPS_ENGRAVE_BIT)
 		propList.insert("style:font-relief", "engraved");
 	if (m_ps->m_lcid)
-		propList.insert("fo:language", getLangFromLCID(m_ps->m_lcid));
+		propList.insert("fo:language", getLangFromLCID(m_ps->m_lcid).c_str());
 
 	if (m_ps->m_fontName.len())
 		propList.insert("style:font-name", m_ps->m_fontName.cstr());
