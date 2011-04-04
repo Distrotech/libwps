@@ -37,8 +37,6 @@ WPSHeader::WPSHeader(WPXInputStream *input, uint8_t majorVersion) :
 
 WPSHeader::~WPSHeader()
 {
-	if (m_input)
-		delete m_input;
 }
 
 
@@ -57,7 +55,7 @@ WPSHeader * WPSHeader::constructHeader(WPXInputStream *input)
 	WPXInputStream * document_mn0 = input->getDocumentOLEStream("MN0");	
 	if (document_mn0)
 	{
-		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));
+		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));	
 		return new WPSHeader(document_mn0, 4);
 	}	
 	else

@@ -142,14 +142,14 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 				DELETEP(parser);	
 				break;
 			}
-			DELETEP(header);
 		}
+		DELETEP(header);
 	}
 	catch (FileException)
 	{
 		WPS_DEBUG_MSG(("File exception trapped\n"));
 		error = WPS_FILE_ACCESS_ERROR;
-        }
+	}
 	catch (ParseException)
 	{
 		WPS_DEBUG_MSG(("Parse exception trapped\n"));

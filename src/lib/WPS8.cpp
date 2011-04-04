@@ -36,7 +36,9 @@ WPS8Parser public
 
 
 WPS8Parser::WPS8Parser(WPXInputStream *input, WPSHeader * header) :
-	WPSParser(input, header)
+	WPSParser(input, header),
+	offset_eot(0),
+	oldTextAttributeBits(0)
 {
 }
 
