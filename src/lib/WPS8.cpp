@@ -641,16 +641,17 @@ void WPS8Parser::readNote(WPXInputStream * input, WPS8ContentListener *listener,
 	uint32_t  streamkey = WPS_STREAM_FOOTNOTES;
 
 	if (!is_endnote) {
-		note = *fn_iter;
-		fn_iter++;
+		if (fn_iter != footnotes.end()) {
+			note = *fn_iter++;
+		}
 	} else {
-		note = *en_iter;
-		en_iter++;
-
+		if (en_iter != endnotes.end()) {
+			note = *en_iter++;
+		}
 		streamkey = WPS_STREAM_ENDNOTES;
 	}
 
-	for (int i=0; streams.size(); i++) {
+	for (unsigned i=0; i<streams.size(); i++) {
 		if (streams[i].type == streamkey) {
 			stream = streams[i];
 			break;

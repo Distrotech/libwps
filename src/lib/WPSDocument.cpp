@@ -87,7 +87,7 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
 	catch (FileException)
 	{
 		WPS_DEBUG_MSG(("File exception trapped\n"));
-        }
+	}
 	catch (ParseException)
 	{
 		WPS_DEBUG_MSG(("Parse exception trapped\n"));
@@ -143,7 +143,7 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 				break;
 			}
 		}
-		DELETEP(header);
+		delete header;
 	}
 	catch (FileException)
 	{

@@ -35,5 +35,4 @@ WPSParser::WPSParser(WPXInputStream *input, WPSHeader *header) :
 
 WPSParser::~WPSParser()
 {
-	DELETEP(m_header);
 }

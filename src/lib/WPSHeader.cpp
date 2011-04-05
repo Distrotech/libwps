@@ -37,6 +37,11 @@ WPSHeader::WPSHeader(WPXInputStream *input, uint8_t majorVersion) :
 
 WPSHeader::~WPSHeader()
 {
+	if (m_majorVersion != 2 && m_input)
+	{
+		delete m_input;
+		m_input = 0;
+	}
 }
 
 
@@ -58,8 +63,6 @@ WPSHeader * WPSHeader::constructHeader(WPXInputStream *input)
 		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));	
 		return new WPSHeader(document_mn0, 4);
 	}	
-	else
-		DELETEP(document_mn0);
 	
 	WPXInputStream * document_contents = input->getDocumentOLEStream("CONTENTS");	
 	if (document_contents)
