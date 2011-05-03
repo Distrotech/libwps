@@ -79,18 +79,15 @@ static const struct _lange
 	{0x419,"ru-RU"}
 };
 
-static int _ltcomp(const void *k1, const void *k2)
-{
-	int r = (int)((ssize_t)k1) - ((_lange*)k2)->id;
-	return r;
-}
-
 std::string getLangFromLCID(uint32_t lcid)
 {
-	_lange *c = (_lange*) bsearch((const void*)lcid,s_lang_table,
-		sizeof(s_lang_table)/sizeof(_lange),
-		sizeof(_lange),_ltcomp);
-	if (c) return c->name;
+	unsigned i = 0;
+	
+	for (i=0; i < sizeof(s_lang_table)/sizeof(s_lang_table[0]); i++)
+	{
+		if (s_lang_table[i].id == lcid)
+			return s_lang_table[i].name;
+	}
 	return "-none-";
 }
 
