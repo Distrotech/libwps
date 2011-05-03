@@ -154,7 +154,7 @@ public:
 
 	void insertEOL();
 
-	const uint16_t getSpec() const;
+	uint16_t getSpec() const;
 protected:
 	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
 	virtual ~WPSContentListener();

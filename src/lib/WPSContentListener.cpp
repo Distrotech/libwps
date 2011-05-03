@@ -621,7 +621,7 @@ void WPSContentListener::insertEOL()
 		_closeParagraph();
 }
 
-const uint16_t WPSContentListener::getSpec() const
+uint16_t WPSContentListener::getSpec() const
 {
 	return m_ps->m_spec;
 }

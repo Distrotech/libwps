@@ -136,7 +136,7 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 	input->seek(pos->second.offset, WPX_SEEK_SET);
 	n_streams = readU32(input);
 
-	if (n_streams > 100) WPS_DEBUG_MSG(("Probably garbled STRS: count = %u\n",n_streams));
+	if (n_streams > 100) { WPS_DEBUG_MSG(("Probably garbled STRS: count = %u\n",n_streams)); }
 
 	/* skip mysterious header*/
 	input->seek(8, WPX_SEEK_CUR);
@@ -155,7 +155,7 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 		last_pos += offset;
 	}
 	offset = readU32(input);
-	if (offset) WPS_DEBUG_MSG(("Offset table is not 0-terminated!\n"));
+	if (offset) { WPS_DEBUG_MSG(("Offset table is not 0-terminated!\n")); }
 
 	for (unsigned i=0; i < n_streams; i++) {
 		uint16_t len;
@@ -325,7 +325,7 @@ void WPS8Parser::appendUTF16LE(WPXInputStream *input, WPS8ContentListener *liste
  *
  */
 
-void WPS8Parser::readText(WPXInputStream * input, WPS8ContentListener *listener)
+void WPS8Parser::readText(WPXInputStream * /* input */, WPS8ContentListener * /* listener */)
 {
 #if (0)
 	WPS_DEBUG_MSG(("WPS8Parser::readText()\n"));
@@ -1356,7 +1356,7 @@ void WPS8Parser::propertyChangePara(std::string rgchProp, WPS8ContentListener *l
 							id += 4;
 							t_rem -= 4;
 
-							if (t_count < 0 && t_count > 20) break; /* obviously wrong */
+							if (t_count > 20) break; /* obviously wrong */
 						} else break; /* wrong format */
 					}
 
