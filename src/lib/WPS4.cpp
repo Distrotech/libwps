@@ -198,10 +198,7 @@ bool WPS4Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs)
 	}
 	input->seek(page_offset, WPX_SEEK_SET);	
 	
-	uint32_t fcFirst; /* Byte number of first character covered by this page 
-			     of formatting information */	
-			    
-	fcFirst = readU32(input);
+	readU32(input);
 	
 	int first_fod = FODs->size();
 

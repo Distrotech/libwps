@@ -159,7 +159,7 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 
 	for (unsigned i=0; i < n_streams; i++) {
 		uint16_t len;
-		uint32_t unknown, type = 0;
+		uint32_t type = 0;
 
 		len = readU16(input);
 		if (len > 10) {
@@ -168,7 +168,7 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 		}
 
 		if (len > 4) {
-			unknown = readU32(input); // assume == 0x22000000
+			readU32(input); // assume == 0x22000000
 			type = readU32(input);
 		} else input->seek(len-2,WPX_SEEK_CUR);
 
