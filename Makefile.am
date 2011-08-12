@@ -1,3 +1,5 @@
+ACLOCAL_AMFLAGS = -I m4
+
 pkgconfdir = $(libdir)/pkgconfig
 
 pkgconf_DATA = libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
