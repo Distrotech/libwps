@@ -1,26 +1,7 @@
-if PLATFORM_WIN32
-no_undefined = -no-undefined
-else
-if PLATFORM_DARWIN
-no_undefined = -no-undefined
-else
-no_undefined =
-endif
-endif
-
 if OS_WIN32
 version_info = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) -avoid-version
-
-install-libtool-import-lib:
-	$(INSTALL) @WPS_OBJDIR@/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll.a $(DESTDIR)$(libdir)
-
-uninstall-libtool-import-lib:
-	-rm $(DESTDIR)$(libdir)/libwps*-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.dll.a
-
 else
 version_info = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
-install-libtool-import-lib:
-uninstall-libtool-import-lib:
 endif
 
 lib_LTLIBRARIES = libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la $(target_libwps_stream)
@@ -29,11 +10,11 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS = libwps.h WPSDoc
 
 INCLUDES = -I$(srcdir)
 
-AM_CXXFLAGS = $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = $(LIBWPS_CFLAGS) $(DEBUG_CXXFLAGS)
 
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LIBADD  = $(LIBWPS_LIBS) @LIBWPS_WIN32_RESOURCE@
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_DEPENDENCIES = @LIBWPS_WIN32_RESOURCE@
-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic $(no_undefined)
+libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic -no-undefined
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	libwps_internal.cpp \
 	WPS4.cpp \
@@ -62,11 +43,6 @@ if OS_WIN32
 	WINDRES=@WINDRES@ $(top_srcdir)/build/win32/lt-compile-resource libwps.rc @LIBWPS_WIN32_RESOURCE@
 
 endif
-
-
-install-data-local: install-libtool-import-lib
-
-uninstall-local: uninstall-libtool-import-lib
 
 EXTRA_DIST = \
 	makefile.mk \

@@ -1,6 +1,6 @@
 bin_PROGRAMS = wps2html
 
-AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(LIBWPS_CFLAGS) $(DEBUG_CXXFLAGS)
 
 wps2html_DEPENDENCIES = @WPS2HTML_WIN32_RESOURCE@
 

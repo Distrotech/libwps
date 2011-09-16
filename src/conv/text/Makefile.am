@@ -1,6 +1,6 @@
 bin_PROGRAMS = wps2text
 
-AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(LIBWPS_CXXFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(LIBWPS_CFLAGS) $(DEBUG_CXXFLAGS)
 
 wps2text_DEPENDENCIES = @WPS2TEXT_WIN32_RESOURCE@
 

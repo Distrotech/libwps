@@ -28,7 +28,7 @@
 int main(int argc, char *argv[])
 {
 	bool printIndentLevel = false;
-	char *file = NULL;
+	char *file = 0;
 	
 	if (argc < 2)
 	{

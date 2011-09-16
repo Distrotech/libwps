@@ -7,9 +7,10 @@ Andrew Ziem <andrew ziem users sourceforge net>         Main Author
 
 Urmas <davian818@gmail.com> Many improvements to the 4 and 8 versions
 of file-format.
+Tomas 'scarabeus' Chvatal <tomas.chvatal@gmail.com>		Build system rewrite
 
 
-Current maintainers and principal authors of libwpd2
+Current maintainers and principal authors of libwpd
 ----------------------------------------------------
 William Lachance <william.lachance@sympatico.ca>	Main Author
 Marc Maurer <uwog@uwog.net>				Main Author

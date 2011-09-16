@@ -1,93 +1,83 @@
-AC_INIT(src/lib/WPS8.cpp)
+# Process this file with autoconf to create configure.
+
 AC_PREREQ([2.65])
 
+# ====================
+# Version informations
+# ====================
+m4_define([libwps_version_major],[0])
+m4_define([libwps_version_minor],[2])
+m4_define([libwps_version_micro],[2])
+m4_define([libwps_version],[libwps_version_major.libwps_version_minor.libwps_version_micro])
+
+# =============
+# Automake init
+# =============
+AC_INIT([libwps],[libwps_version])
 AC_CONFIG_MACRO_DIR([m4])
 AM_CONFIG_HEADER([config.h])
+AM_INIT_AUTOMAKE([1.11 foreign dist-xz dist-bzip2])
+AM_SILENT_RULES([yes])
+AC_LANG([C++])
 
-WPS_MAJOR_VERSION=0
-WPS_MINOR_VERSION=2
-WPS_MICRO_VERSION=2
-
-WPS_VERSION="$WPS_MAJOR_VERSION.$WPS_MINOR_VERSION.$WPS_MICRO_VERSION"
-
-AC_SUBST(WPS_MAJOR_VERSION)
-AC_SUBST(WPS_MINOR_VERSION)
-AC_SUBST(WPS_MICRO_VERSION)
-AC_SUBST(WPS_VERSION)
-
-dnl # libtool versioning
-dnl LT_RELEASE=$WPS_MAJOR_VERSION.$WPS_MINOR_VERSION
-dnl AC_SUBST(LT_RELEASE)
-
-LT_CURRENT=`expr 10 '*' $WPS_MAJOR_VERSION + $WPS_MINOR_VERSION`
-LT_REVISION=$WPS_MICRO_VERSION
-# For 1.0.0 comment the first line and uncomment the second
-LT_AGE=0
-# LT_AGE=$WPS_MINOR_VERSION
-LT_CURRENT_MINUS_AGE=`expr $LT_CURRENT - $LT_AGE`
-AC_SUBST(LT_CURRENT)
-AC_SUBST(LT_REVISION)
-AC_SUBST(LT_AGE)
-AC_SUBST(LT_CURRENT_MINUS_AGE)
-
-AM_INIT_AUTOMAKE(libwps, $WPS_VERSION, foreign dist-bzip2)
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
-
+# ===========================
+# Find required base packages
+# ===========================
 AC_PROG_CC
+AC_PROG_CPP
 AC_PROG_CXX
 AC_PROG_INSTALL
-AC_LIBTOOL_WIN32_DLL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
+AC_LIBTOOL_WIN32_DLL
+PKG_PROG_PKG_CONFIG([0.20])
 
-AC_ARG_ENABLE([static-tools],
-	[AS_HELP_STRING([--enable-static-tools], [Link tools (binaries) statically])]
-)
-AS_IF([test "x$enable_static_tools" = "xyes"], [
-	enable_static="yes"
-], [
-	AC_DISABLE_STATIC
-])
-AM_CONDITIONAL(STATIC_TOOLS, [test "x$enable_static_tools" = "xyes"])
-
-AC_ARG_ENABLE([werror],
-	[AS_HELP_STRING([--disable-werror], [Treat all warnings as errors, usefull for development])]
-)
-AS_IF([test x"$enable_werror" != "xno"], [
-	CFLAGS="$CFLAGS -Werror"
-	CXXFLAGS="$CXXFLAGS -Werror"
-])
-
-AC_SUBST(WPS_OBJDIR, [$objdir])
-
-AC_PATH_PROG(PKG_CONFIG, [pkg-config], [no])
-
-dnl ***********************************************************************************
-
-PKG_CHECK_MODULES(LIBWPS,[
+# ====================
+# Find additional apps
+# ====================
+PKG_CHECK_MODULES([LIBWPS],[
     libwpd-0.9
-	libwpd-stream-0.9
-    ])
+    libwpd-stream-0.9
+])
 
+# =================================
+# Libtool/Version Makefile settings
+# =================================
+AC_SUBST(WPS_MAJOR_VERSION, [libwps_version_major])
+AC_SUBST(WPS_MINOR_VERSION, [libwps_version_minor])
+AC_SUBST(WPS_MICRO_VERSION, [libwps_version_micro])
+AC_SUBST(WPS_VERSION, [libwps_version])
+# AC_SUBST(LT_RELEASE, [libwps_version_major.libwps_version_minor])
+LT_CURRENT=`expr 100 '*' libwps_version_major + libwps_version_minor`
+# For 1.0.0 comment the first line and uncomment the second
+LT_AGE=0
+# LT_AGE=libwpd_version_minor
+AC_SUBST(LT_CURRENT)
+AC_SUBST(LT_REVISION, [libwps_version_micro])
+AC_SUBST(LT_AGE)
+
+# ==========================
+# Platform check for windows
+# ==========================
 AC_MSG_CHECKING([for native Win32])
-case "$host" in
-	*-*-mingw*)
+AS_CASE([$host],
+	[*-*-mingw*], [
 		native_win32=yes
 		LIBWPS_WIN32_RESOURCE=libwps-win32res.lo
 		LIBWPS_STREAM_WIN32_RESOURCE=libwps-stream-win32res.lo
 		WPS2HTML_WIN32_RESOURCE=wps2html-win32res.lo
 		WPS2TEXT_WIN32_RESOURCE=wps2text-win32res.lo
 		WPS2RAW_WIN32_RESOURCE=wps2raw-win32res.lo
-	;;
-	*)
+	], [
 		native_win32=no
 		LIBWPS_WIN32_RESOURCE=
 		LIBWPS_STREAM_WIN32_RESOURCE=
 		WPS2HTML_WIN32_RESOURCE=
 		WPS2TEXT_WIN32_RESOURCE=
 		WPS2RAW_WIN32_RESOURCE=
-	;;
-esac
-AC_MSG_RESULT([$native_win32])
+	]
+)
 AM_CONDITIONAL(OS_WIN32, [test "x$native_win32" = "xyes"])
 AC_SUBST(LIBWPS_WIN32_RESOURCE)
 AC_SUBST(LIBWPS_STREAM_WIN32_RESOURCE)
@@ -95,58 +85,42 @@ AC_SUBST(WPS2HTML_WIN32_RESOURCE)
 AC_SUBST(WPS2TEXT_WIN32_RESOURCE)
 AC_SUBST(WPS2RAW_WIN32_RESOURCE)
 
-AC_ARG_WITH(docs,
-	[AS_HELP_STRING([--without-docs], [Do not build documentation])]
-)
-AS_IF([test "x$native_win32" = "xyes"], [with_docs=false])
-AS_IF([test "x$with_docs" != "xno"], [
-	AC_PATH_PROG(DOXYGEN, [doxygen])
-	AS_IF([test -z "$DOXYGEN"], [
-		AC_MSG_WARN([*** Could not find doxygen in your PATH.])
-		AC_MSG_WARN([*** The documentation will not be built.])
-		enable_docs=false
-	], [enable_docs=true])
-], [enable_docs=false])
-AM_CONDITIONAL([WITH_LIBWPS_DOCS], [test "x$enable_docs" != "xfalse"])
-
 AC_MSG_CHECKING([for Win32 platform in general])
-case "$host" in
-	*-*-mingw*|*-*-cygwin*)
-		platform_win32=yes
-	;;
-	*)
-		platform_win32=no
-	;;
-esac
+AS_CASE([$host],
+	[*-*-mingw*|*-*-cygwin*], [platform_win32=yes],
+	[platform_win32=no]
+)
 AC_MSG_RESULT([$platform_win32])
-AM_CONDITIONAL(PLATFORM_WIN32, [test "x$platform_win32" = "xyes"])
+AM_CONDITIONAL([PLATFORM_WIN32], [test "x$platform_win32" = "xyes"])
 
+# =========================
+# Platform check for darwin
+# =========================
 AC_MSG_CHECKING([for Darwin (Mac OS X) platform])
-case "$host" in
-	*-*-darwin*)
-		platform_darwin=yes
-	;;
-	*)
-		platform_darwin=no
-	;;
-esac
+AS_CASE([$host],
+	[*-*-darwin*], [platform_darwin=yes],
+	[platform_darwin=no]
+)
 AC_MSG_RESULT([$platform_darwin])
 AM_CONDITIONAL(PLATFORM_DARWIN, [test "x$platform_darwin" = "xyes"])
 
-AC_ARG_ENABLE([debug],
-	[AS_HELP_STRING([--enable-debug], [Turn on debugging])]
+# ================
+# Check for cflags
+# ================
+AC_ARG_ENABLE([werror],
+	[AS_HELP_STRING([--disable-werror], [Treat all warnings as errors, usefull for development])],
+	[enable_werror="$enableval"],
+	[enable_werror=yes]
 )
-AS_IF([test "x$enable_debug" = "xyes"], [
-	DEBUG_CXXFLAGS="-DDEBUG -g"
-], [
-	DEBUG_CXXFLAGS="-DNDEBUG"
+AS_IF([test x"$enable_werror" != "xno"], [
+	CFLAGS="$CFLAGS -Werror"
+	CXXFLAGS="$CXXFLAGS -Werror"
 ])
-
 # Courtesy of Glib: Ensure MSVC-compatible struct packing convention
 # is used when compiling for Win32 with gcc.
 AS_IF([test "x$native_win32" = "xyes"], [
 	AC_CHECK_TOOL(WINDRES, windres)
-	AS_IF([x"$GCC" = xyes], [
+	AS_IF([test x"$GCC" = xyes], [
 		AC_MSG_CHECKING([how to get MSVC-compatible struct packing])
 		AS_IF([test -z "$ac_cv_prog_CC"], [
 			our_gcc="$CC"
@@ -173,12 +147,58 @@ AS_IF([test "x$native_win32" = "xyes"], [
 	])
 ])
 
-LIBWPS_CXXFLAGS="$LIBWPS_CFLAGS"
-AC_SUBST(LIBWPS_CXXFLAGS)
+# ============
+# Debug switch
+# ============
+AC_ARG_ENABLE([debug],
+	[AS_HELP_STRING([--enable-debug], [Turn on debugging])],
+	[enable_debug="$enableval"],
+	[enable_debug=no]
+)
+AS_IF([test "x$enable_debug" = "xyes"], [
+	DEBUG_CXXFLAGS="-DDEBUG -g"
+], [
+	DEBUG_CXXFLAGS="-DNDEBUG"
+])
 AC_SUBST(DEBUG_CXXFLAGS)
-AC_SUBST(LIBWPS_LIBS)
 
-AC_OUTPUT([
+# ============
+# Static tools
+# ============
+AC_ARG_ENABLE([static-tools],
+	[AS_HELP_STRING([--enable-static-tools], [Link tools (binaries) statically])],
+	[enable_static_tools="$enableval"],
+	[enable_static_tools=no]
+)
+AS_IF([test "x$enable_static_tools" = "xyes"], [
+	enable_static="yes"
+], [
+	AC_DISABLE_STATIC
+])
+AM_CONDITIONAL(STATIC_TOOLS, [test "x$enable_static_tools" = "xyes"])
+
+# =============
+# Documentation
+# =============
+AC_ARG_WITH(docs,
+	[AS_HELP_STRING([--without-docs], [Do not build documentation])],
+	[with_docs="$withval"],
+	[AS_IF([test "x$native_win32" = "xyes"], [with_docs=no], [with_docs=yes])]
+)
+AS_IF([test "x$with_docs" != "xno"], [
+	AC_PATH_PROG(DOXYGEN, [doxygen])
+	AS_IF([test -z "$DOXYGEN"], [
+		AC_MSG_WARN([*** Could not find doxygen in your PATH.])
+		AC_MSG_WARN([*** The documentation will not be built.])
+		build_docs=no
+	], [build_docs=yes])
+], [build_docs=no])
+AM_CONDITIONAL([WITH_LIBWPS_DOCS], [test "x$build_docs" != "xno"])
+
+# =====================
+# Prepare all .in files
+# =====================
+AC_CONFIG_FILES([
 Makefile
 src/Makefile
 src/conv/Makefile
@@ -200,7 +220,17 @@ libwps-zip
 autopackage/Makefile
 autopackage/default.apspec
 ])
+AC_OUTPUT
 
-AS_IF([test "x$enable_debug" = "xyes"], [
-	AC_MSG_RESULT([Configured with debugging symbols.])
+# ==============================================
+# Display final informations about configuration
+# ==============================================
+AC_MSG_NOTICE([
+==============================================================================
+Build configuration:
+	debug:           ${enable_debug}
+	docs:            ${build_docs}
+	static-tools:    ${enable_static_tools}
+	werror:          ${enable_werror}
+==============================================================================
 ])
