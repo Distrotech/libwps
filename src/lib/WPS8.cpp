@@ -112,7 +112,7 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
 	if (fonts.size() != n_fonts)
 	{
 		WPS_DEBUG_MSG(("Works: warning: expected %i fonts but only found %i\n",
-			n_fonts, fonts.size()));
+			n_fonts, int(fonts.size())));
 	}
 }
 
@@ -177,7 +177,7 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 
 #ifdef DEBUG
 	int bodypos = -1;
-	for (int i=0; i < n_streams; i++) {
+	for (unsigned i=0; i < n_streams; i++) {
 		int z = streams[i].type;
 		if (z == WPS_STREAM_DUMMY) WPS_DEBUG_MSG(("Default strm[%d] type\n",i));
 		if (z == WPS_STREAM_BODY) {

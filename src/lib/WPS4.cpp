@@ -167,7 +167,7 @@ void WPS4Parser::readFontsTable(WPXInputStream * input)
 			s.append(1, (uint8_t)readU8(input));
 		}
 		WPS_DEBUG_MSG(("Works: info: count=%i, font_number=%i, unknown=%i, name=%s\n",
-			 fonts.size(), font_number, unknown_byte, s.c_str()));
+			 int(fonts.size()), font_number, unknown_byte, s.c_str()));
 		s.append(1, (char)0);
 		wpsfont f;
 		f.cp=getCodepage(s);
