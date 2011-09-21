@@ -727,7 +727,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 		if ((*FODs_iter).fcLim == offset_eot)
 			break;
 
-                (*FODs_iter).bfprop = readU16(input);
+		(*FODs_iter).bfprop = readU16(input);
 
 		/* check size of bfprop  */
 		if (((*FODs_iter).bfprop < (8 + (6*cfod)) && (*FODs_iter).bfprop > 0) ||
@@ -764,8 +764,8 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 			WPS_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%lx", (input->tell())-1));
 			throw ParseException();
 		}
-		// fixme: what is largest cch?
-		if ((*FODs_iter).fprop.cch > 128)
+		// check that the property remains in the FOD zone
+		if ((*FODs_iter).bfprop_abs+(*FODs_iter).fprop.cch > page_offset+page_size)
 		{
 			WPS_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).fprop.cch));
 			throw ParseException();
