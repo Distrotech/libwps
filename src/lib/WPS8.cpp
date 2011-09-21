@@ -801,9 +801,12 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 	if (0x18 != cch)
 	{
 		WPS_DEBUG_MSG(("Works8: error: parseHeaderIndexEntry cch = %i (0x%X)\n", cch, cch));
-#if 0
-		throw ParseException();
-#endif
+               /* Osnola: normally, this size must be >= 0x18
+                  In my code, I throw an exception when this size is less than 10
+                  to try to continue the parsing ( but I do not accept this entry)
+                */
+               if (cch < 10)
+                 throw ParseException();
 	}
 
 	std::string name;
@@ -849,8 +852,8 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 		name.c_str(), hie.offset, hie.length));
 
 	headerIndexTable.insert(std::multimap<std::string, HeaderIndexEntries>::value_type(name, hie));
-
-	input->seek(input->tell() + 0x18 - cch, WPX_SEEK_SET);
+       // OSNOLA: cch is the length of the entry, so we must advance by cch-0x18
+       input->seek(input->tell() + cch - 0x18, WPX_SEEK_SET);
 }
 
 /**
@@ -1138,7 +1141,9 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8ContentListener *liste
 					break;
 				default:
 					WPS_DEBUG_MSG(("Works8: error: unknown 0x0A format code 0x%04X\n", rgchProp[x]));
- 					throw ParseException();
+                                       // OSNOLA: ok to continue, this is a bool field
+                                       // ( without any data )
+                                       //throw ParseException();
 			}
 			continue;
 		}
