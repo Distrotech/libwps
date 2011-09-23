@@ -1,0 +1,8 @@
+.deps
+.libs
+*.lo
+*.la
+Makefile
+Makefile.in
+wps2text
+*.rc
