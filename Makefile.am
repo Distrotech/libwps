@@ -12,11 +12,11 @@ EXTRA_DIST = \
 	libwps.spec.in \
 	libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc.in \
 	libwps-zip.in \
-	CHANGES \
 	COPYING \
 	CREDITS \
 	HACKING \
 	INSTALL \
+	NEWS \
 	README
 
 distclean-local:
@@ -28,4 +28,7 @@ rpm: dist
 
 zip: install
 	sh libwps-zip
+
+dist-hook:
+	git log --date=short --pretty="format:@%cd  %an  <%ae>  [%H]%n%n%s%n%n%e%b" | sed -e "s|^\([^@]\)|\t\1|" -e "s|^@||" >$(distdir)/ChangeLog
 
