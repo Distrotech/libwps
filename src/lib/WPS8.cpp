@@ -409,19 +409,29 @@ void WPS8Parser::readText(WPXInputStream * /* input */, WPS8ContentListener * /*
 						//	TODO: fields, pictures, etc.
 							switch (spec) {
 								case 3:
+#if 0
+								  /* REMOVED in this version
+								     because footnote/endnote tends to make
+								     the resulting file inconsistent */
 									listener->openFootnote();
 									propertyChange("",listener);
 									listener->insertCharacter('F');
 									listener->insertCharacter('!');
 									listener->closeFootnote();
+#endif
 									break;
 								case 4:
+#if 0
+								  /* REMOVED in this version
+								     because footnote/endnote tends to make
+								     the resulting file inconsistent */
 									listener->openEndnote();
 									propertyChange("",listener);
 									listener->insertCharacter(0xE2/*0x263B*/);
 									listener->insertCharacter(0x98);
 									listener->insertCharacter(0xBA);
 									listener->closeEndnote();
+#endif
 									break;
 								case 5:
 									/*switch (<field code>) {
@@ -582,15 +592,22 @@ void WPS8Parser::readTextRange(WPXInputStream * input, WPS8ContentListener *list
 							switch (spec) {
 								case 3:
 									if (stream != WPS_STREAM_BODY) break;
-									listener->openFootnote();
+								  /* REMOVED in this version
+								     because footnote/endnote tends to make
+								     the resulting file inconsistent */
+									//listener->openFootnote();
+									listener->insertEOL();
 									readNote(input,listener,false);
-									listener->closeFootnote();
 									break;
 								case 4:
 									if (stream != WPS_STREAM_BODY) break;
-									listener->openEndnote();
+								  /* REMOVED in this version
+								     because footnote/endnote tends to make
+								     the resulting file inconsistent */
+									//listener->openEndnote();
+									listener->insertEOL();
 									readNote(input,listener,true);
-									listener->closeEndnote();
+									//listener->closeEndnote();
 									break;
 								case 5:
 									listener->insertField();
