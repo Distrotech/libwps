@@ -561,6 +561,7 @@ void WPS4Parser::propertyChangePara(std::string rgchProp, WPS4ContentListener *l
 							case 1: pos.align = WPS_TAB_CENTER; break;
 							case 2: pos.align = WPS_TAB_RIGHT; break;
 							case 3: pos.align = WPS_TAB_DECIMAL; break;
+							default: pos.align = WPS_TAB_LEFT;
 							}
 							// TODO: leader
 							tabs.push_back(pos);

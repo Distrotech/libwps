@@ -170,6 +170,14 @@ void WPSContentListener::_closeSection()
 		if (m_ps->m_isParagraphOpened)
 			_closeParagraph();
 
+		if (m_ps->m_numbering) {
+		  /* a Hack which calls open/close paragraph (and so closeListLevel)
+		     when a list is opened */
+		  m_ps->m_numbering = 0;
+		  _openParagraph();
+		  _closeParagraph();
+		}
+
 		m_documentInterface->closeSection();
 
 		m_ps->m_sectionAttributesChanged = false;
@@ -764,7 +772,7 @@ int WPSContentListener::_getListId()
 	WPXPropertyList pl;
 
 	pl.insert("libwpd:id",listid);
-	//pl.insert("libwpd:level",1);
+	pl.insert("libwpd:level",1);
 
 	if (m_ps->m_numbering == WPS_NUMBERING_NUMBER) {
 		const char *nst = "1";

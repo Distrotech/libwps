@@ -409,29 +409,19 @@ void WPS8Parser::readText(WPXInputStream * /* input */, WPS8ContentListener * /*
 						//	TODO: fields, pictures, etc.
 							switch (spec) {
 								case 3:
-#if 0
-								  /* REMOVED in this version
-								     because footnote/endnote tends to make
-								     the resulting file inconsistent */
 									listener->openFootnote();
 									propertyChange("",listener);
 									listener->insertCharacter('F');
 									listener->insertCharacter('!');
 									listener->closeFootnote();
-#endif
 									break;
 								case 4:
-#if 0
-								  /* REMOVED in this version
-								     because footnote/endnote tends to make
-								     the resulting file inconsistent */
 									listener->openEndnote();
 									propertyChange("",listener);
 									listener->insertCharacter(0xE2/*0x263B*/);
 									listener->insertCharacter(0x98);
 									listener->insertCharacter(0xBA);
 									listener->closeEndnote();
-#endif
 									break;
 								case 5:
 									/*switch (<field code>) {
@@ -596,8 +586,12 @@ void WPS8Parser::readTextRange(WPXInputStream * input, WPS8ContentListener *list
 								     because footnote/endnote tends to make
 								     the resulting file inconsistent */
 									//listener->openFootnote();
-									listener->insertEOL();
+									listener->insertCharacter('-');
+									listener->insertCharacter('-');
 									readNote(input,listener,false);
+									listener->insertCharacter('-');
+									listener->insertCharacter('-');
+									//listener->closeEndnote();
 									break;
 								case 4:
 									if (stream != WPS_STREAM_BODY) break;
@@ -605,8 +599,11 @@ void WPS8Parser::readTextRange(WPXInputStream * input, WPS8ContentListener *list
 								     because footnote/endnote tends to make
 								     the resulting file inconsistent */
 									//listener->openEndnote();
-									listener->insertEOL();
+									listener->insertCharacter('-');
+									listener->insertCharacter('-');
 									readNote(input,listener,true);
+									listener->insertCharacter('-');
+									listener->insertCharacter('-');
 									//listener->closeEndnote();
 									break;
 								case 5:
@@ -678,8 +675,16 @@ void WPS8Parser::readNote(WPXInputStream * input, WPS8ContentListener *listener,
 	WPS_DEBUG_MSG(("Reading footnote [%d;%d)\n",note.contents.start,note.contents.limit));
 
 	uint32_t pos = input->tell();
+	uint32_t endPos = stream.span.start+note.contents.limit;
+	// try to remove the end of lines which can appear after the footnote
+	while (endPos-1 > stream.span.start+note.contents.start) {
+	  input->seek(0x200+2*(endPos-1),WPX_SEEK_SET);
+	  uint16_t readVal =readU16(input); 
+	  if (readVal != 0xd) break;
+	  endPos -= 1;
+	}
 	readTextRange(input,listener,stream.span.start+note.contents.start,
-		stream.span.start+note.contents.limit,streamkey);
+		endPos,streamkey);
 	input->seek(pos,WPX_SEEK_SET);
 }
 
