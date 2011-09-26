@@ -20,8 +20,8 @@ wps2html_LDADD = \
 endif
 
 wps2html_SOURCES = \
-	HtmlListenerImpl.cpp	\
-	HtmlListenerImpl.h	\
+	HtmlDocumentGenerator.cpp	\
+	HtmlDocumentGenerator.h	\
 	wps2html.cpp
 
 if OS_WIN32

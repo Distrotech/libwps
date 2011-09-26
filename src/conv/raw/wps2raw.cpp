@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include "libwps.h"
-#include "RawListener.h"
+#include "RawDocumentGenerator.h"
 #include <libwpd-stream/libwpd-stream.h>
 #include <string.h>
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	RawListenerImpl listenerImpl(printIndentLevel);
+	RawDocumentGenerator listenerImpl(printIndentLevel);
 	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
 
 	if (error == WPS_FILE_ACCESS_ERROR)

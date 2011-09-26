@@ -1,5 +1,5 @@
 /* libwps
- * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2002 William Lachance (wrlach@gmail.com)
  * Copyright (C) 2002-2004 Marc Maurer (uwog@uwog.net)
  *
  * This library is free software; you can redistribute it and/or
@@ -19,22 +19,31 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/*
- * This file is in sync with CVS
- * /libwpd2/src/conv/raw/RawListener.cpp 1.51
+/* "This product is not manufactured, approved, or supported by
+ * Corel Corporation or Corel Corporation Limited."
  */
 
 #include <stdio.h>
 #include <stdarg.h>
-#include "RawListener.h"
+#include "RawDocumentGenerator.h"
+
+#ifdef _U
+#undef _U
+#endif
 
 #define _U(M, L) \
+	m_atLeastOneCallback = true; \
 	if (!m_printCallgraphScore) \
 			__iuprintf M; \
 	else \
 		m_callStack.push(L);
 
+#ifdef _D
+#undef _D
+#endif
+
 #define _D(M, L) \
+	m_atLeastOneCallback = true; \
 	if (!m_printCallgraphScore) \
 			__idprintf M; \
 	else \
@@ -45,22 +54,24 @@
 		m_callStack.pop(); \
 	}	
 	
-RawListenerImpl::RawListenerImpl(bool printCallgraphScore) :
+RawDocumentGenerator::RawDocumentGenerator(bool printCallgraphScore) :
 	m_indent(0),
 	m_callbackMisses(0),
+	m_atLeastOneCallback(false),
 	m_printCallgraphScore(printCallgraphScore),
 	m_callStack()
 {
 }
 
-RawListenerImpl::~RawListenerImpl()
+RawDocumentGenerator::~RawDocumentGenerator()
 {
 	if (m_printCallgraphScore)
-		printf("%d\n", (int)(m_callStack.size() + m_callbackMisses));
+		printf("%d\n", m_atLeastOneCallback ? (int)(m_callStack.size() + m_callbackMisses) : -1);
 }
 
-void RawListenerImpl::__iprintf(const char *format, ...)
+void RawDocumentGenerator::__iprintf(const char *format, ...)
 {
+	m_atLeastOneCallback = true;
 	if (m_printCallgraphScore) return;
 	
 	va_list args;
@@ -71,8 +82,9 @@ void RawListenerImpl::__iprintf(const char *format, ...)
 	va_end(args);
 }
 
-void RawListenerImpl::__iuprintf(const char *format, ...)
+void RawDocumentGenerator::__iuprintf(const char *format, ...)
 {
+	m_atLeastOneCallback = true;
 	va_list args;
 	va_start(args, format);
 	for (int i=0; i<m_indent; i++)
@@ -82,8 +94,9 @@ void RawListenerImpl::__iuprintf(const char *format, ...)
 	va_end(args);
 }
 
-void RawListenerImpl::__idprintf(const char *format, ...)
+void RawDocumentGenerator::__idprintf(const char *format, ...)
 {
+	m_atLeastOneCallback = true;
 	va_list args;
 	va_start(args, format);
 	__indentDown();
@@ -99,13 +112,15 @@ WPXString getPropString(const WPXPropertyList &propList)
 	WPXPropertyList::Iter i(propList);
 	if (!i.last()) 
 	{
-		WPXString prop;
-		prop.sprintf("%s: %s", i.key(), i()->getStr().cstr());
-		propString.append(prop);
+		propString.append(i.key());
+		propString.append(": ");
+		propString.append(i()->getStr().cstr());
 		for (; i.next(); )
 		{
-			prop.sprintf(", %s: %s", i.key(), i()->getStr().cstr());
-			propString.append(prop);
+			propString.append(", ");
+			propString.append(i.key());
+			propString.append(": ");
+			propString.append(i()->getStr().cstr());
 		}
 	}
 
@@ -138,7 +153,7 @@ WPXString getPropString(const WPXPropertyListVector &itemList)
 	return propString;
 }
 
-void RawListenerImpl::setDocumentMetaData(const WPXPropertyList &propList)
+void RawDocumentGenerator::setDocumentMetaData(const WPXPropertyList &propList)
 {
 	if (m_printCallgraphScore)
 		return;
@@ -146,273 +161,272 @@ void RawListenerImpl::setDocumentMetaData(const WPXPropertyList &propList)
 	__iprintf("setDocumentMetaData(%s)\n", getPropString(propList).cstr());
 }
 
-void RawListenerImpl::startDocument()
+void RawDocumentGenerator::startDocument()
 {
 	_U(("startDocument()\n"), LC_START_DOCUMENT);
 }
 
-void RawListenerImpl::endDocument()
+void RawDocumentGenerator::endDocument()
 {
 	_D(("endDocument()\n"), LC_START_DOCUMENT);
 }
 
-void RawListenerImpl::definePageStyle(const WPXPropertyList &propList)
+void RawDocumentGenerator::definePageStyle(const WPXPropertyList &propList)
 {
 	__iprintf("definePageStyle(%s)\n", getPropString(propList).cstr());
 }
 
-void RawListenerImpl::openPageSpan(const WPXPropertyList &propList)
+void RawDocumentGenerator::openPageSpan(const WPXPropertyList &propList)
 {
 	_U(("openPageSpan(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_PAGE_SPAN);
 }
 
-void RawListenerImpl::closePageSpan()
+void RawDocumentGenerator::closePageSpan()
 {
 	_D(("closePageSpan()\n"),
 		LC_OPEN_PAGE_SPAN);
 }
 
-void RawListenerImpl::openHeader(const WPXPropertyList &propList)
+void RawDocumentGenerator::openHeader(const WPXPropertyList &propList)
 {
 	_U(("openHeader(%s)\n",
 	    getPropString(propList).cstr()),
 	   LC_OPEN_HEADER_FOOTER);
 }
 
-void RawListenerImpl::closeHeader()
+void RawDocumentGenerator::closeHeader()
 {
 	_D(("closeHeader()\n"),
 	   LC_OPEN_HEADER_FOOTER);
 }
 
-void RawListenerImpl::openFooter(const WPXPropertyList &propList)
+void RawDocumentGenerator::openFooter(const WPXPropertyList &propList)
 {
 	_U(("openFooter(%s)\n",
 	    getPropString(propList).cstr()),
 	   LC_OPEN_HEADER_FOOTER);
 }
 
-void RawListenerImpl::closeFooter()
+void RawDocumentGenerator::closeFooter()
 {
 	_D(("closeFooter()\n"),
 	   LC_OPEN_HEADER_FOOTER);
 }
 
-void RawListenerImpl::defineParagraphStyle(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
+void RawDocumentGenerator::defineParagraphStyle(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
 {
 	__iprintf("defineParagraphStyle(%s, tab-stops: %s)\n", getPropString(propList).cstr(), getPropString(tabStops).cstr());
 }
 
-void RawListenerImpl::openParagraph(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
+void RawDocumentGenerator::openParagraph(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
 {
 	_U(("openParagraph(%s, tab-stops: %s)\n", getPropString(propList).cstr(), getPropString(tabStops).cstr()),
 	   LC_OPEN_PARAGRAPH);
 }
 
-void RawListenerImpl::closeParagraph()
+void RawDocumentGenerator::closeParagraph()
 {
 	_D(("closeParagraph()\n"), LC_OPEN_PARAGRAPH);
 }
 
-void RawListenerImpl::defineCharacterStyle(const WPXPropertyList &propList)
+void RawDocumentGenerator::defineCharacterStyle(const WPXPropertyList &propList)
 {
 	__iprintf("defineCharacterStyle(%s)\n", getPropString(propList).cstr());
 }
 
-void RawListenerImpl::openSpan(const WPXPropertyList &propList)
+void RawDocumentGenerator::openSpan(const WPXPropertyList &propList)
 {
 	_U(("openSpan(%s)\n", getPropString(propList).cstr()), LC_OPEN_SPAN);
 }
 
-void RawListenerImpl::closeSpan()
+void RawDocumentGenerator::closeSpan()
 {
 	_D(("closeSpan()\n"), LC_OPEN_SPAN);
 }
 
-void RawListenerImpl::defineSectionStyle(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
+void RawDocumentGenerator::defineSectionStyle(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
 {
 	__iprintf("defineSectionStyle(%s, columns: %s)\n", getPropString(propList).cstr(), getPropString(columns).cstr());
 }
 
-void RawListenerImpl::openSection(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
+void RawDocumentGenerator::openSection(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
 {
 	_U(("openSection(%s, columns: %s)\n", getPropString(propList).cstr(), getPropString(columns).cstr()), LC_OPEN_SECTION);
 }
 
-void RawListenerImpl::closeSection()
+void RawDocumentGenerator::closeSection()
 {
 	_D(("closeSection()\n"), LC_OPEN_SECTION);
 }
 
-void RawListenerImpl::insertTab()
+void RawDocumentGenerator::insertTab()
 {
 	__iprintf("insertTab()\n");
 }
 
-void RawListenerImpl::insertSpace()
+void RawDocumentGenerator::insertSpace()
 {
 	__iprintf("insertSpace()\n");
 }
 
-void RawListenerImpl::insertText(const WPXString &text)
+void RawDocumentGenerator::insertText(const WPXString &text)
 {
-	WPXString textUTF8(text);
-	__iprintf("insertText(text: %s)\n", textUTF8.cstr());
+	__iprintf("insertText(text: %s)\n", text.cstr());
 }
 
-void RawListenerImpl::insertLineBreak()
+void RawDocumentGenerator::insertLineBreak()
 {
 	__iprintf("insertLineBreak()\n");
 }
 
-void RawListenerImpl::insertField(const WPXString &type, const WPXPropertyList &propList)
+void RawDocumentGenerator::insertField(const WPXString &type, const WPXPropertyList &propList)
 {
 	__iprintf("insertField(type: %s, %s)\n", type.cstr(), getPropString(propList).cstr());
 }
 
-void RawListenerImpl::defineOrderedListLevel(const WPXPropertyList &propList)
+void RawDocumentGenerator::defineOrderedListLevel(const WPXPropertyList &propList)
 {
 	__iprintf("defineOrderedListLevel(%s)\n", getPropString(propList).cstr());
 }
 
-void RawListenerImpl::defineUnorderedListLevel(const WPXPropertyList &propList)
+void RawDocumentGenerator::defineUnorderedListLevel(const WPXPropertyList &propList)
 {
 	__iprintf("defineUnorderedListLevel(%s)\n", getPropString(propList).cstr());
 }
 
-void RawListenerImpl::openOrderedListLevel(const WPXPropertyList &propList)
+void RawDocumentGenerator::openOrderedListLevel(const WPXPropertyList &propList)
 {
 	_U(("openOrderedListLevel(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_ORDERED_LIST_LEVEL);
 }
 
-void RawListenerImpl::openUnorderedListLevel(const WPXPropertyList &propList)
+void RawDocumentGenerator::openUnorderedListLevel(const WPXPropertyList &propList)
 {
 	_U(("openUnorderedListLevel(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_UNORDERED_LIST_LEVEL);
 }
 
-void RawListenerImpl::closeOrderedListLevel()
+void RawDocumentGenerator::closeOrderedListLevel()
 {
 	_D(("closeOrderedListLevel()\n"),
 	   LC_OPEN_ORDERED_LIST_LEVEL);
 }
 
-void RawListenerImpl::closeUnorderedListLevel()
+void RawDocumentGenerator::closeUnorderedListLevel()
 {
 	_D(("closeUnorderedListLevel()\n"), LC_OPEN_UNORDERED_LIST_LEVEL);
 }
 
-void RawListenerImpl::openListElement(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
+void RawDocumentGenerator::openListElement(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
 {
 	_U(("openListElement(%s, tab-stops: %s)\n", getPropString(propList).cstr(), getPropString(tabStops).cstr()), 
 	   LC_OPEN_LIST_ELEMENT);
 }
 
-void RawListenerImpl::closeListElement()
+void RawDocumentGenerator::closeListElement()
 {
 	_D(("closeListElement()\n"), LC_OPEN_LIST_ELEMENT);
 }
 
-void RawListenerImpl::openFootnote(const WPXPropertyList &propList)
+void RawDocumentGenerator::openFootnote(const WPXPropertyList &propList)
 {
 	_U(("openFootnote(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_FOOTNOTE);
 }
 
-void RawListenerImpl::closeFootnote()
+void RawDocumentGenerator::closeFootnote()
 {
 	_D(("closeFootnote()\n"), LC_OPEN_FOOTNOTE);
 }
 
-void RawListenerImpl::openEndnote(const WPXPropertyList &propList)
+void RawDocumentGenerator::openEndnote(const WPXPropertyList &propList)
 {
 	_U(("openEndnote(number: %s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_ENDNOTE);
 }
 
-void RawListenerImpl::closeEndnote()
+void RawDocumentGenerator::closeEndnote()
 {
 	_D(("closeEndnote()\n"), LC_OPEN_ENDNOTE);
 }
 
-void RawListenerImpl::openComment(const WPXPropertyList &propList)
+void RawDocumentGenerator::openComment(const WPXPropertyList &propList)
 {
 	_U(("openComment(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_COMMENT);
 }
 
-void RawListenerImpl::closeComment()
+void RawDocumentGenerator::closeComment()
 {
 	_D(("closeComment()\n"), LC_OPEN_COMMENT);
 }
 
-void RawListenerImpl::openTextBox(const WPXPropertyList &propList)
+void RawDocumentGenerator::openTextBox(const WPXPropertyList &propList)
 {
 	_U(("openTextBox(%s)\n", getPropString(propList).cstr()),
 	  LC_OPEN_TEXT_BOX);
 }
 
-void RawListenerImpl::closeTextBox()
+void RawDocumentGenerator::closeTextBox()
 {
 	_D(("closeTextBox()\n"), LC_OPEN_TEXT_BOX);
 }
 	
-void RawListenerImpl::openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
+void RawDocumentGenerator::openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
 {
 	_U(("openTable(%s, columns: %s)\n", getPropString(propList).cstr(), getPropString(columns).cstr()), LC_OPEN_TABLE);
 }
 
-void RawListenerImpl::openTableRow(const WPXPropertyList &propList)
+void RawDocumentGenerator::openTableRow(const WPXPropertyList &propList)
 {
 	_U(("openTableRow(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_TABLE_ROW);
 }
 
-void RawListenerImpl::closeTableRow()
+void RawDocumentGenerator::closeTableRow()
 {
 	_D(("closeTableRow()\n"), LC_OPEN_TABLE_ROW);
 }
 
-void RawListenerImpl::openTableCell(const WPXPropertyList &propList)
+void RawDocumentGenerator::openTableCell(const WPXPropertyList &propList)
 {
 	_U(("openTableCell(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_TABLE_CELL);
 }
 
-void RawListenerImpl::closeTableCell()
+void RawDocumentGenerator::closeTableCell()
 {
 	_D(("closeTableCell()\n"), LC_OPEN_TABLE_CELL);
 }
 
-void RawListenerImpl::insertCoveredTableCell(const WPXPropertyList &propList)
+void RawDocumentGenerator::insertCoveredTableCell(const WPXPropertyList &propList)
 {
 	__iprintf("insertCoveredTableCell(%s)\n", getPropString(propList).cstr());
 }
 
-void RawListenerImpl::closeTable()
+void RawDocumentGenerator::closeTable()
 {
 	_D(("closeTable()\n"), LC_OPEN_TABLE);
 }
 
-void RawListenerImpl::openFrame(const WPXPropertyList &propList)
+void RawDocumentGenerator::openFrame(const WPXPropertyList &propList)
 {
 	_U(("openFrame(%s)\n", getPropString(propList).cstr()),
 	  LC_OPEN_FRAME);
 }
 
-void RawListenerImpl::closeFrame()
+void RawDocumentGenerator::closeFrame()
 {
 	_D(("closeFrame()\n"), LC_OPEN_FRAME);
 }
 	
-void RawListenerImpl::insertBinaryObject(const WPXPropertyList & propList, const WPXBinaryData & /* object */)
+void RawDocumentGenerator::insertBinaryObject(const WPXPropertyList &propList, const WPXBinaryData & /* data */)
 {
 	__iprintf("insertBinaryObject(%s)\n", getPropString(propList).cstr());
 }
 	
-void RawListenerImpl::insertEquation(const WPXPropertyList &propList, const WPXString &data)
+void RawDocumentGenerator::insertEquation(const WPXPropertyList &propList, const WPXString &data)
 {
 	__iprintf("insertEquation(%s, text: %s)\n", getPropString(propList).cstr(), data.cstr());
 }

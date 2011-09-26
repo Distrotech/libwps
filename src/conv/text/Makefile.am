@@ -20,8 +20,8 @@ wps2text_LDADD = \
 endif
 
 wps2text_SOURCES = \
-	TextListenerImpl.cpp	 \
-	TextListenerImpl.h	 \
+	TextDocumentGenerator.cpp	 \
+	TextDocumentGenerator.h	 \
 	wps2text.cpp
 
 if OS_WIN32

@@ -20,8 +20,8 @@ wps2raw_LDADD = \
 endif
 
 wps2raw_SOURCES = \
-	RawListener.cpp	 \
-	RawListener.h	 \
+	RawDocumentGenerator.cpp	 \
+	RawDocumentGenerator.h	 \
 	wps2raw.cpp
 
 if OS_WIN32

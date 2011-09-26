@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "libwps.h"
-#include "TextListenerImpl.h"
+#include "TextDocumentGenerator.h"
 #include <libwpd-stream/libwpd-stream.h>
 
 int main(int argc, char *argv[])
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	TextListenerImpl listenerImpl;
+	TextDocumentGenerator listenerImpl;
 	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
 
 	if (error == WPS_FILE_ACCESS_ERROR)

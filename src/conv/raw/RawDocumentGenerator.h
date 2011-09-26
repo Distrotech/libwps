@@ -1,5 +1,5 @@
 /* libwps
- * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2002 William Lachance (wrlach@gmail.com)
  * Copyright (C) 2002-2004 Marc Maurer (uwog@uwog.net)
  *
  * This library is free software; you can redistribute it and/or
@@ -17,6 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
  * For further information visit http://libwps.sourceforge.net
+ */
+
+/* "This product is not manufactured, approved, or supported by
+ * Corel Corporation or Corel Corporation Limited."
  */
 
 #ifndef RAWLISTENERIMPL_H
@@ -46,11 +50,11 @@ enum ListenerCallback {
 	LC_OPEN_FRAME
 };
 
-class RawListenerImpl : public WPXDocumentInterface
+class RawDocumentGenerator : public WPXDocumentInterface
 {
 public:
-	RawListenerImpl(bool printCallgraphScore);
-	virtual ~RawListenerImpl();
+	RawDocumentGenerator(bool printCallgraphScore);
+	virtual ~RawDocumentGenerator();
 
  	virtual void setDocumentMetaData(const WPXPropertyList &propList);
 
@@ -78,10 +82,10 @@ public:
 	virtual void closeSection();
 
 	virtual void insertTab();
+	virtual void insertSpace();
 	virtual void insertText(const WPXString &text);
  	virtual void insertLineBreak();
 	virtual void insertField(const WPXString &type, const WPXPropertyList &propList);
-	virtual void insertSpace();
 
 	virtual void defineOrderedListLevel(const WPXPropertyList &propList);
 	virtual void defineUnorderedListLevel(const WPXPropertyList &propList);
@@ -112,12 +116,13 @@ public:
 	virtual void openFrame(const WPXPropertyList &propList);
 	virtual void closeFrame();
 	
-	virtual void insertBinaryObject(const WPXPropertyList & propList, const WPXBinaryData &object);
+	virtual void insertBinaryObject(const WPXPropertyList &propList, const WPXBinaryData &data);
 	virtual void insertEquation(const WPXPropertyList &propList, const WPXString &data);
 
 private:
 	int m_indent;
 	int m_callbackMisses;
+	bool m_atLeastOneCallback;
 	bool m_printCallgraphScore;
 	stack<ListenerCallback> m_callStack;
 

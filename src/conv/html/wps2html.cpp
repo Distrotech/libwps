@@ -20,7 +20,7 @@
  */
 
 #include <stdio.h>
-#include "HtmlListenerImpl.h"
+#include "HtmlDocumentGenerator.h"
 #include "WPSDocument.h"
 #include <libwpd-stream/libwpd-stream.h>
 
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	HtmlListenerImpl listenerImpl;
+	HtmlDocumentGenerator listenerImpl;
 	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
 
 	if (error == WPS_FILE_ACCESS_ERROR)
