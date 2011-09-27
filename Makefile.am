@@ -4,7 +4,7 @@ pkgconfdir = $(libdir)/pkgconfig
 
 pkgconf_DATA = libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc
 
-SUBDIRS = src build docs autopackage
+SUBDIRS = src build docs
 
 EXTRA_DIST = \
 	autogen.sh \

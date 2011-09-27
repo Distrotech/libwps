@@ -7,7 +7,7 @@ AC_PREREQ([2.65])
 # ====================
 m4_define([libwps_version_major],[0])
 m4_define([libwps_version_minor],[2])
-m4_define([libwps_version_micro],[2])
+m4_define([libwps_version_micro],[3])
 m4_define([libwps_version],[libwps_version_major.libwps_version_minor.libwps_version_micro])
 
 # =============
@@ -217,8 +217,6 @@ build/win32/Makefile
 libwps-0.2.pc
 libwps.spec
 libwps-zip
-autopackage/Makefile
-autopackage/default.apspec
 ])
 AC_OUTPUT
 
