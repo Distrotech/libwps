@@ -157,13 +157,13 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 	offset = readU32(input);
 	if (offset) { WPS_DEBUG_MSG(("Offset table is not 0-terminated!\n")); }
 
-	for (unsigned i=0; i < n_streams; i++) {
+	for (unsigned j=0; j < n_streams; j++) {
 		uint16_t len;
 		uint32_t type = 0;
 
 		len = readU16(input);
 		if (len > 10) {
-			WPS_DEBUG_MSG(("Rogue strm[%d] def len (%d)\n",i,len));
+			WPS_DEBUG_MSG(("Rogue strm[%d] def len (%d)\n",j,len));
 			input->seek(len-2,WPX_SEEK_CUR);
 		}
 
@@ -172,17 +172,17 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 			type = readU32(input);
 		} else input->seek(len-2,WPX_SEEK_CUR);
 
-		streams[i].type = type;
+		streams[j].type = type;
 	}
 
 #ifdef DEBUG
 	int bodypos = -1;
-	for (unsigned i=0; i < n_streams; i++) {
-		int z = streams[i].type;
-		if (z == WPS_STREAM_DUMMY) WPS_DEBUG_MSG(("Default strm[%d] type\n",i));
+	for (unsigned k=0; k < n_streams; k++) {
+		int z = streams[k].type;
+		if (z == WPS_STREAM_DUMMY) WPS_DEBUG_MSG(("Default strm[%d] type\n",k));
 		if (z == WPS_STREAM_BODY) {
-			if (bodypos < 0) bodypos = i;
-			else WPS_DEBUG_MSG(("Duplicating body (strm[%d])\n",i));
+			if (bodypos < 0) bodypos = k;
+			else WPS_DEBUG_MSG(("Duplicating body (strm[%d])\n",k));
 		}
 	}
 	if (bodypos < 0) WPS_DEBUG_MSG(("Doc body not found!\n"));
@@ -1057,7 +1057,7 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8ContentListener *listener)
 void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8ContentListener *listener)
 {
 	if ((oldTextAttributeBits ^ newTextAttributeBits) & bit)
-		listener->attributeChange(newTextAttributeBits & bit, attribute);
+		listener->attributeChange(newTextAttributeBits & bit ? true : false, attribute);
 }
 
 /**

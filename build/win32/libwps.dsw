@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "libwps"=.\libwps.dsp - Package Owner=<4>
+Project: "libwps"=".\libwps.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -15,7 +15,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libwpsstream"=.\libwpsstream.dsp - Package Owner=<4>
+Project: "wps2html"=".\wps2html.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -30,7 +30,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "wps2html"=.\wps2html.dsp - Package Owner=<4>
+Project: "wps2raw"=".\wps2raw.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -40,15 +40,12 @@ Package=<4>
 {{{
     Begin Project Dependency
     Project_Dep_Name libwps
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libwpsstream
     End Project Dependency
 }}}
 
 ###############################################################################
 
-Project: "wps2raw"=.\wps2raw.dsp - Package Owner=<4>
+Project: "wps2text"=".\wps2text.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -58,27 +55,6 @@ Package=<4>
 {{{
     Begin Project Dependency
     Project_Dep_Name libwps
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libwpsstream
-    End Project Dependency
-}}}
-
-###############################################################################
-
-Project: "wps2text"=.\wps2text.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name libwps
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libwpsstream
     End Project Dependency
 }}}
 
