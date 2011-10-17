@@ -2,6 +2,7 @@
 .libs
 *.lo
 *.la
+*.o
 Makefile
 Makefile.in
 wps2text
