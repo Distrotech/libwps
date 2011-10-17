@@ -65,6 +65,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_numsep(0),
 
 	m_curListType(0),
+	m_isOrdered(false),
 
 	m_isDocumentStarted(false),
 	m_isPageSpanOpened(false),
@@ -78,6 +79,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 
 	m_isParaListItem(false),
 
+	m_nextPageSpanIter(),
 	m_numPagesRemainingInSpan(0),
 
 	m_sectionAttributesChanged(false),
@@ -106,7 +108,9 @@ _WPSContentParsingState::~_WPSContentParsingState()
 WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
 	m_ps(new WPSContentParsingState),
 	m_documentInterface(documentInterface),
-	m_pageList(pageList)
+	m_metaData(), m_tabs(),
+	m_pageList(pageList),
+	m_listFormats()
 {
 	m_ps->m_nextPageSpanIter = pageList.begin();
 }

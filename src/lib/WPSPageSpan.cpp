@@ -47,6 +47,7 @@ WPSPageSpan::WPSPageSpan() :
 	m_marginRight(1.0f),
 	m_marginTop(WPS_DEFAULT_PAGE_MARGIN_TOP),
 	m_marginBottom(WPS_DEFAULT_PAGE_MARGIN_BOTTOM),
+	m_headerFooterList(),
 	m_pageSpan(1)
 {
 	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)

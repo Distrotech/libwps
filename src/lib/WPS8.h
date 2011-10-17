@@ -80,6 +80,7 @@ struct WPSNote
 {
 	uint32_t offset;
 	WPSRange contents;
+	WPSNote() : offset(0), contents() {}
 };
 
 #define WPS_STREAM_DUMMY 0

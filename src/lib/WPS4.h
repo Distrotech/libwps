@@ -53,6 +53,7 @@ struct wpsfont
 {
 	std::string name;
 	int cp;
+	wpsfont() : name(), cp(0) {}
 };
 
 class WPS4Parser : public WPSParser
