@@ -632,6 +632,12 @@ void WPS8Parser::readTextRange(WPXInputStream * input, WPS8ContentListener *list
 						// ! fallback to default
 
 					default:
+						if (readVal < 28 && readVal != 9)
+						{
+							// do not add unprintable control which can create invalid odt file
+					      		WPS_DEBUG_MSG(("WPS8Parser::readTextRange(find unprintable character: ignored)\n"));
+							break;
+						}
 						// fixme: convert UTF-16LE to UTF-8
 						input->seek(-2, WPX_SEEK_CUR);
 						this->appendUTF16LE(input, listener);
