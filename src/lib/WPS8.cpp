@@ -205,8 +205,6 @@ void WPS8Parser::readNotes(std::vector<WPSNote> &dest, WPXInputStream *input, co
 	if (headerIndexTable.end() == pos)
 		return;
 
-	pos->second.length;
-
 	uint32_t unk1;
 	uint32_t count;
 	uint32_t boff;
