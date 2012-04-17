@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2006 Fridrich Strba (fridrich.strba@bluewin.ch)
  *
@@ -86,7 +87,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 
 	m_pageFormLength(11.0f),
 	m_pageFormWidth(8.5f),
-	m_pageFormOrientation(PORTRAIT),
+	m_pageFormOrientation(libwps::PORTRAIT),
 
 	m_pageMarginLeft(1.0f),
 	m_pageMarginRight(1.0f),
@@ -96,7 +97,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_paragraphMarginTop(0.0f),
 	m_paragraphMarginBottom(0.0f),
 	m_paragraphIndentFirst(0.0f),
-	
+
 	m_textBuffer()
 {
 }
@@ -117,7 +118,7 @@ WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocu
 
 WPSContentListener::~WPSContentListener()
 {
-	DELETEP(m_ps);
+	if (m_ps) delete m_ps;
 }
 
 void WPSContentListener::startDocument()
@@ -131,7 +132,7 @@ void WPSContentListener::startDocument()
 
 		m_documentInterface->startDocument();
 	}
-	
+
 	m_ps->m_isDocumentStarted = true;
 }
 
@@ -174,12 +175,13 @@ void WPSContentListener::_closeSection()
 		if (m_ps->m_isParagraphOpened)
 			_closeParagraph();
 
-		if (m_ps->m_numbering) {
-		  /* a Hack which calls open/close paragraph (and so closeListLevel)
-		     when a list is opened */
-		  m_ps->m_numbering = 0;
-		  _openParagraph();
-		  _closeParagraph();
+		if (m_ps->m_numbering)
+		{
+			/* a Hack which calls open/close paragraph (and so closeListLevel)
+			   when a list is opened */
+			m_ps->m_numbering = 0;
+			_openParagraph();
+			_closeParagraph();
 		}
 
 		m_documentInterface->closeSection();
@@ -200,28 +202,28 @@ void WPSContentListener::_openPageSpan()
 	if ( m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end()))
 	{
 		WPS_DEBUG_MSG(("m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end())\n"));
-		throw ParseException();
+		throw libwps::ParseException();
 	}
 
 	WPSPageSpan currentPage = (*m_ps->m_nextPageSpanIter);
 	currentPage.makeConsistent(1);
-	
+
 	WPXPropertyList propList;
 	propList.insert("libwpd:num-pages", currentPage.getPageSpan());
 
-	std::list<WPSPageSpan>::iterator lastPageSpan = --m_pageList.end(); 
+	std::list<WPSPageSpan>::iterator lastPageSpan = --m_pageList.end();
 	propList.insert("libwpd:is-last-page-span", ((m_ps->m_nextPageSpanIter == lastPageSpan) ? true : false));
 	propList.insert("fo:page-height", currentPage.getFormLength());
 	propList.insert("fo:page-width", currentPage.getFormWidth());
-	if (currentPage.getFormOrientation() == LANDSCAPE)
-		propList.insert("style:print-orientation", "landscape"); 
+	if (currentPage.getFormOrientation() == libwps::LANDSCAPE)
+		propList.insert("style:print-orientation", "landscape");
 	else
-		propList.insert("style:print-orientation", "portrait"); 
+		propList.insert("style:print-orientation", "portrait");
 	propList.insert("fo:margin-left", currentPage.getMarginLeft());
 	propList.insert("fo:margin-right", currentPage.getMarginRight());
 	propList.insert("fo:margin-top", currentPage.getMarginTop());
 	propList.insert("fo:margin-bottom", currentPage.getMarginBottom());
-	
+
 	if (!m_ps->m_isPageSpanOpened)
 		m_documentInterface->openPageSpan(propList);
 
@@ -239,36 +241,36 @@ void WPSContentListener::_openPageSpan()
 			propList.clear();
 			switch ((*iter).getOccurence())
 			{
-			case ODD:
+			case libwps::ODD:
 				propList.insert("libwpd:occurence", "odd");
 				break;
-			case EVEN:
+			case libwps::EVEN:
 				propList.insert("libwpd:occurence", "even");
 				break;
-			case ALL:
+			case libwps::ALL:
 				propList.insert("libwpd:occurence", "all");
 				break;
-			case NEVER:
+			case libwps::NEVER:
 			default:
 				break;
 			}
 
-			if ((*iter).getType() == HEADER)
-				m_documentInterface->openHeader(propList); 
+			if ((*iter).getType() == libwps::HEADER)
+				m_documentInterface->openHeader(propList);
 			else
-				m_documentInterface->openFooter(propList); 
+				m_documentInterface->openFooter(propList);
 
-			if ((*iter).getType() == HEADER)
+			if ((*iter).getType() == libwps::HEADER)
 				m_documentInterface->closeHeader();
 			else
-				m_documentInterface->closeFooter(); 
+				m_documentInterface->closeFooter();
 
 			WPS_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
-				       (*iter).getType(), (*iter).getOccurence()));
+			               (*iter).getType(), (*iter).getOccurence()));
 		}
 	}
 
-	/* Some of this would maybe not be necessary, but it does not do any harm 
+	/* Some of this would maybe not be necessary, but it does not do any harm
 	 * and apparently solves some troubles */
 	m_ps->m_pageFormLength = currentPage.getFormLength();
 	m_ps->m_pageFormWidth = currentPage.getFormWidth();
@@ -289,7 +291,7 @@ void WPSContentListener::_closePageSpan()
 
 		m_documentInterface->closePageSpan();
 	}
-	
+
 	m_ps->m_isPageSpanOpened = false;
 	m_ps->m_isPageSpanBreakDeferred = false;
 }
@@ -341,7 +343,8 @@ void WPSContentListener::_openParagraph()
 		else if (m_ps->m_isParagraphPageBreak)
 			propList.insert("fo:break-before", "page");
 
-		for (unsigned i=0; i < m_tabs.size(); i++) {
+		for (unsigned i=0; i < m_tabs.size(); i++)
+		{
 			WPXPropertyList wpx_td;
 			TabPos bpos = m_tabs[i];
 			wpx_td.insert("style:position",bpos.pos,WPX_INCH);
@@ -351,42 +354,54 @@ void WPSContentListener::_openParagraph()
 			tabStops.append(wpx_td);
 		}
 
-		if (m_ps->m_numbering) {
+		if (m_ps->m_numbering)
+		{
 			WPXPropertyList pl;
 			int list_type = _getListId();
-			if (list_type != m_ps->m_curListType) {
-				if (m_ps->m_curListType) {
+			if (list_type != m_ps->m_curListType)
+			{
+				if (m_ps->m_curListType)
+				{
 					if (m_ps->m_isOrdered)
 						m_documentInterface->closeOrderedListLevel();
-					else 
+					else
 						m_documentInterface->closeUnorderedListLevel();
 				}
 				/* and open new */
 				pl.insert("libwpd:id",list_type);
-				if (m_ps->m_numbering == WPS_NUMBERING_NUMBER) {
+				if (m_ps->m_numbering == WPS_NUMBERING_NUMBER)
+				{
 					m_ps->m_isOrdered = true;
 					m_documentInterface->openOrderedListLevel(pl);
-				} else {
+				}
+				else
+				{
 					m_ps->m_isOrdered = false;
 					m_documentInterface->openUnorderedListLevel(pl);
 				}
 				m_ps->m_curListType = list_type;
 			}
-		} else {
-			if (m_ps->m_curListType != 0) {
+		}
+		else
+		{
+			if (m_ps->m_curListType != 0)
+			{
 				if (m_ps->m_isOrdered)
 					m_documentInterface->closeOrderedListLevel();
-				else 
+				else
 					m_documentInterface->closeUnorderedListLevel();
 				m_ps->m_curListType = 0;
 			}
 		}
 
-		if (!m_ps->m_isParagraphOpened) {
-			if (m_ps->m_curListType) {
+		if (!m_ps->m_isParagraphOpened)
+		{
+			if (m_ps->m_curListType)
+			{
 				m_documentInterface->openListElement(propList, tabStops);
 				m_ps->m_isParaListItem = true;
-			} else 
+			}
+			else
 				m_documentInterface->openParagraph(propList, tabStops);
 		}
 
@@ -403,10 +418,12 @@ void WPSContentListener::_closeParagraph()
 		if (m_ps->m_isSpanOpened)
 			_closeSpan();
 
-		if (m_ps->m_isParaListItem) {
+		if (m_ps->m_isParaListItem)
+		{
 			m_documentInterface->closeListElement();
 			m_ps->m_isParaListItem = false;
-		} else
+		}
+		else
 			m_documentInterface->closeParagraph();
 	}
 
@@ -420,14 +437,14 @@ void WPSContentListener::_openSpan()
 {
 	if (!m_ps->m_isParagraphOpened)
 		_openParagraph();
-	
+
 	uint8_t fontSizeAttributes = (uint8_t)(m_ps->m_textAttributeBits & 0x0000001f);
 	float fontSizeChange = 0.0f;
 	switch (fontSizeAttributes)
 	{
 	case 0x01:  // Extra large
 		fontSizeChange = 2.0f;
-		break;	
+		break;
 	case 0x02: // Very large
 		fontSizeChange = 1.5f;
 		break;
@@ -446,9 +463,9 @@ void WPSContentListener::_openSpan()
 	}
 
 	WPXPropertyList propList;
- 	if (m_ps->m_textAttributeBits & WPS_SUPERSCRIPT_BIT)
+	if (m_ps->m_textAttributeBits & WPS_SUPERSCRIPT_BIT)
 		propList.insert("style:text-position", "super 58%");
- 	else if (m_ps->m_textAttributeBits & WPS_SUBSCRIPT_BIT)
+	else if (m_ps->m_textAttributeBits & WPS_SUBSCRIPT_BIT)
 		propList.insert("style:text-position", "sub 58%");
 	if (m_ps->m_textAttributeBits & WPS_ITALICS_BIT)
 		propList.insert("fo:font-style", "italic");
@@ -456,19 +473,19 @@ void WPSContentListener::_openSpan()
 		propList.insert("fo:font-weight", "bold");
 	if (m_ps->m_textAttributeBits & WPS_STRIKEOUT_BIT)
 		propList.insert("style:text-line-through-type", "single");
-	if (m_ps->m_textAttributeBits & WPS_DOUBLE_UNDERLINE_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_DOUBLE_UNDERLINE_BIT)
 		propList.insert("style:text-underline-type", "double");
- 	else if (m_ps->m_textAttributeBits & WPS_UNDERLINE_BIT) 
+	else if (m_ps->m_textAttributeBits & WPS_UNDERLINE_BIT)
 		propList.insert("style:text-underline-type", "single");
-	if (m_ps->m_textAttributeBits & WPS_OUTLINE_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_OUTLINE_BIT)
 		propList.insert("style:text-outline", "true");
-	if (m_ps->m_textAttributeBits & WPS_SMALL_CAPS_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_SMALL_CAPS_BIT)
 		propList.insert("fo:font-variant", "small-caps");
 	if (m_ps->m_textAttributeBits & WPS_ALL_CAPS_BIT)
 		propList.insert("fo:text-transform", "uppercase");
-	if (m_ps->m_textAttributeBits & WPS_BLINK_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_BLINK_BIT)
 		propList.insert("style:text-blinking", "true");
-	if (m_ps->m_textAttributeBits & WPS_SHADOW_BIT) 
+	if (m_ps->m_textAttributeBits & WPS_SHADOW_BIT)
 		propList.insert("fo:text-shadow", "1pt 1pt");
 	if (m_ps->m_textAttributeBits & WPS_EMBOSS_BIT)
 		propList.insert("style:font-relief", "embossed");
@@ -487,7 +504,8 @@ void WPSContentListener::_openSpan()
 	// When redline finishes, the color is back.
 	if (m_ps->m_textAttributeBits & WPS_REDLINE_BIT)
 		propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
-	else {
+	else
+	{
 		char color[20];
 		sprintf(color,"%06x",m_ps->m_textcolor);
 		propList.insert("fo:color", color);
@@ -507,7 +525,7 @@ void WPSContentListener::_closeSpan()
 
 		m_documentInterface->closeSpan();
 	}
-	
+
 	m_ps->m_isSpanOpened = false;
 }
 
@@ -517,21 +535,21 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 	{
 	case WPS_COLUMN_BREAK:
 		if (!m_ps->m_isPageSpanOpened)
-			_openSpan();				
+			_openSpan();
 		if (m_ps->m_isParagraphOpened)
 			_closeParagraph();
 		m_ps->m_isParagraphColumnBreak = true;
 		break;
 	case WPS_PAGE_BREAK:
 		if (!m_ps->m_isPageSpanOpened)
-			_openSpan();				
+			_openSpan();
 		if (m_ps->m_isParagraphOpened)
 			_closeParagraph();
 		m_ps->m_isParagraphPageBreak = true;
 		break;
 		// TODO: (.. line break?)
 	}
-		
+
 	switch (breakType)
 	{
 	case WPS_PAGE_BREAK:
@@ -542,7 +560,7 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 		{
 			if (!m_ps->m_isParagraphOpened)
 				_closePageSpan();
-		    else
+			else
 				m_ps->m_isPageSpanBreakDeferred = true;
 		}
 	default:
@@ -559,7 +577,7 @@ void WPSContentListener::setSpec(const uint16_t specCode)
 void WPSContentListener::setTextFont(const WPXString fontName)
 {
 	_closeSpan();
-	m_ps->m_fontName = fontName;	
+	m_ps->m_fontName = fontName;
 }
 
 void WPSContentListener::setFontSize(const uint16_t fontSize)
@@ -596,8 +614,8 @@ void WPSContentListener::setParaFlags(const uint32_t flags)
 	m_ps->m_paraLayoutFlags = flags;
 }
 
-void WPSContentListener::setMargins(const float first, const float left, 
-									const float right,const float before, const float after)
+void WPSContentListener::setMargins(const float first, const float left,
+                                    const float right,const float before, const float after)
 {
 	m_ps->m_paragraphMarginLeft = left;
 	m_ps->m_paragraphMarginRight = right;
@@ -620,12 +638,12 @@ void WPSContentListener::setNumberingProp(const uint16_t type, const uint16_t se
 {
 	if (m_ps->m_numbering == WPS_NUMBERING_NONE)
 		m_ps->m_numbering = WPS_NUMBERING_NUMBER;
-	
+
 	m_ps->m_numstyle = type;
 	m_ps->m_numsep = sep;
 }
 
-void WPSContentListener::insertEOL() 
+void WPSContentListener::insertEOL()
 {
 	if (!m_ps->m_isParagraphOpened)
 		_openSpan();
@@ -639,7 +657,7 @@ uint16_t WPSContentListener::getSpec() const
 }
 
 
-void WPSContentListener::insertCharacter(const uint16_t character) 
+void WPSContentListener::insertCharacter(const uint16_t character)
 {
 	if (!m_ps->m_isSpanOpened)
 		_openSpan();
@@ -655,7 +673,8 @@ void WPSContentListener::insertField()
 {
 	WPXPropertyList pl;
 
-	if (m_ps->m_fieldcode == WPS_FIELD_PAGE) {
+	if (m_ps->m_fieldcode == WPS_FIELD_PAGE)
+	{
 		_flushText();
 		pl.insert("style:num-format","1");
 		m_documentInterface->insertField("text:page-number",pl);
@@ -726,22 +745,22 @@ void WPSContentListener::_insertText(const WPXString &textBuffer)
 {
 	if (textBuffer.len() <= 0)
 		return;
-        
+
 	WPXString tmpText;
 	const char ASCII_SPACE = 0x0020;
 
 	int numConsecutiveSpaces = 0;
-        WPXString::Iter i(textBuffer);
-	for (i.rewind(); i.next();) 
+	WPXString::Iter i(textBuffer);
+	for (i.rewind(); i.next();)
 	{
 		if (*(i()) == ASCII_SPACE)
 			numConsecutiveSpaces++;
 		else
 			numConsecutiveSpaces = 0;
 
-		if (numConsecutiveSpaces > 1) 
+		if (numConsecutiveSpaces > 1)
 		{
-			if (tmpText.len() > 0) 
+			if (tmpText.len() > 0)
 			{
 				m_documentInterface->insertText(tmpText);
 				tmpText.clear();
@@ -749,7 +768,7 @@ void WPSContentListener::_insertText(const WPXString &textBuffer)
 
 			m_documentInterface->insertSpace();
 		}
-		else 
+		else
 		{
 			tmpText.append(i());
 		}
@@ -767,7 +786,8 @@ int WPSContentListener::_getListId()
 
 	if (l.a == 0) return 0;
 
-	for (unsigned i=0; i < m_listFormats.size(); i++) {
+	for (unsigned i=0; i < m_listFormats.size(); i++)
+	{
 		if (m_listFormats[i]==l)
 			return i+1;
 	}
@@ -778,21 +798,23 @@ int WPSContentListener::_getListId()
 	pl.insert("libwpd:id",listid);
 	pl.insert("libwpd:level",1);
 
-	if (m_ps->m_numbering == WPS_NUMBERING_NUMBER) {
+	if (m_ps->m_numbering == WPS_NUMBERING_NUMBER)
+	{
 		const char *nst = "1";
-		switch (m_ps->m_numstyle) {
-			case WPS_NUM_STYLE_LLATIN:
-				nst = "a";
-				break;
-			case WPS_NUM_STYLE_ULATIN:
-				nst = "A";
-				break;
-			case WPS_NUM_STYLE_LROMAN:
-				nst = "i";
-				break;
-			case WPS_NUM_STYLE_UROMAN:
-				nst = "I";
-				break;
+		switch (m_ps->m_numstyle)
+		{
+		case WPS_NUM_STYLE_LLATIN:
+			nst = "a";
+			break;
+		case WPS_NUM_STYLE_ULATIN:
+			nst = "A";
+			break;
+		case WPS_NUM_STYLE_LROMAN:
+			nst = "i";
+			break;
+		case WPS_NUM_STYLE_UROMAN:
+			nst = "I";
+			break;
 		};
 		pl.insert("style:num-format", nst);
 
@@ -801,10 +823,13 @@ int WPSContentListener::_getListId()
 		pl.insert("text:start-value",1);
 
 		m_documentInterface->defineOrderedListLevel(pl);
-	} else {
+	}
+	else
+	{
 		pl.insert("text:bullet-char","*");
 		m_documentInterface->defineUnorderedListLevel(pl);
 	}
 
 	return listid;
 }
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

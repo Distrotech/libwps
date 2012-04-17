@@ -1,7 +1,8 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
- *  
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -41,7 +42,7 @@ enum WPSResult { WPS_OK, WPS_FILE_ACCESS_ERROR, WPS_PARSE_ERROR, WPS_OLE_ERROR, 
 class WPXDocumentInterface;
 
 /**
-This class provides all the functions an application would need to parse 
+This class provides all the functions an application would need to parse
 Works documents.
 */
 
@@ -53,3 +54,4 @@ public:
 };
 
 #endif /* WPSDOCUMENT_H */
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

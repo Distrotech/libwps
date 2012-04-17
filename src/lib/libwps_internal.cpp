@@ -1,7 +1,8 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2002, 2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002, 2004 Marc Maurer (uwog@uwog.net)
- *  
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -24,15 +25,22 @@
 #include <stdlib.h>
 #include <locale.h>
 
+namespace libwps
+{
 uint8_t readU8(WPXInputStream *input)
 {
 	unsigned long numBytesRead;
-	unsigned char const * p = input->read(sizeof(uint8_t), numBytesRead);
-	
-  	if (!p || numBytesRead != sizeof(uint8_t))
-  		throw FileException();
+	unsigned char const *p = input->read(sizeof(uint8_t), numBytesRead);
+
+	if (!p || numBytesRead != sizeof(uint8_t))
+		throw FileException();
 
 	return *(uint8_t const *)(p);
+}
+
+int8_t read8(WPXInputStream *input)
+{
+	return (int8_t) readU8(input);
 }
 
 uint16_t readU16(WPXInputStream *input)
@@ -42,13 +50,24 @@ uint16_t readU16(WPXInputStream *input)
 	return p0|(p1<<8);
 }
 
+int16_t read16(WPXInputStream *input)
+{
+	return (int16_t) readU16(input);
+}
+
 uint32_t readU32(WPXInputStream *input)
 {
 	uint8_t p0 = readU8(input);
 	uint8_t p1 = readU8(input);
 	uint8_t p2 = readU8(input);
 	uint8_t p3 = readU8(input);
-        return (uint32_t) ((p0<<0)|(p1<<8)|(p2<<16)|(p3<<24));
+	return (uint32_t) ((p0<<0)|(p1<<8)|(p2<<16)|(p3<<24));
+}
+
+int32_t read32(WPXInputStream *input)
+{
+	return (int32_t) readU16(input);
+}
 }
 
 #ifdef DEBUG
@@ -57,7 +76,7 @@ std::string to_bits(std::string s)
 	std::string r;
 	for (unsigned int i = 0; i < s.length(); i++)
 	{
-		std::bitset<8> b(s[i]);	
+		std::bitset<8> b(s[i]);
 		r.append(b.to_string());
 		char buf[20];
 		sprintf(buf, "(%02u,0x%02x)  ", (uint8_t)s[i],(uint8_t)s[i]);
@@ -74,7 +93,8 @@ static const struct _lange
 {
 	uint32_t id;
 	const char *name;
-} s_lang_table[] = {
+} s_lang_table[] =
+{
 	{0x409,"en-US"},
 	{0x419,"ru-RU"}
 };
@@ -82,7 +102,7 @@ static const struct _lange
 std::string getLangFromLCID(uint32_t lcid)
 {
 	unsigned i = 0;
-	
+
 	for (i=0; i < sizeof(s_lang_table)/sizeof(s_lang_table[0]); i++)
 	{
 		if (s_lang_table[i].id == lcid)
@@ -91,4 +111,4 @@ std::string getLangFromLCID(uint32_t lcid)
 	return "-none-";
 }
 
-
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

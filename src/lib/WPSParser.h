@@ -1,7 +1,8 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
- *  
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -35,21 +36,28 @@ class WPXDocumentInterface;
 class WPSParser
 {
 public:
-	WPSParser(WPXInputStream * input, WPSHeader *header);
+	WPSParser(WPXInputStream *input, shared_ptr<WPSHeader> header);
 	virtual ~WPSParser();
 
 	virtual void parse(WPXDocumentInterface *documentInterface) = 0;
 
 protected:
-	WPSHeader * getHeader() { return m_header; }
-	WPXInputStream * getInput() { return m_input; }
-	
-private:
-	WPSParser(const WPSParser&);
-	WPSParser& operator=(const WPSParser&);
-	WPXInputStream * m_input;
+	shared_ptr<WPSHeader> &getHeader()
+	{
+		return m_header;
+	}
+	WPXInputStream *getInput()
+	{
+		return m_input;
+	}
 
-	WPSHeader * m_header;
+private:
+	WPSParser(const WPSParser &);
+	WPSParser &operator=(const WPSParser &);
+	WPXInputStream *m_input;
+
+	shared_ptr<WPSHeader> m_header;
 };
 
 #endif /* WPSPARSER_H */
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

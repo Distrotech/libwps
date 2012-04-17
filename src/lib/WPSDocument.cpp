@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2003 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003-2004 Marc Maurer (uwog@uwog.net)
@@ -58,10 +59,10 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
 	WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
-	
+	shared_ptr<WPSHeader> header;
 	try
 	{
-		WPSHeader *header = WPSHeader::constructHeader(input);
+		header.reset(WPSHeader::constructHeader(input));
 
 		if (!header)
 			return WPS_CONFIDENCE_NONE;
@@ -69,26 +70,25 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
 		switch (header->getMajorVersion())
 		{
 
-			case 8:
-			case 7:
-			case 4:
-				confidence = WPS_CONFIDENCE_EXCELLENT;
-				break;
+		case 8:
+		case 7:
+		case 4:
+			confidence = WPS_CONFIDENCE_EXCELLENT;
+			break;
 
-			case 5:
-			case 2:
-				confidence = WPS_CONFIDENCE_GOOD;
-				break;
+		case 5:
+		case 2:
+			confidence = WPS_CONFIDENCE_GOOD;
+			break;
 		}
-		DELETEP(header);
 
 		return confidence;
 	}
-	catch (FileException)
+	catch (libwps::FileException)
 	{
 		WPS_DEBUG_MSG(("File exception trapped\n"));
 	}
-	catch (ParseException)
+	catch (libwps::ParseException)
 	{
 		WPS_DEBUG_MSG(("Parse exception trapped\n"));
 	}
@@ -112,9 +112,11 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 {
 	WPSResult error = WPS_OK;
 
+	shared_ptr<WPSHeader> header;
+	shared_ptr<WPSParser> parser;
 	try
 	{
-		WPSHeader *header = WPSHeader::constructHeader(input);
+		header.reset(WPSHeader::constructHeader(input));
 
 		if (!header)
 			return WPS_UNKNOWN_ERROR;
@@ -122,38 +124,37 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 		switch (header->getMajorVersion())
 		{
 
-			case 8:
-			case 7:
-			case 6:
-			case 5:
-			{
-				WPS8Parser *parser = new WPS8Parser(header->getInput(), header);
-				parser->parse(documentInterface);
-				DELETEP(parser);		
-				break;
-			}
-
-			case 4:
-			case 3:
-			case 2:
-			{
-				WPS4Parser *parser = new WPS4Parser(header->getInput(), header);
-				parser->parse(documentInterface);
-				DELETEP(parser);	
-				break;
-			}
+		case 8:
+		case 7:
+		case 6:
+		case 5:
+		{
+			parser.reset(new WPS8Parser(header->getInput(), header));
+			if (!parser) return WPS_UNKNOWN_ERROR;
+			parser->parse(documentInterface);
+			break;
 		}
-		delete header;
+
+		case 4:
+		case 3:
+		case 2:
+		{
+			parser.reset(new WPS4Parser(header->getInput(), header));
+			if (!parser) return WPS_UNKNOWN_ERROR;
+			parser->parse(documentInterface);
+			break;
+		}
+		}
 	}
-	catch (FileException)
+	catch (libwps::FileException)
 	{
 		WPS_DEBUG_MSG(("File exception trapped\n"));
 		error = WPS_FILE_ACCESS_ERROR;
 	}
-	catch (ParseException)
+	catch (libwps::ParseException)
 	{
 		WPS_DEBUG_MSG(("Parse exception trapped\n"));
-                error = WPS_PARSE_ERROR;
+		error = WPS_PARSE_ERROR;
 	}
 	catch (...)
 	{
@@ -164,3 +165,4 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 
 	return error;
 }
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
