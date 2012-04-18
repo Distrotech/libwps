@@ -58,7 +58,7 @@ WPS8Parser::~WPS8Parser ()
 
 void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 {
-	std::list<WPSPageSpan> pageList;
+	std::vector<WPSPageSpan> pageList;
 
 	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));
 
@@ -322,50 +322,7 @@ void WPS8Parser::appendUTF16LE(WPXInputStream *input, WPS8ContentListener *liste
 	if (fail)
 		throw libwps::GenericException();
 
-	uint8_t first;
-	int len;
-	if (ucs4Character < 0x80)
-	{
-		first = 0;
-		len = 1;
-	}
-	else if (ucs4Character < 0x800)
-	{
-		first = 0xc0;
-		len = 2;
-	}
-	else if (ucs4Character < 0x10000)
-	{
-		first = 0xe0;
-		len = 3;
-	}
-	else if (ucs4Character < 0x200000)
-	{
-		first = 0xf0;
-		len = 4;
-	}
-	else if (ucs4Character < 0x4000000)
-	{
-		first = 0xf8;
-		len = 5;
-	}
-	else
-	{
-		first = 0xfc;
-		len = 6;
-	}
-
-	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
-	int i;
-	for (i = len - 1; i > 0; --i)
-	{
-		outbuf[i] = (ucs4Character & 0x3f) | 0x80;
-		ucs4Character >>= 6;
-	}
-	outbuf[0] = ucs4Character | first;
-
-	for (i = 0; i < len; i++)
-		listener->insertCharacter(outbuf[i]);
+	listener->insertUnicodeCharacter(ucs4Character);
 }
 
 
@@ -857,7 +814,7 @@ void WPS8Parser::parseHeaderIndex(WPXInputStream *input)
  * can only have one page format throughout the whole document.
  *
  */
-void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream * /* input */)
+void WPS8Parser::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStream * /* input */)
 {
 	//fixme: this method doesn't do much
 

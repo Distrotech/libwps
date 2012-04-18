@@ -30,8 +30,10 @@
 #include <libwpd-stream/WPXStream.h>
 
 #include "libwps_internal.h"
+#include "libwps_tools_win.h"
 
 #include "WPSDocument.h"
+#include "WPSContentListener.h"
 #include "WPSHeader.h"
 
 #include "WPS4.h"
@@ -41,57 +43,23 @@
 
 namespace WPS4ParserInternal
 {
-struct FontName
+struct Font
 {
-	FontName() : m_name(), m_cp(0) {}
+	Font(std::string const &name="",
+	     libwps_tools_win::Font::Type type = libwps_tools_win::Font::DOS_850) :
+		m_name(name), m_type(type) {}
 
+	/** Works version 2 for DOS supports only a specific set of fonts. */
+	static std::string getWps2Name(uint8_t font_n);
+
+	/** the font name */
 	std::string m_name;
-	int m_cp;
+	/** the font type */
+	libwps_tools_win::Font::Type m_type;
 };
 
-static const struct FontMapping
-{
-	const char *m_name;
-	const char *m_repl;
-	int m_codepage;
-} s_fontMapping[] =
-{
-	// Built-in Windows
-	{"Arial CYR","Arial",1251},
-	{"Arial CE","Arial",1250},
-	{"Courier New CYR","Courier New",1251},
-	{"Courier New CE","Courier New",1250},
-	{"Times New Roman CYR","Times New Roman",1251},
-	{"Times New Roman CE","Times New Roman",1250},
 
-	// Custom
-	{"Baltica",NULL,1251},
-	{"Pragmatica",NULL,1251}
-};
-/**
-Maps some of legacy fonts to modern ones and set encoding accordingly.
-\param[in,out] str May contain mapped font name
-*/
-
-int getCodepage(std::string &str)
-{
-	const char *s = str.c_str();
-	for (unsigned i=0; i < (sizeof(s_fontMapping)/sizeof(s_fontMapping[0])); i++)
-	{
-		if (!strcasecmp(s,s_fontMapping[i].m_name))
-		{
-			if (s_fontMapping[i].m_repl) str = s_fontMapping[i].m_repl;
-			return s_fontMapping[i].m_codepage;
-		}
-	}
-	return 0;
-}
-
-/**
- * Works version 2 for DOS supports only a specific set of fonts.
- *
- */
-const char *getWps2FontNameFromIndex(uint8_t font_n)
+std::string Font::getWps2Name(uint8_t font_n)
 {
 	switch (font_n)
 	{
@@ -164,6 +132,7 @@ WPS4Parser::WPS4Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 	m_offset_eot(0),
 	m_CHFODs(),
 	m_PAFODs(),
+	m_listener(),
 	m_fonts(),
 	m_worksVersion(header->getMajorVersion())
 {
@@ -175,7 +144,7 @@ WPS4Parser::~WPS4Parser ()
 
 void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
 {
-	std::list<WPSPageSpan> pageList;
+	std::vector<WPSPageSpan> pageList;
 
 	WPS_DEBUG_MSG(("WPS4Parser::parse()\n"));
 
@@ -185,8 +154,9 @@ void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
 	parsePages(pageList, input);
 
 	/* parse document */
-	WPS4ContentListener listener(pageList, documentInterface);
-	parse(input, &listener);
+	m_listener.reset(new WPS4ContentListener(pageList, documentInterface));
+	parse(input);
+	m_listener.reset();
 }
 
 
@@ -248,9 +218,8 @@ void WPS4Parser::readFontsTable(WPXInputStream *input)
 		}
 		WPS_DEBUG_MSG(("Works: info: count=%i, font_number=%i, unknown=%i, name=%s\n",
 		               int(m_fonts.size()), font_number, unknown_byte, s.c_str()));
-		s.append(1, (char)0);
-		WPS4ParserInternal::FontName f;
-		f.m_cp=	WPS4ParserInternal::getCodepage(s);
+		WPS4ParserInternal::Font f;
+		f.m_type = libwps_tools_win::Font::getWin3Type(s);
 		f.m_name=s;
 		m_fonts[font_number] = f;
 	}
@@ -372,16 +341,15 @@ bool WPS4Parser::readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs)
 
 /**
  * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
- * @param listener:
  *
  */
-void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4ContentListener *listener)
+void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits)
 {
-	WPS_DEBUG_MSG(("WPS4Parser::propertyChangeDelta(%i, %p)\n", newTextAttributeBits, (void *)listener));
+	WPS_DEBUG_MSG(("WPS4Parser::propertyChangeDelta(%i, %p)\n", newTextAttributeBits, (void *)m_listener));
 	if (newTextAttributeBits == m_oldTextAttributeBits)
 		return;
 
-	listener->setFontAttributes(newTextAttributeBits);
+	m_listener->setFontAttributes(newTextAttributeBits);
 #ifdef DEBUG
 	static uint32_t const listAttributes[6] = { WPS_BOLD_BIT, WPS_ITALICS_BIT, WPS_UNDERLINE_BIT, WPS_STRIKEOUT_BIT, WPS_SUBSCRIPT_BIT, WPS_SUPERSCRIPT_BIT };
 	uint32_t diffAttributes = (m_oldTextAttributeBits ^ newTextAttributeBits);
@@ -403,13 +371,13 @@ void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS4ContentL
  * in rgchProp is significant (e.g., bold is always in the first byte).
  *
  */
-void WPS4Parser::propertyChange(std::string rgchProp, WPS4ContentListener *listener)
+void WPS4Parser::propertyChange(std::string rgchProp, WPS4ParserInternal::Font &font)
 {
 	/* set default properties */
 	uint32_t textAttributeBits = 0;
 	uint8_t  colorid = 0;
 
-	listener->setFontSize(12);
+	m_listener->setFontSize(12);
 
 	if (0 == rgchProp.length())
 		return;
@@ -443,13 +411,14 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4ContentListener *liste
 			}
 			else
 			{
-				listener->setTextFont(m_fonts[font_n].m_name.c_str());
-				listener->setCodepage(m_fonts[font_n].m_cp);
+				font.m_name = m_fonts[font_n].m_name;
+				m_listener->setTextFont(font.m_name.c_str());
 			}
 		}
 		if (2 == getHeader()->getMajorVersion())
 		{
-			listener->setTextFont(WPS4ParserInternal::getWps2FontNameFromIndex(font_n));
+			font.m_name = WPS4ParserInternal::Font::getWps2Name(font_n);
+			m_listener->setTextFont(font.m_name.c_str());
 		}
 	}
 	if (rgchProp.length() >= 4)
@@ -459,7 +428,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4ContentListener *liste
 	}
 	if (rgchProp.length() >= 4 && ((uint8_t)rgchProp[4]) > 0)
 	{
-		listener->setFontSize(((uint8_t)rgchProp[4])/2);
+		m_listener->setFontSize(((uint8_t)rgchProp[4])/2);
 	}
 	if (rgchProp.length() >= 6)
 	{
@@ -478,11 +447,11 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4ContentListener *liste
 	{
 		colorid = (uint8_t)rgchProp[7] & 0xF;
 	}
-	propertyChangeDelta(textAttributeBits, listener);
-	listener->setColor(WPS4ParserInternal::s_colorMap[colorid]);
+	propertyChangeDelta(textAttributeBits);
+	m_listener->setColor(WPS4ParserInternal::s_colorMap[colorid]);
 }
 
-void WPS4Parser::propertyChangePara(std::string rgchProp, WPS4ContentListener *listener)
+void WPS4Parser::propertyChangePara(std::string rgchProp)
 {
 	static const uint8_t _align[]= {WPS_PARAGRAPH_JUSTIFICATION_LEFT,
 	                                WPS_PARAGRAPH_JUSTIFICATION_CENTER,WPS_PARAGRAPH_JUSTIFICATION_RIGHT,
@@ -493,7 +462,7 @@ void WPS4Parser::propertyChangePara(std::string rgchProp, WPS4ContentListener *l
 	int pleft =0, pright =0;
 
 	std::vector<WPSTabPos> tabs;
-	listener->setTabs(tabs);
+	m_listener->setTabs(tabs);
 
 	int pf = 0;
 
@@ -511,7 +480,7 @@ void WPS4Parser::propertyChangePara(std::string rgchProp, WPS4ContentListener *l
 		{
 			uint8_t a = rgchProp[x];
 			if (a < 4)
-				listener->setAlign(_align[a]);
+				m_listener->setAlign(_align[a]);
 			x++;
 		}
 		break;
@@ -591,7 +560,7 @@ void WPS4Parser::propertyChangePara(std::string rgchProp, WPS4ContentListener *l
 					// TODO: leader
 					tabs.push_back(pos);
 				}
-				listener->setTabs(tabs);
+				m_listener->setTabs(tabs);
 			}
 			x+=rgchProp[x]+(rgchProp[x+1]<<8)+1;
 		}
@@ -602,230 +571,18 @@ void WPS4Parser::propertyChangePara(std::string rgchProp, WPS4ContentListener *l
 		}
 	}
 
-	if (pf != 0) listener->setParaFlags(pf);
+	if (pf != 0) m_listener->setParaFlags(pf);
 
-	listener->setMargins(pindent/1440.0,pleft/1440.0,pright/1440.0,
-	                     pbefore/1440.0,pafter/1440.0);
+	m_listener->setMargins(pindent/1440.0,pleft/1440.0,pright/1440.0,
+	                       pbefore/1440.0,pafter/1440.0);
 }
-
-/**
- * Take a character in CP850 encoding, convert it
- * and append it to the text buffer as UTF8.
- * Courtesy of glib2 and iconv
- *
- */
-void WPS4Parser::appendCP850(const uint8_t readVal, WPS4ContentListener *listener)
-{
-// Fridrich: I see some MS Works files with IBM850 encoding ???
-	static const uint16_t cp850toUCS4[128] =
-	{
-		0x00c7, 0x00fc, 0x00e9, 0x00e2, 0x00e4, 0x00e0, 0x00e5, 0x00e7,
-		0x00ea, 0x00eb, 0x00e8, 0x00ef, 0x00ee, 0x00ec, 0x00c4, 0x00c5,
-		0x00c9, 0x00e6, 0x00c6, 0x00f4, 0x00f6, 0x00f2, 0x00fb, 0x00f9,
-		0x00ff, 0x00d6, 0x00dc, 0x00f8, 0x00a3, 0x00d8, 0x00d7, 0x0192,
-		0x00e1, 0x00ed, 0x00f3, 0x00fa, 0x00f1, 0x00d1, 0x00aa, 0x00ba,
-		0x00bf, 0x00ae, 0x00ac, 0x00bd, 0x00bc, 0x00a1, 0x00ab, 0x00bb,
-		0x2591, 0x2592, 0x2593, 0x2502, 0x2524, 0x00c1, 0x00c2, 0x00c0,
-		0x00a9, 0x2563, 0x2551, 0x2557, 0x255d, 0x00a2, 0x00a5, 0x2510,
-		0x2514, 0x2534, 0x252c, 0x251c, 0x2500, 0x253c, 0x00e3, 0x00c3,
-		0x255a, 0x2554, 0x2569, 0x2566, 0x2560, 0x2550, 0x256c, 0x00a4,
-		0x00f0, 0x00d0, 0x00ca, 0x00cb, 0x00c8, 0x0131, 0x00cd, 0x00ce,
-		0x00cf, 0x2518, 0x250c, 0x2588, 0x2584, 0x00a6, 0x00cc, 0x2580,
-		0x00d3, 0x00df, 0x00d4, 0x00d2, 0x00f5, 0x00d5, 0x00b5, 0x00fe,
-		0x00de, 0x00da, 0x00db, 0x00d9, 0x00fd, 0x00dd, 0x00af, 0x00b4,
-		0x00ad, 0x00b1, 0x2017, 0x00be, 0x00b6, 0x00a7, 0x00f7, 0x00b8,
-		0x00b0, 0x00a8, 0x00b7, 0x00b9, 0x00b3, 0x00b2, 0x25a0, 0x00a0
-	};
-
-	uint32_t ucs4Character = 0;
-	if (readVal < 0x80)
-		ucs4Character = (uint32_t) readVal;
-	else
-	{
-		ucs4Character = (uint32_t) cp850toUCS4[readVal - 0x80];
-	}
-
-	appendUCS(ucs4Character,listener);
-}
-
-/**
- * Take a character in CP1252 encoding, convert it
- * and append it to the text buffer as UTF8.
- * Courtesy of glib2 and iconv
- *
- */
-void WPS4Parser::appendCP1252(const uint8_t readVal, WPS4ContentListener *listener)
-{
-	static const uint16_t cp1252toUCS4[32] =
-	{
-		0x20ac, 0xfffd, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021,
-		0x02c6, 0x2030, 0x0160, 0x2039, 0x0152, 0xfffd, 0x017d, 0xfffd,
-		0xfffd, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
-		0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0xfffd, 0x017e, 0x0178
-	};
-
-	uint32_t ucs4Character = 0;
-	if (readVal < 0x80 || readVal >= 0xa0)
-		ucs4Character = (uint32_t) readVal;
-	else
-	{
-		ucs4Character = (uint32_t) cp1252toUCS4[readVal - 0x80];
-		if (ucs4Character == 0xfffd)
-//			throw GenericException();
-			return;
-	}
-
-	appendUCS(ucs4Character,listener);
-}
-
-uint32_t s_CP1250(const uint8_t readVal)
-{
-	static const uint16_t cp1250toUCS4[128] =
-	{
-		0x20ac, 0xfffd, 0x201a, 0xfffd, 0x201e, 0x2026, 0x2020, 0x2021,
-		0xfffd, 0x2030, 0x0160, 0x2039, 0x015a, 0x0164, 0x017d, 0x0179,
-		0xfffd, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
-		0xfffd, 0x2122, 0x0161, 0x203a, 0x015b, 0x0165, 0x017e, 0x017a,
-		0x00a0, 0x02c7, 0x02d8, 0x0141, 0x00a4, 0x0104, 0x00a6, 0x00a7,
-		0x00a8, 0x00a9, 0x015e, 0x00ab, 0x00ac, 0x00ad, 0x00ae, 0x017b,
-		0x00b0, 0x00b1, 0x02db, 0x0142, 0x00b4, 0x00b5, 0x00b6, 0x00b7,
-		0x00b8, 0x0105, 0x015f, 0x00bb, 0x013d, 0x02dd, 0x013e, 0x017c,
-
-		0x0154, 0x00c1, 0x00c2, 0x0453, 0x201e, 0x2026, 0x2020, 0x2021,
-		0x20ac, 0x2030, 0x0409, 0x2039, 0x040a, 0x040c, 0x040b, 0x040f,
-		0x0452, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
-		0xfffd, 0x2122, 0x0459, 0x203a, 0x045a, 0x045c, 0x045b, 0x045f,
-		0x0155, 0x00e1, 0x00e2, 0x0103, 0x00e4, 0x013a, 0x0107, 0x00e7,
-		0x010d, 0x00e9, 0x0119, 0x00eb, 0x011b, 0x00ed, 0x00ee, 0x010f,
-		0x0111, 0x0144, 0x0148, 0x00f3, 0x00f4, 0x0151, 0x00f6, 0x00b7,
-		0x0159, 0x016f, 0x00fa, 0x0171, 0x00fc, 0x00fd, 0x0163, 0x02d9
-	};
-
-	uint32_t ucs4Character = 0;
-	if (readVal < 0x80)
-	{
-		ucs4Character = (uint32_t) readVal;
-	}
-	else
-	{
-		ucs4Character = (uint32_t) cp1250toUCS4[readVal - 0x80];
-	}
-
-	return ucs4Character;
-}
-
-uint32_t s_CP1251(const uint8_t readVal)
-{
-	static const uint16_t cp1251toUCS4[64] =
-	{
-		0x0402, 0x0403, 0x201a, 0x0453, 0x201e, 0x2026, 0x2020, 0x2021,
-		0x20ac, 0x2030, 0x0409, 0x2039, 0x040a, 0x040c, 0x040b, 0x040f,
-		0x0452, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
-		0xfffd, 0x2122, 0x0459, 0x203a, 0x045a, 0x045c, 0x045b, 0x045f,
-		0x00a0, 0x040e, 0x045e, 0x0408, 0x00a4, 0x0490, 0x00a6, 0x00a7,
-		0x0401, 0x00a9, 0x0404, 0x00ab, 0x00ac, 0x00ad, 0x00ae, 0x0407,
-		0x00b0, 0x00b1, 0x0406, 0x0456, 0x0491, 0x00b5, 0x00b6, 0x00b7,
-		0x0451, 0x2116, 0x0454, 0x00bb, 0x0458, 0x0405, 0x0455, 0x0457
-	};
-
-	uint32_t ucs4Character = 0;
-	if (readVal < 0x80)
-	{
-		ucs4Character = (uint32_t) readVal;
-	}
-	else if (readVal >= 0xc0)
-	{
-		ucs4Character = (uint32_t) readVal+0x410-0xc0;
-	}
-	else
-	{
-		ucs4Character = (uint32_t) cp1251toUCS4[readVal - 0x80];
-	}
-
-	return ucs4Character;
-}
-
-void WPS4Parser::appendCP(const uint8_t readVal, int codepage, WPS4ContentListener *listener)
-{
-	if (!codepage) codepage=listener->getCodepage();
-	if (codepage == 1251)
-	{
-		appendUCS(s_CP1251(readVal),listener);
-		return;
-	}
-	else if (codepage == 1250)
-	{
-		appendUCS(s_CP1250(readVal),listener);
-		return;
-	}
-	else if (codepage == 850)
-	{
-		appendCP850(readVal,listener);
-		return;
-	}
-	appendCP1252(readVal,listener);
-}
-
-void WPS4Parser::appendUCS(const uint16_t readVal, WPS4ContentListener *listener)
-{
-	uint32_t ucs4Character = (uint32_t) readVal;
-	if (ucs4Character == 0xfffd)
-//		throw GenericException();
-		return;
-
-	uint8_t first;
-	int len;
-	if (ucs4Character < 0x80)
-	{
-		first = 0;
-		len = 1;
-	}
-	else if (ucs4Character < 0x800)
-	{
-		first = 0xc0;
-		len = 2;
-	}
-	else if (ucs4Character < 0x10000)
-	{
-		first = 0xe0;
-		len = 3;
-	}
-	else if (ucs4Character < 0x200000)
-	{
-		first = 0xf0;
-		len = 4;
-	}
-	else if (ucs4Character < 0x4000000)
-	{
-		first = 0xf8;
-		len = 5;
-	}
-	else
-	{
-		first = 0xfc;
-		len = 6;
-	}
-
-	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
-	int i;
-	for (i = len - 1; i > 0; --i)
-	{
-		outbuf[i] = (ucs4Character & 0x3f) | 0x80;
-		ucs4Character >>= 6;
-	}
-	outbuf[0] = ucs4Character | first;
-
-	for (i = 0; i < len; i++)
-		listener->insertCharacter(outbuf[i]);
-}
-
 
 /**
  * Read the text of the document using previously-read
  * formatting information.
  *
  */
-void WPS4Parser::readText(WPXInputStream *input, WPS4ContentListener *listener)
+void WPS4Parser::readText(WPXInputStream *input)
 {
 	m_oldTextAttributeBits = 0;
 	std::vector<WPSFOD>::iterator FODs_iter;
@@ -841,6 +598,9 @@ void WPS4Parser::readText(WPXInputStream *input, WPS4ContentListener *listener)
 
 	uint32_t last_fcLim = 0x100;
 	PFOD_iter = m_PAFODs.begin();
+	WPS4ParserInternal::Font font;
+	font.m_type = m_worksVersion <= 2 ?
+	              libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
 	for (FODs_iter = m_CHFODs.begin(); FODs_iter!= m_CHFODs.end(); FODs_iter++)
 	{
 		uint32_t len1 = (*FODs_iter).m_fcLim - last_fcLim;
@@ -853,9 +613,9 @@ void WPS4Parser::readText(WPXInputStream *input, WPS4ContentListener *listener)
 			               len, to_bits((*FODs_iter).m_fprop.m_rgchProp).c_str()));
 
 			if ((*FODs_iter).m_fprop.m_cch > 0)
-				propertyChange((*FODs_iter).m_fprop.m_rgchProp, listener);
+				propertyChange((*FODs_iter).m_fprop.m_rgchProp, font);
 			if ((*PFOD_iter).m_fprop.m_cch > 0)
-				propertyChangePara((*PFOD_iter).m_fprop.m_rgchProp, listener);
+				propertyChangePara((*PFOD_iter).m_fprop.m_rgchProp);
 			input->seek(last_fcLim, WPX_SEEK_SET);
 			for (uint32_t i = len; i>0; i--)
 			{
@@ -897,24 +657,26 @@ void WPS4Parser::readText(WPXInputStream *input, WPS4ContentListener *listener)
 
 				case 0x02:
 					// TODO: check special bit
-					listener->setFieldType(WPS_FIELD_PAGE);
-					listener->insertField();
+					m_listener->setFieldType(WPS_FIELD_PAGE);
+					m_listener->insertField();
 					break;
 
 				case 0x0C:
-					listener->insertBreak(WPS_PAGE_BREAK);
+					m_listener->insertBreak(WPS_PAGE_BREAK);
 					break;
 
 				case 0x0D:
-					listener->insertEOL();
+					m_listener->insertEOL();
 					break;
 
 				default:
-					if (m_worksVersion == 2)
-						this->appendCP(readVal, 850, listener);
-					else
-						this->appendCP(readVal, 0, listener);
+				{
+					unsigned long unicode =
+					    libwps_tools_win::Font::unicode(readVal, font.m_type);
+					if (unicode != 0xfffd)
+						m_listener->insertUnicodeCharacter(unicode);
 					break;
+				}
 				}
 			}
 
@@ -935,7 +697,7 @@ void WPS4Parser::readText(WPXInputStream *input, WPS4ContentListener *listener)
  * can only have one page format throughout the whole document.
  *
  */
-void WPS4Parser::parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input)
+void WPS4Parser::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStream *input)
 {
 	/* read page format */
 	input->seek(0x64, WPX_SEEK_SET);
@@ -1007,11 +769,16 @@ void WPS4Parser::parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *in
 	}
 }
 
-void WPS4Parser::parse(WPXInputStream *input, WPS4ContentListener *listener)
+void WPS4Parser::parse(WPXInputStream *input)
 {
+	if (!m_listener)
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::parse(): the listener is not set, stop parsing\n"));
+		return;
+	}
 	WPS_DEBUG_MSG(("WPS4Parser::parse()\n"));
 
-	listener->startDocument();
+	m_listener->startDocument();
 
 	/* find beginning of character FODs */
 	input->seek(WPS4_FCMAC_OFFSET, WPX_SEEK_SET);
@@ -1054,9 +821,9 @@ void WPS4Parser::parse(WPXInputStream *input, WPS4ContentListener *listener)
 		readFontsTable(input);
 
 	/* process text file using previously-read character formatting */
-	readText(input, listener);
+	readText(input);
 
-	listener->endDocument();
+	m_listener->endDocument();
 }
 
 #ifdef DEBUG

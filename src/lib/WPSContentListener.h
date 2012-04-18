@@ -32,7 +32,7 @@
 #include "WPSPageSpan.h"
 #include <libwpd/WPXPropertyListVector.h>
 #include <libwpd/WPXDocumentInterface.h>
-#include <list>
+#include <vector>
 
 typedef struct _WPSContentParsingState WPSContentParsingState;
 struct _WPSContentParsingState
@@ -48,8 +48,6 @@ struct _WPSContentParsingState
 	uint32_t m_textcolor;
 
 	uint16_t m_fieldcode;
-
-	int m_codepage;
 
 	bool m_isParagraphColumnBreak;
 	bool m_isParagraphPageBreak;
@@ -79,7 +77,7 @@ struct _WPSContentParsingState
 
 	bool m_isParaListItem;
 
-	std::list<WPSPageSpan>::iterator m_nextPageSpanIter;
+	std::vector<WPSPageSpan>::iterator m_nextPageSpanIter;
 	int m_numPagesRemainingInSpan;
 
 	bool m_sectionAttributesChanged;
@@ -124,13 +122,14 @@ struct WPSTabPos
 class WPSContentListener
 {
 public:
-	WPSContentListener(std::list<WPSPageSpan> pageList, WPXDocumentInterface *documentInterface);
+	WPSContentListener(std::vector<WPSPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
 	virtual ~WPSContentListener();
 
 	void startDocument();
 	void endDocument();
 	void insertBreak(const uint8_t breakType);
 	void insertCharacter(const uint16_t character);
+	void insertUnicodeCharacter(uint32_t character);
 	void insertField();
 
 	void openFootnote();
@@ -143,8 +142,6 @@ public:
 	void setFontSize(const uint16_t fontSize);
 	void setFontAttributes(const uint32_t fontAttributes);
 	void setLCID(const uint32_t lcid);
-	int getCodepage() const;
-	void setCodepage(const int codepage);
 	void setColor(const unsigned int rgb);
 	void setFieldType(uint16_t code);
 	void setFieldFormat(uint16_t code);
@@ -189,7 +186,7 @@ private:
 	WPSContentListener &operator=(const WPSContentListener &);
 
 	std::vector<WPSTabPos> m_tabs;
-	std::list<WPSPageSpan> m_pageList;
+	std::vector<WPSPageSpan> m_pageList;
 	std::vector<WPSListSignature> m_listFormats;
 };
 

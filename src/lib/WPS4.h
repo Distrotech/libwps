@@ -26,19 +26,19 @@
 #include <vector>
 #include <map>
 
+#include <libwpd-stream/WPXStream.h>
 #include "libwps_internal.h"
 #include "WPS.h"
-#include "WPSContentListener.h"
-#include "WPSHeader.h"
-#include <libwpd-stream/WPXStream.h>
-#include <libwpd/WPXString.h>
+
 #include "WPSParser.h"
 
+class WPSContentListener;
 typedef WPSContentListener WPS4ContentListener;
+class WPSPageSpan;
 
 namespace WPS4ParserInternal
 {
-struct FontName;
+struct Font;
 }
 
 class WPS4Parser : public WPSParser
@@ -49,18 +49,14 @@ public:
 
 	void parse(WPXDocumentInterface *documentInterface);
 private:
-	void parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input);
-	void parse(WPXInputStream *stream, WPS4ContentListener *listener);
+	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStream *input);
+	void parse(WPXInputStream *stream);
 	void readFontsTable(WPXInputStream *input);
 	bool readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs);
-	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS4ContentListener *listener);
-	void propertyChange(std::string rgchProp, WPS4ContentListener *listener);
-	void propertyChangePara(std::string rgchProp, WPS4ContentListener *listener);
-	void appendCP(const uint8_t readVal, int codepage, WPS4ContentListener *listener);
-	void appendUCS(const uint16_t readVal, WPS4ContentListener *listener);
-	void appendCP850(const uint8_t readVal, WPS4ContentListener *listener);
-	void appendCP1252(const uint8_t readVal, WPS4ContentListener *listener);
-	void readText(WPXInputStream *input, WPS4ContentListener *listener);
+	void propertyChangeDelta(uint32_t newTextAttributeBits);
+	void propertyChange(std::string rgchProp, WPS4ParserInternal::Font &font);
+	void propertyChangePara(std::string rgchProp);
+	void readText(WPXInputStream *input);
 
 #ifdef DEBUG
 	static std::string to_bits(std::string s);
@@ -69,7 +65,8 @@ private:
 	uint32_t m_offset_eot; /* stream offset to end of text */
 	std::vector<WPSFOD> m_CHFODs; /* CHaracter FOrmatting Descriptors */
 	std::vector<WPSFOD> m_PAFODs; /* PAragraph FOrmatting Descriptors */
-	std::map<uint8_t, WPS4ParserInternal::FontName> m_fonts; /* fonts in format <index code, <font name, codepage>>  */
+	shared_ptr<WPS4ContentListener> m_listener; /* the listener (if set)*/
+	std::map<uint8_t, WPS4ParserInternal::Font> m_fonts; /* fonts in format <index code, <font name, encoding>>  */
 	const uint8_t m_worksVersion;
 };
 

@@ -52,8 +52,6 @@ _WPSContentParsingState::_WPSContentParsingState() :
 
 	m_fieldcode(0),
 
-	m_codepage(0),
-
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
 	m_paragraphJustification(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
@@ -108,14 +106,14 @@ _WPSContentParsingState::~_WPSContentParsingState()
 {
 }
 
-WPSContentListener::WPSContentListener(std::list<WPSPageSpan> pageList, WPXDocumentInterface *documentInterface) :
+WPSContentListener::WPSContentListener(std::vector<WPSPageSpan> const &pageList, WPXDocumentInterface *documentInterface) :
 	m_ps(new WPSContentParsingState),
 	m_documentInterface(documentInterface),
 	m_metaData(), m_tabs(),
 	m_pageList(pageList),
 	m_listFormats()
 {
-	m_ps->m_nextPageSpanIter = pageList.begin();
+	m_ps->m_nextPageSpanIter = m_pageList.begin();
 }
 
 WPSContentListener::~WPSContentListener()
@@ -212,7 +210,7 @@ void WPSContentListener::_openPageSpan()
 	WPXPropertyList propList;
 	propList.insert("libwpd:num-pages", currentPage.getPageSpan());
 
-	std::list<WPSPageSpan>::iterator lastPageSpan = --m_pageList.end();
+	std::vector<WPSPageSpan>::iterator lastPageSpan = --m_pageList.end();
 	propList.insert("libwpd:is-last-page-span", ((m_ps->m_nextPageSpanIter == lastPageSpan) ? true : false));
 	propList.insert("fo:page-height", currentPage.getFormLength());
 	propList.insert("fo:page-width", currentPage.getFormWidth());
@@ -492,10 +490,26 @@ void WPSContentListener::_openSpan()
 		propList.insert("style:font-relief", "embossed");
 	else if (m_ps->m_textAttributeBits & WPS_ENGRAVE_BIT)
 		propList.insert("style:font-relief", "engraved");
-	if (m_ps->m_lcid) {
+	if (m_ps->m_lcid)
+	{
 		std::string lang = libwps_tools_win::Language::localeName(m_ps->m_lcid);
-		if (lang.length()) propList.insert("fo:language", lang.c_str());
-		else propList.insert("fo:language", "-none-");
+		if (lang.length())
+		{
+			std::string language(lang);
+			std::string country("none");
+			if (lang.length() > 3 && lang[2]=='_')
+			{
+				country=lang.substr(3);
+				language=lang.substr(0,2);
+			}
+			propList.insert("fo:language", language.c_str());
+			propList.insert("fo:country", country.c_str());
+		}
+		else
+		{
+			propList.insert("fo:language", "none");
+			propList.insert("fo:country", "none");
+		}
 	}
 
 	if (m_ps->m_fontName.len())
@@ -511,7 +525,7 @@ void WPSContentListener::_openSpan()
 	else
 	{
 		char color[20];
-		sprintf(color,"%06x",m_ps->m_textcolor);
+		sprintf(color,"#%06x",m_ps->m_textcolor);
 		propList.insert("fo:color", color);
 	}
 
@@ -602,17 +616,6 @@ void WPSContentListener::setLCID(const uint32_t lcid)
 	m_ps->m_lcid=lcid;
 }
 
-int WPSContentListener::getCodepage() const
-{
-	return m_ps->m_codepage;
-}
-
-void WPSContentListener::setCodepage(const int codepage)
-{
-	if (codepage == 0) return;
-	m_ps->m_codepage = codepage;
-}
-
 void WPSContentListener::setColor(const unsigned int rgb)
 {
 	_closeSpan();
@@ -677,6 +680,58 @@ void WPSContentListener::insertCharacter(const uint16_t character)
 	if (!m_ps->m_isSpanOpened)
 		_openSpan();
 	m_ps->m_textBuffer.append(character);
+}
+
+void WPSContentListener::insertUnicodeCharacter(uint32_t character)
+{
+	if (!m_ps->m_isSpanOpened)
+		_openSpan();
+	if (character == 0xfffd)
+		return;
+	uint8_t first;
+	int len;
+	if (character < 0x80)
+	{
+		first = 0;
+		len = 1;
+	}
+	else if (character < 0x800)
+	{
+		first = 0xc0;
+		len = 2;
+	}
+	else if (character < 0x10000)
+	{
+		first = 0xe0;
+		len = 3;
+	}
+	else if (character < 0x200000)
+	{
+		first = 0xf0;
+		len = 4;
+	}
+	else if (character < 0x4000000)
+	{
+		first = 0xf8;
+		len = 5;
+	}
+	else
+	{
+		first = 0xfc;
+		len = 6;
+	}
+
+	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
+	int i;
+	for (i = len - 1; i > 0; --i)
+	{
+		outbuf[i] = (character & 0x3f) | 0x80;
+		character >>= 6;
+	}
+	outbuf[0] = character | first;
+
+	for (i = 0; i < len; i++)
+		m_ps->m_textBuffer.append(outbuf[i]);
 }
 
 void WPSContentListener::setFieldType(uint16_t code)

@@ -24,7 +24,6 @@
 #define WPS8_H
 
 #include <vector>
-#include <list>
 #include <map>
 #include <libwpd/WPXString.h>
 
@@ -98,7 +97,7 @@ private:
 	bool readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs, uint16_t page_size);
 	void parseHeaderIndexEntry(WPXInputStream *input);
 	void parseHeaderIndex(WPXInputStream *input);
-	void parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input);
+	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStream *input);
 	void parse(WPXInputStream *stream, WPS8ContentListener *listener);
 	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS8ContentListener *listener);
 	void propertyChange(std::string rgchProp, WPS8ContentListener *listener);

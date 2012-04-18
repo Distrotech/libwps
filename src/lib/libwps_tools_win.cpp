@@ -557,7 +557,7 @@ std::string Language::localeName(long id)
 	case 0x418:
 		return "ro";
 	case 0x419:
-		return "ru";
+		return "ru_RU";
 	case 0x41d:
 		return "sv";
 	case 0x420:

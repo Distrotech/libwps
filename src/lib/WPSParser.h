@@ -29,7 +29,10 @@
 #ifndef WPSPARSER_H
 #define WPSPARSER_H
 
-#include "WPSHeader.h"
+#include "libwps_internal.h"
+
+class WPSHeader;
+typedef shared_ptr<WPSHeader> WPSHeaderPtr;
 
 class WPXDocumentInterface;
 
