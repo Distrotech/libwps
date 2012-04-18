@@ -489,7 +489,7 @@ void WPSContentListener::_openSpan()
 		propList.insert("fo:color", "#ff3333");  // #ff3333 = a nice bright red
 	else {
 		char color[20];
-		sprintf(color,"%06x",m_ps->m_textcolor);
+		sprintf(color,"#%06x",m_ps->m_textcolor);
 		propList.insert("fo:color", color);
 	}
 
