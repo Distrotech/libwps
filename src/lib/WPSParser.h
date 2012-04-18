@@ -36,17 +36,17 @@ class WPXDocumentInterface;
 class WPSParser
 {
 public:
-	WPSParser(WPXInputStream *input, shared_ptr<WPSHeader> header);
+	WPSParser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
 	virtual ~WPSParser();
 
 	virtual void parse(WPXDocumentInterface *documentInterface) = 0;
 
 protected:
-	shared_ptr<WPSHeader> &getHeader()
+	WPSHeaderPtr &getHeader()
 	{
 		return m_header;
 	}
-	WPXInputStream *getInput()
+	WPXInputStreamPtr &getInput()
 	{
 		return m_input;
 	}
@@ -54,9 +54,9 @@ protected:
 private:
 	WPSParser(const WPSParser &);
 	WPSParser &operator=(const WPSParser &);
-	WPXInputStream *m_input;
+	shared_ptr<WPXInputStream > m_input;
 
-	shared_ptr<WPSHeader> m_header;
+	WPSHeaderPtr m_header;
 };
 
 #endif /* WPSPARSER_H */

@@ -34,15 +34,16 @@
 class WPSHeader
 {
 public:
-	WPSHeader(WPXInputStream *input, uint8_t majorVersion);
+	WPSHeader(WPXInputStreamPtr &input, uint8_t majorVersion);
 	virtual ~WPSHeader();
 
-	static WPSHeader *constructHeader(WPXInputStream *input);
+	static WPSHeader *constructHeader(WPXInputStreamPtr &input);
 
-	WPXInputStream *getInput() const
+	WPXInputStreamPtr &getInput()
 	{
 		return m_input;
 	}
+
 	uint8_t getMajorVersion() const
 	{
 		return m_majorVersion;
@@ -51,9 +52,11 @@ public:
 private:
 	WPSHeader(const WPSHeader &);
 	WPSHeader &operator=(const WPSHeader &);
-	WPXInputStream *m_input;
+	WPXInputStreamPtr m_input;
 	uint8_t m_majorVersion;
 };
+
+typedef shared_ptr<WPSHeader> WPSHeaderPtr;
 
 #endif /* WPSHEADER_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

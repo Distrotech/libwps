@@ -23,7 +23,6 @@
 #include "libwps_internal.h"
 #include <string>
 #include <stdlib.h>
-#include <locale.h>
 
 namespace libwps
 {
@@ -68,47 +67,6 @@ int32_t read32(WPXInputStream *input)
 {
 	return (int32_t) readU16(input);
 }
-}
-
-#ifdef DEBUG
-std::string to_bits(std::string s)
-{
-	std::string r;
-	for (unsigned int i = 0; i < s.length(); i++)
-	{
-		std::bitset<8> b(s[i]);
-		r.append(b.to_string());
-		char buf[20];
-		sprintf(buf, "(%02u,0x%02x)  ", (uint8_t)s[i],(uint8_t)s[i]);
-		r.append(buf);
-	}
-	return r;
-}
-#endif
-
-/* Not troubling ourselves with extra dependencies */
-/* TODO: extend */
-
-static const struct _lange
-{
-	uint32_t id;
-	const char *name;
-} s_lang_table[] =
-{
-	{0x409,"en-US"},
-	{0x419,"ru-RU"}
-};
-
-std::string getLangFromLCID(uint32_t lcid)
-{
-	unsigned i = 0;
-
-	for (i=0; i < sizeof(s_lang_table)/sizeof(s_lang_table[0]); i++)
-	{
-		if (s_lang_table[i].id == lcid)
-			return s_lang_table[i].name;
-	}
-	return "-none-";
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

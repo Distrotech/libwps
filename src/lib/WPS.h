@@ -21,31 +21,30 @@
 #ifndef WPS_H
 #define WPS_H
 
-
 /**
  * CHaracter Properties (CHP) or
  * PAragraph Properties (PAP)
  *
  **/
-class FPROP
+class WPSFPROP
 {
 public:
-	FPROP() : cch(0), rgchProp() {};
-	uint8_t	cch; /* number of bytes in this FPROP */
-	std::string rgchProp; /* Prefix for a CHP or PAP sufficient to handle differing bits from default */
+	WPSFPROP() : m_cch(0), m_rgchProp() {};
+	uint8_t	m_cch; /* number of bytes in this FPROP */
+	std::string m_rgchProp; /* Prefix for a CHP or PAP sufficient to handle differing bits from default */
 };
 
 /**
  * FOrmatting Descriptor (FOD)
  */
-class FOD
+class WPSFOD
 {
 public:
-	FOD() : fcLim(0), bfprop(0), bfprop_abs(0), fprop() {}
-	uint32_t	fcLim; /* byte number of last character covered by this FOD */
-	uint16_t	bfprop; /* byte offset from beginning of FOD array to corresponding FPROP */
-	uint32_t        bfprop_abs; /* bfprop from beginning of stream offset */
-	FPROP		fprop;	/* character or paragraph formatting */
+	WPSFOD() : m_fcLim(0), m_bfprop(0), m_bfpropAbs(0), m_fprop() {}
+	uint32_t	m_fcLim; /* byte number of last character covered by this FOD */
+	uint16_t	m_bfprop; /* byte offset from beginning of FOD array to corresponding FPROP */
+	uint32_t        m_bfpropAbs; /* bfprop from beginning of stream offset */
+	WPSFPROP		m_fprop;	/* character or paragraph formatting */
 };
 
 #endif

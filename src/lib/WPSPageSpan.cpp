@@ -27,7 +27,6 @@
 
 const float WPS_DEFAULT_PAGE_MARGIN_TOP = 1.0f;
 const float WPS_DEFAULT_PAGE_MARGIN_BOTTOM = 1.0f;
-const uint8_t DUMMY_INTERNAL_HEADER_FOOTER = 16;
 
 WPSHeaderFooter::WPSHeaderFooter(const WPSHeaderFooter &headerFooter) :
 	m_type(headerFooter.getType()),
@@ -51,7 +50,7 @@ WPSPageSpan::WPSPageSpan() :
 	m_headerFooterList(),
 	m_pageSpan(1)
 {
-	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)
+	for (int i=0; i<NUM_HEADER_FOOTER_TYPES; i++)
 		m_isHeaderFooterSuppressed[i]=false;
 }
 
@@ -66,7 +65,7 @@ WPSPageSpan::WPSPageSpan(const WPSPageSpan &page) :
 	m_headerFooterList(page.getHeaderFooterList()),
 	m_pageSpan(page.getPageSpan())
 {
-	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)
+	for (int i=0; i<NUM_HEADER_FOOTER_TYPES; i++)
 		m_isHeaderFooterSuppressed[i] = page.getHeaderFooterSuppression(i);
 }
 
@@ -100,7 +99,7 @@ bool operator==(const WPSPageSpan &page1, const WPSPageSpan &page2)
 		return false;
 
 
-	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)
+	for (int i=0; i<WPSPageSpan::NUM_HEADER_FOOTER_TYPES; i++)
 	{
 		if (page1.getHeaderFooterSuppression(i) != page2.getHeaderFooterSuppression(i))
 			return false;

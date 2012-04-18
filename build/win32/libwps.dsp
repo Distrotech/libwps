@@ -91,6 +91,10 @@ SOURCE=..\..\src\lib\libwps_internal.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\libwps_tools_win.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPS4.cpp
 # End Source File
 # Begin Source File
@@ -131,6 +135,10 @@ SOURCE=..\..\src\lib\libwps_internal.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\libwps_tools_win.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPS.h
 # End Source File
 # Begin Source File
@@ -148,10 +156,6 @@ SOURCE=..\..\src\lib\WPSContentListener.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSDocument.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\WPSFileStructure.h
 # End Source File
 # Begin Source File
 

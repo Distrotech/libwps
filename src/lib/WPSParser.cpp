@@ -28,7 +28,7 @@
 #include "WPSParser.h"
 #include "libwps_internal.h"
 
-WPSParser::WPSParser(WPXInputStream *input, shared_ptr<WPSHeader> header) :
+WPSParser::WPSParser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 	m_input(input),
 	m_header(header)
 {

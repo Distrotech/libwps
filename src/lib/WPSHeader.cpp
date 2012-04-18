@@ -26,11 +26,10 @@
  */
 
 #include "WPSHeader.h"
-#include "WPSFileStructure.h"
 #include "libwps_internal.h"
 #include <string.h>
 
-WPSHeader::WPSHeader(WPXInputStream *input, uint8_t majorVersion) :
+WPSHeader::WPSHeader(WPXInputStreamPtr &input, uint8_t majorVersion) :
 	m_input(input),
 	m_majorVersion(majorVersion)
 {
@@ -38,11 +37,6 @@ WPSHeader::WPSHeader(WPXInputStream *input, uint8_t majorVersion) :
 
 WPSHeader::~WPSHeader()
 {
-	if (m_majorVersion != 2 && m_input)
-	{
-		delete m_input;
-		m_input = 0;
-	}
 }
 
 
@@ -54,18 +48,18 @@ WPSHeader::~WPSHeader()
  * Works 3 without OLE, so those two types use the same parser.
  *
  */
-WPSHeader *WPSHeader::constructHeader(WPXInputStream *input)
+WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
 
-	WPXInputStream *document_mn0 = input->getDocumentOLEStream("MN0");
+	WPXInputStreamPtr document_mn0(input->getDocumentOLEStream("MN0"));
 	if (document_mn0)
 	{
 		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));
 		return new WPSHeader(document_mn0, 4);
 	}
 
-	WPXInputStream *document_contents = input->getDocumentOLEStream("CONTENTS");
+	WPXInputStreamPtr document_contents(input->getDocumentOLEStream("CONTENTS"));
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */
@@ -73,7 +67,7 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStream *input)
 
 		char fileMagic[8];
 		for (int i=0; i<7 && !document_contents->atEOS(); i++)
-			fileMagic[i] = libwps::readU8(document_contents);
+			fileMagic[i] = libwps::readU8(document_contents.get());
 		fileMagic[7] = '\0';
 
 
@@ -89,12 +83,10 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStream *input)
 		{
 			return new WPSHeader(document_contents, 5);
 		}
-
-		delete document_contents;
 	}
 
 	input->seek(0, WPX_SEEK_SET);
-	if (libwps::readU8(input) < 6 && 0xFE == libwps::readU8(input))
+	if (libwps::readU8(input.get()) < 6 && 0xFE == libwps::readU8(input.get()))
 	{
 		WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
 		return new WPSHeader(input, 2);

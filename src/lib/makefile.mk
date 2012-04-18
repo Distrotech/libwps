@@ -24,6 +24,7 @@ INCPRE+=$(SOLARVER)$/$(UPD)$/$(INPATH)$/inc$/libwpd
 
 SLOFILES= \
 	$(SLO)$/libwps_internal.obj \
+	$(SLO)$/libwps_tools_win.obj \
 	$(SLO)$/WPS4.obj \
 	$(SLO)$/WPS8.obj \
 	$(SLO)$/WPSContentListener.obj \

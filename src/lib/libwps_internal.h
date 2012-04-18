@@ -22,10 +22,6 @@
 
 #ifndef LIBWPS_INTERNAL_H
 #define LIBWPS_INTERNAL_H
-#ifdef DEBUG
-#include <bitset>
-#include <stdio.h>
-#endif
 #include <libwpd-stream/libwpd-stream.h>
 #include <libwpd/libwpd.h>
 #include <string>
@@ -57,11 +53,19 @@ using std::shared_ptr;
 using boost::shared_ptr;
 #endif
 
+/** an noop deleter used to transform a libwpd pointer in a false shared_ptr */
+template <class T>
+struct WPS_shared_ptr_noop_deleter
+{
+	void operator() (T *) {}
+};
+
+/* ---------- typedef ------------- */
+typedef shared_ptr<WPXInputStream> WPXInputStreamPtr;
+
 /* ---------- debug  --------------- */
 #ifdef DEBUG
 #define WPS_DEBUG_MSG(M) printf M
-
-std::string to_bits(std::string s);
 #else
 #define WPS_DEBUG_MSG(M)
 #endif
@@ -116,7 +120,6 @@ int32_t read32(WPXInputStream *input);
 namespace libwps
 {
 enum HeaderFooterType { HEADER, FOOTER };
-enum HeaderFooterInternalType { HEADER_A, HEADER_B, FOOTER_A, FOOTER_B, DUMMY };
 enum HeaderFooterOccurence { ODD, EVEN, ALL, NEVER };
 enum FormOrientation { PORTRAIT, LANDSCAPE };
 }
@@ -192,12 +195,6 @@ enum FormOrientation { PORTRAIT, LANDSCAPE };
 #define WPS_NUM_STYLE_ULATIN 4
 #define WPS_NUM_STYLE_LROMAN 5
 #define WPS_NUM_STYLE_UROMAN 6
-
-std::string getLangFromLCID(uint32_t lcid);
-
-
-// Various functions
-
 
 #endif /* LIBWPS_INTERNAL_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

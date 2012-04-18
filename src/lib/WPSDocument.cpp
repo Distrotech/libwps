@@ -54,12 +54,13 @@ Analyzes the content of an input stream to see if it can be parsed
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
+WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *ip)
 {
 	WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
-	shared_ptr<WPSHeader> header;
+	WPSHeaderPtr header;
+	shared_ptr<WPXInputStream > input(ip, WPS_shared_ptr_noop_deleter<WPXInputStream>());
 	try
 	{
 		header.reset(WPSHeader::constructHeader(input));
@@ -108,12 +109,13 @@ WPXDocumentInterface class implementation when needed. This is often commonly ca
 \param input The input stream
 \param documentInterface A WPSListener implementation
 */
-WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *documentInterface)
+WPSResult WPSDocument::parse(WPXInputStream *ip, WPXDocumentInterface *documentInterface)
 {
 	WPSResult error = WPS_OK;
 
-	shared_ptr<WPSHeader> header;
+	WPSHeaderPtr header;
 	shared_ptr<WPSParser> parser;
+	shared_ptr<WPXInputStream > input(ip, WPS_shared_ptr_noop_deleter<WPXInputStream>());
 	try
 	{
 		header.reset(WPSHeader::constructHeader(input));

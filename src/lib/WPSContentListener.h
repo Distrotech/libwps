@@ -104,26 +104,29 @@ private:
 	_WPSContentParsingState &operator=(const _WPSContentParsingState &);
 };
 
-struct ListSignature
+struct WPSListSignature
 {
-	uint16_t a,b,c;
+	uint16_t m_numbering,m_numstyle,m_numsep;
 
-	bool operator == (ListSignature &y)
+	bool operator == (WPSListSignature &y)
 	{
-		return (a == y.a) && (b == y.b) && (c == y.c);
+		return (m_numbering == y.m_numbering) && (m_numstyle == y.m_numstyle) && (m_numsep == y.m_numsep);
 	}
 };
 
-struct TabPos
+struct WPSTabPos
 {
-	float pos;
-	char  align;
-	char  leader;
+	float m_pos;
+	char  m_align;
+	char  m_leader;
 };
 
 class WPSContentListener
 {
 public:
+	WPSContentListener(std::list<WPSPageSpan> pageList, WPXDocumentInterface *documentInterface);
+	virtual ~WPSContentListener();
+
 	void startDocument();
 	void endDocument();
 	void insertBreak(const uint8_t breakType);
@@ -138,7 +141,9 @@ public:
 	void setSpec(const uint16_t specCode);
 	void setTextFont(const WPXString fontName);
 	void setFontSize(const uint16_t fontSize);
+	void setFontAttributes(const uint32_t fontAttributes);
 	void setLCID(const uint32_t lcid);
+	int getCodepage() const;
 	void setCodepage(const int codepage);
 	void setColor(const unsigned int rgb);
 	void setFieldType(uint16_t code);
@@ -148,7 +153,7 @@ public:
 	void setParaFlags(const uint32_t flags);
 	void setMargins(const float first=0.0, const float left=0.0, const float right=0.0,
 	                const float before=0.0, const float after=0.0);
-	void setTabs(std::vector<TabPos> &tabs);
+	void setTabs(std::vector<WPSTabPos> &tabs);
 
 	void setNumberingType(const uint8_t style);
 	void setNumberingProp(const uint16_t type, const uint16_t sep);
@@ -157,10 +162,8 @@ public:
 
 	uint16_t getSpec() const;
 protected:
-	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
-	virtual ~WPSContentListener();
 
-	WPSContentParsingState *m_ps; // parse state
+	shared_ptr<WPSContentParsingState> m_ps; // parse state
 	WPXDocumentInterface *m_documentInterface;
 	WPXPropertyList m_metaData;
 
@@ -185,9 +188,9 @@ private:
 	WPSContentListener(const WPSContentListener &);
 	WPSContentListener &operator=(const WPSContentListener &);
 
-	std::vector<TabPos> m_tabs;
-	std::list<WPSPageSpan> &m_pageList;
-	std::vector<ListSignature> m_listFormats;
+	std::vector<WPSTabPos> m_tabs;
+	std::list<WPSPageSpan> m_pageList;
+	std::vector<WPSListSignature> m_listFormats;
 };
 
 #endif /* WPSCONTENTLISTENER_H */

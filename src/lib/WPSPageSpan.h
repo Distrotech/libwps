@@ -28,7 +28,6 @@
 
 #ifndef WPSPAGE_H
 #define WPSPAGE_H
-#include "WPSFileStructure.h"
 #include <vector>
 #include "libwps_internal.h"
 
@@ -61,13 +60,15 @@ private:
 class WPSPageSpan
 {
 public:
+	enum HeaderFooterInternalType { HEADER_A=0, HEADER_B, FOOTER_A, FOOTER_B, NUM_HEADER_FOOTER_TYPES= FOOTER_B+1 };
+
 	WPSPageSpan();
 	WPSPageSpan(const WPSPageSpan &page);
 	virtual ~WPSPageSpan();
 
 	bool getHeaderFooterSuppression(const uint8_t headerFooterType) const
 	{
-		if (headerFooterType <= WPS_FOOTER_B) return m_isHeaderFooterSuppressed[headerFooterType];
+		if (headerFooterType <= FOOTER_B) return m_isHeaderFooterSuppressed[headerFooterType];
 		return false;
 	}
 	float getFormLength() const
@@ -150,7 +151,7 @@ protected:
 	void _removeHeaderFooter(libwps::HeaderFooterType type, libwps::HeaderFooterOccurence occurence);
 
 private:
-	bool m_isHeaderFooterSuppressed[WPS_NUM_HEADER_FOOTER_TYPES];
+	bool m_isHeaderFooterSuppressed[NUM_HEADER_FOOTER_TYPES];
 	float m_formLength, m_formWidth;
 	libwps::FormOrientation m_formOrientation;
 	float m_marginLeft, m_marginRight;

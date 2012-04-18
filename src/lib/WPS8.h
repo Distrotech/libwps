@@ -48,18 +48,7 @@ public:
 
 typedef std::multimap <std::string, HeaderIndexEntries> HeaderIndexMultiMap; /* string is name */
 
-class WPS8ContentListener : public WPSContentListener
-{
-public:
-	WPS8ContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
-	~WPS8ContentListener();
-
-	void attributeChange(const bool isOn, const uint8_t attribute);
-
-private:
-	WPS8ContentListener(const WPS8ContentListener &);
-	WPS8ContentListener &operator=(const WPS8ContentListener &);
-};
+typedef WPSContentListener WPS8ContentListener;
 
 struct WPSRange
 {
@@ -95,7 +84,7 @@ struct WPSNote
 class WPS8Parser : public WPSParser
 {
 public:
-	WPS8Parser(WPXInputStream *input, shared_ptr<WPSHeader> header);
+	WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
 	~WPS8Parser();
 
 	void parse(WPXDocumentInterface *documentInterface);
@@ -106,20 +95,19 @@ private:
 	void appendUTF16LE(WPXInputStream *input, WPS8ContentListener *listener);
 	void readTextRange(WPXInputStream *input, WPS8ContentListener *listener, uint32_t startpos, uint32_t endpos, uint16_t stream);
 	void readNote(WPXInputStream *input, WPS8ContentListener *listener, bool is_endnote);
-	bool readFODPage(WPXInputStream *input, std::vector<FOD> * FODs, uint16_t page_size);
+	bool readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs, uint16_t page_size);
 	void parseHeaderIndexEntry(WPXInputStream *input);
 	void parseHeaderIndex(WPXInputStream *input);
 	void parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input);
 	void parse(WPXInputStream *stream, WPS8ContentListener *listener);
-	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8ContentListener *listener);
 	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS8ContentListener *listener);
 	void propertyChange(std::string rgchProp, WPS8ContentListener *listener);
 	void propertyChangePara(std::string rgchProp, WPS8ContentListener *listener);
 	uint32_t offset_eot; /* stream offset to end of text */
 	uint32_t oldTextAttributeBits;
 	HeaderIndexMultiMap headerIndexTable;
-	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */
-	std::vector<FOD> PAFODs; /* PAragraph FOrmatting Descriptors */
+	std::vector<WPSFOD> CHFODs; /* CHaracter FOrmatting Descriptors */
+	std::vector<WPSFOD> PAFODs; /* PAragraph FOrmatting Descriptors */
 	std::vector<std::string> fonts;
 	std::vector<WPSStream> streams;
 	std::vector<WPSNote> footnotes;
