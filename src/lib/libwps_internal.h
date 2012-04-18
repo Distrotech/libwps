@@ -142,7 +142,7 @@ enum WPSFormOrientation { PORTRAIT, LANDSCAPE };
 #define WPS_NUM_STYLE_LROMAN 5
 #define WPS_NUM_STYLE_UROMAN 6
 
-std::string getLangFromLCID(uint32_t lcid);
+bool getLangFromLCID(uint32_t lcid, std::string &language, std::string &country);
 
 // Various exceptions
 

@@ -475,13 +475,18 @@ void WPSContentListener::_openSpan()
 	else if (m_ps->m_textAttributeBits & WPS_ENGRAVE_BIT)
 		propList.insert("style:font-relief", "engraved");
 	if (m_ps->m_lcid)
-		propList.insert("fo:language", getLangFromLCID(m_ps->m_lcid).c_str());
-
+	{
+		std::string lang, country;
+		if (getLangFromLCID(m_ps->m_lcid, lang, country))
+		{
+			propList.insert("fo:language", lang.c_str());
+			if (country.length())
+				propList.insert("fo:country", country.c_str());
+		}
+	}
 	if (m_ps->m_fontName.len())
 		propList.insert("style:font-name", m_ps->m_fontName.cstr());
 	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, WPX_POINT);
-	/*if (m_ps->m_lcid)
-		propList.insert("fo:lang",lcid2code(m_ps->lcid));*/
 
 	// Here we give the priority to the redline bit over the font color.
 	// When redline finishes, the color is back.

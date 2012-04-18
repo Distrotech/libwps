@@ -74,21 +74,26 @@ static const struct _lange
 {
 	uint32_t id;
 	const char *name;
+	const char *country;
 } s_lang_table[] = {
-	{0x409,"en-US"},
-	{0x419,"ru-RU"}
+	{0x409,"en", "US"},
+	{0x419,"ru", "RU"}
 };
 
-std::string getLangFromLCID(uint32_t lcid)
+bool getLangFromLCID(uint32_t lcid, std::string &language, std::string &country)
 {
 	unsigned i = 0;
-	
 	for (i=0; i < sizeof(s_lang_table)/sizeof(s_lang_table[0]); i++)
 	{
-		if (s_lang_table[i].id == lcid)
-			return s_lang_table[i].name;
+		if (s_lang_table[i].id == lcid) 
+		{
+			language = s_lang_table[i].name;
+			country = s_lang_table[i].country;
+			return true;
+		}
 	}
-	return "-none-";
+	language=country="none";
+	return true;
 }
 
 
