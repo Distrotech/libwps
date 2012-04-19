@@ -20,7 +20,6 @@
  *
  */
 
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef DEBUG
@@ -32,14 +31,11 @@
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
 
-#include "WPSDocument.h"
 #include "WPSContentListener.h"
 #include "WPSHeader.h"
+#include "WPSPageSpan.h"
 
 #include "WPS4.h"
-
-#define WPS4_FCMAC_OFFSET 0x26
-#define WPS4_TEXT_OFFSET 0x100
 
 namespace WPS4ParserInternal
 {
@@ -148,14 +144,12 @@ void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
 
 	WPS_DEBUG_MSG(("WPS4Parser::parse()\n"));
 
-	WPXInputStream *input = getInput().get();
-
 	/* parse pages */
-	parsePages(pageList, input);
+	parsePages(pageList, getInput());
 
 	/* parse document */
 	m_listener.reset(new WPS4ContentListener(pageList, documentInterface));
-	parse(input);
+	parse(getInput());
 	m_listener.reset();
 }
 
@@ -173,7 +167,7 @@ WPS4Parser private
  * Reads fonts table into memory.
  *
  */
-void WPS4Parser::readFontsTable(WPXInputStream *input)
+void WPS4Parser::readFontsTable(WPXInputStreamPtr &input)
 {
 	/* offset of FFNTB */
 	input->seek(0x5E, WPX_SEEK_SET);
@@ -233,7 +227,7 @@ void WPS4Parser::readFontsTable(WPXInputStream *input)
  * Return: true if more pages of this type exist, otherwise false
  *
  */
-bool WPS4Parser::readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs)
+bool WPS4Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs)
 {
 	uint32_t page_offset = input->tell();
 
@@ -249,7 +243,7 @@ bool WPS4Parser::readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs)
 
 	libwps::readU32(input);
 
-	int first_fod = FODs->size();
+	int first_fod = FODs.size();
 
 	/* Read array of fcLim of FODs.  The fcLim refers to the offset of the
 	   last character covered by the formatting. */
@@ -268,19 +262,19 @@ bool WPS4Parser::readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs)
 		}
 
 		/* check that fcLim is monotonic */
-		if (FODs->size() > 0 && FODs->back().m_fcLim > fod.m_fcLim)
+		if (FODs.size() > 0 && FODs.back().m_fcLim > fod.m_fcLim)
 		{
 			WPS_DEBUG_MSG(("Works: error: character position list must "
-			               "be monotonic, but found %i, %i\n", FODs->back().m_fcLim, fod.m_fcLim));
+			               "be monotonic, but found %i, %i\n", FODs.back().m_fcLim, fod.m_fcLim));
 			throw libwps::ParseException();
 		}
-		FODs->push_back(fod);
+		FODs.push_back(fod);
 	}
 
 	/* Read array of bfprop of FODs.  The bfprop is the offset where
 	   the FPROP is located. */
 	std::vector<WPSFOD>::iterator FODs_iter;
-	for (FODs_iter = FODs->begin()+first_fod; FODs_iter!= FODs->end(); FODs_iter++)
+	for (FODs_iter = FODs.begin()+first_fod; FODs_iter!= FODs.end(); FODs_iter++)
 	{
 		if ((*FODs_iter).m_fcLim == m_offset_eot)
 			break;
@@ -303,7 +297,7 @@ bool WPS4Parser::readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs)
 
 	/* Read array of FPROPs.  These contain the actual formatting
 	   codes (bold, alignment, etc.) */
-	for (FODs_iter = FODs->begin()+first_fod; FODs_iter!= FODs->end(); FODs_iter++)
+	for (FODs_iter = FODs.begin()+first_fod; FODs_iter!= FODs.end(); FODs_iter++)
 	{
 		if ((*FODs_iter).m_fcLim == m_offset_eot)
 			break;
@@ -336,7 +330,7 @@ bool WPS4Parser::readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs)
 	/* go to end of page */
 	input->seek(page_offset	+ 128, WPX_SEEK_SET);
 
-	return (!FODs->empty() && (m_offset_eot > FODs->back().m_fcLim));
+	return (!FODs.empty() && (m_offset_eot > FODs.back().m_fcLim));
 }
 
 /**
@@ -345,7 +339,7 @@ bool WPS4Parser::readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs)
  */
 void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits)
 {
-	WPS_DEBUG_MSG(("WPS4Parser::propertyChangeDelta(%i, %p)\n", newTextAttributeBits, (void *)m_listener));
+	WPS_DEBUG_MSG(("WPS4Parser::propertyChangeDelta(%i)\n", newTextAttributeBits));
 	if (newTextAttributeBits == m_oldTextAttributeBits)
 		return;
 
@@ -571,8 +565,6 @@ void WPS4Parser::propertyChangePara(std::string rgchProp)
 		}
 	}
 
-	if (pf != 0) m_listener->setParaFlags(pf);
-
 	m_listener->setMargins(pindent/1440.0,pleft/1440.0,pright/1440.0,
 	                       pbefore/1440.0,pafter/1440.0);
 }
@@ -582,7 +574,7 @@ void WPS4Parser::propertyChangePara(std::string rgchProp)
  * formatting information.
  *
  */
-void WPS4Parser::readText(WPXInputStream *input)
+void WPS4Parser::readText(WPXInputStreamPtr &input)
 {
 	m_oldTextAttributeBits = 0;
 	std::vector<WPSFOD>::iterator FODs_iter;
@@ -697,7 +689,7 @@ void WPS4Parser::readText(WPXInputStream *input)
  * can only have one page format throughout the whole document.
  *
  */
-void WPS4Parser::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStream *input)
+void WPS4Parser::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input)
 {
 	/* read page format */
 	input->seek(0x64, WPX_SEEK_SET);
@@ -769,7 +761,7 @@ void WPS4Parser::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStream *
 	}
 }
 
-void WPS4Parser::parse(WPXInputStream *input)
+void WPS4Parser::parse(WPXInputStreamPtr &input)
 {
 	if (!m_listener)
 	{
@@ -781,10 +773,11 @@ void WPS4Parser::parse(WPXInputStream *input)
 	m_listener->startDocument();
 
 	/* find beginning of character FODs */
-	input->seek(WPS4_FCMAC_OFFSET, WPX_SEEK_SET);
+	int const fcmacOffset=0x26;
+	input->seek(fcmacOffset, WPX_SEEK_SET);
 	m_offset_eot = libwps::readU32(input); /* stream offset to end of text */
 	WPS_DEBUG_MSG(("Works: info: location WPS4_FCMAC_OFFSET (0x%X) has offset_eot = 0x%X (%i)\n",
-	               WPS4_FCMAC_OFFSET, m_offset_eot, m_offset_eot));
+	               fcmacOffset, m_offset_eot, m_offset_eot));
 	uint32_t pnChar = (m_offset_eot+127)/128; /* page number of character information */
 	WPS_DEBUG_MSG(("Works: info: 128*pnChar = 0x%X (%i)\n", pnChar*128, pnChar*128));
 
@@ -806,13 +799,13 @@ void WPS4Parser::parse(WPXInputStream *input)
 	input->seek(128*pnChar, WPX_SEEK_SET);
 
 	/* read character FODs */
-	while (readFODPage(input, &m_CHFODs))
+	while (readFODPage(input, m_CHFODs))
 	{
 	}
 	// fixme: verify: final FOD covers end of text
 
 	/* read paragraph formatting */
-	while (readFODPage(input, &m_PAFODs))
+	while (readFODPage(input, m_PAFODs))
 	{
 	}
 

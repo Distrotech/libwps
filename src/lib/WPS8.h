@@ -33,52 +33,7 @@
 #include <libwpd-stream/WPXStream.h>
 #include "WPSParser.h"
 
-/**
- * Starting near beginning of CONTENTS stream, there is an index
- * to various types of pages in the document.
- *
- */
-class HeaderIndexEntries
-{
-public:
-	uint32_t offset;
-	uint32_t length;
-};
-
-typedef std::multimap <std::string, HeaderIndexEntries> HeaderIndexMultiMap; /* string is name */
-
 typedef WPSContentListener WPS8ContentListener;
-
-struct WPSRange
-{
-	WPSRange() : start(0), limit(0) {}
-	~WPSRange() {}
-	uint32_t start;
-	uint32_t limit;
-};
-
-struct WPSStream
-{
-	uint32_t type;
-	WPSRange span;
-	WPSStream() : type(0), span() {}
-	~WPSStream() {}
-};
-
-struct WPSNote
-{
-	uint32_t offset;
-	WPSRange contents;
-	WPSNote() : offset(0), contents() {}
-};
-
-#define WPS_STREAM_DUMMY 0
-#define WPS_STREAM_BODY  1
-#define WPS_STREAM_FOOTNOTES 2
-#define WPS_STREAM_ENDNOTES 3
-
-#define WPS_NUM_SEP_PAR  0x0
-#define WPS_NUM_SEP_DOT  0x2
 
 class WPS8Parser : public WPSParser
 {
@@ -87,33 +42,93 @@ public:
 	~WPS8Parser();
 
 	void parse(WPXDocumentInterface *documentInterface);
+public:
+	struct Zone;
+	typedef std::multimap<std::string, Zone> IndexMultiMap; /* string is name */
+	struct Note;
+	struct Stream;
 private:
-	void readFontsTable(WPXInputStream *input);
-	void readStreams(WPXInputStream *input);
-	void readNotes(std::vector<WPSNote> &dest, WPXInputStream *input, const char *key);
-	void appendUTF16LE(WPXInputStream *input, WPS8ContentListener *listener);
-	void readTextRange(WPXInputStream *input, WPS8ContentListener *listener, uint32_t startpos, uint32_t endpos, uint16_t stream);
-	void readNote(WPXInputStream *input, WPS8ContentListener *listener, bool is_endnote);
-	bool readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs, uint16_t page_size);
-	void parseHeaderIndexEntry(WPXInputStream *input);
-	void parseHeaderIndex(WPXInputStream *input);
-	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStream *input);
-	void parse(WPXInputStream *stream, WPS8ContentListener *listener);
-	void propertyChangeDelta(uint32_t newTextAttributeBits, WPS8ContentListener *listener);
-	void propertyChange(std::string rgchProp, WPS8ContentListener *listener);
-	void propertyChangePara(std::string rgchProp, WPS8ContentListener *listener);
-	uint32_t offset_eot; /* stream offset to end of text */
-	uint32_t oldTextAttributeBits;
-	HeaderIndexMultiMap headerIndexTable;
-	std::vector<WPSFOD> CHFODs; /* CHaracter FOrmatting Descriptors */
-	std::vector<WPSFOD> PAFODs; /* PAragraph FOrmatting Descriptors */
-	std::vector<std::string> fonts;
-	std::vector<WPSStream> streams;
-	std::vector<WPSNote> footnotes;
-	std::vector<WPSNote> endnotes;
+	void readFontsTable(WPXInputStreamPtr &input);
+	void readStreams(WPXInputStreamPtr &input);
+	void readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key);
+	void appendUTF16LE(WPXInputStreamPtr &input);
+	void readTextRange(WPXInputStreamPtr &input, uint32_t startpos, uint32_t endpos, uint16_t stream);
+	void readNote(WPXInputStreamPtr &input, bool is_endnote);
+	bool readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> * FODs, uint16_t page_size);
+	void parseHeaderIndexEntry(WPXInputStreamPtr &input);
+	void parseHeaderIndex(WPXInputStreamPtr &input);
+	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
+	void parse(WPXInputStreamPtr &stream);
+	void propertyChangeDelta(uint32_t newTextAttributeBits);
+	void propertyChange(std::string rgchProp, uint16_t &specialCode);
+	void propertyChangePara(std::string rgchProp);
+	/// the listener
+	shared_ptr<WPS8ContentListener> m_listener;
+	uint32_t m_offset_eot; /* stream offset to end of text */
+	uint32_t m_oldTextAttributeBits;
+	IndexMultiMap m_headerIndexTable;
+	std::vector<WPSFOD> m_CHFODs; /* CHaracter FOrmatting Descriptors */
+	std::vector<WPSFOD> m_PAFODs; /* PAragraph FOrmatting Descriptors */
+	std::vector<std::string> m_fontNames;
+	std::vector<Stream> m_streams;
+	std::vector<Note> m_footnotes;
+	int m_actualFootnote;
+	std::vector<Note> m_endnotes;
+	int m_actualEndnote;
 
-	std::vector<WPSNote>::iterator fn_iter;
-	std::vector<WPSNote>::iterator en_iter;
+public:
+	/** Starting near beginning of CONTENTS stream, there is an index
+	 * to various types of pages in the document. */
+	struct Zone
+	{
+		Zone() : m_offset(0), m_length(0) {}
+		virtual ~Zone() {}
+		uint32_t const &begin() const
+		{
+			return m_offset;
+		}
+		uint32_t end() const
+		{
+			return m_offset+m_length;
+		}
+		uint32_t const &length() const
+		{
+			return m_length;
+		}
+		void setBegin(uint32_t pos)
+		{
+			m_offset = pos;
+		}
+		void setLength(uint32_t length)
+		{
+			m_length = length;
+		}
+		void setEnd(uint32_t end)
+		{
+			m_length = end-m_offset;
+		}
+
+		bool valid() const
+		{
+			return m_offset && m_length;
+		}
+	protected:
+		uint32_t m_offset;
+		uint32_t m_length;
+	};
+
+	struct Note : public Zone
+	{
+		Note() : Zone(), m_textOffset(0) {}
+		uint32_t m_textOffset;
+	};
+
+	struct Stream : public Zone
+	{
+		Stream() : Zone(), m_type(Z_Dummy) {}
+
+		enum Type {Z_Dummy=0, Z_Body=1, Z_Footnotes=2, Z_Endnotes = 3}  m_type;
+	};
 };
 
 

@@ -25,16 +25,8 @@
  */
 
 #include <stdio.h>
-#ifdef _MSC_VER
-#include <minmax.h>
-#define LIBWPS_MIN min
-#define LIBWPS_MAX max
-#else
-#define LIBWPS_MIN std::min
-#define LIBWPS_MAX std::max
-#endif
-#include <vector>
 
+#include <libwpd/WPXDocumentInterface.h>
 #include <libwpd/WPXProperty.h>
 
 #include "libwps_tools_win.h"
@@ -42,12 +34,24 @@
 
 #include "WPSContentListener.h"
 
-_WPSContentParsingState::_WPSContentParsingState() :
+namespace WPSContentListenerInternal
+{
+struct ListSignature
+{
+	uint16_t m_numbering,m_numstyle,m_numsep;
+
+	bool operator == (ListSignature &y)
+	{
+		return (m_numbering == y.m_numbering) && (m_numstyle == y.m_numstyle) && (m_numsep == y.m_numsep);
+	}
+};
+}
+
+WPSContentParsingState::WPSContentParsingState() :
 	m_textAttributeBits(0),
-	m_spec(0),
 	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/),
 	m_fontName(WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")),
-	m_lcid(0x409/*en-US*/),
+	m_languageId(0x409/*en-US*/),
 	m_textcolor(0),
 
 	m_fieldcode(0),
@@ -56,7 +60,6 @@ _WPSContentParsingState::_WPSContentParsingState() :
 	m_isParagraphPageBreak(false),
 	m_paragraphJustification(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
 	m_paragraphLineSpacing(1.0f),
-	m_paraLayoutFlags(0),
 
 	m_footnoteId(1),
 	m_endnoteId(1),
@@ -102,7 +105,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 {
 }
 
-_WPSContentParsingState::~_WPSContentParsingState()
+WPSContentParsingState::~WPSContentParsingState()
 {
 }
 
@@ -490,9 +493,9 @@ void WPSContentListener::_openSpan()
 		propList.insert("style:font-relief", "embossed");
 	else if (m_ps->m_textAttributeBits & WPS_ENGRAVE_BIT)
 		propList.insert("style:font-relief", "engraved");
-	if (m_ps->m_lcid)
+	if (m_ps->m_languageId)
 	{
-		std::string lang = libwps_tools_win::Language::localeName(m_ps->m_lcid);
+		std::string lang = libwps_tools_win::Language::localeName(m_ps->m_languageId);
 		if (lang.length())
 		{
 			std::string language(lang);
@@ -515,9 +518,6 @@ void WPSContentListener::_openSpan()
 	if (m_ps->m_fontName.len())
 		propList.insert("style:font-name", m_ps->m_fontName.cstr());
 	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, WPX_POINT);
-	/*if (m_ps->m_lcid)
-		propList.insert("fo:lang",lcid2code(m_ps->lcid));*/
-
 	// Here we give the priority to the redline bit over the font color.
 	// When redline finishes, the color is back.
 	if (m_ps->m_textAttributeBits & WPS_REDLINE_BIT)
@@ -586,12 +586,6 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 	}
 }
 
-void WPSContentListener::setSpec(const uint16_t specCode)
-{
-	_closeSpan();
-	m_ps->m_spec = specCode;
-}
-
 void WPSContentListener::setTextFont(const WPXString fontName)
 {
 	_closeSpan();
@@ -610,10 +604,10 @@ void WPSContentListener::setFontAttributes(const uint32_t fontAttributes)
 	m_ps->m_textAttributeBits=fontAttributes;
 }
 
-void WPSContentListener::setLCID(const uint32_t lcid)
+void WPSContentListener::setLanguageID(const uint32_t lcid)
 {
 	_closeSpan();
-	m_ps->m_lcid=lcid;
+	m_ps->m_languageId=lcid;
 }
 
 void WPSContentListener::setColor(const unsigned int rgb)
@@ -625,11 +619,6 @@ void WPSContentListener::setColor(const unsigned int rgb)
 void WPSContentListener::setAlign(const uint8_t align)
 {
 	m_ps->m_paragraphJustification = align;
-}
-
-void WPSContentListener::setParaFlags(const uint32_t flags)
-{
-	m_ps->m_paraLayoutFlags = flags;
 }
 
 void WPSContentListener::setMargins(const float first, const float left,
@@ -668,12 +657,6 @@ void WPSContentListener::insertEOL()
 	if (m_ps->m_isParagraphOpened)
 		_closeParagraph();
 }
-
-uint16_t WPSContentListener::getSpec() const
-{
-	return m_ps->m_spec;
-}
-
 
 void WPSContentListener::insertCharacter(const uint16_t character)
 {
@@ -849,7 +832,7 @@ void WPSContentListener::_insertText(const WPXString &textBuffer)
 
 int WPSContentListener::_getListId()
 {
-	WPSListSignature l;
+	WPSContentListenerInternal::ListSignature l;
 	l.m_numbering = m_ps->m_numbering;
 	l.m_numstyle = m_ps->m_numstyle;
 	l.m_numsep = m_ps->m_numsep;

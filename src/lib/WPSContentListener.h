@@ -28,23 +28,23 @@
 #ifndef WPSCONTENTLISTENER_H
 #define WPSCONTENTLISTENER_H
 
-#include "libwps_internal.h"
-#include "WPSPageSpan.h"
-#include <libwpd/WPXPropertyListVector.h>
-#include <libwpd/WPXDocumentInterface.h>
 #include <vector>
 
-typedef struct _WPSContentParsingState WPSContentParsingState;
-struct _WPSContentParsingState
+#include <libwpd/WPXPropertyList.h>
+
+#include "libwps_internal.h"
+
+struct WPSPageSpan;
+
+struct WPSContentParsingState
 {
-	_WPSContentParsingState();
-	~_WPSContentParsingState();
+	WPSContentParsingState();
+	~WPSContentParsingState();
 
 	uint32_t m_textAttributeBits;
-	uint16_t m_spec;
 	float m_fontSize;
 	WPXString m_fontName;
-	uint32_t m_lcid;
+	uint32_t m_languageId;
 	uint32_t m_textcolor;
 
 	uint16_t m_fieldcode;
@@ -53,7 +53,6 @@ struct _WPSContentParsingState
 	bool m_isParagraphPageBreak;
 	uint8_t m_paragraphJustification;
 	float m_paragraphLineSpacing;
-	uint32_t m_paraLayoutFlags;
 
 	uint16_t m_footnoteId;
 	uint16_t m_endnoteId;
@@ -98,19 +97,14 @@ struct _WPSContentParsingState
 	WPXString m_textBuffer;
 
 private:
-	_WPSContentParsingState(const _WPSContentParsingState &);
-	_WPSContentParsingState &operator=(const _WPSContentParsingState &);
+	WPSContentParsingState(const WPSContentParsingState &);
+	WPSContentParsingState &operator=(const WPSContentParsingState &);
 };
 
-struct WPSListSignature
+namespace WPSContentListenerInternal
 {
-	uint16_t m_numbering,m_numstyle,m_numsep;
-
-	bool operator == (WPSListSignature &y)
-	{
-		return (m_numbering == y.m_numbering) && (m_numstyle == y.m_numstyle) && (m_numsep == y.m_numsep);
-	}
-};
+struct ListSignature;
+}
 
 struct WPSTabPos
 {
@@ -137,17 +131,15 @@ public:
 	void openEndnote();
 	void closeEndnote();
 
-	void setSpec(const uint16_t specCode);
 	void setTextFont(const WPXString fontName);
 	void setFontSize(const uint16_t fontSize);
 	void setFontAttributes(const uint32_t fontAttributes);
-	void setLCID(const uint32_t lcid);
+	void setLanguageID(const uint32_t lcid);
 	void setColor(const unsigned int rgb);
 	void setFieldType(uint16_t code);
 	void setFieldFormat(uint16_t code);
 
 	void setAlign(const uint8_t align);
-	void setParaFlags(const uint32_t flags);
 	void setMargins(const float first=0.0, const float left=0.0, const float right=0.0,
 	                const float before=0.0, const float after=0.0);
 	void setTabs(std::vector<WPSTabPos> &tabs);
@@ -157,7 +149,6 @@ public:
 
 	void insertEOL();
 
-	uint16_t getSpec() const;
 protected:
 
 	shared_ptr<WPSContentParsingState> m_ps; // parse state
@@ -187,7 +178,7 @@ private:
 
 	std::vector<WPSTabPos> m_tabs;
 	std::vector<WPSPageSpan> m_pageList;
-	std::vector<WPSListSignature> m_listFormats;
+	std::vector<WPSContentListenerInternal::ListSignature> m_listFormats;
 };
 
 #endif /* WPSCONTENTLISTENER_H */

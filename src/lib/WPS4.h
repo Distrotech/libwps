@@ -49,14 +49,14 @@ public:
 
 	void parse(WPXDocumentInterface *documentInterface);
 private:
-	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStream *input);
-	void parse(WPXInputStream *stream);
-	void readFontsTable(WPXInputStream *input);
-	bool readFODPage(WPXInputStream *input, std::vector<WPSFOD> * FODs);
+	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
+	void parse(WPXInputStreamPtr &input);
+	void readFontsTable(WPXInputStreamPtr &input);
+	bool readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs);
 	void propertyChangeDelta(uint32_t newTextAttributeBits);
 	void propertyChange(std::string rgchProp, WPS4ParserInternal::Font &font);
 	void propertyChangePara(std::string rgchProp);
-	void readText(WPXInputStream *input);
+	void readText(WPXInputStreamPtr &input);
 
 #ifdef DEBUG
 	static std::string to_bits(std::string s);

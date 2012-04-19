@@ -105,6 +105,32 @@ uint32_t readU32(WPXInputStream *input);
 int8_t read8(WPXInputStream *input);
 int16_t read16(WPXInputStream *input);
 int32_t read32(WPXInputStream *input);
+
+inline uint8_t readU8(WPXInputStreamPtr &input)
+{
+	return readU8(input.get());
+}
+inline uint16_t readU16(WPXInputStreamPtr &input)
+{
+	return readU16(input.get());
+}
+inline uint32_t readU32(WPXInputStreamPtr &input)
+{
+	return readU32(input.get());
+}
+
+inline int8_t read8(WPXInputStreamPtr &input)
+{
+	return read8(input.get());
+}
+inline int16_t read16(WPXInputStreamPtr &input)
+{
+	return read16(input.get());
+}
+inline int32_t read32(WPXInputStreamPtr &input)
+{
+	return read32(input.get());
+}
 }
 
 #define WPS_LE_GET_GUINT16(p)				  \
