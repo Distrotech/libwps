@@ -395,7 +395,7 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4ParserInternal::Font &
 		/* text font */
 		uint8_t font_n = (uint8_t)rgchProp[2];
 
-		if (3 <= getHeader()->getMajorVersion())
+		if (3 <= m_worksVersion)
 		{
 			if (m_fonts.find(font_n) == m_fonts.end())
 			{
@@ -405,11 +405,11 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4ParserInternal::Font &
 			}
 			else
 			{
-				font.m_name = m_fonts[font_n].m_name;
+				font = m_fonts[font_n];
 				m_listener->setTextFont(font.m_name.c_str());
 			}
 		}
-		if (2 == getHeader()->getMajorVersion())
+		else if (2 == m_worksVersion)
 		{
 			font.m_name = WPS4ParserInternal::Font::getWps2Name(font_n);
 			m_listener->setTextFont(font.m_name.c_str());
@@ -810,7 +810,7 @@ void WPS4Parser::parse(WPXInputStreamPtr &input)
 	}
 
 	/* read fonts table */
-	if ( getHeader()->getMajorVersion() > 2)
+	if ( m_worksVersion > 2)
 		readFontsTable(input);
 
 	/* process text file using previously-read character formatting */

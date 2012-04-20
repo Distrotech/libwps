@@ -34,7 +34,7 @@
 
 #include "libwps_internal.h"
 
-struct WPSPageSpan;
+class WPSPageSpan;
 
 struct WPSContentParsingState
 {

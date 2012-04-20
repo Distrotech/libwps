@@ -204,7 +204,7 @@ void WPS8Parser::readStreams(WPXInputStreamPtr &input)
 #endif
 }
 
-void WPS8Parser::readNotes(std::vector<WPS8Parser::Note> &dest, WPXInputStreamPtr &input, const char *key)
+void WPS8Parser::readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key)
 {
 	IndexMultiMap::iterator pos;
 	pos = m_headerIndexTable.lower_bound(key);
@@ -560,7 +560,7 @@ void WPS8Parser::readNote(WPXInputStreamPtr &input, bool is_endnote)
 
 //fixme: this readFODPage is mostly the same as in WPS4
 
-bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> * FODs, uint16_t page_size)
+bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, uint16_t page_size)
 {
 	uint32_t page_offset = input->tell();
 	uint16_t cfod = libwps::readU16(input); /* number of FODs on this page */
@@ -574,7 +574,7 @@ bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> * FOD
 
 	input->seek(page_offset + 2 + 6, WPX_SEEK_SET);	// fixme: unknown
 
-	int first_fod = FODs->size();
+	int first_fod = FODs.size();
 
 	/* Read array of m_fcLim of FODs.  The m_fcLim refers to the offset of the
 	       last character covered by the formatting. */
@@ -593,19 +593,19 @@ bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> * FOD
 		}
 
 		/* check that m_fcLim is monotonic */
-		if (FODs->size() > 0 && FODs->back().m_fcLim > fod.m_fcLim)
+		if (FODs.size() > 0 && FODs.back().m_fcLim > fod.m_fcLim)
 		{
 			WPS_DEBUG_MSG(("Works: error: character position list must "
-			               "be monotonic, but found %i, %i\n", FODs->back().m_fcLim, fod.m_fcLim));
+			               "be monotonic, but found %i, %i\n", FODs.back().m_fcLim, fod.m_fcLim));
 			throw libwps::ParseException();
 		}
-		FODs->push_back(fod);
+		FODs.push_back(fod);
 	}
 
 	/* Read array of m_bfprop of FODs.  The m_bfprop is the offset where
 	   the FPROP is located. */
 	std::vector<WPSFOD>::iterator FODs_iter;
-	for (FODs_iter = FODs->begin() + first_fod; FODs_iter!= FODs->end(); FODs_iter++)
+	for (FODs_iter = FODs.begin() + first_fod; FODs_iter!= FODs.end(); FODs_iter++)
 	{
 		if ((*FODs_iter).m_fcLim == m_offset_eot)
 			break;
@@ -629,7 +629,7 @@ bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> * FOD
 
 	/* Read array of FPROPs.  These contain the actual formatting
 	   codes (bold, alignment, etc.) */
-	for (FODs_iter = FODs->begin()+first_fod; FODs_iter!= FODs->end(); FODs_iter++)
+	for (FODs_iter = FODs.begin()+first_fod; FODs_iter!= FODs.end(); FODs_iter++)
 	{
 		if ((*FODs_iter).m_fcLim == m_offset_eot)
 			break;
@@ -663,7 +663,7 @@ bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> * FOD
 	/* go to end of page */
 	input->seek(page_offset	+ page_size, WPX_SEEK_SET);
 
-	return (m_offset_eot > FODs->back().m_fcLim);
+	return (m_offset_eot > FODs.back().m_fcLim);
 }
 
 /**
@@ -852,9 +852,9 @@ void WPS8Parser::parse(WPXInputStreamPtr &input)
 				               name,entry.begin(), entry.length()));
 			}
 			if (wh==0)
-				readFODPage(input, &m_CHFODs, entry.length());
+				readFODPage(input, m_CHFODs, entry.length());
 			else
-				readFODPage(input, &m_PAFODs, entry.length());
+				readFODPage(input, m_PAFODs, entry.length());
 		}
 	}
 

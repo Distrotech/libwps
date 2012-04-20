@@ -107,7 +107,6 @@ Font::Type Font::getWin3Type(std::string &fName)
 			return WIN3_VIETNAMESE;
 		}
 	}
-
 	return WIN3_WEUROPE;
 }
 
@@ -122,7 +121,7 @@ Font::Type Font::getWin3Type(std::string &fName)
 unsigned long Font::unicodeFromCP850(unsigned char c)
 {
 	// Fridrich: I see some MS Works files with IBM850 encoding ???
-	static const unsigned int cp850toUCS4[128] =
+	static const unsigned int cp850[128] =
 	{
 		0x00c7, 0x00fc, 0x00e9, 0x00e2, 0x00e4, 0x00e0, 0x00e5, 0x00e7,
 		0x00ea, 0x00eb, 0x00e8, 0x00ef, 0x00ee, 0x00ec, 0x00c4, 0x00c5,
@@ -143,7 +142,7 @@ unsigned long Font::unicodeFromCP850(unsigned char c)
 	};
 
 	if (c < 0x80) return c;
-	return cp850toUCS4[c - 0x80];
+	return cp850[c - 0x80];
 }
 
 /**
@@ -211,7 +210,7 @@ unsigned long Font::unicodeFromCP1251(unsigned char c)
  */
 unsigned long Font::unicodeFromCP1252(unsigned char c)
 {
-	static const unsigned int cp1252toUCS4[32] =
+	static const unsigned int cp1252[32] =
 	{
 		0x20ac, UNDEF, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021,
 		0x02c6, 0x2030, 0x0160, 0x2039, 0x0152, UNDEF, 0x017d, UNDEF,
@@ -220,7 +219,7 @@ unsigned long Font::unicodeFromCP1252(unsigned char c)
 	};
 
 	if (c < 0x80 || c >= 0xa0) return c;
-	return cp1252toUCS4[c - 0x80];
+	return cp1252[c - 0x80];
 }
 
 /**
@@ -509,69 +508,69 @@ std::string Language::localeName(long id)
 	case 0x400:
 		return "";
 	case 0x401:
-		return "ar";
+		return "ar_DZ"; // checkme
 	case 0x402:
-		return "bg";
+		return "bg_BG";
 	case 0x403:
 		return "ca_ES";
 	case 0x404:
 		return "zh_TW";
 	case 0x405:
-		return "cs";
+		return "cs_CZ";
 	case 0x406:
-		return "da";
+		return "da_DK";
 	case 0x407:
-		return "de";
+		return "de_DE";
 	case 0x408:
-		return "el";
+		return "el_GR";
 	case 0x409:
 		return "en_US";
 	case 0x40A:
-		return "es";
+		return "es_ES";
 	case 0x40B:
-		return "fi";
+		return "fi_FI";
 	case 0x40C:
-		return "fr";
+		return "fr_FR";
 	case 0x40D:
-		return "iw";
+		return "iw_IL";
 	case 0x40E:
-		return "hu";
+		return "hu_HU";
 	case 0x40F:
-		return "is";
+		return "is_IS";
 	case 0x410:
-		return "it";
+		return "it_IT";
 	case 0x411:
-		return "ja";
+		return "ja_JP";
 	case 0x412:
-		return "ko";
+		return "ko_KR";
 	case 0x413:
-		return "nl";
+		return "nl_NL";
 	case 0x414:
-		return "no";
+		return "no_NO";
 	case 0x415:
-		return "pl";
+		return "pl_PL";
 	case 0x416:
 		return "pt_BR";
 	case 0x417:
-		return "rm";
+		return "rm_CH";
 	case 0x418:
-		return "ro";
+		return "ro_RO";
 	case 0x419:
 		return "ru_RU";
 	case 0x41d:
-		return "sv";
+		return "sv_SE";
 	case 0x420:
-		return "hr";
+		return "hr_HR";
 	case 0x809:
 		return "en_GB";
 	case 0x80a:
 		return "es_MX";
 	case 0x816:
-		return "pt";
+		return "pt_PT";
 	case 0xC09:
 		return "en_AU";
 	case 0xC0a:
-		return "es";
+		return "es_ES";
 	case 0xC0c:
 		return "fr_CA";
 	case 0x1009:
@@ -581,7 +580,7 @@ std::string Language::localeName(long id)
 	case 0x2c0a:
 		return "es_AR";
 	case 0x3409:
-		return "en"; // english Philippines
+		return "en_PH"; // english Philippines
 	case 0x480A:
 		return "es_HN";
 	default:

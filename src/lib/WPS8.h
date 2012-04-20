@@ -42,7 +42,7 @@ public:
 	~WPS8Parser();
 
 	void parse(WPXDocumentInterface *documentInterface);
-public:
+protected:
 	struct Zone;
 	typedef std::multimap<std::string, Zone> IndexMultiMap; /* string is name */
 	struct Note;
@@ -54,7 +54,7 @@ private:
 	void appendUTF16LE(WPXInputStreamPtr &input);
 	void readTextRange(WPXInputStreamPtr &input, uint32_t startpos, uint32_t endpos, uint16_t stream);
 	void readNote(WPXInputStreamPtr &input, bool is_endnote);
-	bool readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> * FODs, uint16_t page_size);
+	bool readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, uint16_t page_size);
 	void parseHeaderIndexEntry(WPXInputStreamPtr &input);
 	void parseHeaderIndex(WPXInputStreamPtr &input);
 	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
@@ -76,7 +76,7 @@ private:
 	std::vector<Note> m_endnotes;
 	int m_actualEndnote;
 
-public:
+protected:
 	/** Starting near beginning of CONTENTS stream, there is an index
 	 * to various types of pages in the document. */
 	struct Zone

@@ -50,7 +50,7 @@ the full 100%.
 
 /**
 Analyzes the content of an input stream to see if it can be parsed
-\param input The input stream
+\param ip The input stream
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
@@ -106,7 +106,7 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *ip)
 Parses the input stream content. It will make callbacks to the functions provided by a
 WPXDocumentInterface class implementation when needed. This is often commonly called the
 'main parsing routine'.
-\param input The input stream
+\param ip The input stream
 \param documentInterface A WPSListener implementation
 */
 WPSResult WPSDocument::parse(WPXInputStream *ip, WPXDocumentInterface *documentInterface)
