@@ -137,13 +137,13 @@ AS_IF([test "x$native_win32" = "xyes"], [
 			AC_MSG_WARN([produced libraries might be incompatible with MSVC-compiled code])
 		])
 	])
-	CFLAGS="$CFLAGS -Wall -pedantic"
-	CXXFLAGS="$CXXFLAGS -Wall -pedantic"
+	CFLAGS="$CFLAGS -Wall -Wextra -pedantic"
+	CXXFLAGS="$CXXFLAGS -Wall -Wextra -pedantic"
 ], [
 	AS_IF([test x"$GCC" = xyes], [
 		# Be tough with warnings and produce less careless code
-		CFLAGS="$CFLAGS -Wall -pedantic"
-		CXXFLAGS="$CXXFLAGS -Wall -pedantic -Weffc++"
+		CFLAGS="$CFLAGS -Wall -Wextra -pedantic"
+		CXXFLAGS="$CXXFLAGS -Wall -Wextra -pedantic -Weffc++"
 	])
 ])
 
@@ -176,6 +176,48 @@ AS_IF([test "x$enable_static_tools" = "xyes"], [
 	AC_DISABLE_STATIC
 ])
 AM_CONDITIONAL(STATIC_TOOLS, [test "x$enable_static_tools" = "xyes"])
+
+# ========
+# shared_ptr implementation
+# ========
+AC_ARG_WITH(sharedptr,
+	[AS_HELP_STRING([--with-sharedptr=boost|c++11|tr1],
+		[Use Boost|std::memory|std::tr1::memory for shared ptr implementation])],
+	[with_sharedptr="$withval"],
+	[with_sharedptr=boost]
+)
+AS_IF([test "x$with_sharedptr" == "xc++11"], [
+		AC_COMPILE_IFELSE([
+			AC_LANG_PROGRAM(
+			[[#include <memory>]],
+			[[std::shared_ptr<int> p;]]
+      	)],
+		[AC_DEFINE([SHAREDPTR_STD],[1],[Use C++11 implementation of shared_ptr])],
+		[AC_MSG_ERROR(Could not find C++11 implementation of shared_ptr)],
+		[[#include <memory>]])
+	]
+)
+AS_IF([test "x$with_sharedptr" == "xtr1"], [
+		AC_COMPILE_IFELSE([
+			AC_LANG_PROGRAM(
+			[[#include <tr1/memory>]],
+			[[std::tr1::shared_ptr<int> p;]]
+      	)],
+		[AC_DEFINE([SHAREDPTR_TR1],[1],[Use TR1 implementation of shared_ptr])],
+		[AC_MSG_ERROR(Could not find TR1 implementation of shared_ptr)],
+		[[#include <tr1/memory>]])
+	]
+)
+AS_IF([test "x$with_sharedptr" == "xboost"], [
+		AC_COMPILE_IFELSE([
+			AC_LANG_PROGRAM(
+			[[#include <boost/shared_ptr.hpp>]],
+			[[boost::shared_ptr<int> p;]]
+      	)],
+		[AC_DEFINE([SHAREDPTR_BOOST],[1],[Use Boost implementation of shared_ptr],
+		[AC_MSG_ERROR(Could not find Boost implementation of shared_ptr)])])
+	]
+)
 
 # =============
 # Documentation

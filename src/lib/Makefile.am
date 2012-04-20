@@ -16,24 +16,25 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LIBADD  = $(LIBWPS_LIBS) @LIBW
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_DEPENDENCIES = @LIBWPS_WIN32_RESOURCE@
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic -no-undefined
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
-	libwps_internal.cpp \
-	WPS4.cpp \
-	WPS8.cpp \
-	WPSDocument.cpp \
-	WPSContentListener.cpp \
-	WPSHeader.cpp \
-	WPSPageSpan.cpp \
-	WPSParser.cpp \
-	libwps.h \
-	libwps_internal.h \
-	WPS.h \
-	WPS4.h \
-	WPS8.h \
-	WPSDocument.h \
-	WPSContentListener.h \
-	WPSHeader.h \
-	WPSFileStructure.h \
-	WPSPageSpan.h \
+	libwps_internal.cpp 	\
+	libwps_tools_win.cpp	\
+	WPS4.cpp		\
+	WPS8.cpp		\
+	WPSDocument.cpp		\
+	WPSContentListener.cpp	\
+	WPSHeader.cpp		\
+	WPSPageSpan.cpp		\
+	WPSParser.cpp		\
+	libwps.h		\
+	libwps_tools_win.h	\
+	libwps_internal.h	\
+	WPS.h			\
+	WPS4.h			\
+	WPS8.h			\
+	WPSDocument.h		\
+	WPSContentListener.h	\
+	WPSHeader.h		\
+	WPSPageSpan.h		\
 	WPSParser.h
 
 if OS_WIN32

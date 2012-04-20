@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2006 Fridrich Strba (fridrich.strba@bluewin.ch)
  *
@@ -27,34 +28,31 @@
 #ifndef WPSCONTENTLISTENER_H
 #define WPSCONTENTLISTENER_H
 
-#include "libwps_internal.h"
-#include "WPSPageSpan.h"
-#include <libwpd/WPXPropertyListVector.h>
-#include <libwpd/WPXDocumentInterface.h>
-#include <list>
+#include <vector>
 
-typedef struct _WPSContentParsingState WPSContentParsingState;
-struct _WPSContentParsingState
+#include <libwpd/WPXPropertyList.h>
+
+#include "libwps_internal.h"
+
+class WPSPageSpan;
+
+struct WPSContentParsingState
 {
-	_WPSContentParsingState();
-	~_WPSContentParsingState();
+	WPSContentParsingState();
+	~WPSContentParsingState();
 
 	uint32_t m_textAttributeBits;
-	uint16_t m_spec;
 	float m_fontSize;
 	WPXString m_fontName;
-	uint32_t m_lcid;
+	uint32_t m_languageId;
 	uint32_t m_textcolor;
 
 	uint16_t m_fieldcode;
-
-	int m_codepage;
 
 	bool m_isParagraphColumnBreak;
 	bool m_isParagraphPageBreak;
 	uint8_t m_paragraphJustification;
 	float m_paragraphLineSpacing;
-	uint32_t m_paraLayoutFlags;
 
 	uint16_t m_footnoteId;
 	uint16_t m_endnoteId;
@@ -78,14 +76,14 @@ struct _WPSContentParsingState
 
 	bool m_isParaListItem;
 
-	std::list<WPSPageSpan>::iterator m_nextPageSpanIter;
+	std::vector<WPSPageSpan>::iterator m_nextPageSpanIter;
 	int m_numPagesRemainingInSpan;
 
 	bool m_sectionAttributesChanged;
 
 	float m_pageFormLength;
 	float m_pageFormWidth;
-	WPSFormOrientation m_pageFormOrientation;
+	libwps::FormOrientation m_pageFormOrientation;
 
 	float m_pageMarginLeft;
 	float m_pageMarginRight;
@@ -99,34 +97,33 @@ struct _WPSContentParsingState
 	WPXString m_textBuffer;
 
 private:
-	_WPSContentParsingState(const _WPSContentParsingState &);
-	_WPSContentParsingState &operator=(const _WPSContentParsingState &);
+	WPSContentParsingState(const WPSContentParsingState &);
+	WPSContentParsingState &operator=(const WPSContentParsingState &);
 };
 
-struct ListSignature
+namespace WPSContentListenerInternal
 {
-	uint16_t a,b,c;
+struct ListSignature;
+}
 
-	bool operator == (ListSignature &y)
-	{
-		return (a == y.a) && (b == y.b) && (c == y.c);
-	}
-};
-
-struct TabPos
+struct WPSTabPos
 {
-	float pos;
-	char  align;
-	char  leader;
+	float m_pos;
+	char  m_align;
+	char  m_leader;
 };
 
 class WPSContentListener
 {
 public:
+	WPSContentListener(std::vector<WPSPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
+	virtual ~WPSContentListener();
+
 	void startDocument();
 	void endDocument();
 	void insertBreak(const uint8_t breakType);
 	void insertCharacter(const uint16_t character);
+	void insertUnicodeCharacter(uint32_t character);
 	void insertField();
 
 	void openFootnote();
@@ -134,32 +131,27 @@ public:
 	void openEndnote();
 	void closeEndnote();
 
-	void setSpec(const uint16_t specCode);
 	void setTextFont(const WPXString fontName);
 	void setFontSize(const uint16_t fontSize);
-	void setLCID(const uint32_t lcid);
-	void setCodepage(const int codepage);
+	void setFontAttributes(const uint32_t fontAttributes);
+	void setLanguageID(const uint32_t lcid);
 	void setColor(const unsigned int rgb);
 	void setFieldType(uint16_t code);
 	void setFieldFormat(uint16_t code);
 
 	void setAlign(const uint8_t align);
-	void setParaFlags(const uint32_t flags);
 	void setMargins(const float first=0.0, const float left=0.0, const float right=0.0,
 	                const float before=0.0, const float after=0.0);
-	void setTabs(std::vector<TabPos> &tabs);
+	void setTabs(std::vector<WPSTabPos> &tabs);
 
 	void setNumberingType(const uint8_t style);
 	void setNumberingProp(const uint16_t type, const uint16_t sep);
 
 	void insertEOL();
 
-	uint16_t getSpec() const;
 protected:
-	WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface);
-	virtual ~WPSContentListener();
 
-	WPSContentParsingState *m_ps; // parse state
+	shared_ptr<WPSContentParsingState> m_ps; // parse state
 	WPXDocumentInterface *m_documentInterface;
 	WPXPropertyList m_metaData;
 
@@ -184,9 +176,10 @@ private:
 	WPSContentListener(const WPSContentListener &);
 	WPSContentListener &operator=(const WPSContentListener &);
 
-	std::vector<TabPos> m_tabs;
-	std::list<WPSPageSpan> &m_pageList;
-	std::vector<ListSignature> m_listFormats;
+	std::vector<WPSTabPos> m_tabs;
+	std::vector<WPSPageSpan> m_pageList;
+	std::vector<WPSContentListenerInternal::ListSignature> m_listFormats;
 };
 
 #endif /* WPSCONTENTLISTENER_H */
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

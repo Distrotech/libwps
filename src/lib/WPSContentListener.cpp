@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2006 Fridrich Strba (fridrich.strba@bluewin.ch)
  *
@@ -23,39 +24,42 @@
  * /libwpd2/src/lib/WPXContentListener.cpp 1.12
  */
 
-#include "WPSContentListener.h"
-#include "WPSPageSpan.h"
-#include "libwps_internal.h"
-#include <libwpd/WPXProperty.h>
 #include <stdio.h>
-#ifdef _MSC_VER
-#include <minmax.h>
-#define LIBWPS_MIN min
-#define LIBWPS_MAX max
-#else
-#define LIBWPS_MIN std::min
-#define LIBWPS_MAX std::max
-#endif
 
-#include <vector>
+#include <libwpd/WPXDocumentInterface.h>
+#include <libwpd/WPXProperty.h>
 
-_WPSContentParsingState::_WPSContentParsingState() :
+#include "libwps_tools_win.h"
+#include "WPSPageSpan.h"
+
+#include "WPSContentListener.h"
+
+namespace WPSContentListenerInternal
+{
+struct ListSignature
+{
+	uint16_t m_numbering,m_numstyle,m_numsep;
+
+	bool operator == (ListSignature &y)
+	{
+		return (m_numbering == y.m_numbering) && (m_numstyle == y.m_numstyle) && (m_numsep == y.m_numsep);
+	}
+};
+}
+
+WPSContentParsingState::WPSContentParsingState() :
 	m_textAttributeBits(0),
-	m_spec(0),
 	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/),
 	m_fontName(WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")),
-	m_lcid(0x409/*en-US*/),
+	m_languageId(0x409/*en-US*/),
 	m_textcolor(0),
 
 	m_fieldcode(0),
-
-	m_codepage(0),
 
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
 	m_paragraphJustification(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
 	m_paragraphLineSpacing(1.0f),
-	m_paraLayoutFlags(0),
 
 	m_footnoteId(1),
 	m_endnoteId(1),
@@ -86,7 +90,7 @@ _WPSContentParsingState::_WPSContentParsingState() :
 
 	m_pageFormLength(11.0f),
 	m_pageFormWidth(8.5f),
-	m_pageFormOrientation(PORTRAIT),
+	m_pageFormOrientation(libwps::PORTRAIT),
 
 	m_pageMarginLeft(1.0f),
 	m_pageMarginRight(1.0f),
@@ -101,23 +105,22 @@ _WPSContentParsingState::_WPSContentParsingState() :
 {
 }
 
-_WPSContentParsingState::~_WPSContentParsingState()
+WPSContentParsingState::~WPSContentParsingState()
 {
 }
 
-WPSContentListener::WPSContentListener(std::list<WPSPageSpan> &pageList, WPXDocumentInterface *documentInterface) :
+WPSContentListener::WPSContentListener(std::vector<WPSPageSpan> const &pageList, WPXDocumentInterface *documentInterface) :
 	m_ps(new WPSContentParsingState),
 	m_documentInterface(documentInterface),
 	m_metaData(), m_tabs(),
 	m_pageList(pageList),
 	m_listFormats()
 {
-	m_ps->m_nextPageSpanIter = pageList.begin();
+	m_ps->m_nextPageSpanIter = m_pageList.begin();
 }
 
 WPSContentListener::~WPSContentListener()
 {
-	DELETEP(m_ps);
 }
 
 void WPSContentListener::startDocument()
@@ -201,20 +204,20 @@ void WPSContentListener::_openPageSpan()
 	if ( m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end()))
 	{
 		WPS_DEBUG_MSG(("m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end())\n"));
-		throw ParseException();
+		throw libwps::ParseException();
 	}
 
-	WPSPageSpan currentPage = (*m_ps->m_nextPageSpanIter);
+	WPSPageSpan &currentPage = (*m_ps->m_nextPageSpanIter);
 	currentPage.makeConsistent(1);
 
 	WPXPropertyList propList;
 	propList.insert("libwpd:num-pages", currentPage.getPageSpan());
 
-	std::list<WPSPageSpan>::iterator lastPageSpan = --m_pageList.end();
+	std::vector<WPSPageSpan>::iterator lastPageSpan = --m_pageList.end();
 	propList.insert("libwpd:is-last-page-span", ((m_ps->m_nextPageSpanIter == lastPageSpan) ? true : false));
 	propList.insert("fo:page-height", currentPage.getFormLength());
 	propList.insert("fo:page-width", currentPage.getFormWidth());
-	if (currentPage.getFormOrientation() == LANDSCAPE)
+	if (currentPage.getFormOrientation() == libwps::LANDSCAPE)
 		propList.insert("style:print-orientation", "landscape");
 	else
 		propList.insert("style:print-orientation", "portrait");
@@ -240,29 +243,30 @@ void WPSContentListener::_openPageSpan()
 			propList.clear();
 			switch ((*iter).getOccurence())
 			{
-			case ODD:
+			case libwps::ODD:
 				propList.insert("libwpd:occurence", "odd");
 				break;
-			case EVEN:
+			case libwps::EVEN:
 				propList.insert("libwpd:occurence", "even");
 				break;
-			case ALL:
+			case libwps::ALL:
 				propList.insert("libwpd:occurence", "all");
 				break;
-			case NEVER:
+			case libwps::NEVER:
 			default:
 				break;
 			}
 
-			if ((*iter).getType() == HEADER)
+			if ((*iter).getType() == libwps::HEADER)
+			{
 				m_documentInterface->openHeader(propList);
-			else
-				m_documentInterface->openFooter(propList);
-
-			if ((*iter).getType() == HEADER)
 				m_documentInterface->closeHeader();
+			}
 			else
+			{
+				m_documentInterface->openFooter(propList);
 				m_documentInterface->closeFooter();
+			}
 
 			WPS_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
 			               (*iter).getType(), (*iter).getOccurence()));
@@ -345,10 +349,10 @@ void WPSContentListener::_openParagraph()
 		for (unsigned i=0; i < m_tabs.size(); i++)
 		{
 			WPXPropertyList wpx_td;
-			TabPos bpos = m_tabs[i];
-			wpx_td.insert("style:position",bpos.pos,WPX_INCH);
-			if (bpos.align == WPS_TAB_CENTER) wpx_td.insert("style:type","center");
-			else if (bpos.align == WPS_TAB_RIGHT) wpx_td.insert("style:type","right");
+			WPSTabPos bpos = m_tabs[i];
+			wpx_td.insert("style:position",bpos.m_pos,WPX_INCH);
+			if (bpos.m_align == WPS_TAB_CENTER) wpx_td.insert("style:type","center");
+			else if (bpos.m_align == WPS_TAB_RIGHT) wpx_td.insert("style:type","right");
 			// TODO: Decimal tabs depend on locale, obviously.
 			tabStops.append(wpx_td);
 		}
@@ -490,20 +494,31 @@ void WPSContentListener::_openSpan()
 		propList.insert("style:font-relief", "embossed");
 	else if (m_ps->m_textAttributeBits & WPS_ENGRAVE_BIT)
 		propList.insert("style:font-relief", "engraved");
-	if (m_ps->m_lcid)
+	if (m_ps->m_languageId)
 	{
-		std::string lang, country;
-		if (getLangFromLCID(m_ps->m_lcid, lang, country))
+		std::string lang = libwps_tools_win::Language::localeName(m_ps->m_languageId);
+		if (lang.length())
 		{
-			propList.insert("fo:language", lang.c_str());
-			if (country.length())
-				propList.insert("fo:country", country.c_str());
+			std::string language(lang);
+			std::string country("none");
+			if (lang.length() > 3 && lang[2]=='_')
+			{
+				country=lang.substr(3);
+				language=lang.substr(0,2);
+			}
+			propList.insert("fo:language", language.c_str());
+			propList.insert("fo:country", country.c_str());
+		}
+		else
+		{
+			propList.insert("fo:language", "none");
+			propList.insert("fo:country", "none");
 		}
 	}
+
 	if (m_ps->m_fontName.len())
 		propList.insert("style:font-name", m_ps->m_fontName.cstr());
 	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, WPX_POINT);
-
 	// Here we give the priority to the redline bit over the font color.
 	// When redline finishes, the color is back.
 	if (m_ps->m_textAttributeBits & WPS_REDLINE_BIT)
@@ -572,12 +587,6 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 	}
 }
 
-void WPSContentListener::setSpec(const uint16_t specCode)
-{
-	_closeSpan();
-	m_ps->m_spec = specCode;
-}
-
 void WPSContentListener::setTextFont(const WPXString fontName)
 {
 	_closeSpan();
@@ -590,16 +599,16 @@ void WPSContentListener::setFontSize(const uint16_t fontSize)
 	m_ps->m_fontSize=float(fontSize);
 }
 
-void WPSContentListener::setLCID(const uint32_t lcid)
+void WPSContentListener::setFontAttributes(const uint32_t fontAttributes)
 {
 	_closeSpan();
-	m_ps->m_lcid=lcid;
+	m_ps->m_textAttributeBits=fontAttributes;
 }
 
-void WPSContentListener::setCodepage(const int codepage)
+void WPSContentListener::setLanguageID(const uint32_t lcid)
 {
-	if (codepage == 0) return;
-	m_ps->m_codepage = codepage;
+	_closeSpan();
+	m_ps->m_languageId=lcid;
 }
 
 void WPSContentListener::setColor(const unsigned int rgb)
@@ -613,11 +622,6 @@ void WPSContentListener::setAlign(const uint8_t align)
 	m_ps->m_paragraphJustification = align;
 }
 
-void WPSContentListener::setParaFlags(const uint32_t flags)
-{
-	m_ps->m_paraLayoutFlags = flags;
-}
-
 void WPSContentListener::setMargins(const float first, const float left,
                                     const float right,const float before, const float after)
 {
@@ -628,7 +632,7 @@ void WPSContentListener::setMargins(const float first, const float left,
 	m_ps->m_paragraphMarginBottom = after;
 }
 
-void WPSContentListener::setTabs(std::vector<TabPos> &tabs)
+void WPSContentListener::setTabs(std::vector<WPSTabPos> &tabs)
 {
 	m_tabs = tabs;
 }
@@ -655,17 +659,63 @@ void WPSContentListener::insertEOL()
 		_closeParagraph();
 }
 
-uint16_t WPSContentListener::getSpec() const
-{
-	return m_ps->m_spec;
-}
-
-
 void WPSContentListener::insertCharacter(const uint16_t character)
 {
 	if (!m_ps->m_isSpanOpened)
 		_openSpan();
 	m_ps->m_textBuffer.append(character);
+}
+
+void WPSContentListener::insertUnicodeCharacter(uint32_t character)
+{
+	if (!m_ps->m_isSpanOpened)
+		_openSpan();
+	if (character == 0xfffd)
+		return;
+	uint8_t first;
+	int len;
+	if (character < 0x80)
+	{
+		first = 0;
+		len = 1;
+	}
+	else if (character < 0x800)
+	{
+		first = 0xc0;
+		len = 2;
+	}
+	else if (character < 0x10000)
+	{
+		first = 0xe0;
+		len = 3;
+	}
+	else if (character < 0x200000)
+	{
+		first = 0xf0;
+		len = 4;
+	}
+	else if (character < 0x4000000)
+	{
+		first = 0xf8;
+		len = 5;
+	}
+	else
+	{
+		first = 0xfc;
+		len = 6;
+	}
+
+	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
+	int i;
+	for (i = len - 1; i > 0; --i)
+	{
+		outbuf[i] = (character & 0x3f) | 0x80;
+		character >>= 6;
+	}
+	outbuf[0] = character | first;
+
+	for (i = 0; i < len; i++)
+		m_ps->m_textBuffer.append(outbuf[i]);
 }
 
 void WPSContentListener::setFieldType(uint16_t code)
@@ -783,12 +833,12 @@ void WPSContentListener::_insertText(const WPXString &textBuffer)
 
 int WPSContentListener::_getListId()
 {
-	ListSignature l;
-	l.a = m_ps->m_numbering;
-	l.b = m_ps->m_numstyle;
-	l.c = m_ps->m_numsep;
+	WPSContentListenerInternal::ListSignature l;
+	l.m_numbering = m_ps->m_numbering;
+	l.m_numstyle = m_ps->m_numstyle;
+	l.m_numsep = m_ps->m_numsep;
 
-	if (l.a == 0) return 0;
+	if (l.m_numbering == 0) return 0;
 
 	for (unsigned i=0; i < m_listFormats.size(); i++)
 	{
@@ -836,3 +886,5 @@ int WPSContentListener::_getListId()
 
 	return listid;
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002,2004 Marc Maurer (uwog@uwog.net)
@@ -21,10 +22,6 @@
 
 #ifndef LIBWPS_INTERNAL_H
 #define LIBWPS_INTERNAL_H
-#ifdef DEBUG
-#include <bitset>
-#include <stdio.h>
-#endif
 #include <libwpd-stream/libwpd-stream.h>
 #include <libwpd/libwpd.h>
 #include <string>
@@ -40,15 +37,101 @@ typedef unsigned int uint32_t;
 #include <inttypes.h>
 #endif /* _MSC_VER || __DJGPP__*/
 
-/* Various functions/defines that need not/should not be exported externally */
+/* ---------- memory  --------------- */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#define DELETEP(m) if (m) { delete m; m = NULL; }
+#if defined(SHAREDPTR_TR1)
+#include <tr1/memory>
+using std::tr1::shared_ptr;
+#elif defined(SHAREDPTR_STD)
+#include <memory>
+using std::shared_ptr;
+#else
+#include <boost/shared_ptr.hpp>
+using boost::shared_ptr;
+#endif
 
+/** an noop deleter used to transform a libwpd pointer in a false shared_ptr */
+template <class T>
+struct WPS_shared_ptr_noop_deleter
+{
+	void operator() (T *) {}
+};
+
+/* ---------- typedef ------------- */
+typedef shared_ptr<WPXInputStream> WPXInputStreamPtr;
+
+/* ---------- debug  --------------- */
 #ifdef DEBUG
 #define WPS_DEBUG_MSG(M) printf M
 #else
 #define WPS_DEBUG_MSG(M)
 #endif
+
+/* ---------- exception  ------------ */
+namespace libwps
+{
+// Various exceptions
+class VersionException
+{
+	// needless to say, we could flesh this class out a bit
+};
+
+class FileException
+{
+	// needless to say, we could flesh this class out a bit
+};
+
+class ParseException
+{
+	// needless to say, we could flesh this class out a bit
+};
+
+class GenericException
+{
+	// needless to say, we could flesh this class out a bit
+};
+}
+
+/* ---------- input ----------------- */
+namespace libwps
+{
+uint8_t readU8(WPXInputStream *input);
+uint16_t readU16(WPXInputStream *input);
+uint32_t readU32(WPXInputStream *input);
+
+int8_t read8(WPXInputStream *input);
+int16_t read16(WPXInputStream *input);
+int32_t read32(WPXInputStream *input);
+
+inline uint8_t readU8(WPXInputStreamPtr &input)
+{
+	return readU8(input.get());
+}
+inline uint16_t readU16(WPXInputStreamPtr &input)
+{
+	return readU16(input.get());
+}
+inline uint32_t readU32(WPXInputStreamPtr &input)
+{
+	return readU32(input.get());
+}
+
+inline int8_t read8(WPXInputStreamPtr &input)
+{
+	return read8(input.get());
+}
+inline int16_t read16(WPXInputStreamPtr &input)
+{
+	return read16(input.get());
+}
+inline int32_t read32(WPXInputStreamPtr &input)
+{
+	return read32(input.get());
+}
+}
 
 #define WPS_LE_GET_GUINT16(p)				  \
         (uint16_t)((((uint8_t const *)(p))[0] << 0)  |    \
@@ -59,40 +142,37 @@ typedef unsigned int uint32_t;
                   (((uint8_t const *)(p))[2] << 16) |    \
                   (((uint8_t const *)(p))[3] << 24))
 
-uint8_t readU8(WPXInputStream *input);
-uint16_t readU16(WPXInputStream *input);
-uint32_t readU32(WPXInputStream *input);
-
 // Various helper structures for the parser..
-
-enum WPSHeaderFooterType { HEADER, FOOTER };
-enum WPSHeaderFooterInternalType { HEADER_A, HEADER_B, FOOTER_A, FOOTER_B, DUMMY };
-enum WPSHeaderFooterOccurence { ODD, EVEN, ALL, NEVER };
-enum WPSFormOrientation { PORTRAIT, LANDSCAPE };
+namespace libwps
+{
+enum HeaderFooterType { HEADER, FOOTER };
+enum HeaderFooterOccurence { ODD, EVEN, ALL, NEVER };
+enum FormOrientation { PORTRAIT, LANDSCAPE };
+}
 
 // ATTRIBUTE bits
 #define WPS_EXTRA_LARGE_BIT 1
 #define WPS_VERY_LARGE_BIT 2
 #define WPS_LARGE_BIT 4
 #define WPS_SMALL_PRINT_BIT 8
-#define WPS_FINE_PRINT_BIT 16
-#define WPS_SUPERSCRIPT_BIT 32
-#define WPS_SUBSCRIPT_BIT 64
-#define WPS_OUTLINE_BIT 128
-#define WPS_ITALICS_BIT 256
-#define WPS_SHADOW_BIT 512
-#define WPS_REDLINE_BIT 1024
-#define WPS_DOUBLE_UNDERLINE_BIT 2048
-#define WPS_BOLD_BIT 4096
-#define WPS_STRIKEOUT_BIT 8192
-#define WPS_UNDERLINE_BIT 16384
-#define WPS_SMALL_CAPS_BIT 32768
-#define WPS_BLINK_BIT 65536
-#define WPS_REVERSEVIDEO_BIT 131072
-#define WPS_ALL_CAPS_BIT 262144
-#define WPS_EMBOSS_BIT 524288
-#define WPS_ENGRAVE_BIT 1048576
-#define WPS_SPECIAL_BIT 2097152
+#define WPS_FINE_PRINT_BIT 0x10
+#define WPS_SUPERSCRIPT_BIT 0x20
+#define WPS_SUBSCRIPT_BIT 0x40
+#define WPS_OUTLINE_BIT 0x80
+#define WPS_ITALICS_BIT 0x100
+#define WPS_SHADOW_BIT 0x200
+#define WPS_REDLINE_BIT 0x400
+#define WPS_DOUBLE_UNDERLINE_BIT 0x800
+#define WPS_BOLD_BIT 0x1000
+#define WPS_STRIKEOUT_BIT 0x2000
+#define WPS_UNDERLINE_BIT 0x4000
+#define WPS_SMALL_CAPS_BIT 0x8000
+#define WPS_BLINK_BIT 0x10000L
+#define WPS_REVERSEVIDEO_BIT 0x20000L
+#define WPS_ALL_CAPS_BIT 0x40000L
+#define WPS_EMBOSS_BIT 0x80000L
+#define WPS_ENGRAVE_BIT 0x100000L
+#define WPS_SPECIAL_BIT 0x200000L
 
 // JUSTIFICATION bits
 #define WPS_PARAGRAPH_JUSTIFICATION_LEFT 0x00
@@ -142,34 +222,5 @@ enum WPSFormOrientation { PORTRAIT, LANDSCAPE };
 #define WPS_NUM_STYLE_LROMAN 5
 #define WPS_NUM_STYLE_UROMAN 6
 
-bool getLangFromLCID(uint32_t lcid, std::string &language, std::string &country);
-
-// Various exceptions
-
-class VersionException
-{
-	// needless to say, we could flesh this class out a bit
-};
-
-class FileException
-{
-	// needless to say, we could flesh this class out a bit
-};
-
-class ParseException
-{
-	// needless to say, we could flesh this class out a bit
-};
-
-class GenericException
-{
-	// needless to say, we could flesh this class out a bit
-};
-
-// Various functions
-
-#ifdef DEBUG
-std::string to_bits(std::string s);
-#endif
-
 #endif /* LIBWPS_INTERNAL_H */
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

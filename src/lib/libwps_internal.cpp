@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2002, 2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002, 2004 Marc Maurer (uwog@uwog.net)
@@ -22,8 +23,9 @@
 #include "libwps_internal.h"
 #include <string>
 #include <stdlib.h>
-#include <locale.h>
 
+namespace libwps
+{
 uint8_t readU8(WPXInputStream *input)
 {
 	unsigned long numBytesRead;
@@ -35,11 +37,21 @@ uint8_t readU8(WPXInputStream *input)
 	return *(uint8_t const *)(p);
 }
 
+int8_t read8(WPXInputStream *input)
+{
+	return (int8_t) readU8(input);
+}
+
 uint16_t readU16(WPXInputStream *input)
 {
 	unsigned short p0 = (unsigned short)readU8(input);
 	unsigned short p1 = (unsigned short)readU8(input);
 	return p0|(p1<<8);
+}
+
+int16_t read16(WPXInputStream *input)
+{
+	return (int16_t) readU16(input);
 }
 
 uint32_t readU32(WPXInputStream *input)
@@ -51,50 +63,10 @@ uint32_t readU32(WPXInputStream *input)
 	return (uint32_t) ((p0<<0)|(p1<<8)|(p2<<16)|(p3<<24));
 }
 
-#ifdef DEBUG
-std::string to_bits(std::string s)
+int32_t read32(WPXInputStream *input)
 {
-	std::string r;
-	for (unsigned int i = 0; i < s.length(); i++)
-	{
-		std::bitset<8> b(s[i]);
-		r.append(b.to_string());
-		char buf[20];
-		sprintf(buf, "(%02u,0x%02x)  ", (uint8_t)s[i],(uint8_t)s[i]);
-		r.append(buf);
-	}
-	return r;
+	return (int32_t) readU32(input);
 }
-#endif
-
-/* Not troubling ourselves with extra dependencies */
-/* TODO: extend */
-
-static const struct _lange
-{
-	uint32_t id;
-	const char *name;
-	const char *country;
-} s_lang_table[] =
-{
-	{0x409,"en", "US"},
-	{0x419,"ru", "RU"}
-};
-
-bool getLangFromLCID(uint32_t lcid, std::string &language, std::string &country)
-{
-	unsigned i = 0;
-	for (i=0; i < sizeof(s_lang_table)/sizeof(s_lang_table[0]); i++)
-	{
-		if (s_lang_table[i].id == lcid)
-		{
-			language = s_lang_table[i].name;
-			country = s_lang_table[i].country;
-			return true;
-		}
-	}
-	language=country="none";
-	return true;
 }
 
-
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
@@ -26,7 +27,6 @@
 
 const float WPS_DEFAULT_PAGE_MARGIN_TOP = 1.0f;
 const float WPS_DEFAULT_PAGE_MARGIN_BOTTOM = 1.0f;
-const uint8_t DUMMY_INTERNAL_HEADER_FOOTER = 16;
 
 WPSHeaderFooter::WPSHeaderFooter(const WPSHeaderFooter &headerFooter) :
 	m_type(headerFooter.getType()),
@@ -42,7 +42,7 @@ WPSHeaderFooter::~WPSHeaderFooter()
 WPSPageSpan::WPSPageSpan() :
 	m_formLength(11.0f),
 	m_formWidth(8.5f),
-	m_formOrientation(PORTRAIT),
+	m_formOrientation(libwps::PORTRAIT),
 	m_marginLeft(1.0f),
 	m_marginRight(1.0f),
 	m_marginTop(WPS_DEFAULT_PAGE_MARGIN_TOP),
@@ -50,7 +50,7 @@ WPSPageSpan::WPSPageSpan() :
 	m_headerFooterList(),
 	m_pageSpan(1)
 {
-	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)
+	for (int i=0; i<NUM_HEADER_FOOTER_TYPES; i++)
 		m_isHeaderFooterSuppressed[i]=false;
 }
 
@@ -65,7 +65,7 @@ WPSPageSpan::WPSPageSpan(const WPSPageSpan &page) :
 	m_headerFooterList(page.getHeaderFooterList()),
 	m_pageSpan(page.getPageSpan())
 {
-	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)
+	for (int i=0; i<NUM_HEADER_FOOTER_TYPES; i++)
 		m_isHeaderFooterSuppressed[i] = page.getHeaderFooterSuppression(i);
 }
 
@@ -99,7 +99,7 @@ bool operator==(const WPSPageSpan &page1, const WPSPageSpan &page2)
 		return false;
 
 
-	for (int i=0; i<WPS_NUM_HEADER_FOOTER_TYPES; i++)
+	for (int i=0; i<WPSPageSpan::NUM_HEADER_FOOTER_TYPES; i++)
 	{
 		if (page1.getHeaderFooterSuppression(i) != page2.getHeaderFooterSuppression(i))
 			return false;
@@ -133,3 +133,4 @@ bool operator==(const WPSPageSpan &page1, const WPSPageSpan &page2)
 
 	return true;
 }
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

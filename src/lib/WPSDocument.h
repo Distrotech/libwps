@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
@@ -53,3 +54,4 @@ public:
 };
 
 #endif /* WPSDOCUMENT_H */
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

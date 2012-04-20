@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
@@ -27,7 +28,6 @@
 
 #ifndef WPSPAGE_H
 #define WPSPAGE_H
-#include "WPSFileStructure.h"
 #include <vector>
 #include "libwps_internal.h"
 
@@ -38,11 +38,11 @@ class WPSHeaderFooter
 public:
 	WPSHeaderFooter(const WPSHeaderFooter &headerFooter);
 	~WPSHeaderFooter();
-	WPSHeaderFooterType getType() const
+	libwps::HeaderFooterType getType() const
 	{
 		return m_type;
 	}
-	WPSHeaderFooterOccurence getOccurence() const
+	libwps::HeaderFooterOccurence getOccurence() const
 	{
 		return m_occurence;
 	}
@@ -52,21 +52,23 @@ public:
 	}
 
 private:
-	WPSHeaderFooterType m_type;
-	WPSHeaderFooterOccurence m_occurence;
+	libwps::HeaderFooterType m_type;
+	libwps::HeaderFooterOccurence m_occurence;
 	uint8_t m_internalType; // for suppression
 };
 
 class WPSPageSpan
 {
 public:
+	enum HeaderFooterInternalType { HEADER_A=0, HEADER_B, FOOTER_A, FOOTER_B, NUM_HEADER_FOOTER_TYPES= FOOTER_B+1 };
+
 	WPSPageSpan();
 	WPSPageSpan(const WPSPageSpan &page);
 	virtual ~WPSPageSpan();
 
 	bool getHeaderFooterSuppression(const uint8_t headerFooterType) const
 	{
-		if (headerFooterType <= WPS_FOOTER_B) return m_isHeaderFooterSuppressed[headerFooterType];
+		if (headerFooterType <= FOOTER_B) return m_isHeaderFooterSuppressed[headerFooterType];
 		return false;
 	}
 	float getFormLength() const
@@ -77,7 +79,7 @@ public:
 	{
 		return m_formWidth;
 	}
-	WPSFormOrientation getFormOrientation() const
+	libwps::FormOrientation getFormOrientation() const
 	{
 		return m_formOrientation;
 	}
@@ -118,7 +120,7 @@ public:
 	{
 		m_formWidth = formWidth;
 	}
-	void setFormOrientation(const WPSFormOrientation formOrientation)
+	void setFormOrientation(const libwps::FormOrientation formOrientation)
 	{
 		m_formOrientation = formOrientation;
 	}
@@ -146,12 +148,12 @@ public:
 	void makeConsistent(int startingPageNumber);
 
 protected:
-	void _removeHeaderFooter(WPSHeaderFooterType type, WPSHeaderFooterOccurence occurence);
+	void _removeHeaderFooter(libwps::HeaderFooterType type, libwps::HeaderFooterOccurence occurence);
 
 private:
-	bool m_isHeaderFooterSuppressed[WPS_NUM_HEADER_FOOTER_TYPES];
+	bool m_isHeaderFooterSuppressed[NUM_HEADER_FOOTER_TYPES];
 	float m_formLength, m_formWidth;
-	WPSFormOrientation m_formOrientation;
+	libwps::FormOrientation m_formOrientation;
 	float m_marginLeft, m_marginRight;
 	float m_marginTop, m_marginBottom;
 	std::vector<WPSHeaderFooter> m_headerFooterList;
@@ -161,3 +163,4 @@ private:
 
 bool operator==(const WPSPageSpan &, const WPSPageSpan &);
 #endif /* WPSPAGE_H */
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

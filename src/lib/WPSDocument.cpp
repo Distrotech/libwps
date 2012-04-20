@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Copyright (C) 2003 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003-2004 Marc Maurer (uwog@uwog.net)
@@ -49,19 +50,20 @@ the full 100%.
 
 /**
 Analyzes the content of an input stream to see if it can be parsed
-\param input The input stream
+\param ip The input stream
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
+WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *ip)
 {
 	WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
-
+	WPSHeaderPtr header;
+	shared_ptr<WPXInputStream > input(ip, WPS_shared_ptr_noop_deleter<WPXInputStream>());
 	try
 	{
-		WPSHeader *header = WPSHeader::constructHeader(input);
+		header.reset(WPSHeader::constructHeader(input));
 
 		if (!header)
 			return WPS_CONFIDENCE_NONE;
@@ -80,15 +82,14 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
 			confidence = WPS_CONFIDENCE_GOOD;
 			break;
 		}
-		DELETEP(header);
 
 		return confidence;
 	}
-	catch (FileException)
+	catch (libwps::FileException)
 	{
 		WPS_DEBUG_MSG(("File exception trapped\n"));
 	}
-	catch (ParseException)
+	catch (libwps::ParseException)
 	{
 		WPS_DEBUG_MSG(("Parse exception trapped\n"));
 	}
@@ -105,16 +106,19 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
 Parses the input stream content. It will make callbacks to the functions provided by a
 WPXDocumentInterface class implementation when needed. This is often commonly called the
 'main parsing routine'.
-\param input The input stream
+\param ip The input stream
 \param documentInterface A WPSListener implementation
 */
-WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *documentInterface)
+WPSResult WPSDocument::parse(WPXInputStream *ip, WPXDocumentInterface *documentInterface)
 {
 	WPSResult error = WPS_OK;
 
+	WPSHeaderPtr header;
+	shared_ptr<WPSParser> parser;
+	shared_ptr<WPXInputStream > input(ip, WPS_shared_ptr_noop_deleter<WPXInputStream>());
 	try
 	{
-		WPSHeader *header = WPSHeader::constructHeader(input);
+		header.reset(WPSHeader::constructHeader(input));
 
 		if (!header)
 			return WPS_UNKNOWN_ERROR;
@@ -127,9 +131,9 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 		case 6:
 		case 5:
 		{
-			WPS8Parser *parser = new WPS8Parser(header->getInput(), header);
+			parser.reset(new WPS8Parser(header->getInput(), header));
+			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
-			DELETEP(parser);
 			break;
 		}
 
@@ -137,20 +141,19 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 		case 3:
 		case 2:
 		{
-			WPS4Parser *parser = new WPS4Parser(header->getInput(), header);
+			parser.reset(new WPS4Parser(header->getInput(), header));
+			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
-			DELETEP(parser);
 			break;
 		}
 		}
-		delete header;
 	}
-	catch (FileException)
+	catch (libwps::FileException)
 	{
 		WPS_DEBUG_MSG(("File exception trapped\n"));
 		error = WPS_FILE_ACCESS_ERROR;
 	}
-	catch (ParseException)
+	catch (libwps::ParseException)
 	{
 		WPS_DEBUG_MSG(("Parse exception trapped\n"));
 		error = WPS_PARSE_ERROR;
@@ -164,3 +167,4 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 
 	return error;
 }
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
