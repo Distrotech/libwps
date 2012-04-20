@@ -1057,15 +1057,7 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8ContentListener *listener)
 	listener->endDocument();		
 }
 
-
-
-#define WPS8_ATTRIBUTE_BOLD 0
-#define WPS8_ATTRIBUTE_ITALICS 1
-#define WPS8_ATTRIBUTE_UNDERLINE 2
-#define WPS8_ATTRIBUTE_STRIKEOUT 3
-#define WPS8_ATTRIBUTE_SUBSCRIPT 4
-#define WPS8_ATTRIBUTE_SUPERSCRIPT 5
-#define WPS8_ATTRIBUTE_SPECIAL 6
+enum { WPS8_ATTRIBUTE_BOLD=0, WPS8_ATTRIBUTE_ITALICS, WPS8_ATTRIBUTE_UNDERLINE, WPS8_ATTRIBUTE_STRIKEOUT, WPS8_ATTRIBUTE_SUBSCRIPT, WPS8_ATTRIBUTE_SUPERSCRIPT,  WPS8_ATTRIBUTE_EMBOSS, WPS8_ATTRIBUTE_ENGRAVE, WPS8_ATTRIBUTE_OUTLINE, WPS8_ATTRIBUTE_SHADOW, WPS8_ATTRIBUTE_SMALL_CAPS, WPS8_ATTRIBUTE_ALL_CAPS };
 
 void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8ContentListener *listener)
 {
@@ -1086,6 +1078,12 @@ void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8ContentL
 	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_STRIKEOUT, WPS_STRIKEOUT_BIT, listener);
 	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_SUBSCRIPT, WPS_SUBSCRIPT_BIT, listener);
 	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_SUPERSCRIPT, WPS_SUPERSCRIPT_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_EMBOSS, WPS_EMBOSS_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_ENGRAVE, WPS_ENGRAVE_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_OUTLINE, WPS_OUTLINE_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_SHADOW, WPS_SHADOW_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_SMALL_CAPS, WPS_SMALL_CAPS_BIT, listener);
+	propertyChangeTextAttribute(newTextAttributeBits, WPS8_ATTRIBUTE_ALL_CAPS, WPS_ALL_CAPS_BIT, listener);
 	oldTextAttributeBits = newTextAttributeBits;
 }
 
@@ -1134,8 +1132,6 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8ContentListener *liste
 		throw ParseException();
 	}
 
-
-	//oldTextAttributeBits=0;
 
 	/* set difference from default properties */
 	for (uint32_t x = 3; x < rgchProp.length(); x += 2)
@@ -1531,6 +1527,24 @@ void WPS8ContentListener::attributeChange(const bool isOn, const uint8_t attribu
 			break;							
 		case WPS8_ATTRIBUTE_SUPERSCRIPT:
 			textAttributeBit = WPS_SUPERSCRIPT_BIT;		
+			break;							
+		case WPS8_ATTRIBUTE_EMBOSS:
+			textAttributeBit = WPS_EMBOSS_BIT;		
+			break;							
+		case WPS8_ATTRIBUTE_ENGRAVE:
+			textAttributeBit = WPS_ENGRAVE_BIT;		
+			break;							
+		case WPS8_ATTRIBUTE_OUTLINE:
+			textAttributeBit = WPS_OUTLINE_BIT;		
+			break;							
+		case WPS8_ATTRIBUTE_SHADOW:
+			textAttributeBit = WPS_SHADOW_BIT;		
+			break;							
+		case WPS8_ATTRIBUTE_SMALL_CAPS:
+			textAttributeBit = WPS_SMALL_CAPS_BIT;		
+			break;							
+		case WPS8_ATTRIBUTE_ALL_CAPS:
+			textAttributeBit = WPS_ALL_CAPS_BIT;		
 			break;							
 	}
 	if (isOn)
