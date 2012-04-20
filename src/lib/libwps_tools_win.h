@@ -47,7 +47,7 @@ namespace libwps_tools_win
 class Font
 {
 public:
-	//! \enum Type \brief the knowned DOS© and Windows3© fonts
+	//! enum Type \brief the knowned DOS© and Windows3© fonts
 	enum Type { DOS_850,
 	            WIN3_ARABIC, WIN3_BALTIC, WIN3_CEUROPE, WIN3_CYRILLIC,
 	            WIN3_GREEK, WIN3_HEBREW, WIN3_TURKISH,

@@ -405,7 +405,6 @@ unsigned long Font::unicodeFromCP1258(unsigned char c)
 //
 ////////////////////////////////////////////////////////////
 
-// see http://msdn.microsoft.com/en-us/library/bb213877.aspx
 long Language::getDefault()
 {
 	return 0x409;
