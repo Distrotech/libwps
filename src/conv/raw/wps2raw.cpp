@@ -1,7 +1,7 @@
 /* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002,2004 Marc Maurer (uwog@uwog.net)
- *  
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 {
 	bool printIndentLevel = false;
 	char *file = 0;
-	
+
 	if (argc < 2)
 	{
 		printf("Usage: wps2raw [OPTION] <Works Document>\n");
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 			printf("Usage: wps2raw [OPTION] <Works Document>\n");
 			return -1;
 		}
-			
+
 		printIndentLevel = true;
 		file = argv[2];
 	}
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
 	}
-	
+
 	RawDocumentGenerator listenerImpl(printIndentLevel);
 	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
 

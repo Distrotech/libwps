@@ -30,7 +30,8 @@
 
 using namespace std;
 
-enum ListenerCallback {
+enum ListenerCallback
+{
 	LC_START_DOCUMENT = 0,
 	LC_OPEN_PAGE_SPAN,
 	LC_OPEN_HEADER_FOOTER,
@@ -56,7 +57,7 @@ public:
 	RawDocumentGenerator(bool printCallgraphScore);
 	virtual ~RawDocumentGenerator();
 
- 	virtual void setDocumentMetaData(const WPXPropertyList &propList);
+	virtual void setDocumentMetaData(const WPXPropertyList &propList);
 
 	virtual void startDocument();
 	virtual void endDocument();
@@ -84,7 +85,7 @@ public:
 	virtual void insertTab();
 	virtual void insertSpace();
 	virtual void insertText(const WPXString &text);
- 	virtual void insertLineBreak();
+	virtual void insertLineBreak();
 	virtual void insertField(const WPXString &type, const WPXPropertyList &propList);
 
 	virtual void defineOrderedListLevel(const WPXPropertyList &propList);
@@ -105,17 +106,17 @@ public:
 	virtual void openTextBox(const WPXPropertyList &propList);
 	virtual void closeTextBox();
 
- 	virtual void openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns);
- 	virtual void openTableRow(const WPXPropertyList &propList);
+	virtual void openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns);
+	virtual void openTableRow(const WPXPropertyList &propList);
 	virtual void closeTableRow();
- 	virtual void openTableCell(const WPXPropertyList &propList);
+	virtual void openTableCell(const WPXPropertyList &propList);
 	virtual void closeTableCell();
 	virtual void insertCoveredTableCell(const WPXPropertyList &propList);
- 	virtual void closeTable();
+	virtual void closeTable();
 
 	virtual void openFrame(const WPXPropertyList &propList);
 	virtual void closeFrame();
-	
+
 	virtual void insertBinaryObject(const WPXPropertyList &propList, const WPXBinaryData &data);
 	virtual void insertEquation(const WPXPropertyList &propList, const WPXString &data);
 
@@ -126,8 +127,14 @@ private:
 	bool m_printCallgraphScore;
 	stack<ListenerCallback> m_callStack;
 
-	void __indentUp() { m_indent++; }
-	void __indentDown() { if (m_indent > 0) m_indent--; }
+	void __indentUp()
+	{
+		m_indent++;
+	}
+	void __indentDown()
+	{
+		if (m_indent > 0) m_indent--;
+	}
 
 	void __iprintf(const char *format, ...);
 	void __iuprintf(const char *format, ...);

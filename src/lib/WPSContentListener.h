@@ -99,8 +99,8 @@ struct _WPSContentParsingState
 	WPXString m_textBuffer;
 
 private:
-	_WPSContentParsingState(const _WPSContentParsingState&);
-	_WPSContentParsingState& operator=(const _WPSContentParsingState&);
+	_WPSContentParsingState(const _WPSContentParsingState &);
+	_WPSContentParsingState &operator=(const _WPSContentParsingState &);
 };
 
 struct ListSignature
@@ -146,7 +146,7 @@ public:
 	void setAlign(const uint8_t align);
 	void setParaFlags(const uint32_t flags);
 	void setMargins(const float first=0.0, const float left=0.0, const float right=0.0,
-			const float before=0.0, const float after=0.0);
+	                const float before=0.0, const float after=0.0);
 	void setTabs(std::vector<TabPos> &tabs);
 
 	void setNumberingType(const uint8_t style);
@@ -160,7 +160,7 @@ protected:
 	virtual ~WPSContentListener();
 
 	WPSContentParsingState *m_ps; // parse state
-	WPXDocumentInterface * m_documentInterface;
+	WPXDocumentInterface *m_documentInterface;
 	WPXPropertyList m_metaData;
 
 	void _flushText();
@@ -181,8 +181,8 @@ protected:
 
 	int  _getListId();
 private:
-	WPSContentListener(const WPSContentListener&);
-	WPSContentListener& operator=(const WPSContentListener&);
+	WPSContentListener(const WPSContentListener &);
+	WPSContentListener &operator=(const WPSContentListener &);
 
 	std::vector<TabPos> m_tabs;
 	std::list<WPSPageSpan> &m_pageList;

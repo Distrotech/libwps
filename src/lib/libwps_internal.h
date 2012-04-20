@@ -1,7 +1,7 @@
 /* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002,2004 Marc Maurer (uwog@uwog.net)
- *  
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -43,7 +43,7 @@ typedef unsigned int uint32_t;
 /* Various functions/defines that need not/should not be exported externally */
 
 #define DELETEP(m) if (m) { delete m; m = NULL; }
- 
+
 #ifdef DEBUG
 #define WPS_DEBUG_MSG(M) printf M
 #else
@@ -59,7 +59,7 @@ typedef unsigned int uint32_t;
                   (((uint8_t const *)(p))[2] << 16) |    \
                   (((uint8_t const *)(p))[3] << 24))
 
-uint8_t readU8(WPXInputStream *input); 
+uint8_t readU8(WPXInputStream *input);
 uint16_t readU16(WPXInputStream *input);
 uint32_t readU32(WPXInputStream *input);
 

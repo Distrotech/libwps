@@ -58,7 +58,7 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
 	WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
-	
+
 	try
 	{
 		WPSHeader *header = WPSHeader::constructHeader(input);
@@ -69,16 +69,16 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *input)
 		switch (header->getMajorVersion())
 		{
 
-			case 8:
-			case 7:
-			case 4:
-				confidence = WPS_CONFIDENCE_EXCELLENT;
-				break;
+		case 8:
+		case 7:
+		case 4:
+			confidence = WPS_CONFIDENCE_EXCELLENT;
+			break;
 
-			case 5:
-			case 2:
-				confidence = WPS_CONFIDENCE_GOOD;
-				break;
+		case 5:
+		case 2:
+			confidence = WPS_CONFIDENCE_GOOD;
+			break;
 		}
 		DELETEP(header);
 
@@ -122,26 +122,26 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 		switch (header->getMajorVersion())
 		{
 
-			case 8:
-			case 7:
-			case 6:
-			case 5:
-			{
-				WPS8Parser *parser = new WPS8Parser(header->getInput(), header);
-				parser->parse(documentInterface);
-				DELETEP(parser);		
-				break;
-			}
+		case 8:
+		case 7:
+		case 6:
+		case 5:
+		{
+			WPS8Parser *parser = new WPS8Parser(header->getInput(), header);
+			parser->parse(documentInterface);
+			DELETEP(parser);
+			break;
+		}
 
-			case 4:
-			case 3:
-			case 2:
-			{
-				WPS4Parser *parser = new WPS4Parser(header->getInput(), header);
-				parser->parse(documentInterface);
-				DELETEP(parser);	
-				break;
-			}
+		case 4:
+		case 3:
+		case 2:
+		{
+			WPS4Parser *parser = new WPS4Parser(header->getInput(), header);
+			parser->parse(documentInterface);
+			DELETEP(parser);
+			break;
+		}
 		}
 		delete header;
 	}
@@ -153,7 +153,7 @@ WPSResult WPSDocument::parse(WPXInputStream *input, WPXDocumentInterface *docume
 	catch (ParseException)
 	{
 		WPS_DEBUG_MSG(("Parse exception trapped\n"));
-                error = WPS_PARSE_ERROR;
+		error = WPS_PARSE_ERROR;
 	}
 	catch (...)
 	{

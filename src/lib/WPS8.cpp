@@ -35,13 +35,13 @@ WPS8Parser public
 */
 
 
-WPS8Parser::WPS8Parser(WPXInputStream *input, WPSHeader * header) :
+WPS8Parser::WPS8Parser(WPXInputStream *input, WPSHeader *header) :
 	WPSParser(input, header),
 	offset_eot(0),
 	oldTextAttributeBits(0),
 	headerIndexTable(),
-	CHFODs(),	
-	PAFODs(),	
+	CHFODs(),
+	PAFODs(),
 	fonts(),
 	streams(),
 	footnotes(),
@@ -58,15 +58,15 @@ WPS8Parser::~WPS8Parser ()
 void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 {
 	std::list<WPSPageSpan> pageList;
-	
-	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));		
 
-	WPXInputStream *input = getInput();		
+	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));
+
+	WPXInputStream *input = getInput();
 
 	/* parse pages */
 	WPSPageSpan m_currentPage;
-	parsePages(pageList, input);		
-	
+	parsePages(pageList, input);
+
 	/* parse document */
 	WPS8ContentListener listener(pageList, documentInterface);
 	parse(input, &listener);
@@ -82,7 +82,7 @@ WPS8Parser private
  * Reads fonts table into memory.
  *
  */
-void WPS8Parser::readFontsTable(WPXInputStream * input)
+void WPS8Parser::readFontsTable(WPXInputStream *input)
 {
 	/* find the fonts page offset, fonts array offset, and ending offset */
 	HeaderIndexMultiMap::iterator pos;
@@ -96,8 +96,8 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
 	uint32_t n_fonts = readU32(input);
 	input->seek(pos->second.offset + 0x10 + (4*n_fonts), WPX_SEEK_SET);
 	uint32_t offset_end_FFNTB = pos->second.offset + pos->second.length;
-	
-	/* read each font in the table */	
+
+	/* read each font in the table */
 	while (input->tell() > 0 && (unsigned long)(input->tell()+8) < offset_end_FFNTB && fonts.size() < n_fonts)
 	{
 #ifdef DEBUG
@@ -106,7 +106,7 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
 		input->seek(4, WPX_SEEK_CUR);
 #endif
 		uint16_t string_size = readU16(input);
-		
+
 		std::string s;
 		for (; string_size>0; string_size--)
 			s.append(1, (uint16_t)readU16(input));
@@ -114,14 +114,14 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
 		if (s.empty())
 			continue;
 		WPS_DEBUG_MSG(("Works: debug: unknown={0x%08X}, name=%s\n",
-			 unknown, s.c_str()));
+		               unknown, s.c_str()));
 		fonts.push_back(s);
 	}
 
 	if (fonts.size() != n_fonts)
 	{
 		WPS_DEBUG_MSG(("Works: warning: expected %i fonts but only found %i\n",
-			n_fonts, int(fonts.size())));
+		               n_fonts, int(fonts.size())));
 	}
 }
 
@@ -129,7 +129,7 @@ void WPS8Parser::readFontsTable(WPXInputStream * input)
  * Reads streams (subdocuments) information
  */
 
-void WPS8Parser::readStreams(WPXInputStream * input)
+void WPS8Parser::readStreams(WPXInputStream *input)
 {
 	HeaderIndexMultiMap::iterator pos;
 	pos = headerIndexTable.lower_bound("STRS");
@@ -145,7 +145,10 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 	input->seek(pos->second.offset, WPX_SEEK_SET);
 	n_streams = readU32(input);
 
-	if (n_streams > 100) { WPS_DEBUG_MSG(("Probably garbled STRS: count = %u\n",n_streams)); }
+	if (n_streams > 100)
+	{
+		WPS_DEBUG_MSG(("Probably garbled STRS: count = %u\n",n_streams));
+	}
 
 	/* skip mysterious header*/
 	input->seek(8, WPX_SEEK_CUR);
@@ -153,7 +156,8 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 	WPSStream s;
 	uint32_t offset;
 	//uint32_t *offsets = (uint32_t*) malloc(4 * n_streams + 4);
-	for (unsigned i=0; i < n_streams; i++) {
+	for (unsigned i=0; i < n_streams; i++)
+	{
 		offset = readU32(input);
 		// TODO: assert index in within text
 		s.span.start = last_pos;
@@ -164,32 +168,41 @@ void WPS8Parser::readStreams(WPXInputStream * input)
 		last_pos += offset;
 	}
 	offset = readU32(input);
-	if (offset) { WPS_DEBUG_MSG(("Offset table is not 0-terminated!\n")); }
+	if (offset)
+	{
+		WPS_DEBUG_MSG(("Offset table is not 0-terminated!\n"));
+	}
 
-	for (unsigned j=0; j < n_streams; j++) {
+	for (unsigned j=0; j < n_streams; j++)
+	{
 		uint16_t len;
 		uint32_t type = 0;
 
 		len = readU16(input);
-		if (len > 10) {
+		if (len > 10)
+		{
 			WPS_DEBUG_MSG(("Rogue strm[%d] def len (%d)\n",j,len));
 			input->seek(len-2,WPX_SEEK_CUR);
 		}
 
-		if (len > 4) {
+		if (len > 4)
+		{
 			readU32(input); // assume == 0x22000000
 			type = readU32(input);
-		} else input->seek(len-2,WPX_SEEK_CUR);
+		}
+		else input->seek(len-2,WPX_SEEK_CUR);
 
 		streams[j].type = type;
 	}
 
 #ifdef DEBUG
 	int bodypos = -1;
-	for (unsigned k=0; k < n_streams; k++) {
+	for (unsigned k=0; k < n_streams; k++)
+	{
 		int z = streams[k].type;
 		if (z == WPS_STREAM_DUMMY) WPS_DEBUG_MSG(("Default strm[%d] type\n",k));
-		if (z == WPS_STREAM_BODY) {
+		if (z == WPS_STREAM_BODY)
+		{
 			if (bodypos < 0) bodypos = k;
 			else WPS_DEBUG_MSG(("Duplicating body (strm[%d])\n",k));
 		}
@@ -212,20 +225,25 @@ void WPS8Parser::readNotes(std::vector<WPSNote> &dest, WPXInputStream *input, co
 
 	WPSNote n;
 
-	do {
+	do
+	{
 		input->seek(pos->second.offset,WPX_SEEK_SET);
 		unk1 = readU32(input);
 		count = readU32(input);
 		input->seek(8, WPX_SEEK_CUR);
 		last = 0;
 
-		for (unsigned i=0; i < count; i++) {
+		for (unsigned i=0; i < count; i++)
+		{
 			boff = readU32(input);
-			if (unk1) {
+			if (unk1)
+			{
 				/* first table with body positions */
 				n.offset = boff; // to characters!
 				if (dest.size() <= i) dest.push_back(n);
-			} else {
+			}
+			else
+			{
 				if (i>0) dest[i-1].contents.limit=boff;
 				n=dest[i];
 				n.contents.start = boff;
@@ -237,10 +255,12 @@ void WPS8Parser::readNotes(std::vector<WPSNote> &dest, WPXInputStream *input, co
 		boff = readU32(input);
 		if (!unk1 && dest.size()>0) dest[dest.size()-1].contents.limit=boff;
 
-		while (++pos != headerIndexTable.end()) {
+		while (++pos != headerIndexTable.end())
+		{
 			if (!strcmp(pos->first.c_str(),key)) break;
 		}
-	} while (pos != headerIndexTable.end());
+	}
+	while (pos != headerIndexTable.end());
 
 	/* some kind of loop needed*/
 }
@@ -259,32 +279,41 @@ void WPS8Parser::appendUTF16LE(WPXInputStream *input, WPS8ContentListener *liste
 	bool fail = false;
 	uint16_t readVal;
 	uint32_t ucs4Character;
-	while (true) {
-		if (input->atEOS()) {
+	while (true)
+	{
+		if (input->atEOS())
+		{
 			fail = true;
 			break;
 		}
 		readVal = readU16(input);
-		if (readVal >= 0xdc00 && readVal < 0xe000) /* low surrogate */ {
-			if (high_surrogate) {
+		if (readVal >= 0xdc00 && readVal < 0xe000) /* low surrogate */
+		{
+			if (high_surrogate)
+			{
 				ucs4Character = SURROGATE_VALUE(high_surrogate, readVal);
 				high_surrogate = 0;
 				break;
 			}
-			else {
+			else
+			{
 				fail = true;
 				break;
 			}
 		}
-		else {
-			if (high_surrogate) {
+		else
+		{
+			if (high_surrogate)
+			{
 				fail = true;
 				break;
 			}
-			if (readVal >= 0xd800 && readVal < 0xdc00) /* high surrogate */ {
+			if (readVal >= 0xd800 && readVal < 0xdc00) /* high surrogate */
+			{
 				high_surrogate = readVal;
 			}
-			else {
+			else
+			{
 				ucs4Character = readVal;
 				break;
 			}
@@ -295,28 +324,41 @@ void WPS8Parser::appendUTF16LE(WPXInputStream *input, WPS8ContentListener *liste
 
 	uint8_t first;
 	int len;
-	if (ucs4Character < 0x80) {
-		first = 0; len = 1;
+	if (ucs4Character < 0x80)
+	{
+		first = 0;
+		len = 1;
 	}
-	else if (ucs4Character < 0x800) {
-		first = 0xc0; len = 2;
+	else if (ucs4Character < 0x800)
+	{
+		first = 0xc0;
+		len = 2;
 	}
-	else if (ucs4Character < 0x10000) {
-		first = 0xe0; len = 3;
+	else if (ucs4Character < 0x10000)
+	{
+		first = 0xe0;
+		len = 3;
 	}
-	else if (ucs4Character < 0x200000) {
-		first = 0xf0; len = 4;
+	else if (ucs4Character < 0x200000)
+	{
+		first = 0xf0;
+		len = 4;
 	}
-	else if (ucs4Character < 0x4000000) {
-		first = 0xf8; len = 5;
+	else if (ucs4Character < 0x4000000)
+	{
+		first = 0xf8;
+		len = 5;
 	}
-	else {
-		first = 0xfc; len = 6;
+	else
+	{
+		first = 0xfc;
+		len = 6;
 	}
 
 	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
 	int i;
-	for (i = len - 1; i > 0; --i) {
+	for (i = len - 1; i > 0; --i)
+	{
 		outbuf[i] = (ucs4Character & 0x3f) | 0x80;
 		ucs4Character >>= 6;
 	}
@@ -370,7 +412,8 @@ void WPS8Parser::readText(WPXInputStream * /* input */, WPS8ContentListener * /*
 			propertyChange((*FODs_iter).fprop.rgchProp, listener);
 
 		/* loop until character format not exhausted */
-		do {
+		do
+		{
 			/* paragraph format may change here*/
 
 			if ((*PFOD_iter).fprop.cch > 0)
@@ -384,79 +427,81 @@ void WPS8Parser::readText(WPXInputStream * /* input */, WPS8ContentListener * /*
 
 				if (0x00 == readVal)
 					break;
-					
+
 				switch (readVal)
 				{
-					case 0x0A:
-						break;
+				case 0x0A:
+					break;
 
-					case 0x0C:
-						//fixme: add a page to list of pages
-						//listener->insertBreak(WPS_PAGE_BREAK);
-						break;
+				case 0x0C:
+					//fixme: add a page to list of pages
+					//listener->insertBreak(WPS_PAGE_BREAK);
+					break;
 
-					case 0x0D:
-						listener->insertEOL();
-						break;
+				case 0x0D:
+					listener->insertEOL();
+					break;
 
-					case 0x0E:
-						listener->insertBreak(WPS_COLUMN_BREAK);
-						break;
+				case 0x0E:
+					listener->insertBreak(WPS_COLUMN_BREAK);
+					break;
 
-					case 0x1E:
-						//fixme: non-breaking hyphen
-						break;
+				case 0x1E:
+					//fixme: non-breaking hyphen
+					break;
 
-					case 0x1F:
-						//fixme: optional breaking hyphen
-						break;
+				case 0x1F:
+					//fixme: optional breaking hyphen
+					break;
 
-					case 0x23:
-						if (uint16_t spec = listener->getSpec()) {
+				case 0x23:
+					if (uint16_t spec = listener->getSpec())
+					{
 						//	TODO: fields, pictures, etc.
-							switch (spec) {
-								case 3:
-									listener->openFootnote();
-									propertyChange("",listener);
-									listener->insertCharacter('F');
-									listener->insertCharacter('!');
-									listener->closeFootnote();
-									break;
-								case 4:
-									listener->openEndnote();
-									propertyChange("",listener);
-									listener->insertCharacter(0xE2/*0x263B*/);
-									listener->insertCharacter(0x98);
-									listener->insertCharacter(0xBA);
-									listener->closeEndnote();
-									break;
-								case 5:
-									/*switch (<field code>) {
-									case -1:
-										listener->insertField(WPS_FIELD_PAGE);
-										break;
-									default:*/
-										listener->insertField();
-									/*}*/
-									break;
-								default:
-									listener->insertCharacter(0xE2/*0x263B*/);
-									listener->insertCharacter(0x98);
-									listener->insertCharacter(0xBB);
-							}
-							// listener->insertSpecial();
+						switch (spec)
+						{
+						case 3:
+							listener->openFootnote();
+							propertyChange("",listener);
+							listener->insertCharacter('F');
+							listener->insertCharacter('!');
+							listener->closeFootnote();
 							break;
+						case 4:
+							listener->openEndnote();
+							propertyChange("",listener);
+							listener->insertCharacter(0xE2/*0x263B*/);
+							listener->insertCharacter(0x98);
+							listener->insertCharacter(0xBA);
+							listener->closeEndnote();
+							break;
+						case 5:
+							/*switch (<field code>) {
+							case -1:
+								listener->insertField(WPS_FIELD_PAGE);
+								break;
+							default:*/
+							listener->insertField();
+							/*}*/
+							break;
+						default:
+							listener->insertCharacter(0xE2/*0x263B*/);
+							listener->insertCharacter(0x98);
+							listener->insertCharacter(0xBB);
 						}
-						// ! fallback to default
-
-					case 0xfffc:
-						// ! fallback to default
-
-					default:
-						// fixme: convert UTF-16LE to UTF-8
-						input->seek(-2, WPX_SEEK_CUR);
-						this->appendUTF16LE(input, listener);
+						// listener->insertSpecial();
 						break;
+					}
+					// ! fallback to default
+
+				case 0xfffc:
+					// ! fallback to default
+
+				default:
+					// fixme: convert UTF-16LE to UTF-8
+					input->seek(-2, WPX_SEEK_CUR);
+					this->appendUTF16LE(input, listener);
+					break;
 				}
 			}
 
@@ -465,15 +510,18 @@ void WPS8Parser::readText(WPXInputStream * /* input */, WPS8ContentListener * /*
 			p_len -= len;
 			last_fcLim += len;
 
-			if (p_len == 0) {
+			if (p_len == 0)
+			{
 				PFOD_iter++;
-				if (c_len > 0) { /* otherwise will be set by outside loop */
+				if (c_len > 0)   /* otherwise will be set by outside loop */
+				{
 					p_len = (*PFOD_iter).fcLim - last_fcLim;
 					len = (c_len > p_len)? p_len : c_len;
 					len /= 2;
 				}
 			}
-		} while (c_len > 0);
+		}
+		while (c_len > 0);
 
 	}
 #endif
@@ -485,8 +533,8 @@ void WPS8Parser::readText(WPXInputStream * /* input */, WPS8ContentListener * /*
  *
  */
 
-void WPS8Parser::readTextRange(WPXInputStream * input, WPS8ContentListener *listener,
-							   uint32_t startpos, uint32_t endpos, uint16_t stream)
+void WPS8Parser::readTextRange(WPXInputStream *input, WPS8ContentListener *listener,
+                               uint32_t startpos, uint32_t endpos, uint16_t stream)
 {
 	WPS_DEBUG_MSG(("WPS8Parser::readTextRange(stream=%d)\n",stream));
 
@@ -499,7 +547,8 @@ void WPS8Parser::readTextRange(WPXInputStream * input, WPS8ContentListener *list
 	PFOD_iter = PAFODs.begin();
 	FODs_iter = CHFODs.begin();
 
-	while (last_fcLim < start_fcLim) {
+	while (last_fcLim < start_fcLim)
+	{
 		uint32_t c_len = (*FODs_iter).fcLim - last_fcLim;
 		uint32_t p_len = (*PFOD_iter).fcLim - last_fcLim;
 		uint32_t len = (c_len > p_len)? p_len : c_len;
@@ -542,7 +591,8 @@ void WPS8Parser::readTextRange(WPXInputStream * input, WPS8ContentListener *list
 			propertyChange((*FODs_iter).fprop.rgchProp, listener);
 
 		/* loop until character format not exhausted */
-		do {
+		do
+		{
 			/* paragraph format may change here*/
 
 			if ((*PFOD_iter).fprop.cch > 0)
@@ -556,90 +606,92 @@ void WPS8Parser::readTextRange(WPXInputStream * input, WPS8ContentListener *list
 
 				if (0x00 == readVal)
 					break;
-					
+
 				switch (readVal)
 				{
-					case 0x0A:
-						break;
+				case 0x0A:
+					break;
 
-					case 0x0C:
-						//fixme: add a page to list of pages
-						//listener->insertBreak(WPS_PAGE_BREAK);
-						break;
+				case 0x0C:
+					//fixme: add a page to list of pages
+					//listener->insertBreak(WPS_PAGE_BREAK);
+					break;
 
-					case 0x0D:
-						listener->insertEOL();
-						break;
+				case 0x0D:
+					listener->insertEOL();
+					break;
 
-					case 0x0E:
-						listener->insertBreak(WPS_COLUMN_BREAK);
-						break;
+				case 0x0E:
+					listener->insertBreak(WPS_COLUMN_BREAK);
+					break;
 
-					case 0x1E:
-						//fixme: non-breaking hyphen
-						break;
+				case 0x1E:
+					//fixme: non-breaking hyphen
+					break;
 
-					case 0x1F:
-						//fixme: optional breaking hyphen
-						break;
+				case 0x1F:
+					//fixme: optional breaking hyphen
+					break;
 
-					case 0x23:
-						if (uint16_t spec = listener->getSpec()) {
+				case 0x23:
+					if (uint16_t spec = listener->getSpec())
+					{
 						//	TODO: fields, pictures, etc.
-							switch (spec) {
-								case 3:
-									if (stream != WPS_STREAM_BODY) break;
-								  /* REMOVED in this version
-								     because footnote/endnote tends to make
-								     the resulting file inconsistent */
-									//listener->openFootnote();
-									listener->insertCharacter('-');
-									listener->insertCharacter('-');
-									readNote(input,listener,false);
-									listener->insertCharacter('-');
-									listener->insertCharacter('-');
-									//listener->closeEndnote();
-									break;
-								case 4:
-									if (stream != WPS_STREAM_BODY) break;
-								  /* REMOVED in this version
-								     because footnote/endnote tends to make
-								     the resulting file inconsistent */
-									//listener->openEndnote();
-									listener->insertCharacter('-');
-									listener->insertCharacter('-');
-									readNote(input,listener,true);
-									listener->insertCharacter('-');
-									listener->insertCharacter('-');
-									//listener->closeEndnote();
-									break;
-								case 5:
-									listener->insertField();
-									break;
-								default:
-									listener->insertCharacter(0xE2/*0x263B*/);
-									listener->insertCharacter(0x98);
-									listener->insertCharacter(0xBB);
-							}
-							// listener->insertSpecial();
-							break;
-						}
-						// ! fallback to default
-
-					case 0xfffc:
-						// ! fallback to default
-
-					default:
-						if (readVal < 28 && readVal != 9)
+						switch (spec)
 						{
-							// do not add unprintable control which can create invalid odt file
-					      		WPS_DEBUG_MSG(("WPS8Parser::readTextRange(find unprintable character: ignored)\n"));
+						case 3:
+							if (stream != WPS_STREAM_BODY) break;
+							/* REMOVED in this version
+							   because footnote/endnote tends to make
+							   the resulting file inconsistent */
+							//listener->openFootnote();
+							listener->insertCharacter('-');
+							listener->insertCharacter('-');
+							readNote(input,listener,false);
+							listener->insertCharacter('-');
+							listener->insertCharacter('-');
+							//listener->closeEndnote();
 							break;
+						case 4:
+							if (stream != WPS_STREAM_BODY) break;
+							/* REMOVED in this version
+							   because footnote/endnote tends to make
+							   the resulting file inconsistent */
+							//listener->openEndnote();
+							listener->insertCharacter('-');
+							listener->insertCharacter('-');
+							readNote(input,listener,true);
+							listener->insertCharacter('-');
+							listener->insertCharacter('-');
+							//listener->closeEndnote();
+							break;
+						case 5:
+							listener->insertField();
+							break;
+						default:
+							listener->insertCharacter(0xE2/*0x263B*/);
+							listener->insertCharacter(0x98);
+							listener->insertCharacter(0xBB);
 						}
-						// fixme: convert UTF-16LE to UTF-8
-						input->seek(-2, WPX_SEEK_CUR);
-						this->appendUTF16LE(input, listener);
+						// listener->insertSpecial();
 						break;
+					}
+					// ! fallback to default
+
+				case 0xfffc:
+					// ! fallback to default
+
+				default:
+					if (readVal < 28 && readVal != 9)
+					{
+						// do not add unprintable control which can create invalid odt file
+						WPS_DEBUG_MSG(("WPS8Parser::readTextRange(find unprintable character: ignored)\n"));
+						break;
+					}
+					// fixme: convert UTF-16LE to UTF-8
+					input->seek(-2, WPX_SEEK_CUR);
+					this->appendUTF16LE(input, listener);
+					break;
 				}
 			}
 
@@ -648,38 +700,48 @@ void WPS8Parser::readTextRange(WPXInputStream * input, WPS8ContentListener *list
 			p_len -= len;
 			last_fcLim += len;
 
-			if (p_len == 0) {
+			if (p_len == 0)
+			{
 				PFOD_iter++;
-				if (c_len > 0) { /* otherwise will be set by outside loop */
+				if (c_len > 0)   /* otherwise will be set by outside loop */
+				{
 					p_len = (*PFOD_iter).fcLim - last_fcLim;
 					len = (c_len > p_len)? p_len : c_len;
 					len /= 2;
 				}
 			}
-		} while (c_len > 0);
+		}
+		while (c_len > 0);
 
 	}
 }
 
-void WPS8Parser::readNote(WPXInputStream * input, WPS8ContentListener *listener, bool is_endnote)
+void WPS8Parser::readNote(WPXInputStream *input, WPS8ContentListener *listener, bool is_endnote)
 {
 	WPSNote note;
 	WPSStream stream;
 	uint32_t  streamkey = WPS_STREAM_FOOTNOTES;
 
-	if (!is_endnote) {
-		if (fn_iter != footnotes.end()) {
+	if (!is_endnote)
+	{
+		if (fn_iter != footnotes.end())
+		{
 			note = *fn_iter++;
 		}
-	} else {
-		if (en_iter != endnotes.end()) {
+	}
+	else
+	{
+		if (en_iter != endnotes.end())
+		{
 			note = *en_iter++;
 		}
 		streamkey = WPS_STREAM_ENDNOTES;
 	}
 
-	for (unsigned i=0; i<streams.size(); i++) {
-		if (streams[i].type == streamkey) {
+	for (unsigned i=0; i<streams.size(); i++)
+	{
+		if (streams[i].type == streamkey)
+		{
 			stream = streams[i];
 			break;
 		}
@@ -690,14 +752,15 @@ void WPS8Parser::readNote(WPXInputStream * input, WPS8ContentListener *listener,
 	uint32_t pos = input->tell();
 	uint32_t endPos = stream.span.start+note.contents.limit;
 	// try to remove the end of lines which can appear after the footnote
-	while (endPos-1 > stream.span.start+note.contents.start) {
-	  input->seek(0x200+2*(endPos-1),WPX_SEEK_SET);
-	  uint16_t readVal =readU16(input); 
-	  if (readVal != 0xd) break;
-	  endPos -= 1;
+	while (endPos-1 > stream.span.start+note.contents.start)
+	{
+		input->seek(0x200+2*(endPos-1),WPX_SEEK_SET);
+		uint16_t readVal =readU16(input);
+		if (readVal != 0xd) break;
+		endPos -= 1;
 	}
 	readTextRange(input,listener,stream.span.start+note.contents.start,
-		endPos,streamkey);
+	              endPos,streamkey);
 	input->seek(pos,WPX_SEEK_SET);
 }
 
@@ -712,7 +775,7 @@ void WPS8Parser::readNote(WPXInputStream * input, WPS8ContentListener *listener,
 
 //fixme: this readFODPage is mostly the same as in WPS4
 
-bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, uint16_t page_size)
+bool WPS8Parser::readFODPage(WPXInputStream *input, std::vector<FOD> * FODs, uint16_t page_size)
 {
 	uint32_t page_offset = input->tell();
 	uint16_t cfod = readU16(input); /* number of FODs on this page */
@@ -729,33 +792,33 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 	int first_fod = FODs->size();
 
 	/* Read array of fcLim of FODs.  The fcLim refers to the offset of the
-           last character covered by the formatting. */
+	       last character covered by the formatting. */
 	for (int i = 0; i < cfod; i++)
 	{
 		FOD fod;
 		fod.fcLim = readU32(input);
-//		WPS_DEBUG_MSG(("Works: info: fcLim = %i (0x%X)\n", fod.fcLim, fod.fcLim));			
-		
+//		WPS_DEBUG_MSG(("Works: info: fcLim = %i (0x%X)\n", fod.fcLim, fod.fcLim));
+
 		/* check that fcLim is not too large */
 		if (fod.fcLim > offset_eot)
 		{
 			WPS_DEBUG_MSG(("Works: error: length of 'text selection' %i > "
-				"total text length %i\n", fod.fcLim, offset_eot));					
-			throw ParseException();	
+			               "total text length %i\n", fod.fcLim, offset_eot));
+			throw ParseException();
 		}
 
 		/* check that fcLim is monotonic */
 		if (FODs->size() > 0 && FODs->back().fcLim > fod.fcLim)
 		{
 			WPS_DEBUG_MSG(("Works: error: character position list must "
-				"be monotonic, but found %i, %i\n", FODs->back().fcLim, fod.fcLim));
+			               "be monotonic, but found %i, %i\n", FODs->back().fcLim, fod.fcLim));
 			throw ParseException();
 		}
 		FODs->push_back(fod);
-	} 	
+	}
 
-        /* Read array of bfprop of FODs.  The bfprop is the offset where
-           the FPROP is located. */
+	/* Read array of bfprop of FODs.  The bfprop is the offset where
+	   the FPROP is located. */
 	std::vector<FOD>::iterator FODs_iter;
 	for (FODs_iter = FODs->begin() + first_fod; FODs_iter!= FODs->end(); FODs_iter++)
 	{
@@ -766,10 +829,10 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 
 		/* check size of bfprop  */
 		if (((*FODs_iter).bfprop < (8 + (6*cfod)) && (*FODs_iter).bfprop > 0) ||
-			(*FODs_iter).bfprop  > (page_size - 1))
+		        (*FODs_iter).bfprop  > (page_size - 1))
 		{
 			WPS_DEBUG_MSG(("Works: error: size of bfprop is bad "
-				"%i (0x%X)\n", (*FODs_iter).bfprop, (*FODs_iter).bfprop));
+			               "%i (0x%X)\n", (*FODs_iter).bfprop, (*FODs_iter).bfprop));
 			throw ParseException();
 		}
 
@@ -778,7 +841,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 //                       (*FODs_iter).bfprop, (*FODs_iter).bfprop_abs));
 	}
 
-	
+
 	/* Read array of FPROPs.  These contain the actual formatting
 	   codes (bold, alignment, etc.) */
 	for (FODs_iter = FODs->begin()+first_fod; FODs_iter!= FODs->end(); FODs_iter++)
@@ -811,13 +874,13 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
 		for (int i = 0; (*FODs_iter).fprop.cch > i; i++)
 			(*FODs_iter).fprop.rgchProp.append(1, (uint8_t)readU8(input));
 	}
-	
+
 	/* go to end of page */
 	input->seek(page_offset	+ page_size, WPX_SEEK_SET);
 
 	return (offset_eot > FODs->back().fcLim);
 
-	
+
 }
 
 /**
@@ -828,7 +891,7 @@ bool WPS8Parser::readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, ui
  *
  */
 
-void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
+void WPS8Parser::parseHeaderIndexEntry(WPXInputStream *input)
 {
 	WPS_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos 0x%lX\n", input->tell()));
 
@@ -836,27 +899,27 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 	if (0x18 != cch)
 	{
 		WPS_DEBUG_MSG(("Works8: error: parseHeaderIndexEntry cch = %i (0x%X)\n", cch, cch));
-               /* Osnola: normally, this size must be >= 0x18
-                  In my code, I throw an exception when this size is less than 10
-                  to try to continue the parsing ( but I do not accept this entry)
-                */
-               if (cch < 10)
-                 throw ParseException();
+		/* Osnola: normally, this size must be >= 0x18
+		   In my code, I throw an exception when this size is less than 10
+		   to try to continue the parsing ( but I do not accept this entry)
+		 */
+		if (cch < 10)
+			throw ParseException();
 	}
 
 	std::string name;
 
 	// sanity check
-    int i;
+	int i;
 	for (i =0; i < 4; i++)
 	{
 		name.append(1, readU8(input));
 
 		if ((uint8_t)name[i] != 0 && (uint8_t)name[i] != 0x20 &&
-			(41 > (uint8_t)name[i] || (uint8_t)name[i] > 90))
+		        (41 > (uint8_t)name[i] || (uint8_t)name[i] > 90))
 		{
-			WPS_DEBUG_MSG(("Works8: error: bad character=%u (0x%02x) in name in header index\n", 
-				(uint8_t)name[i], (uint8_t)name[i]));
+			WPS_DEBUG_MSG(("Works8: error: bad character=%u (0x%02x) in name in header index\n",
+			               (uint8_t)name[i], (uint8_t)name[i]));
 			throw ParseException();
 		}
 	}
@@ -873,8 +936,8 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 
 	if (name != name2)
 	{
-		WPS_DEBUG_MSG(("Works8: error: name != name2, %s != %s\n", 
-			name.c_str(), name2.c_str()));
+		WPS_DEBUG_MSG(("Works8: error: name != name2, %s != %s\n",
+		               name.c_str(), name2.c_str()));
 		// fixme: what to do with this?
 //		throw ParseException();
 	}
@@ -883,26 +946,26 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStream * input)
 	hie.offset = readU32(input);
 	hie.length = readU32(input);
 
-	WPS_DEBUG_MSG(("Works8: debug: header index entry %s with offset=0x%04X, length=0x%04X\n", 
-		name.c_str(), hie.offset, hie.length));
+	WPS_DEBUG_MSG(("Works8: debug: header index entry %s with offset=0x%04X, length=0x%04X\n",
+	               name.c_str(), hie.offset, hie.length));
 
 	headerIndexTable.insert(std::multimap<std::string, HeaderIndexEntries>::value_type(name, hie));
-       // OSNOLA: cch is the length of the entry, so we must advance by cch-0x18
-       input->seek(input->tell() + cch - 0x18, WPX_SEEK_SET);
+	// OSNOLA: cch is the length of the entry, so we must advance by cch-0x18
+	input->seek(input->tell() + cch - 0x18, WPX_SEEK_SET);
 }
 
 /**
  * In the header, parse the index to the different sections of
  * the CONTENTS stream.
- * 
+ *
  */
-void WPS8Parser::parseHeaderIndex(WPXInputStream * input)
+void WPS8Parser::parseHeaderIndex(WPXInputStream *input)
 {
-	input->seek(0x0C, WPX_SEEK_SET);		
+	input->seek(0x0C, WPX_SEEK_SET);
 	uint16_t n_entries = readU16(input);
 	// fixme: sanity check n_entries
 
-	input->seek(0x18, WPX_SEEK_SET);		
+	input->seek(0x18, WPX_SEEK_SET);
 	do
 	{
 		uint16_t unknown1 = readU16(input);
@@ -919,7 +982,7 @@ void WPS8Parser::parseHeaderIndex(WPXInputStream * input)
 		if (n_entries_local > 0x20)
 		{
 			WPS_DEBUG_MSG(("Works8: error: n_entries_local=%i\n", n_entries_local));
-			throw ParseException();	
+			throw ParseException();
 		}
 
 		uint32_t next_index_table = readU32(input);
@@ -929,8 +992,9 @@ void WPS8Parser::parseHeaderIndex(WPXInputStream * input)
 			parseHeaderIndexEntry(input);
 			n_entries--;
 			n_entries_local--;
-		} while (n_entries > 0 && n_entries_local);
-		
+		}
+		while (n_entries > 0 && n_entries_local);
+
 		if (0xFFFFFFFF == next_index_table && n_entries > 0)
 		{
 			WPS_DEBUG_MSG(("Works8: error: expected more header index entries\n"));
@@ -942,7 +1006,8 @@ void WPS8Parser::parseHeaderIndex(WPXInputStream * input)
 
 		WPS_DEBUG_MSG(("Works8: debug: seeking to position 0x%X\n", next_index_table));
 		input->seek(next_index_table, WPX_SEEK_SET);
-	} while (n_entries > 0);
+	}
+	while (n_entries > 0);
 }
 
 /**
@@ -961,7 +1026,7 @@ void WPS8Parser::parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream * /
 
 void WPS8Parser::parse(WPXInputStream *input, WPS8ContentListener *listener)
 {
-	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));	
+	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));
 
 	listener->startDocument();
 
@@ -972,8 +1037,8 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8ContentListener *listener)
 	for (pos = headerIndexTable.begin(); pos != headerIndexTable.end(); ++pos)
 	{
 		WPS_DEBUG_MSG(("Works: debug: headerIndexTable: %s, offset=0x%X, length=0x%X, end=0x%X\n",
-			pos->first.c_str(), pos->second.offset, pos->second.length, pos->second.offset +
-			pos->second.length));
+		               pos->first.c_str(), pos->second.offset, pos->second.length, pos->second.offset +
+		               pos->second.length));
 	}
 
 	/* What is the total length of the text? */
@@ -992,13 +1057,13 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8ContentListener *listener)
 			continue;
 
 		WPS_DEBUG_MSG(("Works: debug: FDPC (%s) offset=0x%X, length=0x%X\n",
-				pos->first.c_str(), pos->second.offset, pos->second.length));
+		               pos->first.c_str(), pos->second.offset, pos->second.length));
 
 		input->seek(pos->second.offset, WPX_SEEK_SET);
 		if (pos->second.length != 512)
 		{
-			WPS_DEBUG_MSG(("Works: warning: FDPC offset=0x%X, length=0x%X\n", 
-				pos->second.offset, pos->second.length));
+			WPS_DEBUG_MSG(("Works: warning: FDPC offset=0x%X, length=0x%X\n",
+			               pos->second.offset, pos->second.length));
 		}
 		readFODPage(input, &CHFODs, pos->second.length);
 	}
@@ -1010,13 +1075,13 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8ContentListener *listener)
 			continue;
 
 		WPS_DEBUG_MSG(("Works: debug: FDPP (%s) offset=0x%X, length=0x%X\n",
-				pos->first.c_str(), pos->second.offset, pos->second.length));
+		               pos->first.c_str(), pos->second.offset, pos->second.length));
 
 		input->seek(pos->second.offset, WPX_SEEK_SET);
 		if (pos->second.length != 512)
 		{
-			WPS_DEBUG_MSG(("Works: warning: FDPP offset=0x%X, length=0x%X\n", 
-				pos->second.offset, pos->second.length));
+			WPS_DEBUG_MSG(("Works: warning: FDPP offset=0x%X, length=0x%X\n",
+			               pos->second.offset, pos->second.length));
 		}
 		readFODPage(input, &PAFODs, pos->second.length);
 	}
@@ -1036,13 +1101,15 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8ContentListener *listener)
 	/* process text file using previously-read character formatting */
 	uint32_t doc_start = 0, doc_end = (offset_eot - 0x200) >> 1; // character offsets
 	uint32_t doc_start2 = doc_start, doc_end2 = doc_end;
-	for (unsigned i=0; i<streams.size(); i++) {
+	for (unsigned i=0; i<streams.size(); i++)
+	{
 		/* skip to extract full document text for debug purposes */
 		/*if (streams[i].type == WPS_STREAM_BODY) {
 			readTextRange(input,listener,streams[i].span.start,streams[i].span.limit,
 				WPS_STREAM_BODY);
 		} else*/ if (streams[i].type == WPS_STREAM_FOOTNOTES ||
-					streams[i].type == WPS_STREAM_ENDNOTES) {
+		             streams[i].type == WPS_STREAM_ENDNOTES)
+		{
 			if (streams[i].span.start < doc_end) doc_end = streams[i].span.start;
 			if (streams[i].span.limit > doc_start2) doc_start2 = streams[i].span.limit;
 		}
@@ -1050,11 +1117,11 @@ void WPS8Parser::parse(WPXInputStream *input, WPS8ContentListener *listener)
 	if (doc_end > doc_start2) doc_start2 = doc_end;
 
 	readTextRange(input,listener,doc_start,doc_end,WPS_STREAM_BODY);
-	if (doc_end2 > doc_start2) 
+	if (doc_end2 > doc_start2)
 		readTextRange(input,listener,doc_start2,doc_end2,WPS_STREAM_BODY);
 	//readText(input, listener);
 
-	listener->endDocument();		
+	listener->endDocument();
 }
 
 enum { WPS8_ATTRIBUTE_BOLD=0, WPS8_ATTRIBUTE_ITALICS, WPS8_ATTRIBUTE_UNDERLINE, WPS8_ATTRIBUTE_STRIKEOUT, WPS8_ATTRIBUTE_SUBSCRIPT, WPS8_ATTRIBUTE_SUPERSCRIPT,  WPS8_ATTRIBUTE_EMBOSS, WPS8_ATTRIBUTE_ENGRAVE, WPS8_ATTRIBUTE_OUTLINE, WPS8_ATTRIBUTE_SHADOW, WPS8_ATTRIBUTE_SMALL_CAPS, WPS8_ATTRIBUTE_ALL_CAPS };
@@ -1067,7 +1134,7 @@ void WPS8Parser::propertyChangeTextAttribute(const uint32_t newTextAttributeBits
 
 /**
  * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
- * @param listener: 
+ * @param listener:
  *
  */
 void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits, WPS8ContentListener *listener)
@@ -1112,7 +1179,8 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8ContentListener *liste
 
 	/* check */
 	/* sometimes, the rgchProp is blank */
-	if (0 == rgchProp.length()) {
+	if (0 == rgchProp.length())
+	{
 		return;
 	}
 	/* other than blank, the shortest should be 9 bytes */
@@ -1126,9 +1194,9 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8ContentListener *liste
 		WPS_DEBUG_MSG(("Works8: error: rgchProp.length() is even\n"));
 		throw ParseException();
 	}
-        if (0 != rgchProp[0] || 0 != rgchProp[1] || 0 != rgchProp[2])
+	if (0 != rgchProp[0] || 0 != rgchProp[1] || 0 != rgchProp[2])
 	{
-		WPS_DEBUG_MSG(("Works8: error: rgchProp does not begin 0x000000\n"));		
+		WPS_DEBUG_MSG(("Works8: error: rgchProp does not begin 0x000000\n"));
 		throw ParseException();
 	}
 
@@ -1140,155 +1208,157 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8ContentListener *liste
 		{
 			switch(rgchProp[x])
 			{
-				case 0x02:
-					textAttributeBits |= WPS_BOLD_BIT;
-					break;
-				case 0x03:
-					textAttributeBits |= WPS_ITALICS_BIT;
-					break;
-				case 0x04:
-					textAttributeBits |= WPS_OUTLINE_BIT;
-					break;
-				case 0x05:
-					textAttributeBits |= WPS_SHADOW_BIT;
-					break;
-				case 0x10:
-					textAttributeBits |= WPS_STRIKEOUT_BIT;
-					break;
-				case 0x13:
-					textAttributeBits |= WPS_SMALL_CAPS_BIT;
-					break;
-				case 0x15:
-					//fixme: unknown
-					break;
-				case 0x14:
-					textAttributeBits |= WPS_ALL_CAPS_BIT;
-					break;
-				case 0x16:
-					textAttributeBits |= WPS_EMBOSS_BIT;
-					break;
-				case 0x17:
-					textAttributeBits |= WPS_ENGRAVE_BIT;
-					break;
-				default:
-					WPS_DEBUG_MSG(("Works8: error: unknown 0x0A format code 0x%04X\n", rgchProp[x]));
-                                       // OSNOLA: ok to continue, this is a bool field
-                                       // ( without any data )
-                                       //throw ParseException();
+			case 0x02:
+				textAttributeBits |= WPS_BOLD_BIT;
+				break;
+			case 0x03:
+				textAttributeBits |= WPS_ITALICS_BIT;
+				break;
+			case 0x04:
+				textAttributeBits |= WPS_OUTLINE_BIT;
+				break;
+			case 0x05:
+				textAttributeBits |= WPS_SHADOW_BIT;
+				break;
+			case 0x10:
+				textAttributeBits |= WPS_STRIKEOUT_BIT;
+				break;
+			case 0x13:
+				textAttributeBits |= WPS_SMALL_CAPS_BIT;
+				break;
+			case 0x15:
+				//fixme: unknown
+				break;
+			case 0x14:
+				textAttributeBits |= WPS_ALL_CAPS_BIT;
+				break;
+			case 0x16:
+				textAttributeBits |= WPS_EMBOSS_BIT;
+				break;
+			case 0x17:
+				textAttributeBits |= WPS_ENGRAVE_BIT;
+				break;
+			default:
+				WPS_DEBUG_MSG(("Works8: error: unknown 0x0A format code 0x%04X\n", rgchProp[x]));
+				// OSNOLA: ok to continue, this is a bool field
+				// ( without any data )
+				//throw ParseException();
 			}
 			continue;
 		}
 
 		uint16_t format_code = rgchProp[x] | (rgchProp[x+1] << 8);
-		
+
 		switch (format_code)
 		{
-			case 0x0000:
-				break;
+		case 0x0000:
+			break;
 
-			case 0x1200:
-				{
-					// special code
-					uint16_t spec = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str());
-					listener->setSpec(spec);
-					x += 2;
-				}
-				break;
+		case 0x1200:
+		{
+			// special code
+			uint16_t spec = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str());
+			listener->setSpec(spec);
+			x += 2;
+		}
+		break;
 
-			case 0x120F:
-				if (1 == rgchProp[x+2])
-					textAttributeBits |= WPS_SUPERSCRIPT_BIT;
-				if (2 == rgchProp[x+2])
-					textAttributeBits |= WPS_SUBSCRIPT_BIT;
-				x += 2;
-				break;
+		case 0x120F:
+			if (1 == rgchProp[x+2])
+				textAttributeBits |= WPS_SUPERSCRIPT_BIT;
+			if (2 == rgchProp[x+2])
+				textAttributeBits |= WPS_SUBSCRIPT_BIT;
+			x += 2;
+			break;
 
-			case 0x121E:
-				// fixme: there are various styles of underline
-				textAttributeBits |= WPS_UNDERLINE_BIT;
-				x += 2;
-				break;
+		case 0x121E:
+			// fixme: there are various styles of underline
+			textAttributeBits |= WPS_UNDERLINE_BIT;
+			x += 2;
+			break;
 
-			case 0x220C:
+		case 0x220C:
+		{
+			/* font size */
+			uint32_t font_size = WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
+			listener->setFontSize(font_size/12700);
+			x += 4;
+			break;
+		}
+
+		case 0x2218:
+			//fixme: unknown
+			x += 4;
+			break;
+
+		case 0x2212:
+			listener->setLCID(WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str()));
+			x += 4;
+			break;
+
+		case 0x2222:
+			// field.
+			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
+			switch (iv)
 			{
-				/* font size */
-				uint32_t font_size = WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-				listener->setFontSize(font_size/12700);
-				x += 4;
+			case -1:
+				listener->setFieldType(WPS_FIELD_PAGE);
+				break;
+			case -4:
+				listener->setFieldType(WPS_FIELD_DATE);
+				break;
+			case -5:
+				listener->setFieldType(WPS_FIELD_TIME);
 				break;
 			}
+			x += 4;
+			break;
 
-			case 0x2218:
-				//fixme: unknown
-				x += 4;
-				break;
+		case 0x2223:
+			//fixme: date and time field?
+			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
+			x += 4;
+			break;
 
-			case 0x2212:
-				listener->setLCID(WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str()));
-				x += 4;
-				break;
+		case 0x222E:
+			listener->setColor((((unsigned char)rgchProp[x+2]<<16)+((unsigned char)rgchProp[x+3]<<8)+
+			                    (unsigned char)rgchProp[x+4])&0xFFFFFF);
+			x += 4;
+			break;
 
-			case 0x2222:
-				// field.
-				iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-				switch (iv) {
-					case -1:
-						listener->setFieldType(WPS_FIELD_PAGE);
-						break;
-					case -4:
-						listener->setFieldType(WPS_FIELD_DATE);
-						break;
-					case -5:
-						listener->setFieldType(WPS_FIELD_TIME);
-						break;
-				}
-				x += 4;
-				break;
-
-			case 0x2223:
-				//fixme: date and time field?
-				iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-				x += 4;
-				break;
-
-			case 0x222E:
-				listener->setColor((((unsigned char)rgchProp[x+2]<<16)+((unsigned char)rgchProp[x+3]<<8)+
-					(unsigned char)rgchProp[x+4])&0xFFFFFF);
-				x += 4;
-				break;
-	
-			case 0x8A24:
+		case 0x8A24:
+		{
+			/* font change */
+			uint8_t font_n = (uint8_t)rgchProp[x+8];
+			if (font_n > fonts.size())
 			{
-				/* font change */
-				uint8_t font_n = (uint8_t)rgchProp[x+8];
-				if (font_n > fonts.size())
-				{
-					WPS_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n", 
-						font_n,font_n ));			
-					throw ParseException();
-				}
-				else
-					listener->setTextFont(fonts[font_n].c_str());
+				WPS_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n",
+				               font_n,font_n ));
+				throw ParseException();
+			}
+			else
+				listener->setTextFont(fonts[font_n].c_str());
 
-				//x++;
+			//x++;
+			x += rgchProp[x+2];
+		}
+		break;
+		default:
+			WPS_DEBUG_MSG(("Works8: error: unknown format code 0x%04X\n", format_code));
+			switch ((format_code>>12)&0xF)
+			{
+			case 1:
+				x+=2;
+				break;
+			case 2:
+				x+=4;
+				break;
+			case 8:
 				x += rgchProp[x+2];
-			}
-				break;		
-			default:
-				WPS_DEBUG_MSG(("Works8: error: unknown format code 0x%04X\n", format_code));
-				switch ((format_code>>12)&0xF) {
-					case 1:
-						x+=2;
-						break;
-					case 2:
-						x+=4;
-						break;
-					case 8:
-						x += rgchProp[x+2];
-						break;
-				}
-				//throw ParseException();
 				break;
+			}
+			//throw ParseException();
+			break;
 
 
 		}
@@ -1299,9 +1369,10 @@ void WPS8Parser::propertyChange(std::string rgchProp, WPS8ContentListener *liste
 
 void WPS8Parser::propertyChangePara(std::string rgchProp, WPS8ContentListener *listener)
 {
-	static const uint8_t _align[]={WPS_PARAGRAPH_JUSTIFICATION_LEFT,
-		WPS_PARAGRAPH_JUSTIFICATION_RIGHT,WPS_PARAGRAPH_JUSTIFICATION_CENTER,
-		WPS_PARAGRAPH_JUSTIFICATION_FULL};
+	static const uint8_t _align[]= {WPS_PARAGRAPH_JUSTIFICATION_LEFT,
+	                                WPS_PARAGRAPH_JUSTIFICATION_RIGHT,WPS_PARAGRAPH_JUSTIFICATION_CENTER,
+	                                WPS_PARAGRAPH_JUSTIFICATION_FULL
+	                               };
 
 	int iv, align = 0;
 	float pleft=0.0, prigh=0.0, pfirst=0.0, pbefore=0.0, pafter=0.0;
@@ -1315,173 +1386,191 @@ void WPS8Parser::propertyChangePara(std::string rgchProp, WPS8ContentListener *l
 	if (0 == rgchProp.length())
 		return;
 
-	for (uint32_t x = 3; x < rgchProp.length(); x += 2) {
+	for (uint32_t x = 3; x < rgchProp.length(); x += 2)
+	{
 		uint16_t format_code = rgchProp[x] | (rgchProp[x+1] << 8);
-		
+
 		switch (format_code)
 		{
-			case 0x1A03:
-				iv = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str()) & 0xF;
-				/* paragraph has a bullet specified in num format*/
-				listener->setNumberingType(WPS_NUMBERING_BULLET);
-				x+=2;
+		case 0x1A03:
+			iv = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str()) & 0xF;
+			/* paragraph has a bullet specified in num format*/
+			listener->setNumberingType(WPS_NUMBERING_BULLET);
+			x+=2;
+			break;
+
+		case 0x1204:
+			iv = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str()) & 0xF;
+			if (iv >= 0 && iv < 4) align = _align[iv];
+			x+=2;
+			break;
+
+		case 0x220C:
+			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
+			pfirst=iv/914400.0;
+			x+=4;
+			break;
+
+		case 0x220D:
+			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
+			pleft=iv/914400.0;
+			x+=4;
+			break;
+
+			/*case 0x220E:
+				dw=*(int*)c;
+				ps->cur_pf.right=dw/635;
+				c+=4;
 				break;
 
-			case 0x1204:
-				iv = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str()) & 0xF;
-				if (iv >= 0 && iv < 4) align = _align[iv];
-				x+=2;
+			case 0x2212:
+				dw=*(int*)c;
+				ps->cur_pf.before=dw/635;
+				c+=4;
 				break;
 
-			case 0x220C:
-				iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-				pfirst=iv/914400.0;
-				x+=4;
+			case 0x2213:
+				dw=*(int*)c;
+				ps->cur_pf.after=dw/635;
+				c+=4;
 				break;
+			*/
+		case 0x2214:
+		{
+			/* numbering style */
+			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
+			int separator = iv >> 16;
+			int num_style = iv & 0xFFFF; // also Windings character for mark.
+			listener->setNumberingProp(num_style,separator);
+			x+=4;
+		}
+		break;
 
-			case 0x220D:
-				iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-				pleft=iv/914400.0;
-				x+=4;
-				break;
+		case 0x8232:
+		{
+			TabPos s_pos;
+			const char *ts = rgchProp.c_str();
+			unsigned  t_count = 0;
+			int  t_size = WPS_LE_GET_GUINT32(&ts[x+2]);
+			int  t_rem = t_size;
+			int  tp_rem = 0;
+			int  id = x+6;
+			uint16_t prop;
 
-				/*case 0x220E:
-					dw=*(int*)c;
-					ps->cur_pf.right=dw/635;
-					c+=4;
-					break;
-
-				case 0x2212:
-					dw=*(int*)c;
-					ps->cur_pf.before=dw/635;
-					c+=4;
-					break;
-
-				case 0x2213:
-					dw=*(int*)c;
-					ps->cur_pf.after=dw/635;
-					c+=4;
-					break;
-*/
-			case 0x2214:
+			if (t_rem > 2)
+			{
+				prop = WPS_LE_GET_GUINT16(&ts[id]);
+				if (prop == 0x1A27)
 				{
-					/* numbering style */
-					iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-					int separator = iv >> 16;
-					int num_style = iv & 0xFFFF; // also Windings character for mark.
-					listener->setNumberingProp(num_style,separator);
-					x+=4;
+					t_count = WPS_LE_GET_GUINT16(&ts[id+2]);
+					id += 4;
+					t_rem -= 4;
+
+					if (t_count > 20) break; /* obviously wrong */
+				}
+				else break;   /* wrong format */
+			}
+
+			if (t_count > 0 && t_rem > 2)
+			{
+				prop = WPS_LE_GET_GUINT16(&ts[id]);
+				if (prop == 0x8A28)
+				{
+					tp_rem = WPS_LE_GET_GUINT32(&ts[id+2]);
+					id += 6;
+					t_rem -= 6;
+					tp_rem -= 4;
+
+					if (tp_rem > t_rem) break; /* truncated? */
+				}
+				else break;   /* wrong format */
+			}
+
+			while (/*l_pos.size() < t_count && */ tp_rem > 0)
+			{
+				prop = WPS_LE_GET_GUINT16(&ts[id]);
+				id += 2;
+				tp_rem -= 2;
+
+				unsigned iid = (prop >> 3) & 0xF; /* TODO: verify*/
+				int iprop = (prop & 0xFF87);
+
+				if (iid >= t_count) break; /* sanity */
+				while (iid >= l_pos.size())
+				{
+					s_pos.pos = 0;
+					s_pos.align = 0;
+					s_pos.leader = 0;
+					l_pos.push_back(s_pos);
+				}
+				switch (iprop)
+				{
+				case 0x2000:
+				{
+					float tabpos = WPS_LE_GET_GUINT32(&ts[id]) / 914400.0;
+					l_pos[iid].pos = tabpos;
+					id += 4;
+					tp_rem -=4;
 				}
 				break;
-
-			case 0x8232:
-				{
-					TabPos s_pos;
-					const char *ts = rgchProp.c_str();
-					unsigned  t_count = 0;
-					int  t_size = WPS_LE_GET_GUINT32(&ts[x+2]);
-					int  t_rem = t_size;
-					int  tp_rem = 0;
-					int  id = x+6;
-					uint16_t prop;
-
-					if (t_rem > 2) {
-						prop = WPS_LE_GET_GUINT16(&ts[id]);
-						if (prop == 0x1A27) {
-							t_count = WPS_LE_GET_GUINT16(&ts[id+2]);
-							id += 4;
-							t_rem -= 4;
-
-							if (t_count > 20) break; /* obviously wrong */
-						} else break; /* wrong format */
-					}
-
-					if (t_count > 0 && t_rem > 2) {
-						prop = WPS_LE_GET_GUINT16(&ts[id]);
-						if (prop == 0x8A28) {
-							tp_rem = WPS_LE_GET_GUINT32(&ts[id+2]);
-							id += 6;
-							t_rem -= 6;
-							tp_rem -= 4;
-
-							if (tp_rem > t_rem) break; /* truncated? */
-						} else break; /* wrong format */
-					}
-
-					while (/*l_pos.size() < t_count && */ tp_rem > 0) {
-						prop = WPS_LE_GET_GUINT16(&ts[id]);
-						id += 2;
-						tp_rem -= 2;
-
-						unsigned iid = (prop >> 3) & 0xF; /* TODO: verify*/
-						int iprop = (prop & 0xFF87);
-
-						if (iid >= t_count) break; /* sanity */
-						while (iid >= l_pos.size()) {
-							s_pos.pos = 0;
-							s_pos.align = 0;
-							s_pos.leader = 0;
-							l_pos.push_back(s_pos);
-						}
-						switch (iprop) {
-							case 0x2000:
-								{
-									float tabpos = WPS_LE_GET_GUINT32(&ts[id]) / 914400.0;
-									l_pos[iid].pos = tabpos;
-									id += 4;
-									tp_rem -=4;
-								}
-								break;
-							case 0x1001:
-								switch (ts[id] & 0xF) {
-									case 1: l_pos[iid].align = WPS_TAB_RIGHT; break;
-									case 2: l_pos[iid].align = WPS_TAB_CENTER; break;
-									case 3: l_pos[iid].align = WPS_TAB_DECIMAL; break;
-								};
-								id += 2;
-								tp_rem -= 2;
-								break;
-							case 0x1802:
-								// TODO: leader
-								id += 2;
-								tp_rem -= 2;
-								break;
-							default:
-								WPS_DEBUG_MSG(("Unknown tab prop %04x\n",iprop));
-								break;// TODO: handle!
-						};
-					};
-
-					/*while (t_rem > 4) {
-						float tabpos = WPS_LE_GET_GUINT32(&ts[id]) / 914400.0;
-						s_pos.pos = tabpos;
-						l_pos.push_back(s_pos);
-						break;
-						id += 4;
-						t_rem -= 4;
-					}*/
-
-					listener->setTabs(l_pos);
-
-					x += t_size;
-				}
-				break;
-
-			default:
-				WPS_DEBUG_MSG(("Works8: error: unknown pformat code 0x%04X\n", format_code));
-				switch ((format_code>>12)&0xF) {
+				case 0x1001:
+					switch (ts[id] & 0xF)
+					{
 					case 1:
-						x+=2;
+						l_pos[iid].align = WPS_TAB_RIGHT;
 						break;
 					case 2:
-						x+=4;
+						l_pos[iid].align = WPS_TAB_CENTER;
 						break;
-					case 8:
-						x += rgchProp[x+2];
+					case 3:
+						l_pos[iid].align = WPS_TAB_DECIMAL;
 						break;
-				}
-				//throw ParseException();
+					};
+					id += 2;
+					tp_rem -= 2;
+					break;
+				case 0x1802:
+					// TODO: leader
+					id += 2;
+					tp_rem -= 2;
+					break;
+				default:
+					WPS_DEBUG_MSG(("Unknown tab prop %04x\n",iprop));
+					break;// TODO: handle!
+				};
+			};
+
+			/*while (t_rem > 4) {
+				float tabpos = WPS_LE_GET_GUINT32(&ts[id]) / 914400.0;
+				s_pos.pos = tabpos;
+				l_pos.push_back(s_pos);
 				break;
+				id += 4;
+				t_rem -= 4;
+			}*/
+
+			listener->setTabs(l_pos);
+
+			x += t_size;
+		}
+		break;
+
+		default:
+			WPS_DEBUG_MSG(("Works8: error: unknown pformat code 0x%04X\n", format_code));
+			switch ((format_code>>12)&0xF)
+			{
+			case 1:
+				x+=2;
+				break;
+			case 2:
+				x+=4;
+				break;
+			case 8:
+				x += rgchProp[x+2];
+				break;
+			}
+			//throw ParseException();
+			break;
 		}
 	}
 
@@ -1504,48 +1593,48 @@ WPS8ContentListener::~WPS8ContentListener()
 
 void WPS8ContentListener::attributeChange(const bool isOn, const uint8_t attribute)
 {
-	WPS_DEBUG_MSG(("WPS8ContentListener::attributeChange(%i, %i)\n", isOn, attribute));		
+	WPS_DEBUG_MSG(("WPS8ContentListener::attributeChange(%i, %i)\n", isOn, attribute));
 	_closeSpan();
-	
+
 	uint32_t textAttributeBit = 0;
 	switch (attribute)
 	{
-		case WPS8_ATTRIBUTE_BOLD:
-			textAttributeBit = WPS_BOLD_BIT;
-			break;
-		case WPS8_ATTRIBUTE_ITALICS:
-			textAttributeBit = WPS_ITALICS_BIT;		
-			break;
-		case WPS8_ATTRIBUTE_UNDERLINE:
-			textAttributeBit = WPS_UNDERLINE_BIT;		
-			break;	
-		case WPS8_ATTRIBUTE_STRIKEOUT:
-			textAttributeBit = WPS_STRIKEOUT_BIT;		
-			break;				
-		case WPS8_ATTRIBUTE_SUBSCRIPT:
-			textAttributeBit = WPS_SUBSCRIPT_BIT;		
-			break;							
-		case WPS8_ATTRIBUTE_SUPERSCRIPT:
-			textAttributeBit = WPS_SUPERSCRIPT_BIT;		
-			break;							
-		case WPS8_ATTRIBUTE_EMBOSS:
-			textAttributeBit = WPS_EMBOSS_BIT;		
-			break;							
-		case WPS8_ATTRIBUTE_ENGRAVE:
-			textAttributeBit = WPS_ENGRAVE_BIT;		
-			break;							
-		case WPS8_ATTRIBUTE_OUTLINE:
-			textAttributeBit = WPS_OUTLINE_BIT;		
-			break;							
-		case WPS8_ATTRIBUTE_SHADOW:
-			textAttributeBit = WPS_SHADOW_BIT;		
-			break;							
-		case WPS8_ATTRIBUTE_SMALL_CAPS:
-			textAttributeBit = WPS_SMALL_CAPS_BIT;		
-			break;							
-		case WPS8_ATTRIBUTE_ALL_CAPS:
-			textAttributeBit = WPS_ALL_CAPS_BIT;		
-			break;							
+	case WPS8_ATTRIBUTE_BOLD:
+		textAttributeBit = WPS_BOLD_BIT;
+		break;
+	case WPS8_ATTRIBUTE_ITALICS:
+		textAttributeBit = WPS_ITALICS_BIT;
+		break;
+	case WPS8_ATTRIBUTE_UNDERLINE:
+		textAttributeBit = WPS_UNDERLINE_BIT;
+		break;
+	case WPS8_ATTRIBUTE_STRIKEOUT:
+		textAttributeBit = WPS_STRIKEOUT_BIT;
+		break;
+	case WPS8_ATTRIBUTE_SUBSCRIPT:
+		textAttributeBit = WPS_SUBSCRIPT_BIT;
+		break;
+	case WPS8_ATTRIBUTE_SUPERSCRIPT:
+		textAttributeBit = WPS_SUPERSCRIPT_BIT;
+		break;
+	case WPS8_ATTRIBUTE_EMBOSS:
+		textAttributeBit = WPS_EMBOSS_BIT;
+		break;
+	case WPS8_ATTRIBUTE_ENGRAVE:
+		textAttributeBit = WPS_ENGRAVE_BIT;
+		break;
+	case WPS8_ATTRIBUTE_OUTLINE:
+		textAttributeBit = WPS_OUTLINE_BIT;
+		break;
+	case WPS8_ATTRIBUTE_SHADOW:
+		textAttributeBit = WPS_SHADOW_BIT;
+		break;
+	case WPS8_ATTRIBUTE_SMALL_CAPS:
+		textAttributeBit = WPS_SMALL_CAPS_BIT;
+		break;
+	case WPS8_ATTRIBUTE_ALL_CAPS:
+		textAttributeBit = WPS_ALL_CAPS_BIT;
+		break;
 	}
 	if (isOn)
 		m_ps->m_textAttributeBits |= textAttributeBit;

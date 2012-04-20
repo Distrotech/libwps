@@ -147,7 +147,7 @@ void HtmlDocumentGenerator::openParagraph(const WPXPropertyList &propList, const
 		if (propList["fo:text-indent"])
 			*m_pOutputStream << "text-indent:" << propList["fo:text-indent"]->getStr().cstr() << ";";
 
-	// Osnola: replace getDouble by getStr
+		// Osnola: replace getDouble by getStr
 		if (propList["fo:line-height"] && propList["fo:line-height"]->getDouble() != 1.0)
 			*m_pOutputStream << "line-height:" << propList["fo:line-height"]->getStr().cstr() << ";";
 		*m_pOutputStream << "\">";
@@ -180,7 +180,7 @@ void HtmlDocumentGenerator::openSpan(const WPXPropertyList &propList)
 			*m_pOutputStream << "text-decoration:line-through;";
 		if (propList["style:text-underline"]) // don't know if double underline is possible
 			*m_pOutputStream << "text-decoration:underline;";
-		if (propList["style:text-blinking"]) 
+		if (propList["style:text-blinking"])
 			*m_pOutputStream << "text-decoration:blink;";
 		if (propList["fo:color"])
 			*m_pOutputStream << "color:" << propList["fo:color"]->getStr().cstr() << ";";
@@ -231,8 +231,8 @@ void HtmlDocumentGenerator::insertSpace()
 {
 	if (!m_ignore)
 	{
-            *m_pOutputStream << "&nbsp;";
-        }
+		*m_pOutputStream << "&nbsp;";
+	}
 }
 
 void HtmlDocumentGenerator::openOrderedListLevel(const WPXPropertyList & /* propList */)
@@ -293,7 +293,7 @@ void HtmlDocumentGenerator::openFootnote(const WPXPropertyList &propList)
 			if (propList["libwpd:number"])
 				*m_pOutputStream << "<sup>(footnote: " << propList["libwpd:number"]->getStr().cstr() << ")</sup>";
 			m_pOutputStream = &m_footNotesStream;
-			// Cheesey hack.. 
+			// Cheesey hack..
 			if (propList["libwpd:number"])
 				*m_pOutputStream << "<p>" << propList["libwpd:number"]->getStr().cstr() << ":</p>";
 			else
@@ -324,8 +324,8 @@ void HtmlDocumentGenerator::openEndnote(const WPXPropertyList &propList)
 		{
 			if (propList["libwpd:number"])
 				*m_pOutputStream << "<sup>(endnote: " << propList["libwpd:number"]->getStr().cstr() << ")</sup>";
-			 m_pOutputStream = &m_footNotesStream;
-			// Cheesey hack.. 
+			m_pOutputStream = &m_footNotesStream;
+			// Cheesey hack..
 			if (propList["libwpd:number"])
 				*m_pOutputStream << "<p>" << propList["libwpd:number"]->getStr().cstr() << ":</p>";
 			else
@@ -439,7 +439,7 @@ void HtmlDocumentGenerator::openTableCell(const WPXPropertyList &propList)
 			*m_pOutputStream << "background-color:" << propList["fo:background-color"]->getStr().cstr() << ";";
 
 		*m_pOutputStream << "\" ";
-	
+
 		if (propList["table:number-columns-spanned"])
 			*m_pOutputStream << "colspan=\"" << propList["table:number-columns-spanned"]->getInt() << "\" ";
 		if (propList["table:number-rows-spanned"])

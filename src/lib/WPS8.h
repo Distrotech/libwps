@@ -2,7 +2,7 @@
  * Copyright (C) 2006, 2007 Andrew Ziem
  * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
- *  
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -56,8 +56,8 @@ public:
 	void attributeChange(const bool isOn, const uint8_t attribute);
 
 private:
-	WPS8ContentListener(const WPS8ContentListener&);
-	WPS8ContentListener& operator=(const WPS8ContentListener&);
+	WPS8ContentListener(const WPS8ContentListener &);
+	WPS8ContentListener &operator=(const WPS8ContentListener &);
 };
 
 struct WPSRange
@@ -94,21 +94,21 @@ struct WPSNote
 class WPS8Parser : public WPSParser
 {
 public:
-	WPS8Parser(WPXInputStream *input, WPSHeader * header);
+	WPS8Parser(WPXInputStream *input, WPSHeader *header);
 	~WPS8Parser();
 
 	void parse(WPXDocumentInterface *documentInterface);
 private:
-	void readFontsTable(WPXInputStream * input);
-	void readStreams(WPXInputStream * input);
-	void readNotes(std::vector<WPSNote> &dest, WPXInputStream * input, const char *key);
+	void readFontsTable(WPXInputStream *input);
+	void readStreams(WPXInputStream *input);
+	void readNotes(std::vector<WPSNote> &dest, WPXInputStream *input, const char *key);
 	void appendUTF16LE(WPXInputStream *input, WPS8ContentListener *listener);
-	void readText(WPXInputStream * input, WPS8ContentListener *listener);
-	void readTextRange(WPXInputStream * input, WPS8ContentListener *listener, uint32_t startpos, uint32_t endpos, uint16_t stream);
-	void readNote(WPXInputStream * input, WPS8ContentListener *listener, bool is_endnote);
-	bool readFODPage(WPXInputStream * input, std::vector<FOD> * FODs, uint16_t page_size);
-	void parseHeaderIndexEntry(WPXInputStream * input);
-	void parseHeaderIndex(WPXInputStream * input);
+	void readText(WPXInputStream *input, WPS8ContentListener *listener);
+	void readTextRange(WPXInputStream *input, WPS8ContentListener *listener, uint32_t startpos, uint32_t endpos, uint16_t stream);
+	void readNote(WPXInputStream *input, WPS8ContentListener *listener, bool is_endnote);
+	bool readFODPage(WPXInputStream *input, std::vector<FOD> * FODs, uint16_t page_size);
+	void parseHeaderIndexEntry(WPXInputStream *input);
+	void parseHeaderIndex(WPXInputStream *input);
 	void parsePages(std::list<WPSPageSpan> &pageList, WPXInputStream *input);
 	void parse(WPXInputStream *stream, WPS8ContentListener *listener);
 	void propertyChangeTextAttribute(const uint32_t newTextAttributeBits, const uint8_t attribute, const uint32_t bit, WPS8ContentListener *listener);
@@ -118,8 +118,8 @@ private:
 	uint32_t offset_eot; /* stream offset to end of text */
 	uint32_t oldTextAttributeBits;
 	HeaderIndexMultiMap headerIndexTable;
-	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */		
-	std::vector<FOD> PAFODs; /* PAragraph FOrmatting Descriptors */		
+	std::vector<FOD> CHFODs; /* CHaracter FOrmatting Descriptors */
+	std::vector<FOD> PAFODs; /* PAragraph FOrmatting Descriptors */
 	std::vector<std::string> fonts;
 	std::vector<WPSStream> streams;
 	std::vector<WPSNote> footnotes;

@@ -1,7 +1,7 @@
 /* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002-2003 Marc Maurer (uwog@uwog.net)
- *  
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
  * License as published by the Free Software Foundation; either
@@ -32,19 +32,25 @@
 
 class WPSHeader
 {
- public:	
+public:
 	WPSHeader(WPXInputStream *input, uint8_t majorVersion);
 	virtual ~WPSHeader();
 
-	static WPSHeader * constructHeader(WPXInputStream *input);
-		
-	WPXInputStream * getInput() const { return m_input; }
-	uint8_t getMajorVersion() const { return m_majorVersion; }
+	static WPSHeader *constructHeader(WPXInputStream *input);
 
- private:
- 	WPSHeader(const WPSHeader&);
- 	WPSHeader& operator=(const WPSHeader&);
-	WPXInputStream * m_input;
+	WPXInputStream *getInput() const
+	{
+		return m_input;
+	}
+	uint8_t getMajorVersion() const
+	{
+		return m_majorVersion;
+	}
+
+private:
+	WPSHeader(const WPSHeader &);
+	WPSHeader &operator=(const WPSHeader &);
+	WPXInputStream *m_input;
 	uint8_t m_majorVersion;
 };
 
