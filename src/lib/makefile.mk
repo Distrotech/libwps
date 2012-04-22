@@ -23,15 +23,19 @@ INCPRE+=$(SOLARVER)$/$(UPD)$/$(INPATH)$/inc$/libwpd
 .ENDIF
 
 SLOFILES= \
-	$(SLO)$/libwps_internal.obj \
-	$(SLO)$/libwps_tools_win.obj \
-	$(SLO)$/WPS4.obj \
-	$(SLO)$/WPS8.obj \
-	$(SLO)$/WPSContentListener.obj \
-	$(SLO)$/WPSDocument.obj \
-	$(SLO)$/WPSHeader.obj \
-	$(SLO)$/WPSPageSpan.obj \
-	$(SLO)$/WPSParser.obj
+	$(SLO)$/libwps_internal.obj	\
+	$(SLO)$/libwps_tools_win.obj	\
+	$(SLO)$/WPS4.obj		\
+	$(SLO)$/WPS8.obj		\
+	$(SLO)$/WPSCell.obj		\
+	$(SLO)$/WPSContentListener.obj	\
+	$(SLO)$/WPSDocument.obj		\
+	$(SLO)$/WPSHeader.obj		\
+	$(SLO)$/WPSList.obj		\
+	$(SLO)$/WPSPageSpan.obj		\
+	$(SLO)$/WPSParser.obj		\
+	$(SLO)$/WPSSubDocument.obj	\
+	$(SLO)$/WPSSubDocument.obj
 
 LIB1ARCHIV=$(LB)$/libwpslib.a
 LIB1TARGET=$(SLB)$/$(TARGET).lib

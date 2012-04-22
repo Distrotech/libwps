@@ -745,9 +745,9 @@ void WPS4Parser::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPt
 	ps.setFormLength(page_height_inches);
 	ps.setFormWidth(page_width_inches);
 	if (0 == page_orientation)
-		ps.setFormOrientation(libwps::PORTRAIT);
+		ps.setFormOrientation(WPSPageSpan::PORTRAIT);
 	else
-		ps.setFormOrientation(libwps::LANDSCAPE);
+		ps.setFormOrientation(WPSPageSpan::LANDSCAPE);
 
 	pageList.push_back(ps);
 

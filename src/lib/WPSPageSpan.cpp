@@ -2,6 +2,7 @@
 /* libwps
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2006-2007 Fridrich Strba (fridrich.strba@bluewin.ch)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -17,21 +18,31 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwps.sourceforge.net
+ * For further information visit http://libwpd.sourceforge.net
  */
 
-#include <math.h>
-#include <algorithm>
-#include "WPSPageSpan.h"
-#include "libwps_internal.h"
+/* "This product is not manufactured, approved, or supported by
+ * Corel Corporation or Corel Corporation Limited."
+ */
 
-const float WPS_DEFAULT_PAGE_MARGIN_TOP = 1.0f;
-const float WPS_DEFAULT_PAGE_MARGIN_BOTTOM = 1.0f;
+#include "libwps_internal.h"
+#include "WPSSubDocument.h"
+
+#include "WPSPageSpan.h"
+
+// ----------------- WPSHeaderFooter ------------------------
+
+WPSHeaderFooter::WPSHeaderFooter(const WPSPageSpan::HeaderFooterType headerFooterType, const WPSPageSpan::HeaderFooterOccurence occurence, WPSSubDocumentPtr &subDoc) :
+	m_type(headerFooterType),
+	m_occurence(occurence),
+	m_subDocument(subDoc)
+{
+}
 
 WPSHeaderFooter::WPSHeaderFooter(const WPSHeaderFooter &headerFooter) :
 	m_type(headerFooter.getType()),
 	m_occurence(headerFooter.getOccurence()),
-	m_internalType(headerFooter.getInternalType())
+	m_subDocument(headerFooter.m_subDocument)
 {
 }
 
@@ -39,19 +50,37 @@ WPSHeaderFooter::~WPSHeaderFooter()
 {
 }
 
+bool WPSHeaderFooter::operator==(shared_ptr<WPSHeaderFooter> const &hF) const
+{
+	if (!hF) return false;
+	if (m_type != hF.get()->m_type)
+		return false;
+	if (m_occurence != hF.get()->m_occurence)
+		return false;
+	if (!m_subDocument)
+		return !hF.get()->m_subDocument;
+	if (*m_subDocument.get() != hF.get()->m_subDocument)
+		return false;
+	return true;
+}
+
+// ----------------- WPSPageSpan ------------------------
 WPSPageSpan::WPSPageSpan() :
-	m_formLength(11.0f),
+	m_formLength(11.0),
 	m_formWidth(8.5f),
-	m_formOrientation(libwps::PORTRAIT),
-	m_marginLeft(1.0f),
-	m_marginRight(1.0f),
-	m_marginTop(WPS_DEFAULT_PAGE_MARGIN_TOP),
-	m_marginBottom(WPS_DEFAULT_PAGE_MARGIN_BOTTOM),
+	m_formOrientation(PORTRAIT),
+	m_marginLeft(1.0),
+	m_marginRight(1.0),
+	m_marginTop(1.0),
+	m_marginBottom(1.0),
+	m_pageNumberPosition(None),
+	m_pageNumber(0),
+	m_pageNumberingType(libwps::ARABIC),
+	m_pageNumberingFontName("Times New Roman"),
+	m_pageNumberingFontSize(12.0),
 	m_headerFooterList(),
 	m_pageSpan(1)
 {
-	for (int i=0; i<NUM_HEADER_FOOTER_TYPES; i++)
-		m_isHeaderFooterSuppressed[i]=false;
 }
 
 WPSPageSpan::WPSPageSpan(const WPSPageSpan &page) :
@@ -62,75 +91,175 @@ WPSPageSpan::WPSPageSpan(const WPSPageSpan &page) :
 	m_marginRight(page.getMarginRight()),
 	m_marginTop(page.getMarginTop()),
 	m_marginBottom(page.getMarginBottom()),
+	m_pageNumberPosition(page.getPageNumberPosition()),
+	m_pageNumber(page.getPageNumber()),
+	m_pageNumberingType(page.getPageNumberingType()),
+	m_pageNumberingFontName(page.getPageNumberingFontName()),
+	m_pageNumberingFontSize(page.getPageNumberingFontSize()),
 	m_headerFooterList(page.getHeaderFooterList()),
 	m_pageSpan(page.getPageSpan())
 {
-	for (int i=0; i<NUM_HEADER_FOOTER_TYPES; i++)
-		m_isHeaderFooterSuppressed[i] = page.getHeaderFooterSuppression(i);
 }
 
 WPSPageSpan::~WPSPageSpan()
 {
 }
 
-// makeConsistent: post-process page spans (i.e.: save this until all page spans are fully parsed)
-// since this is a span, not an individuated page, we have to swap header/footer odd/even paramaters
-// if we're not starting on an odd page
-// ALSO: add a left/right footer to the page, if we have one but not the other (post-processing step)
-void WPSPageSpan::makeConsistent(int startingPageNumber)
+
+void WPSPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFooterOccurence occurence,
+                                  WPSSubDocumentPtr &subDocument)
 {
-	if (!(startingPageNumber % 2))
+	WPSHeaderFooter headerFooter(type, occurence, subDocument);
+	switch (occurence)
 	{
-		// not sure whether this has any use (Fridrich) ?
+	case NEVER:
+		_removeHeaderFooter(type, ALL);
+	case ALL:
+		_removeHeaderFooter(type, ODD);
+		_removeHeaderFooter(type, EVEN);
+		break;
+	case ODD:
+		_removeHeaderFooter(type, ALL);
+		break;
+	case EVEN:
+		_removeHeaderFooter(type, ALL);
+		break;
+	}
+
+	_setHeaderFooter(type, occurence, subDocument);
+
+	bool containsHFLeft = _containsHeaderFooter(type, ODD);
+	bool containsHFRight = _containsHeaderFooter(type, EVEN);
+
+	//WPS_DEBUG_MSG(("Contains HFL: %i HFR: %i\n", containsHFLeft, containsHFRight));
+	if (containsHFLeft && !containsHFRight)
+	{
+		WPS_DEBUG_MSG(("Inserting dummy header right\n"));
+		WPSSubDocumentPtr dummyDoc;
+		_setHeaderFooter(type, EVEN, dummyDoc);
+	}
+	else if (!containsHFLeft && containsHFRight)
+	{
+		WPS_DEBUG_MSG(("Inserting dummy header left\n"));
+		WPSSubDocumentPtr dummyDoc;
+		_setHeaderFooter(type, ODD, dummyDoc);
 	}
 }
 
-inline bool operator==(const WPSHeaderFooter &headerFooter1, const WPSHeaderFooter &headerFooter2)
+bool WPSPageSpan::operator==(shared_ptr<WPSPageSpan> const &page2) const
 {
-	return ((headerFooter1.getType() == headerFooter2.getType()) &&
-	        (headerFooter1.getOccurence() == headerFooter2.getOccurence()) &&
-	        (headerFooter1.getInternalType() == headerFooter2.getInternalType()) );
-}
-
-bool operator==(const WPSPageSpan &page1, const WPSPageSpan &page2)
-{
-	if ((page1.getMarginLeft() != page2.getMarginLeft()) || (page1.getMarginRight() != page2.getMarginRight()) ||
-	        (page1.getMarginTop() != page2.getMarginTop())|| (page1.getMarginBottom() != page2.getMarginBottom()))
+	if (!page2) return false;
+	if (page2.get() == this) return true;
+	if (m_formLength != page2->m_formLength || m_formWidth != page2->m_formLength ||
+	        m_formOrientation != page2->m_formOrientation)
+		return false;
+	if (getMarginLeft() != page2->getMarginLeft() || getMarginRight() != page2->getMarginRight() ||
+	        getMarginTop() != page2->getMarginTop()|| getMarginBottom() != page2->getMarginBottom())
 		return false;
 
+	if (getPageNumberPosition() != page2->getPageNumberPosition())
+		return false;
 
-	for (int i=0; i<WPSPageSpan::NUM_HEADER_FOOTER_TYPES; i++)
+	if (getPageNumber() != page2->getPageNumber())
+		return false;
+
+	if (getPageNumberingType() != page2->getPageNumberingType())
+		return false;
+
+	if (getPageNumberingFontName() != page2->getPageNumberingFontName() ||
+	        getPageNumberingFontSize() != page2->getPageNumberingFontSize())
+		return false;
+
+	int numHF = m_headerFooterList.size();
+	int numHF2 = page2->m_headerFooterList.size();
+	for (int i = numHF; i < numHF2; i++)
 	{
-		if (page1.getHeaderFooterSuppression(i) != page2.getHeaderFooterSuppression(i))
+		if (page2->m_headerFooterList[i])
 			return false;
 	}
-
-	// NOTE: yes this is O(n^2): so what? n=4 at most
-	const std::vector<WPSHeaderFooter> headerFooterList1 = page1.getHeaderFooterList();
-	const std::vector<WPSHeaderFooter> headerFooterList2 = page2.getHeaderFooterList();
-	std::vector<WPSHeaderFooter>::const_iterator iter1;
-	std::vector<WPSHeaderFooter>::const_iterator iter2;
-
-	for (iter1 = headerFooterList1.begin(); iter1 != headerFooterList1.end(); iter1++)
+	for (int i = numHF2; i < numHF; i++)
 	{
-		if (std::find(headerFooterList2.begin(), headerFooterList2.end(), (*iter1)) == headerFooterList2.end())
+		if (m_headerFooterList[i])
 			return false;
 	}
-
-	// If we came here, we know that every header/footer that is found in the first page span is in the second too.
-	// But this is not enought for us to know whether the page spans are equal. Now we have to check in addition
-	// whether every header/footer that is in the second one is in the first too. If someone wants to optimize this,
-	// (s)he is most welcome :-)
-
-	for (iter2 = headerFooterList2.begin(); iter2 != headerFooterList2.end(); iter2++)
+	if (numHF2 < numHF) numHF = numHF2;
+	for (int i = 0; i < numHF; i++)
 	{
-		if (std::find(headerFooterList1.begin(), headerFooterList1.end(), (*iter2)) == headerFooterList1.end())
+		if (!m_headerFooterList[i])
+		{
+			if (page2->m_headerFooterList[i])
+				return false;
+			continue;
+		}
+		if (!page2->m_headerFooterList[i])
+			return false;
+		if (*m_headerFooterList[i] != page2->m_headerFooterList[i])
 			return false;
 	}
-
-
-	WPS_DEBUG_MSG(("MS Works: WPSPageSpan == comparison finished, found no differences\n"));
+	WPS_DEBUG_MSG(("WordPerfect: WPSPageSpan == comparison finished, found no differences\n"));
 
 	return true;
 }
+
+// -------------- manage header footer list ------------------
+void WPSPageSpan::_setHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence, WPSSubDocumentPtr &doc)
+{
+	if (occurence == NEVER) return;
+
+	int pos = _getHeaderFooterPosition(type, occurence);
+	if (pos == -1) return;
+	m_headerFooterList[pos]=WPSHeaderFooterPtr(new WPSHeaderFooter(type, occurence, doc));
+}
+
+void WPSPageSpan::_removeHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence)
+{
+	int pos = _getHeaderFooterPosition(type, occurence);
+	if (pos == -1) return;
+	m_headerFooterList[pos].reset();
+}
+
+bool WPSPageSpan::_containsHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence)
+{
+	int pos = _getHeaderFooterPosition(type, occurence);
+	if (pos == -1 || ! m_headerFooterList[pos]) return false;
+	if (!m_headerFooterList[pos]->getSubDocument()) return false;
+	return true;
+}
+
+int WPSPageSpan::_getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOccurence occurence)
+{
+	int typePos = 0, occurencePos = 0;
+	switch(type)
+	{
+	case HEADER:
+		typePos = 0;
+		break;
+	case FOOTER:
+		typePos = 1;
+		break;
+	default:
+		WPS_DEBUG_MSG(("WPSPageSpan::getVectorPosition: unknown type\n"));
+		return -1;
+	}
+	switch(occurence)
+	{
+	case ALL:
+		occurencePos = 0;
+		break;
+	case ODD:
+		occurencePos = 0;
+		break;
+	case EVEN:
+		occurencePos = 0;
+		break;
+	default:
+		WPS_DEBUG_MSG(("WPSPageSpan::getVectorPosition: unknown occurence\n"));
+		return -1;
+	}
+	int res = typePos*3+occurencePos;
+	if (res >= int(m_headerFooterList.size()))
+		m_headerFooterList.resize(res+1);
+	return res;
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

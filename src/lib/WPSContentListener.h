@@ -58,7 +58,7 @@ struct WPSContentParsingState
 	uint16_t m_endnoteId;
 
 	uint8_t m_numbering;
-	uint16_t m_numstyle;
+	libwps::NumberingType m_numstyle;
 	uint16_t m_numsep;
 
 	int m_curListType;
@@ -83,7 +83,7 @@ struct WPSContentParsingState
 
 	float m_pageFormLength;
 	float m_pageFormWidth;
-	libwps::FormOrientation m_pageFormOrientation;
+	bool m_pageFormOrientationIsPortrait;
 
 	float m_pageMarginLeft;
 	float m_pageMarginRight;
@@ -145,7 +145,7 @@ public:
 	void setTabs(std::vector<WPSTabPos> &tabs);
 
 	void setNumberingType(const uint8_t style);
-	void setNumberingProp(const uint16_t type, const uint16_t sep);
+	void setNumberingProp(const libwps::NumberingType type, const uint16_t sep);
 
 	void insertEOL();
 

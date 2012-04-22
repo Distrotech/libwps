@@ -32,6 +32,8 @@
 #include "libwps_tools_win.h"
 #include "WPSPageSpan.h"
 
+#include "WPSList.h"
+
 #include "WPSContentListener.h"
 
 namespace WPSContentListenerInternal
@@ -65,7 +67,7 @@ WPSContentParsingState::WPSContentParsingState() :
 	m_endnoteId(1),
 
 	m_numbering(0),
-	m_numstyle(0),
+	m_numstyle(libwps::NONE),
 	m_numsep(0),
 
 	m_curListType(0),
@@ -90,7 +92,7 @@ WPSContentParsingState::WPSContentParsingState() :
 
 	m_pageFormLength(11.0f),
 	m_pageFormWidth(8.5f),
-	m_pageFormOrientation(libwps::PORTRAIT),
+	m_pageFormOrientationIsPortrait(true),
 
 	m_pageMarginLeft(1.0f),
 	m_pageMarginRight(1.0f),
@@ -208,7 +210,7 @@ void WPSContentListener::_openPageSpan()
 	}
 
 	WPSPageSpan &currentPage = (*m_ps->m_nextPageSpanIter);
-	currentPage.makeConsistent(1);
+	//currentPage.makeConsistent(1);
 
 	WPXPropertyList propList;
 	propList.insert("libwpd:num-pages", currentPage.getPageSpan());
@@ -217,7 +219,7 @@ void WPSContentListener::_openPageSpan()
 	propList.insert("libwpd:is-last-page-span", ((m_ps->m_nextPageSpanIter == lastPageSpan) ? true : false));
 	propList.insert("fo:page-height", currentPage.getFormLength());
 	propList.insert("fo:page-width", currentPage.getFormWidth());
-	if (currentPage.getFormOrientation() == libwps::LANDSCAPE)
+	if (currentPage.getFormOrientation() == WPSPageSpan::LANDSCAPE)
 		propList.insert("style:print-orientation", "landscape");
 	else
 		propList.insert("style:print-orientation", "portrait");
@@ -235,49 +237,50 @@ void WPSContentListener::_openPageSpan()
 	m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
 	m_ps->m_pageMarginRight = currentPage.getMarginRight();
 
-	std::vector<WPSHeaderFooter> headerFooterList = currentPage.getHeaderFooterList();
-	for (std::vector<WPSHeaderFooter>::iterator iter = headerFooterList.begin(); iter != headerFooterList.end(); iter++)
+	std::vector<WPSHeaderFooterPtr> headerFooterList = currentPage.getHeaderFooterList();
+	for (std::vector<WPSHeaderFooterPtr>::iterator iter = headerFooterList.begin(); iter != headerFooterList.end(); iter++)
 	{
-		if (!currentPage.getHeaderFooterSuppression((*iter).getInternalType()))
+		WPSHeaderFooterPtr &hf = *iter;
+		if (!hf) continue;
+
+		propList.clear();
+		switch (hf->getOccurence())
 		{
-			propList.clear();
-			switch ((*iter).getOccurence())
-			{
-			case libwps::ODD:
-				propList.insert("libwpd:occurence", "odd");
-				break;
-			case libwps::EVEN:
-				propList.insert("libwpd:occurence", "even");
-				break;
-			case libwps::ALL:
-				propList.insert("libwpd:occurence", "all");
-				break;
-			case libwps::NEVER:
-			default:
-				break;
-			}
-
-			if ((*iter).getType() == libwps::HEADER)
-			{
-				m_documentInterface->openHeader(propList);
-				m_documentInterface->closeHeader();
-			}
-			else
-			{
-				m_documentInterface->openFooter(propList);
-				m_documentInterface->closeFooter();
-			}
-
-			WPS_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
-			               (*iter).getType(), (*iter).getOccurence()));
+		case WPSPageSpan::ODD:
+			propList.insert("libwpd:occurence", "odd");
+			break;
+		case WPSPageSpan::EVEN:
+			propList.insert("libwpd:occurence", "even");
+			break;
+		case WPSPageSpan::ALL:
+			propList.insert("libwpd:occurence", "all");
+			break;
+		case WPSPageSpan::NEVER:
+		default:
+			break;
 		}
+
+		if (hf->getType() == WPSPageSpan::HEADER)
+		{
+			m_documentInterface->openHeader(propList);
+			m_documentInterface->closeHeader();
+		}
+		else
+		{
+			m_documentInterface->openFooter(propList);
+			m_documentInterface->closeFooter();
+		}
+
+		WPS_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
+		               hf->getType(), hf->getOccurence()));
 	}
 
 	/* Some of this would maybe not be necessary, but it does not do any harm
 	 * and apparently solves some troubles */
 	m_ps->m_pageFormLength = currentPage.getFormLength();
 	m_ps->m_pageFormWidth = currentPage.getFormWidth();
-	m_ps->m_pageFormOrientation = currentPage.getFormOrientation();
+	m_ps->m_pageFormOrientationIsPortrait =
+	    (currentPage.getFormOrientation()==WPSPageSpan::PORTRAIT);
 	m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
 	m_ps->m_pageMarginRight = currentPage.getMarginRight();
 
@@ -646,7 +649,7 @@ void WPSContentListener::setNumberingType(const uint8_t style)
 	m_ps->m_numbering = style;
 }
 
-void WPSContentListener::setNumberingProp(const uint16_t type, const uint16_t sep)
+void WPSContentListener::setNumberingProp(const libwps::NumberingType type, const uint16_t sep)
 {
 	if (m_ps->m_numbering == WPS_NUMBERING_NONE)
 		m_ps->m_numbering = WPS_NUMBERING_NUMBER;
@@ -861,17 +864,22 @@ int WPSContentListener::_getListId()
 		const char *nst = "1";
 		switch (m_ps->m_numstyle)
 		{
-		case WPS_NUM_STYLE_LLATIN:
+		case libwps::LOWERCASE:
 			nst = "a";
 			break;
-		case WPS_NUM_STYLE_ULATIN:
+		case libwps::UPPERCASE:
 			nst = "A";
 			break;
-		case WPS_NUM_STYLE_LROMAN:
+		case libwps::LOWERCASE_ROMAN:
 			nst = "i";
 			break;
-		case WPS_NUM_STYLE_UROMAN:
+		case libwps::UPPERCASE_ROMAN:
 			nst = "I";
+			break;
+		default:
+			WPS_DEBUG_MSG(("WPSContentListener::_getListId: unexpected style \n"));
+		case libwps::ARABIC:
+			nst = "1";
 			break;
 		};
 		pl.insert("style:num-format", nst);

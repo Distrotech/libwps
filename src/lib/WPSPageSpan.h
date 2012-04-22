@@ -18,149 +18,209 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
- * For further information visit http://libwps.sourceforge.net
+ * For further information visit http://libwpd.sourceforge.net
  */
 
-/*
- * This file is in sync with CVS
- * /libwpd2/src/lib/WPXPageSpan.h 1.21
+/* "This product is not manufactured, approved, or supported by
+ * Corel Corporation or Corel Corporation Limited."
  */
 
-#ifndef WPSPAGE_H
-#define WPSPAGE_H
+#ifndef WPSPAGESPAN_H
+#define WPSPAGESPAN_H
 #include <vector>
 #include "libwps_internal.h"
 
-// intermediate page representation class: for internal use only (by the high-level content/styles listeners). should not be exported.
+class WPSSubDocument;
+typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
 
-class WPSHeaderFooter
-{
-public:
-	WPSHeaderFooter(const WPSHeaderFooter &headerFooter);
-	~WPSHeaderFooter();
-	libwps::HeaderFooterType getType() const
-	{
-		return m_type;
-	}
-	libwps::HeaderFooterOccurence getOccurence() const
-	{
-		return m_occurence;
-	}
-	uint8_t getInternalType() const
-	{
-		return m_internalType;
-	}
-
-private:
-	libwps::HeaderFooterType m_type;
-	libwps::HeaderFooterOccurence m_occurence;
-	uint8_t m_internalType; // for suppression
-};
+class WPSHeaderFooter;
+typedef shared_ptr<WPSHeaderFooter> WPSHeaderFooterPtr;
 
 class WPSPageSpan
 {
 public:
-	enum HeaderFooterInternalType { HEADER_A=0, HEADER_B, FOOTER_A, FOOTER_B, NUM_HEADER_FOOTER_TYPES= FOOTER_B+1 };
+	enum FormOrientation { PORTRAIT, LANDSCAPE };
 
+	enum HeaderFooterType { HEADER, FOOTER };
+	enum HeaderFooterOccurence { ODD, EVEN, ALL, NEVER };
+
+	enum PageNumberPosition { None = 0, TopLeft, TopCenter, TopRight, TopLeftAndRight,
+	                          BottomLeft, BottomCenter, BottomRight, BottomLeftAndRight,
+	                          TopInsideLeftAndRight, BottomInsideLeftAndRight
+	                        };
+public:
 	WPSPageSpan();
 	WPSPageSpan(const WPSPageSpan &page);
 	virtual ~WPSPageSpan();
 
-	bool getHeaderFooterSuppression(const uint8_t headerFooterType) const
-	{
-		if (headerFooterType <= FOOTER_B) return m_isHeaderFooterSuppressed[headerFooterType];
-		return false;
-	}
-	float getFormLength() const
+	double getFormLength() const
 	{
 		return m_formLength;
 	}
-	float getFormWidth() const
+	double getFormWidth() const
 	{
 		return m_formWidth;
 	}
-	libwps::FormOrientation getFormOrientation() const
+	FormOrientation getFormOrientation() const
 	{
 		return m_formOrientation;
 	}
-	float getMarginLeft() const
+	double getMarginLeft() const
 	{
 		return m_marginLeft;
 	}
-	float getMarginRight() const
+	double getMarginRight() const
 	{
 		return m_marginRight;
 	}
-	float getMarginTop() const
+	double getMarginTop() const
 	{
 		return m_marginTop;
 	}
-	float getMarginBottom() const
+	double getMarginBottom() const
 	{
 		return m_marginBottom;
+	}
+	PageNumberPosition getPageNumberPosition() const
+	{
+		return m_pageNumberPosition;
+	}
+	int getPageNumber() const
+	{
+		return m_pageNumber;
+	}
+	libwps::NumberingType getPageNumberingType() const
+	{
+		return m_pageNumberingType;
+	}
+	double getPageNumberingFontSize() const
+	{
+		return m_pageNumberingFontSize;
+	}
+	WPXString getPageNumberingFontName() const
+	{
+		return m_pageNumberingFontName;
 	}
 	int getPageSpan() const
 	{
 		return m_pageSpan;
 	}
-	const std::vector<WPSHeaderFooter> & getHeaderFooterList() const
+	const std::vector<WPSHeaderFooterPtr> & getHeaderFooterList() const
 	{
 		return m_headerFooterList;
 	}
 
-	void setHeadFooterSuppression(const uint8_t headerFooterType, const bool suppress)
-	{
-		m_isHeaderFooterSuppressed[headerFooterType] = suppress;
-	}
-	void setFormLength(const float formLength)
+	void setHeaderFooter(const HeaderFooterType type, const HeaderFooterOccurence occurence,
+	                     WPSSubDocumentPtr &subDocument);
+	void setFormLength(const double formLength)
 	{
 		m_formLength = formLength;
 	}
-	void setFormWidth(const float formWidth)
+	void setFormWidth(const double formWidth)
 	{
 		m_formWidth = formWidth;
 	}
-	void setFormOrientation(const libwps::FormOrientation formOrientation)
+	void setFormOrientation(const FormOrientation formOrientation)
 	{
 		m_formOrientation = formOrientation;
 	}
-	void setMarginLeft(const float marginLeft)
+	void setMarginLeft(const double marginLeft)
 	{
 		m_marginLeft = marginLeft;
 	}
-	void setMarginRight(const float marginRight)
+	void setMarginRight(const double marginRight)
 	{
 		m_marginRight = marginRight;
 	}
-	void setMarginTop(const float marginTop)
+	void setMarginTop(const double marginTop)
 	{
 		m_marginTop = marginTop;
 	}
-	void setMarginBottom(const float marginBottom)
+	void setMarginBottom(const double marginBottom)
 	{
 		m_marginBottom = marginBottom;
+	}
+	void setPageNumberPosition(const PageNumberPosition pageNumberPosition)
+	{
+		m_pageNumberPosition = pageNumberPosition;
+	}
+	void setPageNumber(const int pageNumber)
+	{
+		m_pageNumber = pageNumber;
+	}
+	void setPageNumberingType(const libwps::NumberingType pageNumberingType)
+	{
+		m_pageNumberingType = pageNumberingType;
+	}
+	void setPageNumberingFontSize(const double pageNumberingFontSize)
+	{
+		m_pageNumberingFontSize = pageNumberingFontSize;
+	}
+	void setPageNumberingFontName(const WPXString &pageNumberingFontName)
+	{
+		m_pageNumberingFontName = pageNumberingFontName;
 	}
 	void setPageSpan(const int pageSpan)
 	{
 		m_pageSpan = pageSpan;
 	}
 
-	void makeConsistent(int startingPageNumber);
+	bool operator==(shared_ptr<WPSPageSpan> const &pageSpan) const;
+	bool operator!=(shared_ptr<WPSPageSpan> const &pageSpan) const
+	{
+		return !operator==(pageSpan);
+	}
 
 protected:
-	void _removeHeaderFooter(libwps::HeaderFooterType type, libwps::HeaderFooterOccurence occurence);
+	int _getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOccurence occurence);
+	void _setHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence, WPSSubDocumentPtr &doc);
+	void _removeHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence);
+	bool _containsHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence);
 
 private:
-	bool m_isHeaderFooterSuppressed[NUM_HEADER_FOOTER_TYPES];
-	float m_formLength, m_formWidth;
-	libwps::FormOrientation m_formOrientation;
-	float m_marginLeft, m_marginRight;
-	float m_marginTop, m_marginBottom;
-	std::vector<WPSHeaderFooter> m_headerFooterList;
+	double m_formLength, m_formWidth;
+	FormOrientation m_formOrientation;
+	double m_marginLeft, m_marginRight;
+	double m_marginTop, m_marginBottom;
+	PageNumberPosition m_pageNumberPosition;
+	int m_pageNumber;
+	libwps::NumberingType m_pageNumberingType;
+	WPXString m_pageNumberingFontName;
+	double m_pageNumberingFontSize;
+	std::vector<WPSHeaderFooterPtr> m_headerFooterList;
 
 	int m_pageSpan;
 };
 
-bool operator==(const WPSPageSpan &, const WPSPageSpan &);
-#endif /* WPSPAGE_H */
+// intermediate page representation class: for internal use only (by the high-level content/styles listeners). should not be exported.
+class WPSHeaderFooter
+{
+public:
+	WPSHeaderFooter(const WPSPageSpan::HeaderFooterType headerFooterType, const WPSPageSpan::HeaderFooterOccurence occurence, WPSSubDocumentPtr &subDoc);
+	WPSHeaderFooter(const WPSHeaderFooter &headerFooter);
+	~WPSHeaderFooter();
+	WPSPageSpan::HeaderFooterType getType() const
+	{
+		return m_type;
+	}
+	WPSPageSpan::HeaderFooterOccurence getOccurence() const
+	{
+		return m_occurence;
+	}
+	WPSSubDocumentPtr &getSubDocument()
+	{
+		return m_subDocument;
+	}
+	bool operator==(shared_ptr<WPSHeaderFooter> const &headerFooter) const;
+	bool operator!=(shared_ptr<WPSHeaderFooter> const &headerFooter) const
+	{
+		return !operator==(headerFooter);
+	}
+private:
+	WPSPageSpan::HeaderFooterType m_type;
+	WPSPageSpan::HeaderFooterOccurence m_occurence;
+	WPSSubDocumentPtr m_subDocument;
+};
+
+#endif
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

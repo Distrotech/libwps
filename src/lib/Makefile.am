@@ -20,22 +20,30 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	libwps_tools_win.cpp	\
 	WPS4.cpp		\
 	WPS8.cpp		\
-	WPSDocument.cpp		\
+	WPSCell.cpp		\
 	WPSContentListener.cpp	\
+	WPSDocument.cpp		\
 	WPSHeader.cpp		\
+	WPSList.cpp		\
 	WPSPageSpan.cpp		\
 	WPSParser.cpp		\
+	WPSSubDocument.cpp	\
+	WPSTable.cpp		\
 	libwps.h		\
 	libwps_tools_win.h	\
 	libwps_internal.h	\
 	WPS.h			\
 	WPS4.h			\
 	WPS8.h			\
-	WPSDocument.h		\
+	WPSCell.h		\
 	WPSContentListener.h	\
+	WPSDocument.h		\
 	WPSHeader.h		\
+	WPSList.h		\
 	WPSPageSpan.h		\
-	WPSParser.h
+	WPSParser.h		\
+	WPSSubDocument.h	\
+	WPSTable.h
 
 if OS_WIN32
 

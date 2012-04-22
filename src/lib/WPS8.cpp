@@ -1201,8 +1201,30 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 			/* numbering style */
 			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 			int separator = iv >> 16;
-			int num_style = iv & 0xFFFF; // also Windings character for mark.
-			m_listener->setNumberingProp(num_style,separator);
+			switch(iv & 0xFFFF)
+			{
+			case 0:
+				m_listener->setNumberingProp(libwps::NONE,separator);
+				break;
+			case 2:
+				m_listener->setNumberingProp(libwps::ARABIC,separator);
+				break;
+			case 3:
+				m_listener->setNumberingProp(libwps::LOWERCASE,separator);
+				break;
+			case 4:
+				m_listener->setNumberingProp(libwps::UPPERCASE,separator);
+				break;
+			case 5:
+				m_listener->setNumberingProp(libwps::LOWERCASE_ROMAN,separator);
+				break;
+			case 6:
+				m_listener->setNumberingProp(libwps::UPPERCASE_ROMAN,separator);
+				break;
+			default:
+				WPS_DEBUG_MSG(("Unknown style %04x\n",(iv & 0xFFFF)));
+				break;
+			}
 			x+=4;
 		}
 		break;

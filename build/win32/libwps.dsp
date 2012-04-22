@@ -103,6 +103,10 @@ SOURCE=..\..\src\lib\WPS8.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSCell.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSContentListener.cpp
 # End Source File
 # Begin Source File
@@ -115,11 +119,23 @@ SOURCE=..\..\src\lib\WPSHeader.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSList.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSPageSpan.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSParser.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSSubDocument.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSTable.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -151,6 +167,10 @@ SOURCE=..\..\src\lib\WPS8.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSCell.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSContentListener.h
 # End Source File
 # Begin Source File
@@ -163,11 +183,23 @@ SOURCE=..\..\src\lib\WPSHeader.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSList.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSPageSpan.h
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSParser.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSSubDocument.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSTable.h
 # End Source File
 # End Group
 # End Target
