@@ -353,7 +353,11 @@ void WPSContentListener::_openParagraph()
 			wpx_td.insert("style:position",bpos.m_pos,WPX_INCH);
 			if (bpos.m_align == WPS_TAB_CENTER) wpx_td.insert("style:type","center");
 			else if (bpos.m_align == WPS_TAB_RIGHT) wpx_td.insert("style:type","right");
-			// TODO: Decimal tabs depend on locale, obviously.
+			else if (bpos.m_align == WPS_TAB_DECIMAL)
+			{
+			  wpx_td.insert("style:type","char");
+			  wpx_td.insert("style:char", "."); // Assume a decimal point for now
+			}
 			tabStops.append(wpx_td);
 		}
 
