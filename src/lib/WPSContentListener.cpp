@@ -51,8 +51,8 @@ struct ListSignature
 
 WPSContentParsingState::WPSContentParsingState() :
 	m_textAttributeBits(0),
-	m_fontSize(12.0f/*WP6_DEFAULT_FONT_SIZE*/),
-	m_fontName(WPXString(/*WP6_DEFAULT_FONT_NAME*/"Times New Roman")),
+	m_fontSize(12.0f),
+	m_fontName("Times New Roman"),
 	m_languageId(0x409/*en-US*/),
 	m_textcolor(0),
 
@@ -60,28 +60,17 @@ WPSContentParsingState::WPSContentParsingState() :
 
 	m_isParagraphColumnBreak(false),
 	m_isParagraphPageBreak(false),
-	m_paragraphJustification(WPS_PARAGRAPH_JUSTIFICATION_LEFT),
+	m_paragraphJustification(libwps::JustificationLeft),
 	m_paragraphLineSpacing(1.0f),
 
-	m_footnoteId(1),
-	m_endnoteId(1),
-
-	m_numbering(0),
-	m_numstyle(libwps::NONE),
-	m_numsep(0),
-
-	m_curListType(0),
-	m_isOrdered(false),
-
 	m_isDocumentStarted(false),
-	m_isPageSpanOpened(false),
-	m_isSectionOpened(false),
+	m_isPageSpanOpened(false),m_isSectionOpened(false),
 	m_isPageSpanBreakDeferred(false),
 
-	m_isSpanOpened(false),
-	m_isParagraphOpened(false),
+	m_isSpanOpened(false), m_isParagraphOpened(false),
 
-	m_isFootEndNote(false),
+	m_inSubDocument(false), m_isListElementOpened(false),
+	m_isTableOpened(false), m_isTableCellOpened(false),
 
 	m_isParaListItem(false),
 
@@ -101,9 +90,12 @@ WPSContentParsingState::WPSContentParsingState() :
 	m_paragraphMarginRight(0.0f),
 	m_paragraphMarginTop(0.0f),
 	m_paragraphMarginBottom(0.0f),
-	m_paragraphIndentFirst(0.0f),
+	m_paragraphTextIndent(0.0f),
 
-	m_textBuffer()
+	m_textBuffer(),
+	m_list(), m_listOrderedLevels(),
+	m_actualListId(0), m_currentListLevel(0),
+	m_listReferencePosition(0.0),  m_listBeginPosition(0.0)
 {
 }
 
@@ -148,6 +140,9 @@ void WPSContentListener::endDocument()
 	if (m_ps->m_isParagraphOpened)
 		_closeParagraph();
 
+	m_ps->m_currentListLevel = 0;
+	_changeList(); // flush the list exterior
+
 	// close the document nice and tight
 	_closeSection();
 	_closePageSpan();
@@ -174,25 +169,17 @@ void WPSContentListener::_openSection()
 
 void WPSContentListener::_closeSection()
 {
-	if (m_ps->m_isSectionOpened)
-	{
-		if (m_ps->m_isParagraphOpened)
-			_closeParagraph();
+	if (!m_ps->m_isSectionOpened)
+		return;
 
-		if (m_ps->m_numbering)
-		{
-			/* a Hack which calls open/close paragraph (and so closeListLevel)
-			   when a list is opened */
-			m_ps->m_numbering = 0;
-			_openParagraph();
-			_closeParagraph();
-		}
+	if (m_ps->m_isParagraphOpened)
+		_closeParagraph();
+	_changeList();
 
-		m_documentInterface->closeSection();
+	m_documentInterface->closeSection();
 
-		m_ps->m_sectionAttributesChanged = false;
-		m_ps->m_isSectionOpened = false;
-	}
+	m_ps->m_sectionAttributesChanged = false;
+	m_ps->m_isSectionOpened = false;
 }
 
 void WPSContentListener::_openPageSpan()
@@ -212,68 +199,18 @@ void WPSContentListener::_openPageSpan()
 	WPSPageSpan &currentPage = (*m_ps->m_nextPageSpanIter);
 	//currentPage.makeConsistent(1);
 
-	WPXPropertyList propList;
-	propList.insert("libwpd:num-pages", currentPage.getPageSpan());
-
-	std::vector<WPSPageSpan>::iterator lastPageSpan = --m_pageList.end();
-	propList.insert("libwpd:is-last-page-span", ((m_ps->m_nextPageSpanIter == lastPageSpan) ? true : false));
-	propList.insert("fo:page-height", currentPage.getFormLength());
-	propList.insert("fo:page-width", currentPage.getFormWidth());
-	if (currentPage.getFormOrientation() == WPSPageSpan::LANDSCAPE)
-		propList.insert("style:print-orientation", "landscape");
-	else
-		propList.insert("style:print-orientation", "portrait");
-	propList.insert("fo:margin-left", currentPage.getMarginLeft());
-	propList.insert("fo:margin-right", currentPage.getMarginRight());
-	propList.insert("fo:margin-top", currentPage.getMarginTop());
-	propList.insert("fo:margin-bottom", currentPage.getMarginBottom());
-
 	if (!m_ps->m_isPageSpanOpened)
+	{
+		WPXPropertyList propList;
+		currentPage.getPageProperty(propList);
+		std::vector<WPSPageSpan>::iterator lastPageSpan = --m_pageList.end();
+		propList.insert("libwpd:is-last-page-span", ((m_ps->m_nextPageSpanIter == lastPageSpan) ? true : false));
 		m_documentInterface->openPageSpan(propList);
+	}
 
 	m_ps->m_isPageSpanOpened = true;
 
-	m_ps->m_pageFormWidth = currentPage.getFormWidth();
-	m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
-	m_ps->m_pageMarginRight = currentPage.getMarginRight();
-
-	std::vector<WPSHeaderFooterPtr> headerFooterList = currentPage.getHeaderFooterList();
-	for (std::vector<WPSHeaderFooterPtr>::iterator iter = headerFooterList.begin(); iter != headerFooterList.end(); iter++)
-	{
-		WPSHeaderFooterPtr &hf = *iter;
-		if (!hf) continue;
-
-		propList.clear();
-		switch (hf->getOccurence())
-		{
-		case WPSPageSpan::ODD:
-			propList.insert("libwpd:occurence", "odd");
-			break;
-		case WPSPageSpan::EVEN:
-			propList.insert("libwpd:occurence", "even");
-			break;
-		case WPSPageSpan::ALL:
-			propList.insert("libwpd:occurence", "all");
-			break;
-		case WPSPageSpan::NEVER:
-		default:
-			break;
-		}
-
-		if (hf->getType() == WPSPageSpan::HEADER)
-		{
-			m_documentInterface->openHeader(propList);
-			m_documentInterface->closeHeader();
-		}
-		else
-		{
-			m_documentInterface->openFooter(propList);
-			m_documentInterface->closeFooter();
-		}
-
-		WPS_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
-		               hf->getType(), hf->getOccurence()));
-	}
+	currentPage.sendHeaderFooters(this, m_documentInterface);
 
 	/* Some of this would maybe not be necessary, but it does not do any harm
 	 * and apparently solves some troubles */
@@ -304,121 +241,26 @@ void WPSContentListener::_closePageSpan()
 
 void WPSContentListener::_openParagraph()
 {
-	if (!m_ps->m_isParagraphOpened)
-	{
-		if (m_ps->m_sectionAttributesChanged)
-			_closeSection();
+	if (m_ps->m_isParagraphOpened)
+		return;
 
-		if (!m_ps->m_isSectionOpened)
-			_openSection();
+	if (m_ps->m_sectionAttributesChanged)
+		_closeSection();
 
-		WPXPropertyListVector tabStops;
+	if (!m_ps->m_isSectionOpened)
+		_openSection();
 
-		WPXPropertyList propList;
-		switch (m_ps->m_paragraphJustification)
-		{
-		case WPS_PARAGRAPH_JUSTIFICATION_LEFT:
-			// doesn't require a paragraph prop - it is the default
-			propList.insert("fo:text-align", "left");
-			break;
-		case WPS_PARAGRAPH_JUSTIFICATION_CENTER:
-			propList.insert("fo:text-align", "center");
-			break;
-		case WPS_PARAGRAPH_JUSTIFICATION_RIGHT:
-			propList.insert("fo:text-align", "end");
-			break;
-		case WPS_PARAGRAPH_JUSTIFICATION_FULL:
-			propList.insert("fo:text-align", "justify");
-			break;
-		case WPS_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES:
-			propList.insert("fo:text-align", "justify");
-			propList.insert("fo:text-align-last", "justify");
-			break;
-		}
+	WPXPropertyListVector tabStops;
+	WPXPropertyList propList;
+	_appendParagraphProperties(propList, false);
+	_getTabStops(tabStops);
+	_resetParagraphState();
 
-		propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
-		propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
-		propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
-		propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom);
-		propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, WPX_PERCENT);
+	m_documentInterface->openParagraph(propList, tabStops);
 
-		propList.insert("fo:text-indent", m_ps->m_paragraphIndentFirst);
-
-		if (m_ps->m_isParagraphColumnBreak)
-			propList.insert("fo:break-before", "column");
-		else if (m_ps->m_isParagraphPageBreak)
-			propList.insert("fo:break-before", "page");
-
-		for (unsigned i=0; i < m_tabs.size(); i++)
-		{
-			WPXPropertyList wpx_td;
-			WPSTabPos bpos = m_tabs[i];
-			wpx_td.insert("style:position",bpos.m_pos,WPX_INCH);
-			if (bpos.m_align == WPS_TAB_CENTER) wpx_td.insert("style:type","center");
-			else if (bpos.m_align == WPS_TAB_RIGHT) wpx_td.insert("style:type","right");
-			else if (bpos.m_align == WPS_TAB_DECIMAL)
-			{
-			  wpx_td.insert("style:type","char");
-			  wpx_td.insert("style:char", "."); // Assume a decimal point for now
-			}
-			tabStops.append(wpx_td);
-		}
-
-		if (m_ps->m_numbering)
-		{
-			WPXPropertyList pl;
-			int list_type = _getListId();
-			if (list_type != m_ps->m_curListType)
-			{
-				if (m_ps->m_curListType)
-				{
-					if (m_ps->m_isOrdered)
-						m_documentInterface->closeOrderedListLevel();
-					else
-						m_documentInterface->closeUnorderedListLevel();
-				}
-				/* and open new */
-				pl.insert("libwpd:id",list_type);
-				if (m_ps->m_numbering == WPS_NUMBERING_NUMBER)
-				{
-					m_ps->m_isOrdered = true;
-					m_documentInterface->openOrderedListLevel(pl);
-				}
-				else
-				{
-					m_ps->m_isOrdered = false;
-					m_documentInterface->openUnorderedListLevel(pl);
-				}
-				m_ps->m_curListType = list_type;
-			}
-		}
-		else
-		{
-			if (m_ps->m_curListType != 0)
-			{
-				if (m_ps->m_isOrdered)
-					m_documentInterface->closeOrderedListLevel();
-				else
-					m_documentInterface->closeUnorderedListLevel();
-				m_ps->m_curListType = 0;
-			}
-		}
-
-		if (!m_ps->m_isParagraphOpened)
-		{
-			if (m_ps->m_curListType)
-			{
-				m_documentInterface->openListElement(propList, tabStops);
-				m_ps->m_isParaListItem = true;
-			}
-			else
-				m_documentInterface->openParagraph(propList, tabStops);
-		}
-
-		m_ps->m_isParagraphColumnBreak = false;
-		m_ps->m_isParagraphPageBreak = false;
-		m_ps->m_isParagraphOpened = true;
-	}
+	m_ps->m_isParagraphColumnBreak = false;
+	m_ps->m_isParagraphPageBreak = false;
+	m_ps->m_isParagraphOpened = true;
 }
 
 void WPSContentListener::_closeParagraph()
@@ -428,11 +270,8 @@ void WPSContentListener::_closeParagraph()
 		if (m_ps->m_isSpanOpened)
 			_closeSpan();
 
-		if (m_ps->m_isParaListItem)
-		{
-			m_documentInterface->closeListElement();
-			m_ps->m_isParaListItem = false;
-		}
+		if (m_ps->m_isListElementOpened)
+			_closeListElement();
 		else
 			m_documentInterface->closeParagraph();
 	}
@@ -445,8 +284,12 @@ void WPSContentListener::_closeParagraph()
 
 void WPSContentListener::_openSpan()
 {
-	if (!m_ps->m_isParagraphOpened)
+	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+		_changeList();
+	if (m_ps->m_currentListLevel == 0)
 		_openParagraph();
+	else
+		_openListElement();
 
 	uint8_t fontSizeAttributes = (uint8_t)(m_ps->m_textAttributeBits & 0x0000001f);
 	float fontSizeChange = 0.0f;
@@ -612,56 +455,60 @@ void WPSContentListener::setFontAttributes(const uint32_t fontAttributes)
 	m_ps->m_textAttributeBits=fontAttributes;
 }
 
-void WPSContentListener::setLanguageID(const uint32_t lcid)
+void WPSContentListener::setTextLanguage(const uint32_t lcid)
 {
 	_closeSpan();
 	m_ps->m_languageId=lcid;
 }
 
-void WPSContentListener::setColor(const unsigned int rgb)
+void WPSContentListener::setTextColor(const unsigned int rgb)
 {
 	_closeSpan();
 	m_ps->m_textcolor = rgb;
 }
 
-void WPSContentListener::setAlign(const uint8_t align)
+void WPSContentListener::setAlign(libwps::Justification align)
 {
 	m_ps->m_paragraphJustification = align;
 }
 
-void WPSContentListener::setMargins(const float first, const float left,
-                                    const float right,const float before, const float after)
+void WPSContentListener::setParagraphTextIndent(double margin)
 {
-	m_ps->m_paragraphMarginLeft = left;
-	m_ps->m_paragraphMarginRight = right;
-	m_ps->m_paragraphIndentFirst = first;
-	m_ps->m_paragraphMarginTop = before;
-	m_ps->m_paragraphMarginBottom = after;
+	m_ps->m_paragraphTextIndent = margin;
 }
 
-void WPSContentListener::setTabs(std::vector<WPSTabPos> &tabs)
+void WPSContentListener::setParagraphMargin(double margin, int pos)
+{
+	switch(pos)
+	{
+	case WPS_LEFT:
+		m_ps->m_paragraphMarginLeft = margin;
+		break;
+	case WPS_RIGHT:
+		m_ps->m_paragraphMarginRight = margin;
+		break;
+	case WPS_TOP:
+		m_ps->m_paragraphMarginTop = margin;
+		break;
+	case WPS_BOTTOM:
+		m_ps->m_paragraphMarginBottom = margin;
+		break;
+	default:
+		WPS_DEBUG_MSG(("WPSContentListener::setParagraphMargin: unknown pos"));
+	}
+}
+
+void WPSContentListener::setTabs(std::vector<WPSTabStop> &tabs)
 {
 	m_tabs = tabs;
-}
-
-void WPSContentListener::setNumberingType(const uint8_t style)
-{
-	m_ps->m_numbering = style;
-}
-
-void WPSContentListener::setNumberingProp(const libwps::NumberingType type, const uint16_t sep)
-{
-	if (m_ps->m_numbering == WPS_NUMBERING_NONE)
-		m_ps->m_numbering = WPS_NUMBERING_NUMBER;
-
-	m_ps->m_numstyle = type;
-	m_ps->m_numsep = sep;
 }
 
 void WPSContentListener::insertEOL()
 {
 	if (!m_ps->m_isParagraphOpened)
 		_openSpan();
+	if (m_ps->m_isParagraphOpened)
+		_closeParagraph();
 	if (m_ps->m_isParagraphOpened)
 		_closeParagraph();
 }
@@ -742,60 +589,6 @@ void WPSContentListener::insertField()
 	}
 }
 
-void WPSContentListener::openFootnote()
-{
-	WPXPropertyList pl;
-
-	if (m_ps->m_isFootEndNote) return; /* eventually should be gone*/
-
-	pl.insert("libwpd:number",m_ps->m_footnoteId++);
-
-	_closeSpan();
-	m_documentInterface->openFootnote(pl);
-	m_ps->m_isFootEndNote = true;
-	m_ps->m_isSpanOpened = false;
-}
-
-void WPSContentListener::closeFootnote()
-{
-	if (!m_ps->m_isFootEndNote) return;
-
-	//_closeParagraph();
-	m_documentInterface->closeFootnote();
-	m_ps->m_isFootEndNote = false;
-	/* ideally should push/pop here */
-	m_ps->m_isParagraphOpened = true;
-	m_ps->m_isSpanOpened = true;
-}
-
-void WPSContentListener::openEndnote()
-{
-	WPXPropertyList pl;
-
-	if (m_ps->m_isFootEndNote) return; /* eventually should be gone*/
-
-	pl.insert("libwpd:number",m_ps->m_endnoteId++);
-
-	_closeSpan();
-	m_documentInterface->openEndnote(pl);
-	m_ps->m_isFootEndNote = true;
-
-	m_ps->m_isSpanOpened = true;
-}
-
-void WPSContentListener::closeEndnote()
-{
-	if (!m_ps->m_isFootEndNote) return;
-
-	_closeParagraph();
-	m_documentInterface->closeEndnote();
-	m_ps->m_isFootEndNote = false;
-
-	/* ideally should push/pop here */
-	m_ps->m_isParagraphOpened = true;
-	m_ps->m_isSpanOpened = true;
-}
-
 void WPSContentListener::_flushText()
 {
 	_insertText(m_ps->m_textBuffer);
@@ -838,65 +631,241 @@ void WPSContentListener::_insertText(const WPXString &textBuffer)
 	m_documentInterface->insertText(tmpText);
 }
 
-int WPSContentListener::_getListId()
+void WPSContentListener::_resetParagraphState(const bool isListElement)
 {
-	WPSContentListenerInternal::ListSignature l;
-	l.m_numbering = m_ps->m_numbering;
-	l.m_numstyle = m_ps->m_numstyle;
-	l.m_numsep = m_ps->m_numsep;
-
-	if (l.m_numbering == 0) return 0;
-
-	for (unsigned i=0; i < m_listFormats.size(); i++)
+	m_ps->m_isParagraphColumnBreak = false;
+	m_ps->m_isParagraphPageBreak = false;
+	if (isListElement)
 	{
-		if (m_listFormats[i]==l)
-			return i+1;
-	}
-	m_listFormats.push_back(l);
-	int listid = m_listFormats.size();
-	WPXPropertyList pl;
-
-	pl.insert("libwpd:id",listid);
-	pl.insert("libwpd:level",1);
-
-	if (m_ps->m_numbering == WPS_NUMBERING_NUMBER)
-	{
-		const char *nst = "1";
-		switch (m_ps->m_numstyle)
-		{
-		case libwps::LOWERCASE:
-			nst = "a";
-			break;
-		case libwps::UPPERCASE:
-			nst = "A";
-			break;
-		case libwps::LOWERCASE_ROMAN:
-			nst = "i";
-			break;
-		case libwps::UPPERCASE_ROMAN:
-			nst = "I";
-			break;
-		default:
-			WPS_DEBUG_MSG(("WPSContentListener::_getListId: unexpected style \n"));
-		case libwps::ARABIC:
-			nst = "1";
-			break;
-		};
-		pl.insert("style:num-format", nst);
-
-		pl.insert("style:num-suffix", (m_ps->m_numsep == 2)?".":")");
-
-		pl.insert("text:start-value",1);
-
-		m_documentInterface->defineOrderedListLevel(pl);
+		m_ps->m_isListElementOpened = true;
+		m_ps->m_isParagraphOpened = true;
 	}
 	else
 	{
-		pl.insert("text:bullet-char","*");
-		m_documentInterface->defineUnorderedListLevel(pl);
+		m_ps->m_isListElementOpened = false;
+		m_ps->m_isParagraphOpened = true;
 	}
-
-	return listid;
+#if 0
+	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange;
+	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange;
+	m_ps->m_leftMarginByTabs = 0.0;
+	m_ps->m_rightMarginByTabs = 0.0;
+	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange;
+	m_ps->m_textIndentByTabs = 0.0;
+	m_ps->m_isCellWithoutParagraph = false;
+	m_ps->m_isTextColumnWithoutParagraph = false;
+	m_ps->m_isHeaderFooterWithoutParagraph = false;
+	m_ps->m_tempParagraphJustification = 0;
+#endif
+	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+	m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
 }
 
+void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool /*isListElement*/)
+{
+	switch (m_ps->m_paragraphJustification)
+	{
+	case libwps::JustificationLeft:
+		// doesn't require a paragraph prop - it is the default
+		propList.insert("fo:text-align", "left");
+		break;
+	case libwps::JustificationCenter:
+		propList.insert("fo:text-align", "center");
+		break;
+	case libwps::JustificationRight:
+		propList.insert("fo:text-align", "end");
+		break;
+	case libwps::JustificationFull:
+		propList.insert("fo:text-align", "justify");
+		break;
+	case libwps::JustificationFullAllLines:
+		propList.insert("fo:text-align", "justify");
+		propList.insert("fo:text-align-last", "justify");
+		break;
+	default:
+		WPS_DEBUG_MSG(("WPSContentListener::_appendParagraphProperties: unimplemented justification\n"));
+		propList.insert("fo:text-align", "left");
+		break;
+	}
+
+	if (!m_ps->m_isTableOpened)
+	{
+		// these properties are not appropriate when a table is opened..
+#ifdef NEW_VERSION
+		if (isListElement)
+			propList.insert("fo:margin-left", (m_ps->m_listBeginPosition - m_ps->m_paragraphTextIndent));
+		else
+#endif
+			propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
+		propList.insert("fo:text-indent", m_ps->m_paragraphTextIndent);
+		propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
+	}
+	// WPS : osnola
+	propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop);
+	propList.insert("fo:margin-bottom", m_ps->m_paragraphMarginBottom);
+	propList.insert("fo:line-height", m_ps->m_paragraphLineSpacing, WPX_PERCENT);
+
+	if (m_ps->m_isParagraphColumnBreak)
+		propList.insert("fo:break-before", "column");
+	else if (m_ps->m_isParagraphPageBreak)
+		propList.insert("fo:break-before", "page");
+}
+
+void WPSContentListener::_getTabStops(WPXPropertyListVector &tabStops)
+{
+	for (int i=0; i<(int)m_tabs.size(); i++)
+		m_tabs[i].addTo(tabStops);
+}
+
+///////////////////
+//
+// List: Minimal implementation
+//
+///////////////////
+void WPSContentListener::setCurrentListLevel(int level)
+{
+	m_ps->m_currentListLevel = level;
+	// to be compatible with WPSContentListerner
+	if (level)
+		m_ps->m_listBeginPosition =
+		    m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+	else
+		m_ps->m_listBeginPosition = 0;
+}
+void WPSContentListener::setCurrentList(shared_ptr<WPSList> list)
+{
+	m_ps->m_list=list;
+	if (list && list->getId() <= 0 && list->numLevels())
+		list->setId(++m_ps->m_actualListId);
+}
+shared_ptr<WPSList> WPSContentListener::getCurrentList() const
+{
+	return m_ps->m_list;
+}
+
+
+void WPSContentListener::_openListElement()
+{
+	if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
+		return;
+
+	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+	{
+		if (!m_ps->m_isTableOpened && (!m_ps->m_inSubDocument/* OSNOLA: fixme || m_ps->m_subDocumentType == WPS_SUBDOCUMENT_TEXT_BOX*/))
+		{
+			if (m_ps->m_sectionAttributesChanged)
+				_closeSection();
+
+			if (!m_ps->m_isSectionOpened)
+				_openSection();
+		}
+
+		WPXPropertyList propList;
+		_appendParagraphProperties(propList, true);
+
+		WPXPropertyListVector tabStops;
+		_getTabStops(tabStops);
+
+		if (!m_ps->m_isListElementOpened)
+			m_documentInterface->openListElement(propList, tabStops);
+		_resetParagraphState(true);
+	}
+}
+
+void WPSContentListener::_closeListElement()
+{
+	if (m_ps->m_isListElementOpened)
+	{
+		if (m_ps->m_isSpanOpened)
+			_closeSpan();
+
+		m_documentInterface->closeListElement();
+	}
+
+	m_ps->m_isListElementOpened = false;
+	m_ps->m_currentListLevel = 0;
+
+	if (!m_ps->m_isTableOpened && m_ps->m_isPageSpanBreakDeferred && !m_ps->m_inSubDocument)
+		_closePageSpan();
+}
+
+void WPSContentListener::_changeList()
+{
+	if (m_ps->m_isParagraphOpened)
+		_closeParagraph();
+	_handleListChange();
+}
+
+
+// basic model of unordered list
+void WPSContentListener::_handleListChange()
+{
+	if (!m_ps->m_isSectionOpened && !m_ps->m_inSubDocument && !m_ps->m_isTableOpened)
+		_openSection();
+
+	// FIXME: even if nobody really care, if we close an ordered or an unordered
+	//      elements, we must keep the previous to close this part...
+	int actualListLevel = m_ps->m_listOrderedLevels.size();
+	for (int i=actualListLevel; i > m_ps->m_currentListLevel; i--)
+	{
+		if (m_ps->m_listOrderedLevels[i-1])
+			m_documentInterface->closeOrderedListLevel();
+		else
+			m_documentInterface->closeUnorderedListLevel();
+	}
+
+	WPXPropertyList propList2;
+	if (m_ps->m_currentListLevel)
+	{
+		if (!m_ps->m_list.get())
+		{
+			WPS_DEBUG_MSG(("WPSContentListener::_handleListChange: can not find any list\n"));
+			return;
+		}
+		m_ps->m_list->setLevel(m_ps->m_currentListLevel);
+		m_ps->m_list->openElement();
+
+		if (m_ps->m_list->mustSendLevel(m_ps->m_currentListLevel))
+		{
+			if (actualListLevel == m_ps->m_currentListLevel)
+			{
+				if (m_ps->m_listOrderedLevels[actualListLevel-1])
+					m_documentInterface->closeOrderedListLevel();
+				else
+					m_documentInterface->closeUnorderedListLevel();
+				actualListLevel--;
+			}
+			if (m_ps->m_currentListLevel==1)
+			{
+				// we must change the listID for writerperfect
+				int prevId;
+				if ((prevId=m_ps->m_list->getPreviousId()) > 0)
+					m_ps->m_list->setId(prevId);
+				else
+					m_ps->m_list->setId(++m_ps->m_actualListId);
+			}
+			m_ps->m_list->sendTo(*m_documentInterface, m_ps->m_currentListLevel);
+		}
+
+		propList2.insert("libwpd:id", m_ps->m_list->getId());
+		m_ps->m_list->closeElement();
+	}
+
+	if (actualListLevel == m_ps->m_currentListLevel) return;
+
+	m_ps->m_listOrderedLevels.resize(m_ps->m_currentListLevel, false);
+	for (int i=actualListLevel+1; i<= m_ps->m_currentListLevel; i++)
+	{
+		if (m_ps->m_list->isNumeric(i))
+		{
+			m_ps->m_listOrderedLevels[i-1] = true;
+			m_documentInterface->openOrderedListLevel(propList2);
+		}
+		else
+		{
+			m_ps->m_listOrderedLevels[i-1] = false;
+			m_documentInterface->openUnorderedListLevel(propList2);
+		}
+	}
+}
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

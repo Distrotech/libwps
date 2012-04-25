@@ -67,6 +67,67 @@ int32_t read32(WPXInputStream *input)
 {
 	return (int32_t) readU32(input);
 }
+
+std::string numberingTypeToString(NumberingType type)
+{
+	switch (type)
+	{
+	case ARABIC:
+		return "1";
+	case LOWERCASE:
+		return "a";
+	case UPPERCASE:
+		return "A";
+	case LOWERCASE_ROMAN:
+		return "i";
+	case UPPERCASE_ROMAN:
+		return "I";
+	default:
+		break;
+	}
+	WPS_DEBUG_MSG(("libwps::numberingTypeToString: must not be called with type %d\n", int(type)));
+	return "1";
+}
+
+}
+
+void WPSTabStop::addTo(WPXPropertyListVector &propList, double decalX)
+{
+	WPXPropertyList tab;
+
+	// type
+	switch (m_alignment)
+	{
+	case RIGHT:
+		tab.insert("style:type", "right");
+		break;
+	case CENTER:
+		tab.insert("style:type", "center");
+		break;
+	case DECIMAL:
+		tab.insert("style:type", "char");
+		tab.insert("style:char", "."); // Assume a decimal point for now
+		break;
+	default:  // Left alignment is the default and BAR is not handled in OOo
+		break;
+	}
+
+	// leader character
+	if (m_leaderCharacter != 0x0000)
+	{
+		WPXString sLeader;
+		sLeader.sprintf("%c", m_leaderCharacter);
+		tab.insert("style:leader-text", sLeader);
+		tab.insert("style:leader-style", "solid");
+	}
+
+	// position
+	double position = m_position+decalX;
+	if (position < 0.00005f && position > -0.00005f)
+		position = 0.0;
+	tab.insert("style:position", position);
+
+	propList.append(tab);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

@@ -34,6 +34,7 @@
 
 #include "libwps_internal.h"
 
+class WPSList;
 class WPSPageSpan;
 
 struct WPSContentParsingState
@@ -51,18 +52,8 @@ struct WPSContentParsingState
 
 	bool m_isParagraphColumnBreak;
 	bool m_isParagraphPageBreak;
-	uint8_t m_paragraphJustification;
+	libwps::Justification m_paragraphJustification;
 	float m_paragraphLineSpacing;
-
-	uint16_t m_footnoteId;
-	uint16_t m_endnoteId;
-
-	uint8_t m_numbering;
-	libwps::NumberingType m_numstyle;
-	uint16_t m_numsep;
-
-	int m_curListType;
-	bool m_isOrdered;
 
 	bool m_isDocumentStarted;
 	bool m_isPageSpanOpened;
@@ -72,7 +63,9 @@ struct WPSContentParsingState
 	bool m_isSpanOpened;
 	bool m_isParagraphOpened;
 
-	bool m_isFootEndNote;
+	bool m_inSubDocument;
+	bool m_isListElementOpened;
+	bool m_isTableOpened, m_isTableCellOpened;
 
 	bool m_isParaListItem;
 
@@ -92,26 +85,28 @@ struct WPSContentParsingState
 	float m_paragraphMarginTop;
 	float m_paragraphMarginBottom;
 
-	float m_paragraphIndentFirst;
+	float m_paragraphTextIndent;
 
 	WPXString m_textBuffer;
 
+	//! the list
+	shared_ptr<WPSList> m_list;
+	//! a stack used to know what is open
+	std::vector<bool> m_listOrderedLevels;
+	//! the actual list id
+	int m_actualListId;
+	//! the actual list level
+	int m_currentListLevel;
+
+	double m_listReferencePosition; // position from the left page margin of the list number/bullet
+	double m_listBeginPosition; // position from the left page margin of the beginning of the list
 private:
-	WPSContentParsingState(const WPSContentParsingState &);
-	WPSContentParsingState &operator=(const WPSContentParsingState &);
 };
 
 namespace WPSContentListenerInternal
 {
 struct ListSignature;
 }
-
-struct WPSTabPos
-{
-	float m_pos;
-	char  m_align;
-	char  m_leader;
-};
 
 class WPSContentListener
 {
@@ -126,26 +121,39 @@ public:
 	void insertUnicodeCharacter(uint32_t character);
 	void insertField();
 
-	void openFootnote();
-	void closeFootnote();
-	void openEndnote();
-	void closeEndnote();
-
 	void setTextFont(const WPXString fontName);
 	void setFontSize(const uint16_t fontSize);
 	void setFontAttributes(const uint32_t fontAttributes);
-	void setLanguageID(const uint32_t lcid);
-	void setColor(const unsigned int rgb);
+	void setTextLanguage(const uint32_t lcid);
+	void setTextColor(const unsigned int rgb);
 	void setFieldType(uint16_t code);
 	void setFieldFormat(uint16_t code);
 
-	void setAlign(const uint8_t align);
-	void setMargins(const float first=0.0, const float left=0.0, const float right=0.0,
-	                const float before=0.0, const float after=0.0);
-	void setTabs(std::vector<WPSTabPos> &tabs);
+	void setAlign(libwps::Justification align);
+	//! sets the first paragraph text indent. \warning unit are given in inches
+	void setParagraphTextIndent(double margin);
+	/** sets the paragraph margin.
+	 *
+	 * \param margin is given in inches
+	 * \param pos in WPS_LEFT, WPS_RIGHT, WPS_TOP, WPS_BOTTOM
+	 */
+	void setParagraphMargin(double margin, int pos);
 
-	void setNumberingType(const uint8_t style);
-	void setNumberingProp(const libwps::NumberingType type, const uint16_t sep);
+	void setTabs(std::vector<WPSTabStop> &tabs);
+
+	/** function to set the actual list
+	 *
+	 * \note set the listid if not set
+	 */
+	void setCurrentList(shared_ptr<WPSList> list);
+
+	/** returns the current list */
+	shared_ptr<WPSList> getCurrentList() const;
+
+	/** function to create an unordered list
+	 *
+	 * \warning minimal implementation...*/
+	void setCurrentListLevel(int level);
 
 	void insertEOL();
 
@@ -171,12 +179,21 @@ protected:
 
 	void _insertText(const WPXString &textBuffer);
 
-	int  _getListId();
+	void _resetParagraphState(const bool isListElement=false);
+	void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
+	void _getTabStops(WPXPropertyListVector &tabStops);
+
+	void _openListElement();
+	void _closeListElement();
+	//! closes the previous item (if needed) and open the new one
+	void _changeList();
+	//! sets list properties when the list changes
+	void _handleListChange();
 private:
 	WPSContentListener(const WPSContentListener &);
 	WPSContentListener &operator=(const WPSContentListener &);
 
-	std::vector<WPSTabPos> m_tabs;
+	std::vector<WPSTabStop> m_tabs;
 	std::vector<WPSPageSpan> m_pageList;
 	std::vector<WPSContentListenerInternal::ListSignature> m_listFormats;
 };

@@ -68,6 +68,179 @@ struct WPS_shared_ptr_noop_deleter
 
 typedef shared_ptr<WPXInputStream> WPXInputStreamPtr;
 
+/* ---------- debug  --------------- */
+#ifdef DEBUG
+#define WPS_DEBUG_MSG(M) printf M
+#else
+#define WPS_DEBUG_MSG(M)
+#endif
+
+/* ---------- exception  ------------ */
+namespace libwps
+{
+// Various exceptions
+class VersionException
+{
+	// needless to say, we could flesh this class out a bit
+};
+
+class FileException
+{
+	// needless to say, we could flesh this class out a bit
+};
+
+class ParseException
+{
+	// needless to say, we could flesh this class out a bit
+};
+
+class GenericException
+{
+	// needless to say, we could flesh this class out a bit
+};
+}
+
+/* ---------- input ----------------- */
+namespace libwps
+{
+uint8_t readU8(WPXInputStream *input);
+uint16_t readU16(WPXInputStream *input);
+uint32_t readU32(WPXInputStream *input);
+
+int8_t read8(WPXInputStream *input);
+int16_t read16(WPXInputStream *input);
+int32_t read32(WPXInputStream *input);
+
+inline uint8_t readU8(WPXInputStreamPtr &input)
+{
+	return readU8(input.get());
+}
+inline uint16_t readU16(WPXInputStreamPtr &input)
+{
+	return readU16(input.get());
+}
+inline uint32_t readU32(WPXInputStreamPtr &input)
+{
+	return readU32(input.get());
+}
+
+inline int8_t read8(WPXInputStreamPtr &input)
+{
+	return read8(input.get());
+}
+inline int16_t read16(WPXInputStreamPtr &input)
+{
+	return read16(input.get());
+}
+inline int32_t read32(WPXInputStreamPtr &input)
+{
+	return read32(input.get());
+}
+}
+
+#define WPS_LE_GET_GUINT16(p)				  \
+        (uint16_t)((((uint8_t const *)(p))[0] << 0)  |    \
+                  (((uint8_t const *)(p))[1] << 8))
+#define WPS_LE_GET_GUINT32(p) \
+        (uint32_t)((((uint8_t const *)(p))[0] << 0)  |    \
+                  (((uint8_t const *)(p))[1] << 8)  |    \
+                  (((uint8_t const *)(p))[2] << 16) |    \
+                  (((uint8_t const *)(p))[3] << 24))
+
+// Various helper structures for the parser..
+/* ---------- small enum/class ------------- */
+class WPXPropertyListVector;
+
+struct WPSColumnDefinition
+{
+	WPSColumnDefinition() : m_width(0), m_leftGutter(0), m_rightGutter(0)
+	{
+	}
+	double m_width;
+	double m_leftGutter;
+	double m_rightGutter;
+};
+
+struct WPSColumnProperties
+{
+	WPSColumnProperties() : m_attributes(0), m_alignment(0)
+	{
+	}
+	uint32_t m_attributes;
+	uint8_t m_alignment;
+};
+
+struct WPSTabStop
+{
+	enum Alignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
+	WPSTabStop(double position = 0.0, Alignment alignment = LEFT, uint16_t leaderCharacter='\0', uint8_t leaderNumSpaces = 0)  :
+		m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_leaderNumSpaces(leaderNumSpaces)
+	{
+	}
+	void addTo(WPXPropertyListVector &propList, double decalX=0.0);
+	double m_position;
+	Alignment m_alignment;
+	uint16_t m_leaderCharacter;
+	uint8_t m_leaderNumSpaces;
+};
+
+namespace libwps
+{
+enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
+std::string numberingTypeToString(NumberingType type);
+enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
+enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
+                     JustificationRight, JustificationFullAllLines
+                   };
+}
+
+// ATTRIBUTE bits
+#define WPS_EXTRA_LARGE_BIT 1
+#define WPS_VERY_LARGE_BIT 2
+#define WPS_LARGE_BIT 4
+#define WPS_SMALL_PRINT_BIT 8
+#define WPS_FINE_PRINT_BIT 0x10
+#define WPS_SUPERSCRIPT_BIT 0x20
+#define WPS_SUBSCRIPT_BIT 0x40
+#define WPS_OUTLINE_BIT 0x80
+#define WPS_ITALICS_BIT 0x100
+#define WPS_SHADOW_BIT 0x200
+#define WPS_REDLINE_BIT 0x400
+#define WPS_DOUBLE_UNDERLINE_BIT 0x800
+#define WPS_BOLD_BIT 0x1000
+#define WPS_STRIKEOUT_BIT 0x2000
+#define WPS_UNDERLINE_BIT 0x4000
+#define WPS_SMALL_CAPS_BIT 0x8000
+#define WPS_BLINK_BIT 0x10000L
+#define WPS_REVERSEVIDEO_BIT 0x20000L
+#define WPS_ALL_CAPS_BIT 0x40000L
+#define WPS_EMBOSS_BIT 0x80000L
+#define WPS_ENGRAVE_BIT 0x100000L
+#define WPS_OVERLINE_BIT 0x400000L
+#define WPS_HIDDEN_BIT 0x800000L
+
+
+#define WPS_PARAGRAPH_LAYOUT_NO_BREAK  0x01
+#define WPS_PARAGRAPH_LAYOUT_WITH_NEXT 0x02
+
+// BREAK bits
+#define WPS_PAGE_BREAK 0x00
+#define WPS_SOFT_PAGE_BREAK 0x01
+#define WPS_COLUMN_BREAK 0x02
+
+// Generic bits
+#define WPS_LEFT 0x00
+#define WPS_RIGHT 0x01
+#define WPS_CENTER 0x02
+#define WPS_TOP 0x03
+#define WPS_BOTTOM 0x04
+
+// Field codes
+#define WPS_FIELD_PAGE 1
+#define WPS_FIELD_DATE 2
+#define WPS_FIELD_TIME 3
+#define WPS_FIELD_FILE 4
+
 /* ---------- vec2/box2f ------------- */
 /*! \class Vec2
  *   \brief small class which defines a vector with 2 elements
@@ -124,16 +297,6 @@ public:
 	void add(T dx, T dy)
 	{
 		m_x += dx;
-		m_y += dy;
-	}
-	//! adds \a dx
-	void addX(T dx)
-	{
-		m_x += dx;
-	}
-	//! adds \a dy
-	void addY(T dy)
-	{
 		m_y += dy;
 	}
 
@@ -214,12 +377,6 @@ public:
 		return 0;
 	}
 
-	//! Debug: prints data in form "(x,y)"
-	std::ostream &debugP(std::ostream &o) const
-	{
-		o << "(" << m_x << "," << m_y << ")";
-		return o;
-	}
 	//! operator<<: prints data in form "XxY"
 	friend std::ostream &operator<< (std::ostream &o, Vec2<T> const &f)
 	{
@@ -435,156 +592,6 @@ protected:
 typedef Box2<int> Box2i;
 /*! \brief Box2 of float */
 typedef Box2<float> Box2f;
-
-/* ---------- debug  --------------- */
-#ifdef DEBUG
-#define WPS_DEBUG_MSG(M) printf M
-#else
-#define WPS_DEBUG_MSG(M)
-#endif
-
-/* ---------- exception  ------------ */
-namespace libwps
-{
-// Various exceptions
-class VersionException
-{
-	// needless to say, we could flesh this class out a bit
-};
-
-class FileException
-{
-	// needless to say, we could flesh this class out a bit
-};
-
-class ParseException
-{
-	// needless to say, we could flesh this class out a bit
-};
-
-class GenericException
-{
-	// needless to say, we could flesh this class out a bit
-};
-}
-
-/* ---------- input ----------------- */
-namespace libwps
-{
-uint8_t readU8(WPXInputStream *input);
-uint16_t readU16(WPXInputStream *input);
-uint32_t readU32(WPXInputStream *input);
-
-int8_t read8(WPXInputStream *input);
-int16_t read16(WPXInputStream *input);
-int32_t read32(WPXInputStream *input);
-
-inline uint8_t readU8(WPXInputStreamPtr &input)
-{
-	return readU8(input.get());
-}
-inline uint16_t readU16(WPXInputStreamPtr &input)
-{
-	return readU16(input.get());
-}
-inline uint32_t readU32(WPXInputStreamPtr &input)
-{
-	return readU32(input.get());
-}
-
-inline int8_t read8(WPXInputStreamPtr &input)
-{
-	return read8(input.get());
-}
-inline int16_t read16(WPXInputStreamPtr &input)
-{
-	return read16(input.get());
-}
-inline int32_t read32(WPXInputStreamPtr &input)
-{
-	return read32(input.get());
-}
-}
-
-#define WPS_LE_GET_GUINT16(p)				  \
-        (uint16_t)((((uint8_t const *)(p))[0] << 0)  |    \
-                  (((uint8_t const *)(p))[1] << 8))
-#define WPS_LE_GET_GUINT32(p) \
-        (uint32_t)((((uint8_t const *)(p))[0] << 0)  |    \
-                  (((uint8_t const *)(p))[1] << 8)  |    \
-                  (((uint8_t const *)(p))[2] << 16) |    \
-                  (((uint8_t const *)(p))[3] << 24))
-
-// Various helper structures for the parser..
-namespace libwps
-{
-enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
-}
-
-// ATTRIBUTE bits
-#define WPS_EXTRA_LARGE_BIT 1
-#define WPS_VERY_LARGE_BIT 2
-#define WPS_LARGE_BIT 4
-#define WPS_SMALL_PRINT_BIT 8
-#define WPS_FINE_PRINT_BIT 0x10
-#define WPS_SUPERSCRIPT_BIT 0x20
-#define WPS_SUBSCRIPT_BIT 0x40
-#define WPS_OUTLINE_BIT 0x80
-#define WPS_ITALICS_BIT 0x100
-#define WPS_SHADOW_BIT 0x200
-#define WPS_REDLINE_BIT 0x400
-#define WPS_DOUBLE_UNDERLINE_BIT 0x800
-#define WPS_BOLD_BIT 0x1000
-#define WPS_STRIKEOUT_BIT 0x2000
-#define WPS_UNDERLINE_BIT 0x4000
-#define WPS_SMALL_CAPS_BIT 0x8000
-#define WPS_BLINK_BIT 0x10000L
-#define WPS_REVERSEVIDEO_BIT 0x20000L
-#define WPS_ALL_CAPS_BIT 0x40000L
-#define WPS_EMBOSS_BIT 0x80000L
-#define WPS_ENGRAVE_BIT 0x100000L
-#define WPS_SPECIAL_BIT 0x200000L
-
-// JUSTIFICATION bits
-#define WPS_PARAGRAPH_JUSTIFICATION_LEFT 0x00
-#define WPS_PARAGRAPH_JUSTIFICATION_FULL 0x01
-#define WPS_PARAGRAPH_JUSTIFICATION_CENTER 0x02
-#define WPS_PARAGRAPH_JUSTIFICATION_RIGHT 0x03
-#define WPS_PARAGRAPH_JUSTIFICATION_FULL_ALL_LINES 0x04
-#define WPS_PARAGRAPH_JUSTIFICATION_DECIMAL_ALIGNED 0x05
-
-#define WPS_PARAGRAPH_LAYOUT_NO_BREAK  0x01
-#define WPS_PARAGRAPH_LAYOUT_WITH_NEXT 0x02
-
-#define WPS_TAB_LEFT 0x00
-#define WPS_TAB_CENTER 0x01
-#define WPS_TAB_RIGHT 0x02
-#define WPS_TAB_DECIMAL 0x03
-#define WPS_TAB_BAR 0x04
-
-// BREAK bits
-#define WPS_PAGE_BREAK 0x00
-#define WPS_SOFT_PAGE_BREAK 0x01
-#define WPS_COLUMN_BREAK 0x02
-
-// Generic bits
-#define WPS_LEFT 0x00
-#define WPS_RIGHT 0x01
-#define WPS_CENTER 0x02
-#define WPS_TOP 0x03
-#define WPS_BOTTOM 0x04
-
-// Field codes
-#define WPS_FIELD_PAGE 1
-#define WPS_FIELD_DATE 2
-#define WPS_FIELD_TIME 3
-#define WPS_FIELD_FILE 4
-
-// Bullets and numbering
-
-#define WPS_NUMBERING_NONE   0
-#define WPS_NUMBERING_BULLET 1
-#define WPS_NUMBERING_NUMBER 2
 
 #endif /* LIBWPS_INTERNAL_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

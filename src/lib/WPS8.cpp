@@ -25,9 +25,11 @@
 
 #include "libwps_internal.h"
 
+#include "WPSList.h"
 #include "WPSPageSpan.h"
 
 #include "WPS8.h"
+
 /*
 WPS8Parser public
 */
@@ -935,7 +937,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode)
 
 	/* set default properties */
 	uint32_t textAttributeBits = 0;
-	m_listener->setColor(0);
+	m_listener->setTextColor(0);
 	propertyChangeDelta(0);
 	m_listener->setFontSize(10);
 	/* maybe other stuff */
@@ -1053,7 +1055,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode)
 			break;
 
 		case 0x2212:
-			m_listener->setLanguageID(WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str()));
+			m_listener->setTextLanguage(WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str()));
 			x += 4;
 			break;
 
@@ -1082,8 +1084,8 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode)
 			break;
 
 		case 0x222E:
-			m_listener->setColor((((unsigned char)rgchProp[x+2]<<16)+((unsigned char)rgchProp[x+3]<<8)+
-			                      (unsigned char)rgchProp[x+4])&0xFFFFFF);
+			m_listener->setTextColor((((unsigned char)rgchProp[x+2]<<16)+((unsigned char)rgchProp[x+3]<<8)+
+			                          (unsigned char)rgchProp[x+4])&0xFFFFFF);
 			x += 4;
 			break;
 
@@ -1130,23 +1132,26 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode)
 
 void WPS8Parser::propertyChangePara(std::string rgchProp)
 {
-	static const uint8_t _align[]= {WPS_PARAGRAPH_JUSTIFICATION_LEFT,
-	                                WPS_PARAGRAPH_JUSTIFICATION_RIGHT,WPS_PARAGRAPH_JUSTIFICATION_CENTER,
-	                                WPS_PARAGRAPH_JUSTIFICATION_FULL
-	                               };
+	static const libwps::Justification _align[]=
+	{
+		libwps::JustificationLeft, libwps::JustificationRight,
+		libwps::JustificationCenter, libwps::JustificationFull
+	};
+	libwps::Justification align = libwps::JustificationLeft;
 
-	int iv, align = 0;
-	float pleft=0.0, prigh=0.0, pfirst=0.0, pbefore=0.0, pafter=0.0;
-
-	std::vector<WPSTabPos> tabList;
-
-	m_listener->setNumberingType(WPS_NUMBERING_NONE);
+	int iv = 0;
+	std::vector<WPSTabStop> tabList;
 	m_listener->setTabs(tabList);
 
 	/* sometimes, the rgchProp is blank */
 	if (0 == rgchProp.length())
+	{
+		m_listener->setCurrentListLevel(0);
 		return;
-
+	}
+	float leftIndent=0.0, textIndent=0.0;
+	int listLevel = 0;
+	WPSList::Level level;
 	for (uint32_t x = 3; x < rgchProp.length(); x += 2)
 	{
 		uint16_t format_code = rgchProp[x] | (rgchProp[x+1] << 8);
@@ -1154,9 +1159,11 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 		switch (format_code)
 		{
 		case 0x1A03:
-			iv = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str()) & 0xF;
+			// iv = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str()) & 0xF;
 			/* paragraph has a bullet specified in num format*/
-			m_listener->setNumberingType(WPS_NUMBERING_BULLET);
+			level.m_type = libwps::BULLET;
+			level.m_bullet = "*";
+			listLevel = 1;
 			x+=2;
 			break;
 
@@ -1168,13 +1175,13 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 
 		case 0x220C:
 			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			pfirst=iv/914400.0;
+			textIndent=iv/914400.0;
 			x+=4;
 			break;
 
 		case 0x220D:
 			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			pleft=iv/914400.0;
+			leftIndent=iv/914400.0;
 			x+=4;
 			break;
 
@@ -1200,30 +1207,47 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 		{
 			/* numbering style */
 			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			int separator = iv >> 16;
+			int oldListLevel = listLevel;
+			listLevel = 1;
 			switch(iv & 0xFFFF)
 			{
-			case 0:
-				m_listener->setNumberingProp(libwps::NONE,separator);
+			case 0: // checkme
+				WPS_DEBUG_MSG(("Find list flag=0\n"));
+				level.m_type = libwps::NONE;
+				listLevel = 0;
 				break;
 			case 2:
-				m_listener->setNumberingProp(libwps::ARABIC,separator);
+				level.m_type = libwps::ARABIC;
 				break;
 			case 3:
-				m_listener->setNumberingProp(libwps::LOWERCASE,separator);
+				level.m_type = libwps::LOWERCASE;
 				break;
 			case 4:
-				m_listener->setNumberingProp(libwps::UPPERCASE,separator);
+				level.m_type = libwps::UPPERCASE;
 				break;
 			case 5:
-				m_listener->setNumberingProp(libwps::LOWERCASE_ROMAN,separator);
+				level.m_type = libwps::LOWERCASE_ROMAN;
 				break;
 			case 6:
-				m_listener->setNumberingProp(libwps::UPPERCASE_ROMAN,separator);
+				level.m_type = libwps::UPPERCASE_ROMAN;
 				break;
 			default:
+				listLevel=-1;
 				WPS_DEBUG_MSG(("Unknown style %04x\n",(iv & 0xFFFF)));
 				break;
+			}
+			if (listLevel == -1) listLevel = oldListLevel;
+			else
+			{
+				switch(iv>>16)
+				{
+				case 2:
+					level.m_suffix = ".";
+					break;
+				default:
+					level.m_suffix = ")";
+					break;
+				}
 			}
 			x+=4;
 		}
@@ -1231,7 +1255,7 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 
 		case 0x8232:
 		{
-			WPSTabPos tab;
+			WPSTabStop tab;
 			const char *ts = rgchProp.c_str();
 			unsigned  t_count = 0;
 			int  t_size = WPS_LE_GET_GUINT32(&ts[x+2]);
@@ -1280,18 +1304,13 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 
 				if (iid >= t_count) break; /* sanity */
 				while (iid >= tabList.size())
-				{
-					tab.m_pos = 0;
-					tab.m_align = 0;
-					tab.m_leader = 0;
-					tabList.push_back(tab);
-				}
+					tabList.resize(iid+1);
 				switch (iprop)
 				{
 				case 0x2000:
 				{
 					float tabpos = WPS_LE_GET_GUINT32(&ts[id]) / 914400.0;
-					tabList[iid].m_pos = tabpos;
+					tabList[iid].m_position = tabpos;
 					id += 4;
 					tp_rem -=4;
 				}
@@ -1300,13 +1319,13 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 					switch (ts[id] & 0xF)
 					{
 					case 1:
-						tabList[iid].m_align = WPS_TAB_RIGHT;
+						tabList[iid].m_alignment = WPSTabStop::RIGHT;
 						break;
 					case 2:
-						tabList[iid].m_align = WPS_TAB_CENTER;
+						tabList[iid].m_alignment = WPSTabStop::CENTER;
 						break;
 					case 3:
-						tabList[iid].m_align = WPS_TAB_DECIMAL;
+						tabList[iid].m_alignment = WPSTabStop::DECIMAL;
 						break;
 					};
 					id += 2;
@@ -1357,8 +1376,19 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 		}
 	}
 
+	if (listLevel != -1)
+	{
+		if (listLevel)
+		{
+			if (!m_listener->getCurrentList())
+				m_listener->setCurrentList(shared_ptr<WPSList>(new WPSList));
+			m_listener->getCurrentList()->set(1, level);
+		}
+		m_listener->setCurrentListLevel(listLevel);
+	}
 	m_listener->setAlign(align);
-	m_listener->setMargins(pfirst,pleft,prigh,pbefore,pafter);
+	m_listener->setParagraphTextIndent(textIndent);
+	m_listener->setParagraphMargin(leftIndent, WPS_LEFT);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

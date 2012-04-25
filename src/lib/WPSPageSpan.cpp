@@ -24,33 +24,59 @@
 /* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
+#include <libwpd/WPXDocumentInterface.h>
+#include <libwpd/WPXProperty.h>
 
 #include "libwps_internal.h"
+#include "WPSContentListener.h"
 #include "WPSSubDocument.h"
 
 #include "WPSPageSpan.h"
 
-// ----------------- WPSHeaderFooter ------------------------
-
-WPSHeaderFooter::WPSHeaderFooter(const WPSPageSpan::HeaderFooterType headerFooterType, const WPSPageSpan::HeaderFooterOccurence occurence, WPSSubDocumentPtr &subDoc) :
-	m_type(headerFooterType),
-	m_occurence(occurence),
-	m_subDocument(subDoc)
+namespace WPSPageSpanInternal
 {
-}
-
-WPSHeaderFooter::WPSHeaderFooter(const WPSHeaderFooter &headerFooter) :
-	m_type(headerFooter.getType()),
-	m_occurence(headerFooter.getOccurence()),
-	m_subDocument(headerFooter.m_subDocument)
+// intermediate page representation class: for internal use only (by the high-level content/styles listeners). should not be exported.
+class HeaderFooter
 {
-}
+public:
+	HeaderFooter(const WPSPageSpan::HeaderFooterType headerFooterType, const WPSPageSpan::HeaderFooterOccurence occurence, WPSSubDocumentPtr &subDoc)  :
+		m_type(headerFooterType), m_occurence(occurence), m_subDocument(subDoc)
+	{
+	}
 
-WPSHeaderFooter::~WPSHeaderFooter()
-{
-}
+	HeaderFooter(const HeaderFooter &headerFooter) :
+		m_type(headerFooter.getType()), m_occurence(headerFooter.getOccurence()), m_subDocument(headerFooter.m_subDocument)
+	{
+	}
 
-bool WPSHeaderFooter::operator==(shared_ptr<WPSHeaderFooter> const &hF) const
+	~HeaderFooter()
+	{
+	}
+
+	WPSPageSpan::HeaderFooterType getType() const
+	{
+		return m_type;
+	}
+	WPSPageSpan::HeaderFooterOccurence getOccurence() const
+	{
+		return m_occurence;
+	}
+	WPSSubDocumentPtr &getSubDocument()
+	{
+		return m_subDocument;
+	}
+	bool operator==(shared_ptr<HeaderFooter> const &headerFooter) const;
+	bool operator!=(shared_ptr<HeaderFooter> const &headerFooter) const
+	{
+		return !operator==(headerFooter);
+	}
+private:
+	WPSPageSpan::HeaderFooterType m_type;
+	WPSPageSpan::HeaderFooterOccurence m_occurence;
+	WPSSubDocumentPtr m_subDocument;
+};
+
+bool HeaderFooter::operator==(shared_ptr<HeaderFooter> const &hF) const
 {
 	if (!hF) return false;
 	if (m_type != hF.get()->m_type)
@@ -63,6 +89,7 @@ bool WPSHeaderFooter::operator==(shared_ptr<WPSHeaderFooter> const &hF) const
 		return false;
 	return true;
 }
+}
 
 // ----------------- WPSPageSpan ------------------------
 WPSPageSpan::WPSPageSpan() :
@@ -74,7 +101,7 @@ WPSPageSpan::WPSPageSpan() :
 	m_marginTop(1.0),
 	m_marginBottom(1.0),
 	m_pageNumberPosition(None),
-	m_pageNumber(0),
+	m_pageNumber(-1),
 	m_pageNumberingType(libwps::ARABIC),
 	m_pageNumberingFontName("Times New Roman"),
 	m_pageNumberingFontSize(12.0),
@@ -105,11 +132,10 @@ WPSPageSpan::~WPSPageSpan()
 {
 }
 
-
 void WPSPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFooterOccurence occurence,
                                   WPSSubDocumentPtr &subDocument)
 {
-	WPSHeaderFooter headerFooter(type, occurence, subDocument);
+	WPSPageSpanInternal::HeaderFooter headerFooter(type, occurence, subDocument);
 	switch (occurence)
 	{
 	case NEVER:
@@ -145,6 +171,102 @@ void WPSPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFoote
 		_setHeaderFooter(type, ODD, dummyDoc);
 	}
 }
+
+void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
+                                    WPXDocumentInterface *documentInterface)
+{
+	if (!listener || !documentInterface)
+	{
+		WPS_DEBUG_MSG(("WPSPageSpan::sendHeaderFooters: no listener or document interface\n"));
+		return;
+	}
+
+	bool pageNumberInserted = false;
+	for (int i = 0; i < int(m_headerFooterList.size()); i++)
+	{
+		WPSPageSpanInternal::HeaderFooterPtr &hf = m_headerFooterList[i];
+		if (!hf) continue;
+
+		WPXPropertyList propList;
+		switch (hf->getOccurence())
+		{
+		case WPSPageSpan::ODD:
+			propList.insert("libwpd:occurence", "odd");
+			break;
+		case WPSPageSpan::EVEN:
+			propList.insert("libwpd:occurence", "even");
+			break;
+		case WPSPageSpan::ALL:
+			propList.insert("libwpd:occurence", "all");
+			break;
+		case WPSPageSpan::NEVER:
+		default:
+			break;
+		}
+		bool isHeader = WPSPageSpan::HEADER;
+		if (isHeader)
+			documentInterface->openHeader(propList);
+		else
+			documentInterface->openFooter(propList);
+		if (isHeader && m_pageNumberPosition >= TopLeft &&
+		        m_pageNumberPosition <= TopInsideLeftAndRight)
+		{
+			pageNumberInserted = true;
+			_insertPageNumberParagraph(documentInterface);
+		}
+
+		if (!isHeader && m_pageNumberPosition >= BottomLeft &&
+		        m_pageNumberPosition <= BottomInsideLeftAndRight)
+		{
+			pageNumberInserted = true;
+			_insertPageNumberParagraph(documentInterface);
+		}
+		if (isHeader)
+			documentInterface->closeHeader();
+		else
+			documentInterface->closeFooter();
+
+		WPS_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
+		               hf->getType(), hf->getOccurence()));
+	}
+
+	if (!pageNumberInserted)
+	{
+		WPXPropertyList propList;
+		propList.insert("libwpd:occurence", "all");
+		if (m_pageNumberPosition >= TopLeft &&
+		        m_pageNumberPosition <= TopInsideLeftAndRight)
+		{
+			documentInterface->openHeader(propList);
+			_insertPageNumberParagraph(documentInterface);
+			documentInterface->closeHeader();
+		}
+		else if (m_pageNumberPosition >= BottomLeft &&
+		         m_pageNumberPosition <= BottomInsideLeftAndRight)
+		{
+			documentInterface->openFooter(propList);
+			_insertPageNumberParagraph(documentInterface);
+			documentInterface->closeFooter();
+		}
+	}
+}
+
+void WPSPageSpan::getPageProperty(WPXPropertyList &propList) const
+{
+	propList.insert("libwpd:num-pages", getPageSpan());
+
+	propList.insert("fo:page-height", getFormLength());
+	propList.insert("fo:page-width", getFormWidth());
+	if (getFormOrientation() == WPSPageSpan::LANDSCAPE)
+		propList.insert("style:print-orientation", "landscape");
+	else
+		propList.insert("style:print-orientation", "portrait");
+	propList.insert("fo:margin-left", getMarginLeft());
+	propList.insert("fo:margin-right", getMarginRight());
+	propList.insert("fo:margin-top", getMarginTop());
+	propList.insert("fo:margin-bottom", getMarginBottom());
+}
+
 
 bool WPSPageSpan::operator==(shared_ptr<WPSPageSpan> const &page2) const
 {
@@ -201,6 +323,45 @@ bool WPSPageSpan::operator==(shared_ptr<WPSPageSpan> const &page2) const
 	return true;
 }
 
+void WPSPageSpan::_insertPageNumberParagraph(WPXDocumentInterface *documentInterface)
+{
+	WPXPropertyList propList;
+	switch (m_pageNumberPosition)
+	{
+	case TopLeft:
+	case BottomLeft:
+		// doesn't require a paragraph prop - it is the default
+		propList.insert("fo:text-align", "left");
+		break;
+	case TopRight:
+	case BottomRight:
+		propList.insert("fo:text-align", "end");
+		break;
+	case TopCenter:
+	case BottomCenter:
+	default:
+		propList.insert("fo:text-align", "center");
+		break;
+	}
+
+	documentInterface->openParagraph(propList, WPXPropertyListVector());
+
+	propList.clear();
+	propList.insert("style:font-name", m_pageNumberingFontName.cstr());
+	propList.insert("fo:font-size", m_pageNumberingFontSize, WPX_POINT);
+	documentInterface->openSpan(propList);
+
+
+	propList.clear();
+	propList.insert("style:num-format", libwps::numberingTypeToString(m_pageNumberingType).c_str());
+	documentInterface->insertField("text:page-number", propList);
+
+	propList.clear();
+	documentInterface->closeSpan();
+
+	documentInterface->closeParagraph();
+}
+
 // -------------- manage header footer list ------------------
 void WPSPageSpan::_setHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence, WPSSubDocumentPtr &doc)
 {
@@ -208,7 +369,7 @@ void WPSPageSpan::_setHeaderFooter(HeaderFooterType type, HeaderFooterOccurence 
 
 	int pos = _getHeaderFooterPosition(type, occurence);
 	if (pos == -1) return;
-	m_headerFooterList[pos]=WPSHeaderFooterPtr(new WPSHeaderFooter(type, occurence, doc));
+	m_headerFooterList[pos]=WPSPageSpanInternal::HeaderFooterPtr(new WPSPageSpanInternal::HeaderFooter(type, occurence, doc));
 }
 
 void WPSPageSpan::_removeHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence)

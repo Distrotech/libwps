@@ -61,11 +61,8 @@ public:
 		{
 			return m_type !=libwps::NONE && m_type != libwps::BULLET;
 		}
-		/** add the information of this level in the propList :
-		 m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent,
-		 m_ps->m_listBeginPosition
-		*/
-		void addTo(WPXPropertyList &propList, double actTextPosition, double listBeginPos, int startVal) const;
+		/** add the information of this level in the propList */
+		void addTo(WPXPropertyList &propList, int startVal) const;
 
 		/** returns true, if addTo has been called */
 		bool isSendToInterface() const
@@ -107,7 +104,7 @@ public:
 
 	/** default constructor */
 	WPSList() : m_levels(), m_actLevel(-1), m_actualIndices(), m_nextIndices(),
-		m_lastActTextPosition(), m_lastListBeginPos(), m_id(-1), m_previousId (-1) {}
+		m_id(-1), m_previousId (-1) {}
 
 	/** returns the list id */
 	int getId() const
@@ -146,23 +143,16 @@ public:
 	bool isNumeric(int levl) const;
 
 	/** returns true of the level must be send to the document interface */
-	bool mustSendLevel(int level, double actTextPosition,
-	                   double listBeginPos) const;
+	bool mustSendLevel(int level) const;
 
-	/** send the list information to the document interface,
-	   \Note: must be called with
-	   m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent,
-	   m_ps->m_listBeginPosition
-	*/
-	void sendTo(WPXDocumentInterface &docInterface, int level,
-	            double actTextPosition, double listBeginPos) const;
+	/** send the list information to the document interface */
+	void sendTo(WPXDocumentInterface &docInterface, int level) const;
 
 protected:
 	std::vector<Level> m_levels;
 
 	mutable int m_actLevel;
 	mutable std::vector<int> m_actualIndices, m_nextIndices;
-	mutable std::vector<double> m_lastActTextPosition, m_lastListBeginPos;
 	mutable int m_id, m_previousId;
 };
 

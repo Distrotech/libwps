@@ -442,20 +442,18 @@ void WPS4Parser::propertyChange(std::string rgchProp, WPS4ParserInternal::Font &
 		colorid = (uint8_t)rgchProp[7] & 0xF;
 	}
 	propertyChangeDelta(textAttributeBits);
-	m_listener->setColor(WPS4ParserInternal::s_colorMap[colorid]);
+	m_listener->setTextColor(WPS4ParserInternal::s_colorMap[colorid]);
 }
 
 void WPS4Parser::propertyChangePara(std::string rgchProp)
 {
-	static const uint8_t _align[]= {WPS_PARAGRAPH_JUSTIFICATION_LEFT,
-	                                WPS_PARAGRAPH_JUSTIFICATION_CENTER,WPS_PARAGRAPH_JUSTIFICATION_RIGHT,
-	                                WPS_PARAGRAPH_JUSTIFICATION_FULL
-	                               };
+	static const libwps::Justification _align[]=
+	{
+		libwps::JustificationLeft, libwps::JustificationCenter,
+		libwps::JustificationRight, libwps::JustificationFull
+	};
 
-	int pindent = 0, pbefore = 0, pafter = 0;
-	int pleft =0, pright =0;
-
-	std::vector<WPSTabPos> tabs;
+	std::vector<WPSTabStop> tabs;
 	m_listener->setTabs(tabs);
 
 	int pf = 0;
@@ -463,7 +461,7 @@ void WPS4Parser::propertyChangePara(std::string rgchProp)
 	if (4 > rgchProp.length()) return;
 
 	unsigned x = 3;
-
+	double margins[5] = {0.0, 0.0, 0.0, 0.0, 0.0}; // left, right, top, bottom, textIndent
 	while (x < rgchProp.length())
 	{
 		char code = rgchProp[x++];
@@ -487,23 +485,23 @@ void WPS4Parser::propertyChangePara(std::string rgchProp)
 			x++;
 			break;
 		case 0x11:
-			pleft = WPS_LE_GET_GUINT16(&rgchProp.c_str()[x]);
+			margins[0]=WPS_LE_GET_GUINT16(&rgchProp.c_str()[x])/1440.0;
 			x+=2;
 			break;
 		case 0x12:
-			pright = WPS_LE_GET_GUINT16(&rgchProp.c_str()[x]);
+			margins[1]=WPS_LE_GET_GUINT16(&rgchProp.c_str()[x])/1440.0;
 			x+=2;
 			break;
 		case 0x14:
-			pindent = (int16_t) WPS_LE_GET_GUINT16(&rgchProp.c_str()[x]);
+			margins[4]=int16_t(WPS_LE_GET_GUINT16(&rgchProp.c_str()[x]))/1440.0;
 			x+=2;
 			break;
 		case 0x16:
-			pbefore = WPS_LE_GET_GUINT16(&rgchProp.c_str()[x]);
+			margins[2]=WPS_LE_GET_GUINT16(&rgchProp.c_str()[x])/1440.0;
 			x+=2;
 			break;
 		case 0x17:
-			pafter = WPS_LE_GET_GUINT16(&rgchProp.c_str()[x]);
+			margins[3]=WPS_LE_GET_GUINT16(&rgchProp.c_str()[x])/1440.0;
 			x+=2;
 			break;
 			/*
@@ -527,7 +525,7 @@ void WPS4Parser::propertyChangePara(std::string rgchProp)
 		{
 			const char *td = rgchProp.c_str();
 			uint16_t count;
-			WPSTabPos pos;
+			WPSTabStop pos;
 
 			count = WPS_LE_GET_GUINT16(&td[x+2]);
 			if (count <= 20)
@@ -535,21 +533,21 @@ void WPS4Parser::propertyChangePara(std::string rgchProp)
 				for (int i=0; i<count; i++)
 				{
 					char v;
-					pos.m_pos = WPS_LE_GET_GUINT16(&td[x+4+i*2]) / 1440.0;
+					pos.m_position = WPS_LE_GET_GUINT16(&td[x+4+i*2]) / 1440.0;
 					v = td[x+4+count*2+i];
 					switch (v&3)
 					{
 					case 1:
-						pos.m_align = WPS_TAB_CENTER;
+						pos.m_alignment = WPSTabStop::CENTER;
 						break;
 					case 2:
-						pos.m_align = WPS_TAB_RIGHT;
+						pos.m_alignment = WPSTabStop::RIGHT;
 						break;
 					case 3:
-						pos.m_align = WPS_TAB_DECIMAL;
+						pos.m_alignment = WPSTabStop::DECIMAL;
 						break;
 					default:
-						pos.m_align = WPS_TAB_LEFT;
+						pos.m_alignment = WPSTabStop::LEFT;
 					}
 					// TODO: leader
 					tabs.push_back(pos);
@@ -564,9 +562,11 @@ void WPS4Parser::propertyChangePara(std::string rgchProp)
 			break;
 		}
 	}
-
-	m_listener->setMargins(pindent/1440.0,pleft/1440.0,pright/1440.0,
-	                       pbefore/1440.0,pafter/1440.0);
+	m_listener->setParagraphMargin(margins[0], WPS_LEFT);
+	m_listener->setParagraphMargin(margins[1], WPS_RIGHT);
+	m_listener->setParagraphMargin(margins[2], WPS_TOP);
+	m_listener->setParagraphMargin(margins[3], WPS_BOTTOM);
+	m_listener->setParagraphTextIndent(margins[4]);
 }
 
 /**
