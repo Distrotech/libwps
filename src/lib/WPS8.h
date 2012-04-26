@@ -60,7 +60,7 @@ private:
 	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
 	void parse(WPXInputStreamPtr &stream);
 	void propertyChangeDelta(uint32_t newTextAttributeBits);
-	void propertyChange(std::string rgchProp, uint16_t &specialCode);
+	void propertyChange(std::string rgchProp, uint16_t &specialCode, int &fieldType);
 	void propertyChangePara(std::string rgchProp);
 	/// the listener
 	shared_ptr<WPS8ContentListener> m_listener;

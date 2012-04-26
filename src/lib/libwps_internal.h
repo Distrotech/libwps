@@ -192,6 +192,9 @@ enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TEXT_BOX, DOC_
 enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
                      JustificationRight, JustificationFullAllLines
                    };
+enum { LeftBorderBit = 0x01,  RightBorderBit = 0x02, TopBorderBit=0x4,
+       BottomBorderBit = 0x08
+     };
 }
 
 // ATTRIBUTE bits
@@ -234,12 +237,6 @@ enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
 #define WPS_CENTER 0x02
 #define WPS_TOP 0x03
 #define WPS_BOTTOM 0x04
-
-// Field codes
-#define WPS_FIELD_PAGE 1
-#define WPS_FIELD_DATE 2
-#define WPS_FIELD_TIME 3
-#define WPS_FIELD_FILE 4
 
 /* ---------- vec2/box2f ------------- */
 /*! \class Vec2

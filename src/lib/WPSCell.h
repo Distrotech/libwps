@@ -51,11 +51,6 @@ public:
 	enum HorizontalAlignment { HALIGN_LEFT, HALIGN_RIGHT, HALIGN_CENTER,
 	                           HALIGN_FULL, HALIGN_DEFAULT
 	                         };
-	/// Cell Border bits
-	enum { LeftBorderBit = 0x01,  RightBorderBit = 0x02, TopBorderBit=0x4,
-	       BottomBorderBit = 0x08
-	     };
-
 	//! constructor
 	WPSCellFormat() :
 		m_hAlign(HALIGN_DEFAULT), m_bordersList(0) { }
@@ -79,7 +74,7 @@ public:
 	{
 		return m_bordersList != 0;
 	}
-	//! return the cell border: LeftBorderBit | ...
+	//! return the cell border: libwps::LeftBorderBit | ...
 	int borders() const
 	{
 		return m_bordersList;
@@ -99,7 +94,7 @@ public:
 protected:
 	//! the cell alignement : by default nothing
 	HorizontalAlignment m_hAlign;
-	//! the cell border : LeftBorderBit | ...
+	//! the cell border : libwps::LeftBorderBit | ...
 	int m_bordersList;
 };
 

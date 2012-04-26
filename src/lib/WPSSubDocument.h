@@ -28,6 +28,7 @@
 
 #include "libwps_internal.h"
 
+class WPSContentListener;
 class WPSParser;
 
 /** Basic class used to store a sub document */
@@ -66,6 +67,11 @@ public:
 	{
 		return !operator==(doc);
 	}
+
+	/** virtual parse function
+	 *
+	 * this function is called to parse the subdocument */
+	virtual void parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType) = 0;
 
 protected:
 	WPXInputStreamPtr m_input;

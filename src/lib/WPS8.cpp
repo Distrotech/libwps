@@ -305,7 +305,7 @@ void WPS8Parser::appendUTF16LE(WPXInputStreamPtr &input)
 	if (fail)
 		throw libwps::GenericException();
 
-	m_listener->insertUnicodeCharacter(ucs4Character);
+	m_listener->insertUnicode(ucs4Character);
 }
 
 
@@ -344,6 +344,7 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 	if (last_fcLim > start_fcLim) last_fcLim = start_fcLim;
 
 	uint16_t specialCode=0;
+	int fieldType = 0;
 	for (; last_fcLim < total_fcLim; FODs_iter++)
 	{
 		WPSFOD fod = *(FODs_iter);
@@ -371,7 +372,7 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 
 		/* process character formatting */
 		if ((*FODs_iter).m_fprop.m_cch > 0)
-			propertyChange((*FODs_iter).m_fprop.m_rgchProp, specialCode);
+			propertyChange((*FODs_iter).m_fprop.m_rgchProp, specialCode, fieldType);
 
 		/* loop until character format not exhausted */
 		do
@@ -449,7 +450,20 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 							//m_listener->closeEndnote();
 							break;
 						case 5:
-							m_listener->insertField();
+							switch (fieldType)
+							{
+							case -1:
+								m_listener->insertField(WPSContentListener::PageNumber);
+								break;
+							case -4:
+								m_listener->insertField(WPSContentListener::Date);
+								break;
+							case -5:
+								m_listener->insertField(WPSContentListener::Time);
+								break;
+							default:
+								break;
+							}
 							break;
 						default:
 							m_listener->insertCharacter(0xE2/*0x263B*/);
@@ -929,7 +943,7 @@ void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits)
  * codes.
  *
  */
-void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode)
+void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int &fieldType)
 {
 	//fixme: this method is immature
 
@@ -1061,19 +1075,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode)
 
 		case 0x2222:
 			// field.
-			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			switch (iv)
-			{
-			case -1:
-				m_listener->setFieldType(WPS_FIELD_PAGE);
-				break;
-			case -4:
-				m_listener->setFieldType(WPS_FIELD_DATE);
-				break;
-			case -5:
-				m_listener->setFieldType(WPS_FIELD_TIME);
-				break;
-			}
+			fieldType = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 			x += 4;
 			break;
 
@@ -1386,7 +1388,7 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 		}
 		m_listener->setCurrentListLevel(listLevel);
 	}
-	m_listener->setAlign(align);
+	m_listener->setParagraphJustification(align);
 	m_listener->setParagraphTextIndent(textIndent);
 	m_listener->setParagraphMargin(leftIndent, WPS_LEFT);
 }

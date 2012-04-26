@@ -472,7 +472,7 @@ void WPS4Parser::propertyChangePara(std::string rgchProp)
 		{
 			uint8_t a = rgchProp[x];
 			if (a < 4)
-				m_listener->setAlign(_align[a]);
+				m_listener->setParagraphJustification(_align[a]);
 			x++;
 		}
 		break;
@@ -649,8 +649,7 @@ void WPS4Parser::readText(WPXInputStreamPtr &input)
 
 				case 0x02:
 					// TODO: check special bit
-					m_listener->setFieldType(WPS_FIELD_PAGE);
-					m_listener->insertField();
+					m_listener->insertField(WPSContentListener::PageNumber);
 					break;
 
 				case 0x0C:
@@ -666,7 +665,7 @@ void WPS4Parser::readText(WPXInputStreamPtr &input)
 					unsigned long unicode =
 					    libwps_tools_win::Font::unicode(readVal, font.m_type);
 					if (unicode != 0xfffd)
-						m_listener->insertUnicodeCharacter(unicode);
+						m_listener->insertUnicode(unicode);
 					break;
 				}
 				}

@@ -19,11 +19,9 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/*
- * This file is in sync with CVS
- * /libwpd2/src/lib/WPXContentListener.h 1.9
+/* "This product is not manufactured, approved, or supported by
+ * Corel Corporation or Corel Corporation Limited."
  */
-
 
 #ifndef WPSCONTENTLISTENER_H
 #define WPSCONTENTLISTENER_H
@@ -34,79 +32,126 @@
 
 #include "libwps_internal.h"
 
+class WPXDocumentInterface;
+class WPXString;
+class WPXPropertyListVector;
+
 class WPSList;
 class WPSPageSpan;
+class WPSSubDocument;
+typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
 
 struct WPSContentParsingState
 {
 	WPSContentParsingState();
 	~WPSContentParsingState();
 
-	uint32_t m_textAttributeBits;
-	float m_fontSize;
-	WPXString m_fontName;
-	uint32_t m_languageId;
-	uint32_t m_textcolor;
+	WPXString m_textBuffer;
+	int m_numDeferredTabs;
 
-	uint16_t m_fieldcode;
+	uint32_t m_textAttributeBits;
+	double m_fontSize;
+	WPXString m_fontName;
+	uint32_t m_fontColor;
+	int m_textLanguage;
 
 	bool m_isParagraphColumnBreak;
 	bool m_isParagraphPageBreak;
 	libwps::Justification m_paragraphJustification;
-	float m_paragraphLineSpacing;
+	double m_paragraphLineSpacing;
+	WPXUnit m_paragraphLineSpacingUnit;
+	int m_paragraphBorders;
+	int m_paragraphLanguage;
+
+	shared_ptr<WPSList> m_list;
+	uint8_t m_currentListLevel;
 
 	bool m_isDocumentStarted;
 	bool m_isPageSpanOpened;
 	bool m_isSectionOpened;
 	bool m_isPageSpanBreakDeferred;
+	bool m_isHeaderFooterWithoutParagraph;
 
 	bool m_isSpanOpened;
 	bool m_isParagraphOpened;
-
-	bool m_inSubDocument;
 	bool m_isListElementOpened;
-	bool m_isTableOpened, m_isTableCellOpened;
 
-	bool m_isParaListItem;
+	bool m_firstParagraphInPageSpan;
 
-	std::vector<WPSPageSpan>::iterator m_nextPageSpanIter;
+	std::vector<unsigned int> m_numRowsToSkip;
+#if 0
+	WPSTableDefinition m_tableDefinition;
+#endif
+	int m_currentTableCol;
+	int m_currentTableRow;
+	int m_currentTableCellNumberInRow;
+	bool m_isTableOpened;
+	bool m_isTableRowOpened;
+	bool m_isTableColumnOpened;
+	bool m_isTableCellOpened;
+	bool m_wasHeaderRow;
+	bool m_isCellWithoutParagraph;
+	bool m_isRowWithoutCell;
+	uint32_t m_cellAttributeBits;
+	libwps::Justification m_paragraphJustificationBeforeTable;
+
+	unsigned m_currentPage;
 	int m_numPagesRemainingInSpan;
+	int m_currentPageNumber;
 
 	bool m_sectionAttributesChanged;
+	int m_numColumns;
+	std::vector < WPSColumnDefinition > m_textColumns;
+	bool m_isTextColumnWithoutParagraph;
 
-	float m_pageFormLength;
-	float m_pageFormWidth;
+	double m_pageFormLength;
+	double m_pageFormWidth;
 	bool m_pageFormOrientationIsPortrait;
 
-	float m_pageMarginLeft;
-	float m_pageMarginRight;
-	float m_paragraphMarginLeft;
-	float m_paragraphMarginRight;
-	float m_paragraphMarginTop;
-	float m_paragraphMarginBottom;
+	double m_pageMarginLeft;
+	double m_pageMarginRight;
+	double m_pageMarginTop;
+	double m_pageMarginBottom;
+	double m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted
+	double m_sectionMarginRight; // as section margin change
+	double m_sectionMarginTop;
+	double m_sectionMarginBottom;
+	double m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
+	double m_paragraphMarginRight; // properties
+	double m_paragraphMarginTop;
+	WPXUnit m_paragraphMarginTopUnit;
+	double m_paragraphMarginBottom;
+	WPXUnit m_paragraphMarginBottomUnit;
+	double m_leftMarginByPageMarginChange;  // part of the margin due to the PAGE margin change
+	double m_rightMarginByPageMarginChange; // inside a page that already has content.
+	double m_leftMarginByParagraphMarginChange;  // part of the margin due to the PARAGRAPH
+	double m_rightMarginByParagraphMarginChange; // margin change (in WP6)
+	double m_leftMarginByTabs;  // part of the margin due to the LEFT or LEFT/RIGHT Indent; the
+	double m_rightMarginByTabs; // only part of the margin that is reset at the end of a paragraph
 
-	float m_paragraphTextIndent;
+	double m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
+	double m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
+	double m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
 
-	WPXString m_textBuffer;
-
-	//! the list
-	shared_ptr<WPSList> m_list;
-	//! a stack used to know what is open
-	std::vector<bool> m_listOrderedLevels;
-	//! the actual list id
-	int m_actualListId;
-	//! the actual list level
-	int m_currentListLevel;
-
+	int m_newListId; // a new free id
 	double m_listReferencePosition; // position from the left page margin of the list number/bullet
 	double m_listBeginPosition; // position from the left page margin of the beginning of the list
+	std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
+
+	uint16_t m_alignmentCharacter;
+	std::vector<WPSTabStop> m_tabStops;
+	bool m_isTabPositionRelative;
+
+	std::vector<WPSSubDocumentPtr> m_subDocuments;
+
+	bool m_inSubDocument;
+
+	bool m_isNote;
+	int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
+	libwps::SubDocumentType m_subDocumentType;
+
 private:
 };
-
-namespace WPSContentListenerInternal
-{
-struct ListSignature;
-}
 
 class WPSContentListener
 {
@@ -114,89 +159,156 @@ public:
 	WPSContentListener(std::vector<WPSPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
 	virtual ~WPSContentListener();
 
-	void startDocument();
-	void endDocument();
-	void insertBreak(const uint8_t breakType);
-	void insertCharacter(const uint16_t character);
-	void insertUnicodeCharacter(uint32_t character);
-	void insertField();
+	void setDocumentLanguage(int lcid);
 
-	void setTextFont(const WPXString fontName);
+	void startDocument();
+	void startSubDocument();
+	void endDocument();
+
+	void endSubDocument();
+	void handleSubDocument(WPSSubDocumentPtr &subDocument, libwps::SubDocumentType subDocumentType);
+
+
+	// ------ text data -----------
+
+	//! adds a basic character, ..
+	void insertCharacter(uint8_t character);
+	/** adds an unicode character
+	 *
+	 * by convention if \a character=0xfffd(undef), no character is added */
+	void insertUnicode(uint32_t character);
+	//! adds a unicode string
+	void insertUnicodeString(WPXString const &str);
+	//! internal function used to add an unicode character to a string
+	static void appendUnicode(uint32_t val, WPXString &buffer);
+
+	void insertTab();
+	void insertEOL(bool softBreak=false);
+	void insertBreak(const uint8_t breakType);
+
+	// ------ text format -----------
+	void setTextFont(const WPXString &fontName);
 	void setFontSize(const uint16_t fontSize);
 	void setFontAttributes(const uint32_t fontAttributes);
-	void setTextLanguage(const uint32_t lcid);
-	void setTextColor(const unsigned int rgb);
-	void setFieldType(uint16_t code);
-	void setFieldFormat(uint16_t code);
+	void setTextLanguage(int lcid);
+	void setTextColor(const uint32_t rgb);
 
-	void setAlign(libwps::Justification align);
+	// ------ paragraph format -----------
+	//! returns true if a paragraph or a list is opened
+	bool isParagraphOpened() const;
+	void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT);
+	// force a break if there is a justification change
+	void setParagraphJustification(libwps::Justification justification, bool force=false);
 	//! sets the first paragraph text indent. \warning unit are given in inches
 	void setParagraphTextIndent(double margin);
 	/** sets the paragraph margin.
-	 *
 	 * \param margin is given in inches
 	 * \param pos in WPS_LEFT, WPS_RIGHT, WPS_TOP, WPS_BOTTOM
 	 */
 	void setParagraphMargin(double margin, int pos);
-
-	void setTabs(std::vector<WPSTabStop> &tabs);
-
-	/** function to set the actual list
-	 *
-	 * \note set the listid if not set
+	/** sets the tabulations.
+	 * \param tabStops the tabulations
 	 */
-	void setCurrentList(shared_ptr<WPSList> list);
+	void setTabs(const std::vector<WPSTabStop> &tabStops);
+	/** indicates that the paragraph has a basic borders (ie. a black line)
+	 * \param which = libwps::LeftBorderBit | ...
+	 * \param flag sets to true
+	 */
+	void setParagraphBorders(int which, bool flag);
+	//! indicates that the paragraph has a basic borders (ie. 4 black lines)
+	void setParagraphBorders(bool flag);
 
+	// ------ list format -----------
+	/** function to set the actual list */
+	void setCurrentList(shared_ptr<WPSList> list);
 	/** returns the current list */
 	shared_ptr<WPSList> getCurrentList() const;
-
-	/** function to create an unordered list
-	 *
+	/** function to set the level of the current list
 	 * \warning minimal implementation...*/
 	void setCurrentListLevel(int level);
 
-	void insertEOL();
+	// ------- fields ----------------
+	/** Defines some basic type for field */
+	enum FieldType { None, PageNumber, Date, Time, Title, Link, Database };
+	//! adds a field type
+	void insertField(FieldType type);
+	//! insert a date/time field with given format (see strftime)
+	void insertDateTimeField(char const *format);
+
+	// ------- subdocument -----------------
+	/** defines the footnote type */
+	enum NoteType { FOOTNOTE, ENDNOTE };
+	/** adds note */
+	void insertNote(const NoteType noteType, WPSSubDocumentPtr &subDocument);
+	/** adds comment */
+	void insertComment(WPSSubDocumentPtr &subDocument);
+
+#if 0
+	/** open a frame */
+	bool openFrame(TMWAWPosition const &pos, WPXPropertyList extras=WPXPropertyList());
+	/** close a frame */
+	void closeFrame();
+#endif
+	// ------- section ---------------
+	//! returns true if a section is opened
+	bool isSectionOpened() const;
+	//! open a section if possible
+	bool openSection(std::vector<int> colsWidth, WPXUnit unit);
+	//! close a section
+	bool closeSection();
 
 protected:
-
-	shared_ptr<WPSContentParsingState> m_ps; // parse state
-	WPXDocumentInterface *m_documentInterface;
-	WPXPropertyList m_metaData;
-
-	void _flushText();
-
 	void _openSection();
 	void _closeSection();
 
 	void _openPageSpan();
 	void _closePageSpan();
+	void _updatePageSpanDependent(bool set);
+
+	void _openTable();
+	void _closeTable();
 
 	void _openParagraph();
 	void _closeParagraph();
+	void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
+	void _getTabStops(WPXPropertyListVector &tabStops);
+	void _appendJustification(WPXPropertyList &propList, libwps::Justification justification);
+	void _resetParagraphState(const bool isListElement=false);
+
+	void _openListElement();
+	void _closeListElement();
+	void _changeList();
 
 	void _openSpan();
 	void _closeSpan();
 
-	void _insertText(const WPXString &textBuffer);
+	void _flushText();
+	void _flushDeferredTabs();
 
-	void _resetParagraphState(const bool isListElement=false);
-	void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
-	void _getTabStops(WPXPropertyListVector &tabStops);
+	double _movePositionToFirstColumn(double position);
 
-	void _openListElement();
-	void _closeListElement();
-	//! closes the previous item (if needed) and open the new one
-	void _changeList();
-	//! sets list properties when the list changes
-	void _handleListChange();
+	void _insertBreakIfNecessary(WPXPropertyList &propList);
+
+	static void _addLanguage(int lcid, WPXPropertyList &propList);
+
+	/** creates a new parsing state (copy of the actual state)
+	 *
+	 * \return the old one */
+	shared_ptr<WPSContentParsingState> _pushParsingState();
+	//! resets the previous parsing state
+	void _popParsingState();
+
+protected:
+	shared_ptr<WPSContentParsingState> m_ps; // parse state
+	std::vector<shared_ptr<WPSContentParsingState> > m_psStack;
+	WPXDocumentInterface *m_documentInterface;
+	std::vector<WPSPageSpan> m_pageList;
+	WPXPropertyList m_metaData;
+
 private:
 	WPSContentListener(const WPSContentListener &);
 	WPSContentListener &operator=(const WPSContentListener &);
-
-	std::vector<WPSTabStop> m_tabs;
-	std::vector<WPSPageSpan> m_pageList;
-	std::vector<WPSContentListenerInternal::ListSignature> m_listFormats;
 };
 
-#endif /* WPSCONTENTLISTENER_H */
+#endif
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

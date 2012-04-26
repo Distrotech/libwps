@@ -68,10 +68,10 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 	if (border)
 	{
 		o << ",bord=[";
-		if (border&WPSCellFormat::LeftBorderBit) o << "Lef";
-		if (border&WPSCellFormat::RightBorderBit) o << "Rig";
-		if (border&WPSCellFormat::TopBorderBit) o << "Top";
-		if (border&WPSCellFormat::BottomBorderBit) o << "Bot";
+		if (border&libwps::LeftBorderBit) o << "Lef";
+		if (border&libwps::RightBorderBit) o << "Rig";
+		if (border&libwps::TopBorderBit) o << "Top";
+		if (border&libwps::BottomBorderBit) o << "Bot";
 		o << "]";
 	}
 	return o;
