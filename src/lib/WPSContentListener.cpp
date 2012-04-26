@@ -38,11 +38,7 @@ WPSContentParsingState::WPSContentParsingState() :
 	m_textBuffer(""), m_numDeferredTabs(0),
 
 	m_textAttributeBits(0),	m_fontSize(12.0), m_fontName("Times New Roman"),
-#ifdef NEW_VERSION
 	m_fontColor(0),	m_textLanguage(-1),
-#else
-	m_fontColor(0),	m_textLanguage(0x409),
-#endif
 
 	m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
 
@@ -234,11 +230,9 @@ void WPSContentListener::insertEOL(bool soft)
 	else if (m_ps->m_isParagraphOpened)
 		_closeParagraph();
 
-#ifdef NEW_VERSION
 	// sub/superscript must not survive a new line
 	if (m_ps->m_textAttributeBits & (WPS_SUBSCRIPT_BIT | WPS_SUPERSCRIPT_BIT))
 		m_ps->m_textAttributeBits &= ~(WPS_SUBSCRIPT_BIT | WPS_SUPERSCRIPT_BIT);
-#endif
 }
 
 void WPSContentListener::insertTab()
@@ -405,6 +399,10 @@ void WPSContentListener::setParagraphMargin(double margin, int pos)
 		                              + m_ps->m_leftMarginByParagraphMarginChange
 		                              + m_ps->m_leftMarginByTabs;
 		m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+		if (m_ps->m_currentListLevel)
+			m_ps->m_listBeginPosition =
+			    m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+
 		break;
 	case WPS_RIGHT:
 		m_ps->m_rightMarginByParagraphMarginChange = margin;
@@ -748,11 +746,13 @@ void WPSContentListener::_openSection()
 #ifdef NEW_VERSION
 	propList.insert("fo:margin-left", m_ps->m_sectionMarginLeft);
 	propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
+#endif
 	if (m_ps->m_numColumns > 1)
 		propList.insert("text:dont-balance-text-columns", false);
-	propList.insert("libwpd:margin-top", m_ps->m_sectionMarginTop);
-	propList.insert("libwpd:margin-bottom", m_ps->m_sectionMarginBottom);
-#endif
+	if (m_ps->m_sectionMarginTop)
+		propList.insert("libwpd:margin-top", m_ps->m_sectionMarginTop);
+	if (m_ps->m_sectionMarginBottom)
+		propList.insert("libwpd:margin-bottom", m_ps->m_sectionMarginBottom);
 
 	WPXPropertyListVector columns;
 	for (int i = 0; i < int(m_ps->m_textColumns.size()); i++)
@@ -859,8 +859,8 @@ void WPSContentListener::_closePageSpan()
 
 void WPSContentListener::_updatePageSpanDependent(bool set)
 {
-	int deltaRight = set ? -m_ps->m_pageMarginRight : m_ps->m_pageMarginRight;
-	int deltaLeft = set ? -m_ps->m_pageMarginLeft : m_ps->m_pageMarginLeft;
+	double deltaRight = set ? -m_ps->m_pageMarginRight : m_ps->m_pageMarginRight;
+	double deltaLeft = set ? -m_ps->m_pageMarginLeft : m_ps->m_pageMarginLeft;
 	if (m_ps->m_leftMarginByPageMarginChange != 0)
 		m_ps->m_leftMarginByPageMarginChange += deltaLeft;
 	if (m_ps->m_rightMarginByPageMarginChange != 0)
@@ -1017,10 +1017,8 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 			if (border & libwps::BottomBorderBit)
 				propList.insert("fo:border-bottom", "0.03cm solid #000000");
 		}
-#ifdef NEW_VERSION
 		m_ps->m_paragraphLanguage = m_ps->m_textLanguage;
 		_addLanguage(m_ps->m_paragraphLanguage, propList);
-#endif
 	}
 	else
 		m_ps->m_paragraphLanguage = -1;
