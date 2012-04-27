@@ -25,10 +25,85 @@
 
 #include "libwps_internal.h"
 
+#include "WPSContentListener.h"
 #include "WPSList.h"
 #include "WPSPageSpan.h"
+#include "WPSSubDocument.h"
 
 #include "WPS8.h"
+
+namespace WPS8ParserInternal
+{
+//! Internal: the subdocument of a WPS8
+class SubDocument : public WPSSubDocument
+{
+public:
+	//! type of an entry stored in textId
+	enum Type { Unknown, Footnote, Endnote };
+
+	//! constructor for a text entry
+	SubDocument(WPXInputStreamPtr input, WPS8Parser &pars, Type type, int id) :
+		WPSSubDocument (input, &pars, id), m_type(type) {}
+	//! destructor
+	~SubDocument() {}
+
+	//! operator==
+	virtual bool operator==(WPSSubDocumentPtr const &doc) const
+	{
+		if (!WPSSubDocument::operator==(doc))
+			return false;
+		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
+		if (m_type != sDoc->m_type)
+			return false;
+		return true;
+	}
+
+	//! the parser function
+	void parse(WPSContentListenerPtr &listener, libwps::SubDocumentType type);
+
+	Type m_type;
+};
+
+void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType type)
+{
+	if (!listener.get())
+	{
+		WPS_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+		return;
+	}
+	if (!dynamic_cast<WPS8ContentListener *>(listener.get()))
+	{
+		WPS_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
+		return;
+	}
+	WPS8ContentListenerPtr &listen =  reinterpret_cast<WPS8ContentListenerPtr &>(listener);
+
+	if (!m_parser)
+	{
+		listen->insertCharacter(' ');
+		WPS_DEBUG_MSG(("SubDocument::parse: bad parser\n"));
+		return;
+	}
+
+	if (m_id < 0 || m_type == Unknown)
+	{
+		WPS_DEBUG_MSG(("SubDocument::parse: empty document found...\n"));
+		listen->insertCharacter(' ');
+		return;
+	}
+
+	long actPos = m_input->tell();
+	WPS8Parser *mnParser = reinterpret_cast<WPS8Parser *>(m_parser);
+	if (type == libwps::DOC_NOTE)
+		mnParser->sendNote(m_input, m_id, m_type == Endnote);
+	else
+	{
+		WPS_DEBUG_MSG(("SubDocument::parse: find unknown type of document...\n"));
+	}
+	m_input->seek(actPos, WPX_SEEK_SET);
+}
+
+}
 
 /*
 WPS8Parser public
@@ -424,31 +499,21 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 						switch (specialCode)
 						{
 						case 3:
+						{
 							if (stream != Stream::Z_Body) break;
-							/* REMOVED in this version
-							   because footnote/endnote tends to make
-							   the resulting file inconsistent */
-							//m_listener->openFootnote();
-							m_listener->insertCharacter('-');
-							m_listener->insertCharacter('-');
-							readNote(input,false);
-							m_listener->insertCharacter('-');
-							m_listener->insertCharacter('-');
-							//m_listener->closeEndnote();
+							shared_ptr<WPSSubDocument> doc
+							(new WPS8ParserInternal::SubDocument(input, *this, WPS8ParserInternal::SubDocument::Footnote, m_actualFootnote++));
+							m_listener->insertNote(WPSContentListener::FOOTNOTE, doc);
 							break;
+						}
 						case 4:
+						{
 							if (stream != Stream::Z_Body) break;
-							/* REMOVED in this version
-							   because footnote/endnote tends to make
-							   the resulting file inconsistent */
-							//m_listener->openEndnote();
-							m_listener->insertCharacter('-');
-							m_listener->insertCharacter('-');
-							readNote(input,true);
-							m_listener->insertCharacter('-');
-							m_listener->insertCharacter('-');
-							//m_listener->closeEndnote();
+							shared_ptr<WPSSubDocument> doc
+							(new WPS8ParserInternal::SubDocument(input, *this, WPS8ParserInternal::SubDocument::Footnote, m_actualEndnote++));
+							m_listener->insertNote(WPSContentListener::ENDNOTE, doc);
 							break;
+						}
 						case 5:
 							switch (fieldType)
 							{
@@ -512,31 +577,16 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 	}
 }
 
-void WPS8Parser::readNote(WPXInputStreamPtr &input, bool is_endnote)
+void WPS8Parser::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
 {
-	Note note;
-
-	if (!is_endnote)
+	std::vector<Note> const &notes = is_endnote ? m_endnotes : m_footnotes;
+	if (id < 0 || id >= int(notes.size()))
 	{
-		if (m_actualFootnote < int(m_footnotes.size()))
-			note =m_footnotes[m_actualFootnote++];
-		else
-		{
-			WPS_DEBUG_MSG(("WPS8Parser::readNote: can not find footnote\n"));
-			return;
-		}
+		WPS_DEBUG_MSG(("WPS8Parser::sendNote: can not find footnote\n"));
+		if (m_listener) m_listener->insertCharacter(' ');
+		return;
 	}
-	else
-	{
-		if (m_actualEndnote < int(m_endnotes.size()))
-			note =m_endnotes[m_actualEndnote++];
-		else
-		{
-			WPS_DEBUG_MSG(("WPS8Parser::readNote: can not find endnote\n"));
-			return;
-		}
-	}
-
+	Note const &note =notes[id];
 	Stream stream;
 	Stream::Type streamkey = is_endnote ? Stream::Z_Endnotes : Stream::Z_Footnotes;
 	for (unsigned i=0; i<m_streams.size(); i++)

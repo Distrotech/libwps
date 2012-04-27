@@ -1357,12 +1357,14 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 	m_ps->m_isPageSpanOpened = true;
 	m_ps->m_list.reset();
 
-	if (m_ps->m_subDocumentType == libwps::DOC_TEXT_BOX)
+	if (subDocumentType == libwps::DOC_TEXT_BOX)
 	{
 		m_ps->m_pageMarginLeft = 0.0;
 		m_ps->m_pageMarginRight = 0.0;
 		m_ps->m_sectionAttributesChanged = true;
 	}
+	if (subDocumentType == libwps::DOC_HEADER_FOOTER)
+		m_ps->m_isHeaderFooterWithoutParagraph = true;
 
 	// Check whether the document is calling itself
 	bool sendDoc = true;
@@ -1379,8 +1381,6 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 	}
 	if (sendDoc)
 	{
-		if (subDocumentType == libwps::DOC_HEADER_FOOTER)
-			m_ps->m_isHeaderFooterWithoutParagraph = true;
 		if (subDocument)
 		{
 			m_ps->m_inSubDocument = true;
@@ -1398,14 +1398,12 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 			}
 		}
 		if (m_ps->m_isHeaderFooterWithoutParagraph)
-		{
 			_openSpan();
-			_closeParagraph();
-		}
 	}
 
 	if (m_ps->m_subDocumentType == libwps::DOC_TEXT_BOX)
 		_closeSection();
+	endSubDocument();
 	_popParsingState();
 }
 
@@ -1461,7 +1459,15 @@ shared_ptr<WPSContentParsingState> WPSContentListener::_pushParsingState()
 {
 	shared_ptr<WPSContentParsingState> actual = m_ps;
 	m_psStack.push_back(actual);
-	m_ps.reset(new WPSContentParsingState(*actual.get()));
+	m_ps.reset(new WPSContentParsingState);
+
+	// BEGIN: copy page properties into the new parsing state
+	m_ps->m_pageFormWidth = actual->m_pageFormWidth;
+	m_ps->m_pageMarginLeft = actual->m_pageMarginLeft;
+	m_ps->m_pageMarginRight = actual->m_pageMarginRight;
+	m_ps->m_subDocuments = actual->m_subDocuments;
+	m_ps->m_isNote = actual->m_isNote;
+
 	return actual;
 }
 

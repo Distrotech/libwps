@@ -25,18 +25,26 @@
 
 #include <vector>
 #include <map>
+
 #include <libwpd/WPXString.h>
+#include <libwpd-stream/WPXStream.h>
 
 #include "libwps_internal.h"
 #include "WPS.h"
 #include "WPSContentListener.h"
-#include <libwpd-stream/WPXStream.h>
 #include "WPSParser.h"
 
 typedef WPSContentListener WPS8ContentListener;
+typedef shared_ptr<WPS8ContentListener> WPS8ContentListenerPtr;
+
+namespace WPS8ParserInternal
+{
+class SubDocument;
+}
 
 class WPS8Parser : public WPSParser
 {
+	friend class WPS8ParserInternal::SubDocument;
 public:
 	WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
 	~WPS8Parser();
@@ -53,7 +61,6 @@ private:
 	void readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key);
 	void appendUTF16LE(WPXInputStreamPtr &input);
 	void readTextRange(WPXInputStreamPtr &input, uint32_t startpos, uint32_t endpos, uint16_t stream);
-	void readNote(WPXInputStreamPtr &input, bool is_endnote);
 	bool readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, uint16_t page_size);
 	void parseHeaderIndexEntry(WPXInputStreamPtr &input);
 	void parseHeaderIndex(WPXInputStreamPtr &input);
@@ -62,6 +69,9 @@ private:
 	void propertyChangeDelta(uint32_t newTextAttributeBits);
 	void propertyChange(std::string rgchProp, uint16_t &specialCode, int &fieldType);
 	void propertyChangePara(std::string rgchProp);
+	// interface with subdocument
+	void sendNote(WPXInputStreamPtr &input, int noteId, bool is_endnote);
+
 	/// the listener
 	shared_ptr<WPS8ContentListener> m_listener;
 	uint32_t m_offset_eot; /* stream offset to end of text */

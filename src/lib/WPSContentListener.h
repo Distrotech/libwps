@@ -151,6 +151,8 @@ struct WPSContentParsingState
 	libwps::SubDocumentType m_subDocumentType;
 
 private:
+	WPSContentParsingState(const WPSContentParsingState &);
+	WPSContentParsingState &operator=(const WPSContentParsingState &);
 };
 
 class WPSContentListener
@@ -309,6 +311,8 @@ private:
 	WPSContentListener(const WPSContentListener &);
 	WPSContentListener &operator=(const WPSContentListener &);
 };
+
+typedef shared_ptr<WPSContentListener> WPSContentListenerPtr;
 
 #endif
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

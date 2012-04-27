@@ -64,7 +64,7 @@ void WPSList::Level::addTo(WPXPropertyList &propList, int startVal) const
 	m_sendToInterface = true;
 }
 
-int WPSList::Level::cmp(WPSList::Level::Level const &levl) const
+int WPSList::Level::cmp(WPSList::Level const &levl) const
 {
 	int diff = int(m_type)-int(levl.m_type);
 	if (diff) return diff;
@@ -81,7 +81,7 @@ int WPSList::Level::cmp(WPSList::Level::Level const &levl) const
 	return 0;
 }
 
-std::ostream &operator<<(std::ostream &o, WPSList::Level::Level const &ft)
+std::ostream &operator<<(std::ostream &o, WPSList::Level const &ft)
 {
 	o << "ListLevel[";
 	switch(ft.m_type)
