@@ -398,6 +398,9 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 	std::vector<WPSFOD>::iterator FODs_iter;
 	std::vector<WPSFOD>::iterator PFOD_iter;
 
+	// save old text attribute
+	uint32_t oldTextAttributes = m_oldTextAttributeBits;
+
 	uint32_t last_fcLim = 0x200;
 	uint32_t start_fcLim = 0x200 + startpos*2;
 	uint32_t total_fcLim = start_fcLim + (endpos - startpos)*2;
@@ -575,6 +578,7 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 		while (c_len > 0);
 
 	}
+	m_oldTextAttributeBits = oldTextAttributes;
 }
 
 void WPS8Parser::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
