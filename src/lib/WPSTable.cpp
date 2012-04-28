@@ -202,8 +202,6 @@ bool WPSTable::sendTable(WPSContentListenerPtr listener)
 		}
 	}
 
-#if NEW_VERSION
-	// FIXME: must be decommented as soon these functions appear in the listener
 	listener->openTable(m_colsSize, WPX_POINT);
 	for (int r = 0; r < numRows; r++)
 	{
@@ -218,7 +216,6 @@ bool WPSTable::sendTable(WPSContentListenerPtr listener)
 		listener->closeTableRow();
 	}
 	listener->closeTable();
-#endif
 
 	return true;
 }

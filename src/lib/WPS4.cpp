@@ -825,7 +825,7 @@ std::string WPS4Parser::to_bits(std::string s)
 	for (unsigned int i = 0; i < s.length(); i++)
 	{
 		std::bitset<8> b(s[i]);
-		r.append(b.to_string());
+		r.append(b.to_string<char,std::char_traits<char>,std::allocator<char> >());
 		char buf[20];
 		sprintf(buf, "(%02u,0x%02x)  ", (uint8_t)s[i],(uint8_t)s[i]);
 		r.append(buf);

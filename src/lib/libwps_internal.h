@@ -188,7 +188,7 @@ namespace libwps
 {
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
 std::string numberingTypeToString(NumberingType type);
-enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
+enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
 enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
                      JustificationRight, JustificationFullAllLines
                    };

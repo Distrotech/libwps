@@ -997,8 +997,6 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 {
 	//fixme: this method is immature
 
-	int iv;
-
 	/* set default properties */
 	uint32_t textAttributeBits = 0;
 	m_listener->setTextColor(0);
@@ -1076,7 +1074,8 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 		}
 
 		uint16_t format_code = rgchProp[x] | (rgchProp[x+1] << 8);
-
+		int unparsedChar = rgchProp.length()-x-2;
+		bool ok = true;
 		switch (format_code)
 		{
 		case 0x0000:
@@ -1084,6 +1083,11 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 
 		case 0x1200:
 		{
+			if (unparsedChar < 2)
+			{
+				ok = false;
+				break;
+			}
 			// special code
 			specialCode = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str());
 			x += 2;
@@ -1091,6 +1095,11 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 		break;
 
 		case 0x120F:
+			if (unparsedChar < 2)
+			{
+				ok = false;
+				break;
+			}
 			if (1 == rgchProp[x+2])
 				textAttributeBits |= WPS_SUPERSCRIPT_BIT;
 			if (2 == rgchProp[x+2])
@@ -1106,7 +1115,11 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 
 		case 0x220C:
 		{
-			/* font size */
+			if (unparsedChar < 4)
+			{
+				ok = false;
+				break;
+			}
 			uint32_t font_size = WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 			m_listener->setFontSize(font_size/12700);
 			x += 4;
@@ -1114,28 +1127,50 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 		}
 
 		case 0x2218:
-			//fixme: unknown
+			if (unparsedChar < 4)
+			{
+				ok = false;
+				break;
+			}
 			x += 4;
 			break;
 
 		case 0x2212:
+			if (unparsedChar < 4)
+			{
+				ok = false;
+				break;
+			}
 			m_listener->setTextLanguage(WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str()));
 			x += 4;
 			break;
 
 		case 0x2222:
-			// field.
+			if (unparsedChar < 4)
+			{
+				ok = false;
+				break;
+			}
 			fieldType = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 			x += 4;
 			break;
 
 		case 0x2223:
+			if (unparsedChar < 4)
+			{
+				ok = false;
+				break;
+			}
 			//fixme: date and time field?
-			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 			x += 4;
 			break;
 
 		case 0x222E:
+			if (unparsedChar < 4)
+			{
+				ok = false;
+				break;
+			}
 			m_listener->setTextColor((((unsigned char)rgchProp[x+2]<<16)+((unsigned char)rgchProp[x+3]<<8)+
 			                          (unsigned char)rgchProp[x+4])&0xFFFFFF);
 			x += 4;
@@ -1143,6 +1178,11 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 
 		case 0x8A24:
 		{
+			if (unparsedChar < 7)
+			{
+				ok = false;
+				break;
+			}
 			/* font change */
 			uint8_t font_n = (uint8_t)rgchProp[x+8];
 			if (font_n > m_fontNames.size())
@@ -1169,13 +1209,21 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 				x+=4;
 				break;
 			case 8:
+				if (unparsedChar < 2)
+				{
+					ok = false;
+					break;
+				}
 				x += rgchProp[x+2];
 				break;
 			}
 			//throw libwps::ParseException();
 			break;
-
-
+		}
+		if (!ok)
+		{
+			WPS_DEBUG_MSG(("WPS8Parser::propertyChange: problem with field size, stop\n"));
+			break;
 		}
 	}
 
@@ -1208,6 +1256,8 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 	{
 		uint16_t format_code = rgchProp[x] | (rgchProp[x+1] << 8);
 
+		int unparsedChar = rgchProp.length()-x-2;
+		bool ok = true;
 		switch (format_code)
 		{
 		case 0x1A03:
@@ -1220,18 +1270,33 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 			break;
 
 		case 0x1204:
+			if (unparsedChar < 2)
+			{
+				ok = false;
+				break;
+			}
 			iv = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str()) & 0xF;
 			if (iv >= 0 && iv < 4) align = _align[iv];
 			x+=2;
 			break;
 
 		case 0x220C:
+			if (unparsedChar < 4)
+			{
+				ok = false;
+				break;
+			}
 			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 			textIndent=iv/914400.0;
 			x+=4;
 			break;
 
 		case 0x220D:
+			if (unparsedChar < 4)
+			{
+				ok = false;
+				break;
+			}
 			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 			leftIndent=iv/914400.0;
 			x+=4;
@@ -1257,6 +1322,11 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 			*/
 		case 0x2214:
 		{
+			if (unparsedChar < 4)
+			{
+				ok = false;
+				break;
+			}
 			/* numbering style */
 			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 			int oldListLevel = listLevel;
@@ -1307,13 +1377,23 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 
 		case 0x8232:
 		{
+			if (unparsedChar < 2)
+			{
+				ok = false;
+				break;
+			}
 			WPSTabStop tab;
 			const char *ts = rgchProp.c_str();
 			unsigned  t_count = 0;
 			int  t_size = WPS_LE_GET_GUINT32(&ts[x+2]);
-			int  t_rem = t_size;
+			if (unparsedChar < t_size)
+			{
+				ok = false;
+				break;
+			}
 			int  tp_rem = 0;
 			int  id = x+6;
+			int  t_rem = t_size-4; // we skip 4 characters
 			uint16_t prop;
 
 			if (t_rem > 2)
@@ -1420,10 +1500,20 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 				x+=4;
 				break;
 			case 8:
+				if (unparsedChar < 2)
+				{
+					ok = false;
+					break;
+				}
 				x += rgchProp[x+2];
 				break;
 			}
 			//throw libwps::ParseException();
+			break;
+		}
+		if (!ok)
+		{
+			WPS_DEBUG_MSG(("WPS8Parser::propertyChangePara: problem with field size, stop\n"));
 			break;
 		}
 	}

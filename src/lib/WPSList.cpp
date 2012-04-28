@@ -36,10 +36,8 @@
 
 void WPSList::Level::addTo(WPXPropertyList &propList, int startVal) const
 {
-#ifdef NEW_VERSION
 	propList.insert("text:min-label-width", m_labelWidth);
 	propList.insert("text:space-before", m_labelIndent);
-#endif
 	switch(m_type)
 	{
 	case libwps::BULLET:

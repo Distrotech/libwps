@@ -36,10 +36,31 @@ class WPXDocumentInterface;
 class WPXString;
 class WPXPropertyListVector;
 
+class WPSCell;
 class WPSList;
 class WPSPageSpan;
+class WPSPosition;
 class WPSSubDocument;
 typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
+
+struct WPSDocumentParsingState
+{
+	WPSDocumentParsingState(std::vector<WPSPageSpan> const &pageList);
+	~WPSDocumentParsingState();
+
+	std::vector<WPSPageSpan> m_pageList;
+	WPXPropertyList m_metaData;
+
+	int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
+	int m_newListId; // a new free id
+
+	bool m_isDocumentStarted;
+	std::vector<WPSSubDocumentPtr> m_subDocuments; /** list of document actually open */
+
+private:
+	WPSDocumentParsingState(const WPSDocumentParsingState &);
+	WPSDocumentParsingState &operator=(const WPSDocumentParsingState &);
+};
 
 struct WPSContentParsingState
 {
@@ -61,14 +82,13 @@ struct WPSContentParsingState
 	double m_paragraphLineSpacing;
 	WPXUnit m_paragraphLineSpacingUnit;
 	int m_paragraphBorders;
-	int m_paragraphLanguage;
 
 	shared_ptr<WPSList> m_list;
 	uint8_t m_currentListLevel;
 
-	bool m_isDocumentStarted;
 	bool m_isPageSpanOpened;
 	bool m_isSectionOpened;
+	bool m_isFrameOpened;
 	bool m_isPageSpanBreakDeferred;
 	bool m_isHeaderFooterWithoutParagraph;
 
@@ -79,21 +99,10 @@ struct WPSContentParsingState
 	bool m_firstParagraphInPageSpan;
 
 	std::vector<unsigned int> m_numRowsToSkip;
-#if 0
-	WPSTableDefinition m_tableDefinition;
-#endif
-	int m_currentTableCol;
-	int m_currentTableRow;
-	int m_currentTableCellNumberInRow;
 	bool m_isTableOpened;
 	bool m_isTableRowOpened;
 	bool m_isTableColumnOpened;
 	bool m_isTableCellOpened;
-	bool m_wasHeaderRow;
-	bool m_isCellWithoutParagraph;
-	bool m_isRowWithoutCell;
-	uint32_t m_cellAttributeBits;
-	libwps::Justification m_paragraphJustificationBeforeTable;
 
 	unsigned m_currentPage;
 	int m_numPagesRemainingInSpan;
@@ -112,6 +121,7 @@ struct WPSContentParsingState
 	double m_pageMarginRight;
 	double m_pageMarginTop;
 	double m_pageMarginBottom;
+
 	double m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted
 	double m_sectionMarginRight; // as section margin change
 	double m_sectionMarginTop;
@@ -133,7 +143,6 @@ struct WPSContentParsingState
 	double m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
 	double m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
 
-	int m_newListId; // a new free id
 	double m_listReferencePosition; // position from the left page margin of the list number/bullet
 	double m_listBeginPosition; // position from the left page margin of the beginning of the list
 	std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
@@ -142,12 +151,9 @@ struct WPSContentParsingState
 	std::vector<WPSTabStop> m_tabStops;
 	bool m_isTabPositionRelative;
 
-	std::vector<WPSSubDocumentPtr> m_subDocuments;
-
 	bool m_inSubDocument;
 
 	bool m_isNote;
-	int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
 	libwps::SubDocumentType m_subDocumentType;
 
 private:
@@ -164,10 +170,7 @@ public:
 	void setDocumentLanguage(int lcid);
 
 	void startDocument();
-	void startSubDocument();
 	void endDocument();
-
-	void endSubDocument();
 	void handleSubDocument(WPSSubDocumentPtr &subDocument, libwps::SubDocumentType subDocumentType);
 
 
@@ -245,12 +248,31 @@ public:
 	/** adds comment */
 	void insertComment(WPSSubDocumentPtr &subDocument);
 
-#if 0
-	/** open a frame */
-	bool openFrame(TMWAWPosition const &pos, WPXPropertyList extras=WPXPropertyList());
-	/** close a frame */
-	void closeFrame();
-#endif
+	/** adds a picture in given position */
+	void insertPicture(WPSPosition const &pos, const WPXBinaryData &binaryData,
+	                   std::string type="image/pict",
+	                   WPXPropertyList frameExtras=WPXPropertyList());
+	/** adds a textbox in given position */
+	void insertTextBox(WPSPosition const &pos, WPSSubDocumentPtr &subDocument,
+	                   WPXPropertyList frameExtras=WPXPropertyList());
+
+
+	// ------- table -----------------
+	/** open a table*/
+	void openTable(std::vector<float> const &colWidth, WPXUnit unit);
+	/** closes this table */
+	void closeTable();
+	/** open a row with given height*/
+	void openTableRow(float h, WPXUnit unit, bool headerRow=false);
+	/** closes this row */
+	void closeTableRow();
+	/** low level function to define a cell.
+		\param cell the cell position, alignement, ...
+		\param extras to be used to pass extra data, for instance spreadsheet data*/
+	void openTableCell(WPSCell const &cell, WPXPropertyList const &extras);
+	/** close a cell */
+	void closeTableCell();
+
 	// ------- section ---------------
 	//! returns true if a section is opened
 	bool isSectionOpened() const;
@@ -267,8 +289,12 @@ protected:
 	void _closePageSpan();
 	void _updatePageSpanDependent(bool set);
 
-	void _openTable();
-	void _closeTable();
+	void _startSubDocument();
+	void _endSubDocument();
+
+	void _handleFrameParameters( WPXPropertyList &propList, WPSPosition const &pos);
+	bool _openFrame(WPSPosition const &pos, WPXPropertyList extras=WPXPropertyList());
+	void _closeFrame();
 
 	void _openParagraph();
 	void _closeParagraph();
@@ -287,8 +313,6 @@ protected:
 	void _flushText();
 	void _flushDeferredTabs();
 
-	double _movePositionToFirstColumn(double position);
-
 	void _insertBreakIfNecessary(WPXPropertyList &propList);
 
 	static void _addLanguage(int lcid, WPXPropertyList &propList);
@@ -301,11 +325,10 @@ protected:
 	void _popParsingState();
 
 protected:
+	shared_ptr<WPSDocumentParsingState> m_ds; // main parse state
 	shared_ptr<WPSContentParsingState> m_ps; // parse state
 	std::vector<shared_ptr<WPSContentParsingState> > m_psStack;
 	WPXDocumentInterface *m_documentInterface;
-	std::vector<WPSPageSpan> m_pageList;
-	WPXPropertyList m_metaData;
 
 private:
 	WPSContentListener(const WPSContentListener &);

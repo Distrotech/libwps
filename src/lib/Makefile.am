@@ -42,6 +42,7 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSList.h		\
 	WPSPageSpan.h		\
 	WPSParser.h		\
+	WPSPosition.h		\
 	WPSSubDocument.h	\
 	WPSTable.h
 

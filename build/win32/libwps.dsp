@@ -195,6 +195,10 @@ SOURCE=..\..\src\lib\WPSParser.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSPosition.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSSubDocument.h
 # End Source File
 # Begin Source File
