@@ -513,7 +513,7 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 						{
 							if (stream != Stream::Z_Body) break;
 							shared_ptr<WPSSubDocument> doc
-							(new WPS8ParserInternal::SubDocument(input, *this, WPS8ParserInternal::SubDocument::Footnote, m_actualEndnote++));
+							(new WPS8ParserInternal::SubDocument(input, *this, WPS8ParserInternal::SubDocument::Endnote, m_actualEndnote++));
 							m_listener->insertNote(WPSContentListener::ENDNOTE, doc);
 							break;
 						}
