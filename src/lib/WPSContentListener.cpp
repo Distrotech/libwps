@@ -1107,11 +1107,13 @@ void WPSContentListener::_openSpan()
 		return;
 
 	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+	{
 		_changeList();
-	if (m_ps->m_currentListLevel == 0)
-		_openParagraph();
-	else
-		_openListElement();
+		if (m_ps->m_currentListLevel == 0)
+			_openParagraph();
+		else
+			_openListElement();
+	}
 
 	uint32_t attributeBits = m_ps->m_textAttributeBits;
 	double fontSizeChange = 1.0;
