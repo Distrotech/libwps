@@ -35,7 +35,7 @@ SLOFILES= \
 	$(SLO)$/WPSPageSpan.obj		\
 	$(SLO)$/WPSParser.obj		\
 	$(SLO)$/WPSSubDocument.obj	\
-	$(SLO)$/WPSSubDocument.obj
+	$(SLO)$/WPSTable.obj
 
 LIB1ARCHIV=$(LB)$/libwpslib.a
 LIB1TARGET=$(SLB)$/$(TARGET).lib
