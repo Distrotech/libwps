@@ -203,7 +203,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 		default:
 			break;
 		}
-		bool isHeader = WPSPageSpan::HEADER;
+		bool isHeader = hf->getType() == WPSPageSpan::HEADER;
 		if (isHeader)
 			documentInterface->openHeader(propList);
 		else
@@ -214,7 +214,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 			pageNumberInserted = true;
 			_insertPageNumberParagraph(documentInterface);
 		}
-
+		listener->handleSubDocument(hf->getSubDocument(), libwps::DOC_HEADER_FOOTER);
 		if (!isHeader && m_pageNumberPosition >= BottomLeft &&
 		        m_pageNumberPosition <= BottomInsideLeftAndRight)
 		{
@@ -408,10 +408,10 @@ int WPSPageSpan::_getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOcc
 		occurencePos = 0;
 		break;
 	case ODD:
-		occurencePos = 0;
+		occurencePos = 1;
 		break;
 	case EVEN:
-		occurencePos = 0;
+		occurencePos = 2;
 		break;
 	default:
 		WPS_DEBUG_MSG(("WPSPageSpan::getVectorPosition: unknown occurence\n"));
