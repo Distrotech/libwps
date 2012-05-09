@@ -32,6 +32,7 @@
 
 #include "WPSList.h"
 
+#include <cstring>
 #include <iostream>
 
 void WPSList::Level::addTo(WPXPropertyList &propList, int startVal) const
