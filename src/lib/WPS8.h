@@ -99,13 +99,13 @@ protected:
 		{
 			m_offset = pos;
 		}
-		void setLength(uint32_t length)
+		void setLength(uint32_t _length)
 		{
-			m_length = length;
+			m_length = _length;
 		}
-		void setEnd(uint32_t end)
+		void setEnd(uint32_t _end)
 		{
-			m_length = end-m_offset;
+			m_length = _end-m_offset;
 		}
 
 		bool valid() const
