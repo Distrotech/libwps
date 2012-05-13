@@ -1188,8 +1188,8 @@ void WPSContentListener::_openSpan()
 
 	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, WPX_POINT);
 
-	char color[20];
-	sprintf(color,"#%06x",m_ps->m_fontColor);
+	WPXString color;
+	color.sprintf("#%06x",m_ps->m_fontColor);
 	propList.insert("fo:color", color);
 
 	if (m_ps->m_textLanguage < 0)

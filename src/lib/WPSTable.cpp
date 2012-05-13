@@ -86,7 +86,7 @@ bool WPSTable::buildStructures()
 		std::vector<float> positions;
 		std::set<WPSCell::Compare::Point,
 		    WPSCell::Compare>::iterator it = set.begin();
-		float prevPos, maxPosiblePos=0;
+		float maxPosiblePos=0;
 		int actCell = -1;
 		for ( ; it != set.end(); it++)
 		{
@@ -94,7 +94,6 @@ bool WPSTable::buildStructures()
 			if (actCell < 0 || pos > maxPosiblePos)
 			{
 				actCell++;
-				prevPos = pos;
 				positions.push_back(pos);
 				maxPosiblePos = pos+2.0; // 2 pixel ok
 			}
