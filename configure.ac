@@ -186,7 +186,7 @@ AC_ARG_WITH(sharedptr,
 	[with_sharedptr="$withval"],
 	[with_sharedptr=boost]
 )
-AS_IF([test "x$with_sharedptr" == "xc++11"], [
+AS_IF([test "x$with_sharedptr" = "xc++11"], [
 		AC_COMPILE_IFELSE([
 			AC_LANG_PROGRAM(
 			[[#include <memory>]],
@@ -197,7 +197,7 @@ AS_IF([test "x$with_sharedptr" == "xc++11"], [
 		[[#include <memory>]])
 	]
 )
-AS_IF([test "x$with_sharedptr" == "xtr1"], [
+AS_IF([test "x$with_sharedptr" = "xtr1"], [
 		AC_COMPILE_IFELSE([
 			AC_LANG_PROGRAM(
 			[[#include <tr1/memory>]],
@@ -208,7 +208,7 @@ AS_IF([test "x$with_sharedptr" == "xtr1"], [
 		[[#include <tr1/memory>]])
 	]
 )
-AS_IF([test "x$with_sharedptr" == "xboost"], [
+AS_IF([test "x$with_sharedptr" = "xboost"], [
 		AC_COMPILE_IFELSE([
 			AC_LANG_PROGRAM(
 			[[#include <boost/shared_ptr.hpp>]],
