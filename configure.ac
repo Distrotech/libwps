@@ -270,6 +270,7 @@ AC_MSG_NOTICE([
 Build configuration:
 	debug:           ${enable_debug}
 	docs:            ${build_docs}
+	sharedptr:       ${with_sharedptr}
 	static-tools:    ${enable_static_tools}
 	werror:          ${enable_werror}
 ==============================================================================
