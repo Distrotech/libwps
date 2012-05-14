@@ -187,37 +187,54 @@ AC_ARG_WITH(sharedptr,
 	[with_sharedptr=boost]
 )
 AS_IF([test "x$with_sharedptr" = "xc++11"], [
-		AC_COMPILE_IFELSE([
-			AC_LANG_PROGRAM(
+	AC_MSG_CHECKING([for c++11 shared ptr])
+	AC_COMPILE_IFELSE([
+		AC_LANG_PROGRAM(
 			[[#include <memory>]],
 			[[std::shared_ptr<int> p;]]
-      	)],
-		[AC_DEFINE([SHAREDPTR_STD],[1],[Use C++11 implementation of shared_ptr])],
-		[AC_MSG_ERROR(Could not find C++11 implementation of shared_ptr)],
-		[[#include <memory>]])
-	]
-)
+		)
+	], [
+		AC_MSG_RESULT([yes])
+		AC_DEFINE([SHAREDPTR_STD],[1],[Use C++11 implementation of shared_ptr])
+	], [
+		AC_MSG_RESULT([no])
+		AC_MSG_ERROR([Could not find C++11 implementation of shared_pt]r)
+	], [
+		[#include <memory>]
+	])
+])
 AS_IF([test "x$with_sharedptr" = "xtr1"], [
-		AC_COMPILE_IFELSE([
-			AC_LANG_PROGRAM(
+	AC_MSG_CHECKING([for tr1 shared ptr])
+	AC_COMPILE_IFELSE([
+		AC_LANG_PROGRAM(
 			[[#include <tr1/memory>]],
 			[[std::tr1::shared_ptr<int> p;]]
-      	)],
-		[AC_DEFINE([SHAREDPTR_TR1],[1],[Use TR1 implementation of shared_ptr])],
-		[AC_MSG_ERROR(Could not find TR1 implementation of shared_ptr)],
-		[[#include <tr1/memory>]])
-	]
-)
+		)
+	], [
+		AC_MSG_RESULT([yes])
+		AC_DEFINE([SHAREDPTR_TR1],[1],[Use TR1 implementation of shared_ptr])
+	], [
+		AC_MSG_RESULT([no])
+		AC_MSG_ERROR([Could not find TR1 implementation of shared_ptr])
+	], [
+		[#include <tr1/memory>]
+	])
+])
 AS_IF([test "x$with_sharedptr" = "xboost"], [
-		AC_COMPILE_IFELSE([
-			AC_LANG_PROGRAM(
+	AC_MSG_CHECKING([for boost shared ptr])
+	AC_COMPILE_IFELSE([
+		AC_LANG_PROGRAM(
 			[[#include <boost/shared_ptr.hpp>]],
 			[[boost::shared_ptr<int> p;]]
-      	)],
-		[AC_DEFINE([SHAREDPTR_BOOST],[1],[Use Boost implementation of shared_ptr],
-		[AC_MSG_ERROR(Could not find Boost implementation of shared_ptr)])])
-	]
-)
+		)
+	], [
+		AC_MSG_RESULT([yes])
+		AC_DEFINE([SHAREDPTR_BOOST],[1],[Use Boost implementation of shared_ptr])
+	], [
+		AC_MSG_RESULT([no])
+		AC_MSG_ERROR([Could not find Boost implementation of shared_ptr])
+	])
+])
 
 # =============
 # Documentation
