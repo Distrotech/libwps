@@ -36,11 +36,10 @@
 #include <iostream>
 #include <set>
 
+#include "WPSContentListener.h"
 #include "WPSCell.h"
 
 #include "WPSTable.h"
-
-#include "WPSContentListener.h"
 
 ////////////////////////////////////////////////////////////
 // destructor, ...
