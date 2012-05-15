@@ -24,6 +24,9 @@
 #define LIBWPS_INTERNAL_H
 
 #include <assert.h>
+#ifdef DEBUG
+#include <stdio.h>
+#endif
 
 #include <iostream>
 #include <map>
