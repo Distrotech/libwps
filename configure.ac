@@ -186,6 +186,11 @@ AC_ARG_WITH(sharedptr,
 	[with_sharedptr="$withval"],
 	[with_sharedptr=boost]
 )
+AS_CASE([$with_sharedptr],
+	[boost|c++11|tr1], [],
+	[AC_MSG_ERROR([Unknown value of shared_ptr provider: $with_sharedptr])]
+)
+
 AS_IF([test "x$with_sharedptr" = "xc++11"], [
 	AC_MSG_CHECKING([for c++11 shared ptr])
 	AC_COMPILE_IFELSE([
@@ -198,7 +203,7 @@ AS_IF([test "x$with_sharedptr" = "xc++11"], [
 		AC_DEFINE([SHAREDPTR_STD],[1],[Use C++11 implementation of shared_ptr])
 	], [
 		AC_MSG_RESULT([no])
-		AC_MSG_ERROR([Could not find C++11 implementation of shared_pt]r)
+		AC_MSG_ERROR([Could not find C++11 implementation of shared_ptr])
 	], [
 		[#include <memory>]
 	])
