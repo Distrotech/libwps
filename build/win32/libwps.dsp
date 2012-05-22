@@ -99,6 +99,14 @@ SOURCE=..\..\src\lib\WPS4.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPS4Graph.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPS4Text.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPS8.cpp
 # End Source File
 # Begin Source File
@@ -108,6 +116,10 @@ SOURCE=..\..\src\lib\WPSCell.cpp
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSContentListener.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSDebug.cpp
 # End Source File
 # Begin Source File
 
@@ -123,7 +135,19 @@ SOURCE=..\..\src\lib\WPSList.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSOLEParser.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSOLEStream.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSPageSpan.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSParagraph.cpp
 # End Source File
 # Begin Source File
 
@@ -163,6 +187,14 @@ SOURCE=..\..\src\lib\WPS4.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPS4Graph.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPS4Text.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPS8.h
 # End Source File
 # Begin Source File
@@ -175,7 +207,15 @@ SOURCE=..\..\src\lib\WPSContentListener.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSDebug.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSDocument.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSEntry.h
 # End Source File
 # Begin Source File
 
@@ -187,7 +227,19 @@ SOURCE=..\..\src\lib\WPSList.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSOLEParser.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSOLEStream.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSPageSpan.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSParagraph.h
 # End Source File
 # Begin Source File
 

@@ -19,13 +19,19 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	libwps_internal.cpp 	\
 	libwps_tools_win.cpp	\
 	WPS4.cpp		\
+	WPS4Graph.cpp		\
+	WPS4Text.cpp		\
 	WPS8.cpp		\
 	WPSCell.cpp		\
 	WPSContentListener.cpp	\
+	WPSDebug.cpp		\
 	WPSDocument.cpp		\
 	WPSHeader.cpp		\
 	WPSList.cpp		\
+	WPSOLEParser.cpp	\
+	WPSOLEStream.cpp	\
 	WPSPageSpan.cpp		\
+	WPSParagraph.cpp	\
 	WPSParser.cpp		\
 	WPSSubDocument.cpp	\
 	WPSTable.cpp		\
@@ -34,13 +40,20 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	libwps_internal.h	\
 	WPS.h			\
 	WPS4.h			\
+	WPS4Graph.h		\
+	WPS4Text.h		\
 	WPS8.h			\
 	WPSCell.h		\
 	WPSContentListener.h	\
+	WPSDebug.h		\
 	WPSDocument.h		\
+	WPSEntry.h		\
 	WPSHeader.h		\
 	WPSList.h		\
+	WPSOLEParser.h		\
+	WPSOLEStream.h		\
 	WPSPageSpan.h		\
+	WPSParagraph.h		\
 	WPSParser.h		\
 	WPSPosition.h		\
 	WPSSubDocument.h	\

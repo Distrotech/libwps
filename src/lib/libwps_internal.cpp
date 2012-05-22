@@ -20,9 +20,12 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#include "libwps_internal.h"
 #include <string>
 #include <stdlib.h>
+
+#include <libwpd/WPXBinaryData.h>
+
+#include "libwps_internal.h"
 
 namespace libwps
 {
@@ -32,7 +35,15 @@ uint8_t readU8(WPXInputStream *input)
 	unsigned char const *p = input->read(sizeof(uint8_t), numBytesRead);
 
 	if (!p || numBytesRead != sizeof(uint8_t))
-		throw FileException();
+	{
+		static bool first = true;
+		if (first)
+		{
+			first = false;
+			WPS_DEBUG_MSG(("libwps::readU8: can not read data\n"));
+		}
+		return 0;
+	}
 
 	return *(uint8_t const *)(p);
 }
@@ -68,6 +79,39 @@ int32_t read32(WPXInputStream *input)
 	return (int32_t) readU32(input);
 }
 
+bool readData(WPXInputStreamPtr &input, unsigned long size, WPXBinaryData &data)
+{
+	data.clear();
+	if (size == 0) return true;
+
+	const unsigned char *readData;
+	unsigned long sizeRead;
+	while (size > 2048 && (readData=input->read(2048, sizeRead)) != 0 && sizeRead)
+	{
+		data.append(readData, sizeRead);
+		size -= sizeRead;
+	}
+	if (size > 2048) return false;
+
+	readData=input->read(size, sizeRead);
+	if (size != sizeRead) return false;
+	data.append(readData, sizeRead);
+
+	return true;
+}
+
+bool readDataToEnd(WPXInputStreamPtr &input, WPXBinaryData &data)
+{
+	data.clear();
+
+	const unsigned char *readData;
+	unsigned long sizeRead;
+	while ((readData=input->read(2048, sizeRead)) != 0 && sizeRead)
+		data.append(readData, sizeRead);
+
+	return input->atEOS();
+}
+
 std::string numberingTypeToString(NumberingType type)
 {
 	switch (type)
@@ -88,46 +132,47 @@ std::string numberingTypeToString(NumberingType type)
 	WPS_DEBUG_MSG(("libwps::numberingTypeToString: must not be called with type %d\n", int(type)));
 	return "1";
 }
-
 }
 
-void WPSTabStop::addTo(WPXPropertyListVector &propList, double decalX)
+std::ostream &operator<<(std::ostream &o, WPSFont const &ft)
 {
-	WPXPropertyList tab;
+	int flags = ft.m_attributes;
+	if (!ft.m_name.empty())
+		o << "nam='" << ft.m_name << "',";
+	if (ft.m_size > 0) o << "sz=" << ft.m_size << ",";
 
-	// type
-	switch (m_alignment)
-	{
-	case RIGHT:
-		tab.insert("style:type", "right");
-		break;
-	case CENTER:
-		tab.insert("style:type", "center");
-		break;
-	case DECIMAL:
-		tab.insert("style:type", "char");
-		tab.insert("style:char", "."); // Assume a decimal point for now
-		break;
-	default:  // Left alignment is the default and BAR is not handled in OOo
-		break;
-	}
+	if (flags) o << "fl=";
+	if (flags&WPS_BOLD_BIT) o << "b:";
+	if (flags&WPS_ITALICS_BIT) o << "it:";
+	if (flags&WPS_UNDERLINE_BIT) o << "underL:";
+	if (flags&WPS_OVERLINE_BIT) o << "overL:";
+	if (flags&WPS_EMBOSS_BIT) o << "emboss:";
+	if (flags&WPS_SHADOW_BIT) o << "shadow:";
+	if (flags&WPS_OUTLINE_BIT) o << "outline:";
+	if (flags&WPS_DOUBLE_UNDERLINE_BIT) o << "2underL:";
+	if (flags&WPS_STRIKEOUT_BIT) o << "strikeout:";
+	if (flags&WPS_SMALL_CAPS_BIT) o << "smallCaps:";
+	if (flags&WPS_ALL_CAPS_BIT) o << "allCaps:";
+	if (flags&WPS_HIDDEN_BIT) o << "hidden:";
+	if (flags&WPS_SMALL_PRINT_BIT) o << "consended:";
+	if (flags&WPS_LARGE_BIT) o << "extended:";
+	if (flags&WPS_SUPERSCRIPT_BIT) o << "superS:";
+	if (flags&WPS_SUBSCRIPT_BIT) o << "subS:";
+	if (flags) o << ",";
 
-	// leader character
-	if (m_leaderCharacter != 0x0000)
-	{
-		WPXString sLeader;
-		sLeader.sprintf("%c", m_leaderCharacter);
-		tab.insert("style:leader-text", sLeader);
-		tab.insert("style:leader-style", "solid");
-	}
+	if (ft.m_color) o << "col=" << std::hex << ft.m_color << ",";
+	if (ft.m_extra.length()) o << "extra=" << ft.m_extra << ",";
+	return o;
+}
 
-	// position
-	double position = m_position+decalX;
-	if (position < 0.00005f && position > -0.00005f)
-		position = 0.0;
-	tab.insert("style:position", position);
-
-	propList.append(tab);
+bool WPSFont::operator==(WPSFont const &ft) const
+{
+	if (m_size != ft.m_size || m_attributes != ft.m_attributes
+	        || m_color != ft.m_color || m_languageId != ft.m_languageId)
+		return false;
+	if (m_name.compare(ft.m_name) || m_extra.compare(ft.m_extra))
+		return false;
+	return true;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

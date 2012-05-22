@@ -1,6 +1,8 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
- * Copyright (C) 2005 Fridrich Strba (fridrich.strba@bluewin.ch)
+ * Copyright (C) 2006, 2007 Andrew Ziem
+ * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public

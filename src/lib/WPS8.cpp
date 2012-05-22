@@ -28,6 +28,7 @@
 #include "WPSContentListener.h"
 #include "WPSList.h"
 #include "WPSPageSpan.h"
+#include "WPSParagraph.h"
 #include "WPSSubDocument.h"
 
 #include "WPS8.h"

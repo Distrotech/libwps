@@ -1,6 +1,9 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
+ * Copyright (C) 2006, 2007 Andrew Ziem
  * Copyright (C) 2006 Fridrich Strba (fridrich.strba@bluewin.ch)
+ * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -32,6 +35,7 @@
 
 #include "libwps_internal.h"
 
+class WPXBinaryData;
 class WPXDocumentInterface;
 class WPXString;
 class WPXPropertyListVector;
@@ -41,6 +45,8 @@ class WPSList;
 class WPSPageSpan;
 class WPSPosition;
 class WPSSubDocument;
+struct WPSTabStop;
+
 typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
 
 struct WPSDocumentParsingState
@@ -54,7 +60,7 @@ struct WPSDocumentParsingState
 	int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
 	int m_newListId; // a new free id
 
-	bool m_isDocumentStarted;
+	bool m_isDocumentStarted, m_isHeaderFooterStarted;
 	std::vector<WPSSubDocumentPtr> m_subDocuments; /** list of document actually open */
 
 private:
@@ -82,6 +88,9 @@ struct WPSContentParsingState
 	double m_paragraphLineSpacing;
 	WPXUnit m_paragraphLineSpacingUnit;
 	int m_paragraphBorders;
+	libwps::BorderStyle m_paragraphBordersStyle;
+	int m_paragraphBordersWidth;
+	uint32_t m_paragraphBordersColor;
 
 	shared_ptr<WPSList> m_list;
 	uint8_t m_currentListLevel;
@@ -172,7 +181,7 @@ public:
 	void startDocument();
 	void endDocument();
 	void handleSubDocument(WPSSubDocumentPtr &subDocument, libwps::SubDocumentType subDocumentType);
-
+	bool isHeaderFooterOpened() const;
 
 	// ------ text data -----------
 
@@ -184,7 +193,7 @@ public:
 	void insertUnicode(uint32_t character);
 	//! adds a unicode string
 	void insertUnicodeString(WPXString const &str);
-	//! internal function used to add an unicode character to a string
+	//! adds an unicode character to a string ( with correct encoding ).
 	static void appendUnicode(uint32_t val, WPXString &buffer);
 
 	void insertTab();
@@ -197,12 +206,14 @@ public:
 	void setFontAttributes(const uint32_t fontAttributes);
 	void setTextLanguage(int lcid);
 	void setTextColor(const uint32_t rgb);
+	void setFont(const WPSFont &font);
 
 	// ------ paragraph format -----------
 	//! returns true if a paragraph or a list is opened
 	bool isParagraphOpened() const;
 	void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT);
-	// force a break if there is a justification change
+	/** Define the paragraph justification. You can set force=true to
+		force a break if there is a justification change */
 	void setParagraphJustification(libwps::Justification justification, bool force=false);
 	//! sets the first paragraph text indent. \warning unit are given in inches
 	void setParagraphTextIndent(double margin);
@@ -217,11 +228,11 @@ public:
 	void setTabs(const std::vector<WPSTabStop> &tabStops);
 	/** indicates that the paragraph has a basic borders (ie. a black line)
 	 * \param which = libwps::LeftBorderBit | ...
-	 * \param flag sets to true
+	 * \param style = libwps::BorderSingle | libwps::BorderDouble
+	 * \param width = 1,2,3,...
+	 * \param color: the border color
 	 */
-	void setParagraphBorders(int which, bool flag);
-	//! indicates that the paragraph has a basic borders (ie. 4 black lines)
-	void setParagraphBorders(bool flag);
+	void setParagraphBorders(int which, libwps::BorderStyle style=libwps::BorderSingle, int width=1, uint32_t color=0);
 
 	// ------ list format -----------
 	/** function to set the actual list */
@@ -245,6 +256,8 @@ public:
 	enum NoteType { FOOTNOTE, ENDNOTE };
 	/** adds note */
 	void insertNote(const NoteType noteType, WPSSubDocumentPtr &subDocument);
+	/** adds a label note */
+	void insertLabelNote(const NoteType noteType, WPXString const &label, WPSSubDocumentPtr &subDocument);
 	/** adds comment */
 	void insertComment(WPSSubDocumentPtr &subDocument);
 
@@ -253,7 +266,7 @@ public:
 	                   std::string type="image/pict",
 	                   WPXPropertyList frameExtras=WPXPropertyList());
 	/** adds a textbox in given position */
-	void insertTextBox(WPSPosition const &pos, WPSSubDocumentPtr &subDocument,
+	void insertTextBox(WPSPosition const &pos, WPSSubDocumentPtr subDocument,
 	                   WPXPropertyList frameExtras=WPXPropertyList());
 
 
@@ -277,7 +290,7 @@ public:
 	//! returns true if a section is opened
 	bool isSectionOpened() const;
 	//! open a section if possible
-	bool openSection(std::vector<int> colsWidth, WPXUnit unit);
+	bool openSection(std::vector<int> colsWidth=std::vector<int>(), WPXUnit unit=WPX_INCH);
 	//! close a section
 	bool closeSection();
 
@@ -288,6 +301,7 @@ protected:
 	void _openPageSpan();
 	void _closePageSpan();
 	void _updatePageSpanDependent(bool set);
+	void _recomputeParagraphPositions();
 
 	void _startSubDocument();
 	void _endSubDocument();

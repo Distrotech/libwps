@@ -26,13 +26,19 @@ SLOFILES= \
 	$(SLO)$/libwps_internal.obj	\
 	$(SLO)$/libwps_tools_win.obj	\
 	$(SLO)$/WPS4.obj		\
+	$(SLO)$/WPS4Graph.obj		\
+	$(SLO)$/WPS4Text.obj		\
 	$(SLO)$/WPS8.obj		\
 	$(SLO)$/WPSCell.obj		\
 	$(SLO)$/WPSContentListener.obj	\
+	$(SLO)$/WPSDebug.obj		\
 	$(SLO)$/WPSDocument.obj		\
 	$(SLO)$/WPSHeader.obj		\
 	$(SLO)$/WPSList.obj		\
+	$(SLO)$/WPSOLEParser.obj	\
+	$(SLO)$/WPSOLEStream.obj	\
 	$(SLO)$/WPSPageSpan.obj		\
+	$(SLO)$/WPSParagraph.obj	\
 	$(SLO)$/WPSParser.obj		\
 	$(SLO)$/WPSSubDocument.obj	\
 	$(SLO)$/WPSTable.obj

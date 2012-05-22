@@ -1,6 +1,9 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
+ * Copyright (C) 2006, 2007 Andrew Ziem
  * Copyright (C) 2006 Fridrich Strba (fridrich.strba@bluewin.ch)
+ * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,24 +25,28 @@
 /* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
+#include <iomanip>
+#include <sstream>
 
 #include <libwpd/WPXProperty.h>
 
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
 
+#include "WPSContentListener.h"
+
+#include "WPSCell.h"
 #include "WPSList.h"
 #include "WPSPageSpan.h"
+#include "WPSParagraph.h"
 #include "WPSPosition.h"
 #include "WPSSubDocument.h"
-
-#include "WPSContentListener.h"
 
 WPSDocumentParsingState::WPSDocumentParsingState(std::vector<WPSPageSpan> const &pageList) :
 	m_pageList(pageList),
 	m_metaData(),
 	m_footNoteNumber(0), m_endNoteNumber(0), m_newListId(0),
-	m_isDocumentStarted(false), m_subDocuments()
+	m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments()
 {
 }
 
@@ -57,7 +64,8 @@ WPSContentParsingState::WPSContentParsingState() :
 
 	m_paragraphJustification(libwps::JustificationLeft),
 	m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
-	m_paragraphBorders(0),
+	m_paragraphBorders(0), m_paragraphBordersStyle(libwps::BorderSingle),
+	m_paragraphBordersWidth(1), m_paragraphBordersColor(0),
 
 	m_list(), m_currentListLevel(0),
 
@@ -130,6 +138,8 @@ WPSContentListener::WPSContentListener(std::vector<WPSPageSpan> const &pageList,
 	m_ds(new WPSDocumentParsingState(pageList)), m_ps(new WPSContentParsingState), m_psStack(),
 	m_documentInterface(documentInterface)
 {
+	_updatePageSpanDependent(true);
+	_recomputeParagraphPositions();
 }
 
 WPSContentListener::~WPSContentListener()
@@ -230,8 +240,9 @@ void WPSContentListener::insertEOL(bool soft)
 		_closeParagraph();
 
 	// sub/superscript must not survive a new line
-	if (m_ps->m_textAttributeBits & (WPS_SUBSCRIPT_BIT | WPS_SUPERSCRIPT_BIT))
-		m_ps->m_textAttributeBits &= ~(WPS_SUBSCRIPT_BIT | WPS_SUPERSCRIPT_BIT);
+	static const uint32_t s_subsuperBits = WPS_SUBSCRIPT_BIT | WPS_SUPERSCRIPT_BIT;
+	if (m_ps->m_textAttributeBits & s_subsuperBits)
+		m_ps->m_textAttributeBits &= ~s_subsuperBits;
 }
 
 void WPSContentListener::insertTab()
@@ -297,7 +308,7 @@ void WPSContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
 	{
 		// no hard page-breaks in subdocuments
 		propList.insert("fo:break-before", "page");
-		m_ps->m_isParagraphPageBreak = false; // osnola
+		m_ps->m_isParagraphPageBreak = false;
 	}
 	else if (m_ps->m_isParagraphColumnBreak)
 	{
@@ -311,6 +322,18 @@ void WPSContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
 ///////////////////
 // font/character format
 ///////////////////
+void WPSContentListener::setFont(const WPSFont &font)
+{
+	setFontAttributes(font.m_attributes);
+	if (font.m_size > 0)
+		setFontSize(font.m_size);
+	if (!font.m_name.empty())
+		setTextFont(font.m_name.c_str());
+	setTextColor(font.m_color);
+	if (font.m_languageId > 0)
+		setTextLanguage(font.m_languageId);
+}
+
 void WPSContentListener::setFontAttributes(const uint32_t attribute)
 {
 	if (attribute == m_ps->m_textAttributeBits) return;
@@ -382,10 +405,7 @@ void WPSContentListener::setParagraphJustification(libwps::Justification justifi
 void WPSContentListener::setParagraphTextIndent(double margin)
 {
 	m_ps->m_textIndentByParagraphIndentChange = margin;
-
-	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange
-	                              + m_ps->m_textIndentByTabs;
-	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+	_recomputeParagraphPositions();
 }
 
 void WPSContentListener::setParagraphMargin(double margin, int pos)
@@ -394,20 +414,11 @@ void WPSContentListener::setParagraphMargin(double margin, int pos)
 	{
 	case WPS_LEFT:
 		m_ps->m_leftMarginByParagraphMarginChange = margin;
-		m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange
-		                              + m_ps->m_leftMarginByParagraphMarginChange
-		                              + m_ps->m_leftMarginByTabs;
-		m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-		if (m_ps->m_currentListLevel)
-			m_ps->m_listBeginPosition =
-			    m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-
+		_recomputeParagraphPositions();
 		break;
 	case WPS_RIGHT:
 		m_ps->m_rightMarginByParagraphMarginChange = margin;
-		m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange
-		                               + m_ps->m_rightMarginByParagraphMarginChange
-		                               + m_ps->m_rightMarginByTabs;
+		_recomputeParagraphPositions();
 		break;
 	case WPS_TOP:
 		m_ps->m_paragraphMarginTop = margin;
@@ -426,15 +437,12 @@ void WPSContentListener::setTabs(const std::vector<WPSTabStop> &tabStops)
 	m_ps->m_tabStops = tabStops;
 }
 
-void WPSContentListener::setParagraphBorders(int which, bool flag)
+void WPSContentListener::setParagraphBorders(int which, libwps::BorderStyle style, int width, uint32_t color)
 {
-	if (flag) m_ps->m_paragraphBorders |= which;
-	else m_ps->m_paragraphBorders &= (~which);
-}
-
-void WPSContentListener::setParagraphBorders(bool flag)
-{
-	m_ps->m_paragraphBorders = flag ? libwps::LeftBorderBit | libwps::RightBorderBit | libwps::TopBorderBit| libwps::BottomBorderBit : 0;
+	m_ps->m_paragraphBorders = which;
+	m_ps->m_paragraphBordersStyle = style;
+	m_ps->m_paragraphBordersWidth = width >= 1 ? width : 1;
+	m_ps->m_paragraphBordersColor = color;
 }
 
 ///////////////////
@@ -549,10 +557,8 @@ bool WPSContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
 		switch(unit)
 		{
 		case WPX_POINT:
-			factor = 1/72.;
-			break;
 		case WPX_TWIP:
-			factor = 1/1440.;
+			factor = WPSPosition::getScaleFactor(unit, WPX_INCH);
 			break;
 		case WPX_INCH:
 			break;
@@ -693,12 +699,7 @@ void WPSContentListener::_openPageSpan()
 	m_ps->m_pageMarginTop = currentPage.getMarginTop();
 	m_ps->m_pageMarginBottom = currentPage.getMarginBottom();
 	_updatePageSpanDependent(true);
-
-	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange
-	                              + m_ps->m_leftMarginByTabs;
-	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange
-	                               + m_ps->m_rightMarginByTabs;
-	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
+	_recomputeParagraphPositions();
 
 	// we insert the header footer
 	currentPage.sendHeaderFooters(this, m_documentInterface);
@@ -725,18 +726,23 @@ void WPSContentListener::_updatePageSpanDependent(bool set)
 {
 	double deltaRight = set ? -m_ps->m_pageMarginRight : m_ps->m_pageMarginRight;
 	double deltaLeft = set ? -m_ps->m_pageMarginLeft : m_ps->m_pageMarginLeft;
-	if (m_ps->m_leftMarginByPageMarginChange != 0)
-		m_ps->m_leftMarginByPageMarginChange += deltaLeft;
-	if (m_ps->m_rightMarginByPageMarginChange != 0)
-		m_ps->m_rightMarginByPageMarginChange += deltaRight;
-	if (m_ps->m_sectionMarginLeft != 0)
+	if (m_ps->m_sectionMarginLeft)
 		m_ps->m_sectionMarginLeft += deltaLeft;
-	if (m_ps->m_sectionMarginRight != 0)
+	if (m_ps->m_sectionMarginRight)
 		m_ps->m_sectionMarginRight += deltaRight;
-	if (m_ps->m_listReferencePosition != 0)
-		m_ps->m_listReferencePosition += deltaLeft;
-	if (m_ps->m_listBeginPosition != 0)
-		m_ps->m_listBeginPosition += deltaLeft;
+	m_ps->m_listReferencePosition += deltaLeft;
+	m_ps->m_listBeginPosition += deltaLeft;
+}
+
+void WPSContentListener::_recomputeParagraphPositions()
+{
+	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange
+	                              + m_ps->m_leftMarginByParagraphMarginChange + m_ps->m_leftMarginByTabs;
+	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange
+	                               + m_ps->m_rightMarginByParagraphMarginChange + m_ps->m_rightMarginByTabs;
+	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
+	m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
 }
 
 ///////////////////
@@ -867,16 +873,12 @@ void WPSContentListener::_resetParagraphState(const bool isListElement)
 		m_ps->m_isListElementOpened = false;
 		m_ps->m_isParagraphOpened = true;
 	}
-	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange + m_ps->m_leftMarginByParagraphMarginChange;
-	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange + m_ps->m_rightMarginByParagraphMarginChange;
 	m_ps->m_leftMarginByTabs = 0.0;
 	m_ps->m_rightMarginByTabs = 0.0;
-	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange;
 	m_ps->m_textIndentByTabs = 0.0;
 	m_ps->m_isTextColumnWithoutParagraph = false;
 	m_ps->m_isHeaderFooterWithoutParagraph = false;
-	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-	m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
+	_recomputeParagraphPositions();
 }
 
 void WPSContentListener::_appendJustification(WPXPropertyList &propList, libwps::Justification justification)
@@ -923,20 +925,37 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 		propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
 		if (m_ps->m_paragraphBorders)
 		{
+			std::stringstream stream;
+			stream << m_ps->m_paragraphBordersWidth*0.03 << "cm";
+			switch (m_ps->m_paragraphBordersStyle)
+			{
+			case libwps::BorderSingle:
+			case libwps::BorderDot:
+			case libwps::BorderLargeDot:
+			case libwps::BorderDash:
+				stream << " solid";
+				break;
+			case libwps::BorderDouble:
+				stream << " double";
+				break;
+			}
+			stream << " #" << std::hex << std::setfill('0') << std::setw(6)
+			       << (m_ps->m_paragraphBordersColor&0xFFFFFF);
+			std::string style = stream.str();
 			int border = m_ps->m_paragraphBorders;
 			if (border == 0xF)
 			{
-				propList.insert("fo:border", "0.03cm solid #000000");
+				propList.insert("fo:border", style.c_str());
 				return;
 			}
 			if (border & libwps::LeftBorderBit)
-				propList.insert("fo:border-left", "0.03cm solid #000000");
+				propList.insert("fo:border-left", style.c_str());
 			if (border & libwps::RightBorderBit)
-				propList.insert("fo:border-right", "0.03cm solid #000000");
+				propList.insert("fo:border-right", style.c_str());
 			if (border & libwps::TopBorderBit)
-				propList.insert("fo:border-top", "0.03cm solid #000000");
+				propList.insert("fo:border-top", style.c_str());
 			if (border & libwps::BottomBorderBit)
-				propList.insert("fo:border-bottom", "0.03cm solid #000000");
+				propList.insert("fo:border-bottom", style.c_str());
 		}
 	}
 	propList.insert("fo:margin-top", m_ps->m_paragraphMarginTop, m_ps->m_paragraphMarginBottomUnit);
@@ -1097,7 +1116,6 @@ void WPSContentListener::_changeList()
 ///////////////////
 // span
 ///////////////////
-static char const *WPS_DEFAULT_SUPER_SUB_SCRIPT = "58";
 void WPSContentListener::_openSpan()
 {
 	if (m_ps->m_isSpanOpened)
@@ -1141,19 +1159,9 @@ void WPSContentListener::_openSpan()
 
 	WPXPropertyList propList;
 	if (attributeBits & WPS_SUPERSCRIPT_BIT)
-	{
-		WPXString sSuperScript;
-		sSuperScript.sprintf("super %s", WPS_DEFAULT_SUPER_SUB_SCRIPT);
-		sSuperScript.append("%");
-		propList.insert("style:text-position", sSuperScript);
-	}
+		propList.insert("style:text-position", "super 58%");
 	else if (attributeBits & WPS_SUBSCRIPT_BIT)
-	{
-		WPXString sSubScript;
-		sSubScript.sprintf("sub %s", WPS_DEFAULT_SUPER_SUB_SCRIPT);
-		sSubScript.append("%");
-		propList.insert("style:text-position", sSubScript);
-	}
+		propList.insert("style:text-position", "sub 58%");
 	if (attributeBits & WPS_ITALICS_BIT)
 		propList.insert("fo:font-style", "italic");
 	if (attributeBits & WPS_BOLD_BIT)
@@ -1268,39 +1276,68 @@ void WPSContentListener::insertNote(const NoteType noteType, WPSSubDocumentPtr &
 {
 	if (m_ps->m_isNote)
 	{
-		WPS_DEBUG_MSG(("WPSContentListener::insertNote try to insert a note recursively (ingnored)"));
+		WPS_DEBUG_MSG(("WPSContentListener::insertNote try to insert a note recursively (ingnored)\n"));
+		return;
+	}
+	WPXString label("");
+	insertLabelNote(noteType, label, subDocument);
+}
+
+void WPSContentListener::insertLabelNote(const NoteType noteType, WPXString const &label, WPSSubDocumentPtr &subDocument)
+{
+	if (m_ps->m_isNote)
+	{
+		WPS_DEBUG_MSG(("WPSContentListener::insertLabelNote try to insert a note recursively (ingnored)\n"));
 		return;
 	}
 
-	if (!m_ps->m_isParagraphOpened)
-		_openParagraph();
-	else
-	{
-		_flushText();
-		_closeSpan();
-	}
-
 	m_ps->m_isNote = true;
-
-	WPXPropertyList propList;
-
-	if (noteType == FOOTNOTE)
+	if (m_ds->m_isHeaderFooterStarted)
 	{
-		propList.insert("libwpd:number", ++(m_ds->m_footNoteNumber));
-		m_documentInterface->openFootnote(propList);
+		WPS_DEBUG_MSG(("WPSContentListener::insertLabelNote try to insert a note in a header/footer\n"));
+		/** Must not happen excepted in corrupted document, so we do the minimum.
+			Note that we have no choice, either we begin by closing the paragraph,
+			... or we reprogram handleSubDocument.
+		*/
+		if (m_ps->m_isParagraphOpened)
+			_closeParagraph();
+		int prevListLevel = m_ps->m_currentListLevel;
+		m_ps->m_currentListLevel = 0;
+		_changeList(); // flush the list exterior
+		handleSubDocument(subDocument, libwps::DOC_NOTE);
+		m_ps->m_currentListLevel = prevListLevel;
 	}
 	else
 	{
-		propList.insert("libwpd:number", ++(m_ds->m_endNoteNumber));
-		m_documentInterface->openEndnote(propList);
+		if (!m_ps->m_isParagraphOpened)
+			_openParagraph();
+		else
+		{
+			_flushText();
+			_closeSpan();
+		}
+
+		WPXPropertyList propList;
+		if (label.len())
+			propList.insert("text:label", label);
+		if (noteType == FOOTNOTE)
+		{
+			propList.insert("libwpd:number", ++(m_ds->m_footNoteNumber));
+			m_documentInterface->openFootnote(propList);
+		}
+		else
+		{
+			propList.insert("libwpd:number", ++(m_ds->m_endNoteNumber));
+			m_documentInterface->openEndnote(propList);
+		}
+
+		handleSubDocument(subDocument, libwps::DOC_NOTE);
+
+		if (noteType == FOOTNOTE)
+			m_documentInterface->closeFootnote();
+		else
+			m_documentInterface->closeEndnote();
 	}
-
-	handleSubDocument(subDocument, libwps::DOC_NOTE);
-
-	if (noteType == FOOTNOTE)
-		m_documentInterface->closeFootnote();
-	else
-		m_documentInterface->closeEndnote();
 	m_ps->m_isNote = false;
 }
 
@@ -1326,13 +1363,12 @@ void WPSContentListener::insertComment(WPSSubDocumentPtr &subDocument)
 	m_ps->m_isNote = true;
 	handleSubDocument(subDocument, libwps::DOC_COMMENT_ANNOTATION);
 
-
 	m_documentInterface->closeComment();
 	m_ps->m_isNote = false;
 }
 
 void WPSContentListener::insertTextBox
-(WPSPosition const &pos, WPSSubDocumentPtr &subDocument, WPXPropertyList frameExtras)
+(WPSPosition const &pos, WPSSubDocumentPtr subDocument, WPXPropertyList frameExtras)
 {
 	if (!_openFrame(pos, frameExtras)) return;
 
@@ -1644,6 +1680,7 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 		break;
 	case libwps::DOC_HEADER_FOOTER:
 		m_ps->m_isHeaderFooterWithoutParagraph = true;
+		m_ds->m_isHeaderFooterStarted = true;
 		break;
 	default:
 		break;
@@ -1682,10 +1719,23 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 			_openSpan();
 	}
 
-	if (m_ps->m_subDocumentType == libwps::DOC_TEXT_BOX)
+	switch (m_ps->m_subDocumentType)
+	{
+	case libwps::DOC_TEXT_BOX:
 		_closeSection();
+		break;
+	case libwps::DOC_HEADER_FOOTER:
+		m_ds->m_isHeaderFooterStarted = false;
+	default:
+		break;
+	}
 	_endSubDocument();
 	_popParsingState();
+}
+
+bool WPSContentListener::isHeaderFooterOpened() const
+{
+	return m_ds->m_isHeaderFooterStarted;
 }
 
 void WPSContentListener::_startSubDocument()
@@ -1788,6 +1838,30 @@ void WPSContentListener::closeTableRow()
 	}
 	m_ps->m_isTableRowOpened = false;
 	m_documentInterface->closeTableRow();
+}
+
+void WPSContentListener::openTableCell(WPSCell const &cell, WPXPropertyList const &extras)
+{
+	if (!m_ps->m_isTableRowOpened)
+	{
+		WPS_DEBUG_MSG(("WPSContentListener::openTableCell: called with m_isTableRowOpened=false\n"));
+		return;
+	}
+	if (m_ps->m_isTableCellOpened)
+	{
+		WPS_DEBUG_MSG(("WPSContentListener::openTableCell: called with m_isTableCellOpened=true\n"));
+		closeTableCell();
+	}
+
+	WPXPropertyList propList(extras);
+	propList.insert("libwpd:column", cell.position()[0]);
+	propList.insert("libwpd:row", cell.position()[1]);
+
+	propList.insert("table:number-columns-spanned", cell.numSpannedCells()[0]);
+	propList.insert("table:number-rows-spanned", cell.numSpannedCells()[1]);
+	// FINISHME
+	m_ps->m_isTableCellOpened = true;
+	m_documentInterface->openTableCell(propList);
 }
 
 void WPSContentListener::closeTableCell()

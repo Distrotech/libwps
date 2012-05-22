@@ -28,46 +28,144 @@
 
 #include <libwpd-stream/WPXStream.h>
 #include "libwps_internal.h"
-#include "WPS.h"
+#include "WPSDebug.h"
 
 #include "WPSParser.h"
 
+class WPXString;
 class WPSContentListener;
 typedef WPSContentListener WPS4ContentListener;
+class WPSEntry;
+class WPSPosition;
 class WPSPageSpan;
 
 namespace WPS4ParserInternal
 {
-struct Font;
+class SubDocument;
+struct State;
 }
 
+class WPS4Graph;
+class WPS4Text;
+
+/**
+ * This class parses Works version 2 through 4.
+ *
+ */
 class WPS4Parser : public WPSParser
 {
+	friend class WPS4ParserInternal::SubDocument;
+	friend class WPS4Graph;
+	friend class WPS4Text;
+
 public:
+	//! constructor
 	WPS4Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
+	//! destructor
 	~WPS4Parser();
-
+	//! called by WPSDocument to parse the file
 	void parse(WPXDocumentInterface *documentInterface);
-private:
-	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
-	void parse(WPXInputStreamPtr &input);
-	void readFontsTable(WPXInputStreamPtr &input);
-	bool readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs);
-	void propertyChangeDelta(uint32_t newTextAttributeBits);
-	void propertyChange(std::string rgchProp, WPS4ParserInternal::Font &font);
-	void propertyChangePara(std::string rgchProp);
-	void readText(WPXInputStreamPtr &input);
+protected:
+	//! version
+	int version() const;
+	//! color
+	bool getColor(int id, uint32_t &color) const;
 
-#ifdef DEBUG
-	static std::string to_bits(std::string s);
-#endif
-	uint32_t m_oldTextAttributeBits;
-	uint32_t m_offset_eot; /* stream offset to end of text */
-	std::vector<WPSFOD> m_CHFODs; /* CHaracter FOrmatting Descriptors */
-	std::vector<WPSFOD> m_PAFODs; /* PAragraph FOrmatting Descriptors */
+	//! returns the file size (or the ole zone size)
+	long getSizeFile() const;
+	//! sets the file size ( filled by WPS4Text )
+	void setSizeFile(long sz);
+	//! return true if the pos is in the file, update the file size if need
+	bool checkInFile(long pos);
+
+	//! adds a new page
+	void newPage(int number);
+	//! set the listener
+	void setListener(shared_ptr<WPS4ContentListener> listener);
+
+	/** tries to parse the main zone, ... */
+	bool createStructures();
+	/** tries to parse the different OLE zones ( except the main zone ) */
+	bool createOLEStructures();
+	/** creates the main listener */
+	shared_ptr<WPS4ContentListener> createListener(WPXDocumentInterface *interface);
+
+	// interface with text parser
+
+	//! returns the page height, ie. paper size less margin (in inches)
+	float pageHeight() const;
+	//! returns the page width, ie. paper size less margin (in inches)
+	float pageWidth() const;
+	//! returns the number of columns
+	int numColumns() const;
+
+	/** creates a document for a comment entry and then send the data
+	 *
+	 * \note actually all bookmarks (comments) are empty */
+	void createDocument(WPSEntry const &entry, libwps::SubDocumentType type);
+	/** creates a document for a footnote entry with label and then send the data*/
+	void createNote(WPSEntry const &entry, WPXString const &label);
+	//! creates a textbox and then send the data
+	void createTextBox(WPSEntry const &entry, WPSPosition const &pos, WPXPropertyList &extras);
+	//! sends text corresponding to the entry to the listener (via WPS4MNText)
+	void send(WPSEntry const &entry, libwps::SubDocumentType type);
+
+	// interface with graph parser
+
+	/** tries to read a picture ( via its WPS4Graph )
+	 *
+	 * \note returns the object id or -1 if find nothing */
+	int readObject(WPXInputStreamPtr input, WPSEntry const &entry);
+
+	/** sends an object with given id ( via its WPS4Graph )
+	 *
+	 * The object is sent as a character with given size \a size */
+	void sendObject(Vec2f const &size, int id);
+
+	//
+	// low level
+	//
+
+	/** finds the different zones (text, print, ...) and updates nameMultiMap */
+	bool findZones();
+
+	/** parses an entry
+	 *
+	 * reads a zone offset and a zone size and checks if this entry is valid */
+	bool parseEntry(std::string const &name);
+
+	/** tries to read the document dimension */
+	bool readDocDim();
+
+	/// tries to read the printer information
+	bool readPrnt(WPSEntry const &entry);
+
+	/** reads the additional windows info
+
+		\note this zone contains many unknown data
+	 */
+	bool readDocWindowsInfo(WPSEntry const &entry);
+
+	//! a DebugFile used to write what we recognize when we parse the document
+	libwps::DebugFile &ascii()
+	{
+		return m_asciiFile;
+	}
+
 	shared_ptr<WPS4ContentListener> m_listener; /* the listener (if set)*/
-	std::map<uint8_t, WPS4ParserInternal::Font> m_fonts; /* fonts in format <index code, <font name, encoding>>  */
-	const uint8_t m_worksVersion;
+	//! the graph parser
+	shared_ptr<WPS4Graph> m_graphParser;
+	//! the text parser
+	shared_ptr<WPS4Text> m_textParser;
+	//! the internal state
+	shared_ptr<WPS4ParserInternal::State> m_state;
+
+	//! a map to retrieve a file entry by name
+	typedef std::multimap <std::string, WPSEntry> NameMultiMap;
+	//! a map to retrieve a file entry by name
+	NameMultiMap m_nameMultiMap;
+	//! the debug file
+	libwps::DebugFile m_asciiFile;
 };
 
 #endif /* WPS4_H */

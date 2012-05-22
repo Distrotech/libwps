@@ -116,6 +116,11 @@ AS_IF([test x"$enable_werror" != "xno"], [
 	CFLAGS="$CFLAGS -Werror"
 	CXXFLAGS="$CXXFLAGS -Werror"
 ])
+AC_ARG_ENABLE([weffc],
+	[AS_HELP_STRING([--disable-weffc], [ Disable -Weffc++ warnings, usefull when using an old version of gcc or of boost])],
+	[enable_weffc="$enableval"],
+	[enable_weffc=yes]
+)
 # Courtesy of Glib: Ensure MSVC-compatible struct packing convention
 # is used when compiling for Win32 with gcc.
 AS_IF([test "x$native_win32" = "xyes"], [
@@ -143,7 +148,10 @@ AS_IF([test "x$native_win32" = "xyes"], [
 	AS_IF([test x"$GCC" = xyes], [
 		# Be tough with warnings and produce less careless code
 		CFLAGS="$CFLAGS -Wall -Wextra -pedantic"
-		CXXFLAGS="$CXXFLAGS -Wall -Wextra -pedantic -Weffc++"
+		CXXFLAGS="$CXXFLAGS -Wall -Wextra -pedantic"
+		AS_IF([test x"$enable_weffc" != "xno"], [
+			CXXFLAGS="$CXXFLAGS -Weffc++"
+		])
 	])
 ])
 
@@ -155,11 +163,18 @@ AC_ARG_ENABLE([debug],
 	[enable_debug="$enableval"],
 	[enable_debug=no]
 )
-AS_IF([test "x$enable_debug" = "xyes"], [
-	DEBUG_CXXFLAGS="-DDEBUG -g"
-], [
-	DEBUG_CXXFLAGS="-DNDEBUG"
-])
+AC_ARG_ENABLE([full-debug],
+	[AS_HELP_STRING([--enable-full-debug], [Turn on debugging and debug files' creation ])],
+	[enable_full_debug="$enableval"],
+	[enable_full_debug=no]
+)
+AS_IF([test "x$enable_full_debug" = "xyes"],
+	[ DEBUG_CXXFLAGS="-DDEBUG -DDEBUG_WITH_FILES -g" ],
+	[ AS_IF([test "x$enable_debug" = "xyes"],
+		[DEBUG_CXXFLAGS="-DDEBUG -g"],
+		[DEBUG_CXXFLAGS="-DNDEBUG"])
+	]
+)
 AC_SUBST(DEBUG_CXXFLAGS)
 
 # ============
@@ -291,6 +306,7 @@ AC_MSG_NOTICE([
 ==============================================================================
 Build configuration:
 	debug:           ${enable_debug}
+	full-debug:      ${enable_full_debug}
 	docs:            ${build_docs}
 	shared_ptr:      ${with_sharedptr}
 	static-tools:    ${enable_static_tools}

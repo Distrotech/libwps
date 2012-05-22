@@ -123,11 +123,11 @@ public:
 	{
 		return m_unit;
 	}
-	//! returns a float which can be used to scale some data in object unit
-	float getInvUnitScale(WPXUnit unit) const
+	//! returns a float which can be used to convert between to unit
+	static float getScaleFactor(WPXUnit orig, WPXUnit dest)
 	{
 		float actSc = 1.0, newSc = 1.0;
-		switch(m_unit)
+		switch(orig)
 		{
 		case WPX_TWIP:
 			break;
@@ -138,9 +138,9 @@ public:
 			actSc = 1440;
 			break;
 		default:
-			WPS_DEBUG_MSG(("WPSPosition::getScaleFor %d unit must not appear\n", int(m_unit)));
+			WPS_DEBUG_MSG(("WPSPosition::getScaleFactor %d unit must not appear\n", int(orig)));
 		}
-		switch(unit)
+		switch(dest)
 		{
 		case WPX_TWIP:
 			break;
@@ -151,9 +151,14 @@ public:
 			newSc = 1440;
 			break;
 		default:
-			WPS_DEBUG_MSG(("WPSPosition::getScaleFor %d unit must not appear\n", int(unit)));
+			WPS_DEBUG_MSG(("WPSPosition::getScaleFactor %d unit must not appear\n", int(dest)));
 		}
-		return newSc/actSc;
+		return actSc/newSc;
+	}
+	//! returns a float which can be used to scale some data in object unit
+	float getInvUnitScale(WPXUnit unit) const
+	{
+		return getScaleFactor(unit, m_unit);
 	}
 
 	//! sets the page

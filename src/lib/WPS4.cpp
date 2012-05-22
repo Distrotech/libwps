@@ -22,9 +22,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#ifdef DEBUG
-#include <bitset>
-#endif
 
 #include <libwpd-stream/WPXStream.h>
 
@@ -32,806 +29,977 @@
 #include "libwps_tools_win.h"
 
 #include "WPSContentListener.h"
+#include "WPSEntry.h"
 #include "WPSHeader.h"
+#include "WPSOLEParser.h"
+#include "WPSOLEStream.h"
 #include "WPSPageSpan.h"
+#include "WPSSubDocument.h"
+
+#include "WPS4Graph.h"
+#include "WPS4Text.h"
 
 #include "WPS4.h"
 
 namespace WPS4ParserInternal
 {
-struct Font
+//! Internal: the subdocument of a WPS4Parser
+class SubDocument : public WPSSubDocument
 {
-	Font(std::string const &name="",
-	     libwps_tools_win::Font::Type type = libwps_tools_win::Font::DOS_850) :
-		m_name(name), m_type(type) {}
+public:
+	//! type of an entry stored in textId
+	enum Type { Unknown, MN };
+	//! constructor for a text entry
+	SubDocument(WPXInputStreamPtr input, WPS4Parser &pars, WPSEntry const &entry) :
+		WPSSubDocument (input, &pars), m_entry(entry) {}
+	//! destructor
+	~SubDocument() {}
 
-	/** Works version 2 for DOS supports only a specific set of fonts. */
-	static std::string getWps2Name(uint8_t font_n);
-
-	/** the font name */
-	std::string m_name;
-	/** the font type */
-	libwps_tools_win::Font::Type m_type;
-};
-
-
-std::string Font::getWps2Name(uint8_t font_n)
-{
-	switch (font_n)
+	//! operator==
+	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const
 	{
-	case 0:
-		return "Courier";
-
-	case 1:
-		return "Courier PC";
-
-	case 3:
-		return "Univers_Scale";
-
-	case 4:
-		return "Universe";
-
-	case 6:
-		return "LinePrinterPC";
-
-	case 7:
-		return "LinePrinter";
-
-	case 16:
-		return "CGTimes_Scale";
-
-	case 24:
-		return "CGTimes";
-		break;
+		if ( !doc || !WPSSubDocument::operator==(doc))
+			return false;
+		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
+		if (!sDoc) return false;
+		return m_entry == sDoc->m_entry;
 	}
 
-	WPS_DEBUG_MSG(("Works: error: encountered unknown font %i (0x%02x)ed\n",
-	               font_n,font_n ));
-	return "Courier"; //temporary fixme
-}
-
-// TODO: Verify exact values
-const uint32_t s_colorMap[]=
-{
-	// 0x00RRGGBB
-	0, // auto
-	0,
-	0x0000FF,
-	0x00FFFF,
-	0x00FF00,
-	0xFF00FF,
-	0xFF0000,
-	0xFFFF00,
-	0x808080,
-	0xFFFFFF,
-	0x000080,
-	0x008080,
-	0x008000,
-	0x800080,
-	0x808000,
-	0xC0C0C0
+	//! the parser function
+	void parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType);
+	//! the entry
+	WPSEntry m_entry;
 };
 
+void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType)
+{
+	if (!listener.get())
+	{
+		WPS_DEBUG_MSG(("WPS4ParserInternal::SubDocument::parse: no listener\n"));
+		return;
+	}
+	if (!dynamic_cast<WPS4ContentListener *>(listener.get()))
+	{
+		WPS_DEBUG_MSG(("WPS4ParserInternal::SubDocument::parse: bad listener\n"));
+		return;
+	}
+
+	WPS4ContentListenerPtr &listen =  reinterpret_cast<WPS4ContentListenerPtr &>(listener);
+	if (!m_parser)
+	{
+		listen->insertCharacter(' ');
+		WPS_DEBUG_MSG(("WPS4ParserInternal::SubDocument::parse: bad parser\n"));
+		return;
+	}
+
+	if (m_entry.isParsed() && subDocumentType != libwps::DOC_HEADER_FOOTER)
+	{
+		listen->insertCharacter(' ');
+		WPS_DEBUG_MSG(("WPS4ParserInternal::SubDocument::parse: this zone is already parsed\n"));
+		return;
+	}
+	m_entry.setParsed(true);
+	if (m_entry.type() != "TEXT")
+	{
+		listen->insertCharacter(' ');
+		WPS_DEBUG_MSG(("WPS4ParserInternal::SubDocument::parse: send not Text entry is not implemented\n"));
+		return;
+	}
+
+	if (!m_entry.valid())
+	{
+		if (subDocumentType != libwps::DOC_COMMENT_ANNOTATION)
+		{
+			WPS_DEBUG_MSG(("SubDocument::parse: empty document found...\n"));
+		}
+		listen->insertCharacter(' ');
+		return;
+	}
+
+	WPS4Parser *mnParser = reinterpret_cast<WPS4Parser *>(m_parser);
+	mnParser->send(m_entry, subDocumentType);
 }
 
-/*
-WPS4Parser public
-*/
+//! the state of WPS4
+struct State
+{
+	State() : m_version(0), m_isDosFile(false), m_eof(-1),
+		m_pageSpan(), m_noFirstPageHeader(false), m_noFirstPageFooter(false),
+		m_numColumns(1), m_actPage(0), m_numPages(0)
+	{
+	}
+	//! the version
+	int m_version;
+	//! flag to know if the file is or not a dos file
+	bool m_isDosFile;
+	//! the last file position
+	long m_eof;
+	//! the actual document size
+	WPSPageSpan m_pageSpan;
+	bool m_noFirstPageHeader /* true if the first page has no header */;
+	bool m_noFirstPageFooter /* true if the first page has no footer */;
+	int m_numColumns /** the number of columns */;
+	int m_actPage /** the actual page*/, m_numPages /* the number of pages */;
+};
+}
 
-/**
- * This class parses Works version 2 through 4.
- *
- */
+// constructor, destructor
 WPS4Parser::WPS4Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 	WPSParser(input, header),
-	m_oldTextAttributeBits(0),
-	m_offset_eot(0),
-	m_CHFODs(),
-	m_PAFODs(),
-	m_listener(),
-	m_fonts(),
-	m_worksVersion(header->getMajorVersion())
+	m_listener(), m_graphParser(), m_textParser(), m_state(), m_nameMultiMap(),
+	m_asciiFile()
 {
+	m_state.reset(new WPS4ParserInternal::State);
+	m_state->m_version = header->getMajorVersion();
+	m_graphParser.reset(new WPS4Graph(*this));
+	m_textParser.reset(new WPS4Text(*this, input));
 }
 
 WPS4Parser::~WPS4Parser ()
 {
 }
 
-void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
+// small funtion ( version, dimension, color, fileSize, ...)
+int WPS4Parser::version() const
+{
+	return m_state->m_version;
+}
+
+float WPS4Parser::pageHeight() const
+{
+	return m_state->m_pageSpan.getFormLength()-m_state->m_pageSpan.getMarginTop()-m_state->m_pageSpan.getMarginBottom();
+}
+
+float WPS4Parser::pageWidth() const
+{
+	return m_state->m_pageSpan.getFormWidth()-m_state->m_pageSpan.getMarginLeft()-m_state->m_pageSpan.getMarginRight();
+}
+
+int WPS4Parser::numColumns() const
+{
+	return m_state->m_numColumns;
+}
+
+bool WPS4Parser::getColor(int id, uint32_t &color) const
+{
+	if (m_state->m_isDosFile)
+	{
+		static const uint32_t colorDosMap[]=
+		{
+			0x0, 0xFF0000, 0x00FF00, 0x0000FF,
+			0x00FFFF, 0xFF00FF, 0xFFFF00
+		};
+		if (id < 0 || id >= 7)
+		{
+			WPS_DEBUG_MSG(("WPS4Parser::getColor(): unknown Dos color id: %d\n",id));
+			return false;
+		}
+		color=colorDosMap[id];
+		return true;
+	}
+	static const uint32_t colorMap[]=
+	{
+		// 0x00RRGGBB
+		0, // auto
+		0,
+		0x0000FF, 0x00FFFF,
+		0x00FF00, 0xFF00FF,	0xFF0000, 0xFFFF00,
+		0x808080, 0xFFFFFF,	0x000080, 0x008080,
+		0x008000, 0x800080,	0x808000, 0xC0C0C0
+	};
+	if (id < 0 || id >= 16)
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::getColor(): unknown color id: %d\n",id));
+		return false;
+	}
+	color = colorMap[id];
+	return true;
+}
+long WPS4Parser::getSizeFile() const
+{
+	return m_state->m_eof;
+}
+void WPS4Parser::setSizeFile(long sz)
+{
+	if (sz > m_state->m_eof)
+		m_state->m_eof = sz;
+}
+
+bool WPS4Parser::checkInFile(long pos)
+{
+	if (pos <= m_state->m_eof)
+		return true;
+	WPXInputStreamPtr input = getInput();
+	long actPos = input->tell();
+	input->seek(pos, WPX_SEEK_SET);
+	bool ok = input->tell() == pos;
+	if (ok) m_state->m_eof = pos;
+	input->seek(actPos, WPX_SEEK_SET);
+	return ok;
+}
+
+// listener, new page
+void WPS4Parser::setListener(shared_ptr<WPS4ContentListener> listener)
+{
+	m_listener = listener;
+	m_graphParser->setListener(m_listener);
+	m_textParser->setListener(m_listener);
+}
+
+shared_ptr<WPS4ContentListener> WPS4Parser::createListener(WPXDocumentInterface *interface)
 {
 	std::vector<WPSPageSpan> pageList;
+	WPSPageSpan page1(m_state->m_pageSpan), ps(m_state->m_pageSpan);
 
-	WPS_DEBUG_MSG(("WPS4Parser::parse()\n"));
-
-	/* parse pages */
-	parsePages(pageList, getInput());
-
-	/* parse document */
-	m_listener.reset(new WPS4ContentListener(pageList, documentInterface));
-	parse(getInput());
-	m_listener.reset();
-}
-
-
-/*
-WPS4Parser private
-*/
-
-#ifdef _MSC_VER
-#define strcasecmp _strcmpi
-#endif
-
-
-/**
- * Reads fonts table into memory.
- *
- */
-void WPS4Parser::readFontsTable(WPXInputStreamPtr &input)
-{
-	/* offset of FFNTB */
-	input->seek(0x5E, WPX_SEEK_SET);
-	uint32_t offset_FFNTB = libwps::readU32(input);
-	//fixme: sanity check
-
-	/* length of FFNTB */
-	input->seek(0x62, WPX_SEEK_SET);
-	uint32_t len_FFNTB = libwps::readU16(input);
-	uint32_t offset_end_FFNTB = offset_FFNTB + len_FFNTB;
-	WPS_DEBUG_MSG(("Works: info: offset_FFNTB=0x%X, len_FFNTB=0x%X, offset_end_FFNTB=0x%X\n",
-	               offset_FFNTB, len_FFNTB, offset_end_FFNTB));
-
-	input->seek(offset_FFNTB, WPX_SEEK_SET);
-
-	while (input->tell() < (long)offset_end_FFNTB) //FIXME: be sure we are not overflowing here. Adding cast just to remove warnings
+	WPSEntry ent = m_textParser->getHeaderEntry();
+	if (ent.valid())
 	{
+		WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
+		                         (getInput(), *this, ent));
+		ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::ALL, subdoc);
+		if (!m_state->m_noFirstPageHeader)
+			page1.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::ALL, subdoc);
+	}
+	ent = m_textParser->getFooterEntry();
+	if (ent.valid())
+	{
+		WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
+		                         (getInput(), *this, ent));
+		ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::ALL, subdoc);
+		if (!m_state->m_noFirstPageFooter)
+			page1.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::ALL, subdoc);
+	}
 
-		/* Sometimes the font numbers start at 0 and increment nicely.
-		   However, other times the font numbers jump around. */
-
-		uint8_t font_number = libwps::readU8(input);
-
-		if (m_fonts.find(font_number) != m_fonts.end())
-		{
-			WPS_DEBUG_MSG(("Works: error: at position 0x%lx: font number %i (0x%X) duplicated\n",
-			               (input->tell())-2, font_number, font_number));
-			throw libwps::ParseException();
-		}
-
-		//fixme: what is this byte? maybe a font class
+	int numPages = m_textParser->numPages();
+	int graphPages = m_graphParser->numPages();
+	if (graphPages>=numPages) numPages = graphPages;
 #ifdef DEBUG
-		uint8_t unknown_byte = libwps::readU8(input);
-#else
-		libwps::readU8(input);
+	// create all the pages + an empty page, if we have some remaining data...
+	numPages++;
 #endif
+	pageList.push_back(page1);
+	for (int i = 1; i < numPages; i++) pageList.push_back(ps);
+	m_state->m_numPages=numPages;
+	return shared_ptr<WPS4ContentListener>
+	       (new WPS4ContentListener(pageList, interface));
+}
 
-		std::string s;
-		for (uint8_t i = libwps::readU8(input); i>0; i--)
-		{
-			s.append(1, (uint8_t)libwps::readU8(input));
-		}
-		WPS_DEBUG_MSG(("Works: info: count=%i, font_number=%i, unknown=%i, name=%s\n",
-		               int(m_fonts.size()), font_number, unknown_byte, s.c_str()));
-		WPS4ParserInternal::Font f;
-		f.m_type = libwps_tools_win::Font::getWin3Type(s);
-		f.m_name=s;
-		m_fonts[font_number] = f;
+void WPS4Parser::newPage(int number)
+{
+	if (number <= m_state->m_actPage || number > m_state->m_numPages)
+		return;
+
+	while (m_state->m_actPage < number)
+	{
+		m_state->m_actPage++;
+
+		if (m_listener.get() == 0L || m_state->m_actPage == 1)
+			continue;
+		m_listener->insertBreak(WPS_PAGE_BREAK);
+		m_graphParser->sendObjects(m_state->m_actPage);
 	}
 }
 
-/**
- * Read a single "page" (128 bytes) that contains formatting descriptors (FODs)
- * for either  characters OR paragraphs.  Starts reading at current position in
- * stream.
- *
- * Return: true if more pages of this type exist, otherwise false
- *
- */
-bool WPS4Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs)
+////////////////////////////////////////////////////////////
+// interface with the graph/text parser
+////////////////////////////////////////////////////////////
+int WPS4Parser::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 {
-	uint32_t page_offset = input->tell();
+	long actPos = input->tell();
+	int id=m_graphParser->readObject(input, entry);
+	input->seek(actPos, WPX_SEEK_SET);
+	return id;
+}
 
-	input->seek(page_offset + 127, WPX_SEEK_SET);
-	uint8_t cfod = libwps::readU8(input); /* number of FODs on this page */
-//	WPS_DEBUG_MSG(("Works: info: at position 0x%02x, cfod = %i (%X)\n", (input->tell())-1,cfod, cfod));
-	if (cfod > 0x18)
+void WPS4Parser::sendObject(Vec2f const &size, int id)
+{
+	return m_graphParser->sendObject(size, id);
+}
+
+void WPS4Parser::send(WPSEntry const &entry, libwps::SubDocumentType)
+{
+	if (!entry.hasType("TEXT"))
 	{
-		WPS_DEBUG_MSG(("Works4: error: cfod = %i ", cfod));
-		throw libwps::ParseException();
+		WPS_DEBUG_MSG(("WPS4Parser::send: unknown entry type '%s'\n", entry.type().c_str()));
+		if (m_listener.get()) m_listener->insertCharacter(' ');
+		return;
 	}
-	input->seek(page_offset, WPX_SEEK_SET);
+	WPXInputStreamPtr input = getInput();
+	long actPos = input->tell();
+	m_textParser->readText(entry);
+	input->seek(actPos, WPX_SEEK_SET);
+}
 
-	libwps::readU32(input);
-
-	int first_fod = FODs.size();
-
-	/* Read array of fcLim of FODs.  The fcLim refers to the offset of the
-	   last character covered by the formatting. */
-	for (int i = 0; i < cfod; i++)
+void WPS4Parser::createDocument(WPSEntry const &entry, libwps::SubDocumentType type)
+{
+	if (m_listener.get() == 0L) return;
+	WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
+	                         (getInput(), *this, entry));
+	switch(type)
 	{
-		WPSFOD fod;
-		fod.m_fcLim = libwps::readU32(input);
-//		WPS_DEBUG_MSG(("Works: info: fcLim = %i (0x%X)\n", fod.m_fcLim, fod.m_fcLim));
+	case libwps::DOC_COMMENT_ANNOTATION:
+		m_listener->insertComment(subdoc);
+		break;
+	default:
+		WPS_DEBUG_MSG(("WPS4Parser:createDocument error: unknown type: \"%d\"\n", (int) type));
+	}
+}
 
-		/* check that fcLim is not too large */
-		if (fod.m_fcLim > m_offset_eot)
-		{
-			WPS_DEBUG_MSG(("Works: error: length of 'text selection' %i > "
-			               "total text length %i\n", fod.m_fcLim, m_offset_eot));
-			throw libwps::ParseException();
-		}
+void WPS4Parser::createNote(WPSEntry const &entry, WPXString const &label)
+{
+	if (m_listener.get() == 0L) return;
+	WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
+	                         (getInput(), *this, entry));
+	m_listener->insertLabelNote(WPSContentListener::FOOTNOTE, label, subdoc);
+}
 
-		/* check that fcLim is monotonic */
-		if (FODs.size() > 0 && FODs.back().m_fcLim > fod.m_fcLim)
-		{
-			WPS_DEBUG_MSG(("Works: error: character position list must "
-			               "be monotonic, but found %i, %i\n", FODs.back().m_fcLim, fod.m_fcLim));
-			throw libwps::ParseException();
-		}
-		FODs.push_back(fod);
+void WPS4Parser::createTextBox(WPSEntry const &entry, WPSPosition const &pos, WPXPropertyList &extras)
+{
+	if (m_listener.get() == 0L) return;
+	WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
+	                         (getInput(), *this, entry));
+	m_listener->insertTextBox(pos, subdoc, extras);
+}
+
+// main function to parse the document
+void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
+{
+	WPXInputStreamPtr input=getInput();
+	if (!input)
+	{
+		WPS_DEBUG_MSG(("Works: does not find main ole\n"));
+		throw(libwps::ParseException());
 	}
 
-	/* Read array of bfprop of FODs.  The bfprop is the offset where
-	   the FPROP is located. */
-	std::vector<WPSFOD>::iterator FODs_iter;
-	for (FODs_iter = FODs.begin()+first_fod; FODs_iter!= FODs.end(); FODs_iter++)
+	try
 	{
-		if ((*FODs_iter).m_fcLim == m_offset_eot)
-			break;
-
-		(*FODs_iter).m_bfprop = libwps::readU8(input);
-
-		/* check size of bfprop  */
-		if (((*FODs_iter).m_bfprop < (5*cfod) && (*FODs_iter).m_bfprop > 0) ||
-		        (*FODs_iter).m_bfprop  > (128 - 1))
-		{
-			WPS_DEBUG_MSG(("Works: error: size of bfprop is bad "
-			               "%i (0x%X)\n", (*FODs_iter).m_bfprop, (*FODs_iter).m_bfprop));
-			throw libwps::ParseException();
-		}
-
-		(*FODs_iter).m_bfpropAbs = (*FODs_iter).m_bfprop + page_offset;
-//		WPS_DEBUG_MSG(("Works: info: bfpropAbs = "
-//			"%i (0x%X)\n", (*FODs_iter).m_bfpropAbs, (*FODs_iter).m_bfpropAbs));
+		createOLEStructures();
+	}
+	catch (...)
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::parse: exception catched when parsing secondary OLEs\n"));
 	}
 
-	/* Read array of FPROPs.  These contain the actual formatting
-	   codes (bold, alignment, etc.) */
-	for (FODs_iter = FODs.begin()+first_fod; FODs_iter!= FODs.end(); FODs_iter++)
+	ascii().setStream(input);
+	ascii().open("MN0");
+	try
 	{
-		if ((*FODs_iter).m_fcLim == m_offset_eot)
-			break;
+		createStructures();
+	}
+	catch (...)
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::parse: exception catched when parsing MN0\n"));
+		throw(libwps::ParseException());
+	}
 
-		if (0 == (*FODs_iter).m_bfprop)
+	setListener(createListener(documentInterface));
+	if (!m_listener)
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::parse: can not create the listener\n"));
+		throw(libwps::ParseException());
+	}
+	m_listener->startDocument();
+	WPSEntry ent = m_textParser->getMainTextEntry();
+	if (ent.valid())
+		m_textParser->readText(ent);
+	else
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::parse: can not find main text entry\n"));
+		throw(libwps::ParseException());
+	}
+#ifdef DEBUG
+	m_textParser->flushExtra();
+	m_graphParser->sendObjects(-1);
+#endif
+	m_listener->endDocument();
+	m_listener.reset();
+
+	m_asciiFile.reset();
+}
+
+// find and create all the zones ( normal/ole )
+bool WPS4Parser::createStructures()
+{
+	if (!findZones()) throw libwps::ParseException();
+	if (!m_textParser->readStructures()) throw libwps::ParseException();
+	m_graphParser->computePositions();
+
+#ifdef DEBUG
+	WPS4Parser::NameMultiMap::iterator pos;
+	pos = m_nameMultiMap.find("PRNT");
+	if (pos != m_nameMultiMap.end()) readPrnt(pos->second);
+	pos = m_nameMultiMap.find("DocWInfo");
+	if (pos != m_nameMultiMap.end()) readDocWindowsInfo(pos->second);
+#endif
+
+	return true;
+}
+
+bool WPS4Parser::createOLEStructures()
+{
+	if (!getInput()) return false;
+
+	shared_ptr<libwps::Storage> storage = getHeader()->getOLEStorage();
+	if (!storage) return true;
+	WPSOLEParser oleParser("MN0");
+	if (!oleParser.parse(storage)) return false;
+
+	m_graphParser->storeObjects(oleParser.getObjects(),oleParser.getObjectsId(),
+	                            oleParser.getObjectsPosition());
+#ifdef DEBUG
+	// there can remain some embedded Works subdocument ( WKS, ... )
+	// with name MN0 and some unknown picture ole
+	std::vector<std::string> unparsed = oleParser.getNotParse();
+
+	int numUnparsed = unparsed.size();
+
+	for (int i = 0; i < numUnparsed; i++)
+	{
+		std::string const &name = unparsed[i];
+		if (name == "MN0")
+			continue;
+		WPS_DEBUG_MSG(("WPS4Parser::createOLEStructures:: Find unparsed ole: %s\n", name.c_str()));
+
+#ifdef DEBUG_WITH_FILES
+		WPXInputStreamPtr ole = storage->getDocumentOLEStream(name.c_str());
+		if (!ole.get())
 		{
-			(*FODs_iter).m_fprop.m_cch = 0;
+			WPS_DEBUG_MSG(("WPS4Parser::createOLEStructures: error: can find OLE part: \"%s\"\n", name.c_str()));
 			continue;
 		}
 
-		input->seek((*FODs_iter).m_bfpropAbs, WPX_SEEK_SET);
-		(*FODs_iter).m_fprop.m_cch = libwps::readU8(input);
-		if (0 == (*FODs_iter).m_fprop.m_cch)
-		{
-			WPS_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%lx", (input->tell())-1));
-			throw libwps::ParseException();
-		}
-		// fixme: what is largest cch?
-		/* generally paragraph cch are bigger than character cch */
-		if ((*FODs_iter).m_fprop.m_cch > 93)
-		{
-			WPS_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).m_fprop.m_cch));
-			throw libwps::ParseException();
-		}
-
-		for (int i = 0; (*FODs_iter).m_fprop.m_cch > i; i++)
-			(*FODs_iter).m_fprop.m_rgchProp.append(1, (uint8_t)libwps::readU8(input));
-	}
-
-	/* go to end of page */
-	input->seek(page_offset	+ 128, WPX_SEEK_SET);
-
-	return (!FODs.empty() && (m_offset_eot > FODs.back().m_fcLim));
-}
-
-/**
- * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
- *
- */
-void WPS4Parser::propertyChangeDelta(uint32_t newTextAttributeBits)
-{
-	WPS_DEBUG_MSG(("WPS4Parser::propertyChangeDelta(%i)\n", newTextAttributeBits));
-	if (newTextAttributeBits == m_oldTextAttributeBits)
-		return;
-
-	m_listener->setFontAttributes(newTextAttributeBits);
-#ifdef DEBUG
-	static uint32_t const listAttributes[6] = { WPS_BOLD_BIT, WPS_ITALICS_BIT, WPS_UNDERLINE_BIT, WPS_STRIKEOUT_BIT, WPS_SUBSCRIPT_BIT, WPS_SUPERSCRIPT_BIT };
-	uint32_t diffAttributes = (m_oldTextAttributeBits ^ newTextAttributeBits);
-	for (int i = 0; i < 6; i++)
-	{
-		if (diffAttributes & listAttributes[i])
-		{
-			WPS_DEBUG_MSG(("WPS4Parser::propertyChangeDelta: attribute %i changed, now = %i\n", i, newTextAttributeBits & listAttributes[i]));
-		}
+		WPXBinaryData data;
+		if (libwps::readDataToEnd(ole,data))
+			libwps::Debug::dumpFile(data, name.c_str());
+#endif
 	}
 #endif
-	m_oldTextAttributeBits = newTextAttributeBits;
+	return true;
 }
 
-/**
- * Process a character property change.  The Works format supplies
- * all the character formatting each time there is any change (as
- * opposed to HTML, for example).  In Works 4, the position in
- * in rgchProp is significant (e.g., bold is always in the first byte).
- *
- */
-void WPS4Parser::propertyChange(std::string rgchProp, WPS4ParserInternal::Font &font)
+////////////////////////////////////////////////////////////
+// low level
+////////////////////////////////////////////////////////////
+
+// parse a basic entry: ie offset + size and check if it is valid
+bool WPS4Parser::parseEntry(std::string const &name)
 {
-	/* set default properties */
-	uint32_t textAttributeBits = 0;
-	uint8_t  colorid = 0;
+	WPXInputStreamPtr input = getInput();
+	long actPos = input->tell();
+	WPSEntry zone;
+	zone.setBegin(libwps::readU32(input));
+	zone.setLength(libwps::readU16(input));
+	zone.setType(name);
 
-	m_listener->setFontSize(12);
+	bool ok = zone.valid() && checkInFile(zone.end());
 
-	if (0 == rgchProp.length())
-		return;
-
-//fixme: this method is immature
-	/* set difference from default properties */
-	if (rgchProp[0] & 0x01)
+	if (ok)
 	{
-		textAttributeBits |= WPS_BOLD_BIT;
-	}
-	if (rgchProp[0] & 0x02)
-	{
-		textAttributeBits |= WPS_ITALICS_BIT;
-	}
-	if (rgchProp[0] & 0x04)
-	{
-		textAttributeBits |= WPS_STRIKEOUT_BIT;
-	}
-	if (rgchProp.length() >= 3)
-	{
-		/* text font */
-		uint8_t font_n = (uint8_t)rgchProp[2];
+		m_nameMultiMap.insert(NameMultiMap::value_type(zone.type(), zone));
 
-		if (3 <= m_worksVersion)
-		{
-			if (m_fonts.find(font_n) == m_fonts.end())
-			{
-				WPS_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n",
-				               font_n,font_n ));
-				throw libwps::ParseException();
-			}
-			else
-			{
-				font = m_fonts[font_n];
-				m_listener->setTextFont(font.m_name.c_str());
-			}
-		}
-		else if (2 == m_worksVersion)
-		{
-			font.m_name = WPS4ParserInternal::Font::getWps2Name(font_n);
-			m_listener->setTextFont(font.m_name.c_str());
-		}
-	}
-	if (rgchProp.length() >= 4)
-	{
-		if ((rgchProp[1] &  0x20) && (rgchProp[3] & 0x20))
-			textAttributeBits |= WPS_UNDERLINE_BIT;
-	}
-	if (rgchProp.length() >= 4 && ((uint8_t)rgchProp[4]) > 0)
-	{
-		m_listener->setFontSize(((uint8_t)rgchProp[4])/2);
-	}
-	if (rgchProp.length() >= 6)
-	{
-		WPS_DEBUG_MSG(("rgchProp[1] & 0x40 = %i, rgchProp[5]=%i\n", (rgchProp[1] & 0x40), (uint8_t)rgchProp[5]));
-		if ((rgchProp[1] & 0x40) && (1 == (uint8_t)rgchProp[5]))
-		{
-			textAttributeBits |= WPS_SUPERSCRIPT_BIT;
-		}
-
-		if ((rgchProp[1] & 0x40) && (128 == (uint8_t)rgchProp[5]))
-		{
-			textAttributeBits |= WPS_SUBSCRIPT_BIT;
-		}
-	}
-	if (rgchProp.length() >= 8)
-	{
-		colorid = (uint8_t)rgchProp[7] & 0xF;
-	}
-	propertyChangeDelta(textAttributeBits);
-	m_listener->setTextColor(WPS4ParserInternal::s_colorMap[colorid]);
-}
-
-void WPS4Parser::propertyChangePara(std::string rgchProp)
-{
-	static const libwps::Justification _align[]=
-	{
-		libwps::JustificationLeft, libwps::JustificationCenter,
-		libwps::JustificationRight, libwps::JustificationFull
-	};
-
-	std::vector<WPSTabStop> tabs;
-	m_listener->setTabs(tabs);
-
-	int pf = 0;
-
-	if (4 > rgchProp.length()) return;
-
-	unsigned x = 3;
-	double margins[5] = {0.0, 0.0, 0.0, 0.0, 0.0}; // left, right, top, bottom, textIndent
-	while (x < rgchProp.length())
-	{
-		char code = rgchProp[x++];
-
-		switch (code)
-		{
-		case 0x5:	// alignment
-		{
-			uint8_t a = rgchProp[x];
-			if (a < 4)
-				m_listener->setParagraphJustification(_align[a]);
-			x++;
-		}
-		break;
-		case 0x7:
-			pf |= WPS_PARAGRAPH_LAYOUT_NO_BREAK;
-			x++;
-			break;
-		case 0x8:
-			pf |= WPS_PARAGRAPH_LAYOUT_WITH_NEXT;
-			x++;
-			break;
-		case 0x11:
-			margins[0]=WPS_LE_GET_GUINT16(&rgchProp.c_str()[x])/1440.0;
-			x+=2;
-			break;
-		case 0x12:
-			margins[1]=WPS_LE_GET_GUINT16(&rgchProp.c_str()[x])/1440.0;
-			x+=2;
-			break;
-		case 0x14:
-			margins[4]=int16_t(WPS_LE_GET_GUINT16(&rgchProp.c_str()[x]))/1440.0;
-			x+=2;
-			break;
-		case 0x16:
-			margins[2]=WPS_LE_GET_GUINT16(&rgchProp.c_str()[x])/1440.0;
-			x+=2;
-			break;
-		case 0x17:
-			margins[3]=WPS_LE_GET_GUINT16(&rgchProp.c_str()[x])/1440.0;
-			x+=2;
-			break;
-			/*
-				case 0x9:
-				case 0xA:
-				case 0xB:
-				case 0xC:
-				case 0xD:
-				case 0xE:
-				case 0x18:
-				case 0x1b:
-					// noop, skip 1
-					c+=2;
-					break;
-				case 0x15:
-					// noop, skip 2
-					c+=3;
-					break;
-			*/
-		case 0xF:
-		{
-			const char *td = rgchProp.c_str();
-			uint16_t count;
-			WPSTabStop pos;
-
-			count = WPS_LE_GET_GUINT16(&td[x+2]);
-			if (count <= 20)
-			{
-				for (int i=0; i<count; i++)
-				{
-					char v;
-					pos.m_position = WPS_LE_GET_GUINT16(&td[x+4+i*2]) / 1440.0;
-					v = td[x+4+count*2+i];
-					switch (v&3)
-					{
-					case 1:
-						pos.m_alignment = WPSTabStop::CENTER;
-						break;
-					case 2:
-						pos.m_alignment = WPSTabStop::RIGHT;
-						break;
-					case 3:
-						pos.m_alignment = WPSTabStop::DECIMAL;
-						break;
-					default:
-						pos.m_alignment = WPSTabStop::LEFT;
-					}
-					// TODO: leader
-					tabs.push_back(pos);
-				}
-				m_listener->setTabs(tabs);
-			}
-			x+=rgchProp[x]+(rgchProp[x+1]<<8)+1;
-		}
-		break;
-		default:
-			WPS_DEBUG_MSG(("Unknown parafmt code: %02X\n",code));
-			break;
-		}
-	}
-	m_listener->setParagraphMargin(margins[0], WPS_LEFT);
-	m_listener->setParagraphMargin(margins[1], WPS_RIGHT);
-	m_listener->setParagraphMargin(margins[2], WPS_TOP);
-	m_listener->setParagraphMargin(margins[3], WPS_BOTTOM);
-	m_listener->setParagraphTextIndent(margins[4]);
-}
-
-/**
- * Read the text of the document using previously-read
- * formatting information.
- *
- */
-void WPS4Parser::readText(WPXInputStreamPtr &input)
-{
-	m_oldTextAttributeBits = 0;
-	std::vector<WPSFOD>::iterator FODs_iter;
-	std::vector<WPSFOD>::iterator PFOD_iter;
-#if 0
-	/* dump for debugging */
-	for (FODs_iter = m_CHFODs.begin(); FODs_iter!= m_CHFODs.end(); FODs_iter++)
-	{
-		WPSFOD fod = *(FODs_iter);
-		WPS_DEBUG_MSG(("FOD  fcLim=%u (0x%04x), bfprop=%u, bfpropAbs=%u\n", fod.m_fcLim, fod.m_fcLim, fod.m_bfprop, fod.m_bfpropAbs));
-	}
-#endif
-
-	uint32_t last_fcLim = 0x100;
-	PFOD_iter = m_PAFODs.begin();
-	WPS4ParserInternal::Font font;
-	font.m_type = m_worksVersion <= 2 ?
-	              libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
-	for (FODs_iter = m_CHFODs.begin(); FODs_iter!= m_CHFODs.end(); FODs_iter++)
-	{
-		uint32_t len1 = (*FODs_iter).m_fcLim - last_fcLim;
-		do
-		{
-			uint32_t len2 = (*PFOD_iter).m_fcLim - last_fcLim;
-			uint32_t len = len1;
-			if (len2 < len) len=len2;
-			WPS_DEBUG_MSG(("Works: info: txt len=%02i rgchProp=%s\n",
-			               len, to_bits((*FODs_iter).m_fprop.m_rgchProp).c_str()));
-
-			if ((*FODs_iter).m_fprop.m_cch > 0)
-				propertyChange((*FODs_iter).m_fprop.m_rgchProp, font);
-			if ((*PFOD_iter).m_fprop.m_cch > 0)
-				propertyChangePara((*PFOD_iter).m_fprop.m_rgchProp);
-			input->seek(last_fcLim, WPX_SEEK_SET);
-			for (uint32_t i = len; i>0; i--)
-			{
-				uint8_t readVal = libwps::readU8(input);
-				if (0x00 == readVal)
-					break;
-
-				switch (readVal)
-				{
-				case 0x01:
-				case 0x03:
-				case 0x04:
-				case 0x05:
-				case 0x06:
-				case 0x07:
-				case 0x08:
-				case 0x09:
-				case 0x0A:
-				case 0x0B:
-				case 0x0E:
-				case 0x0F:
-				case 0x10:
-				case 0x11:
-				case 0x12:
-				case 0x13:
-				case 0x14:
-				case 0x15:
-				case 0x16:
-				case 0x17:
-				case 0x18:
-				case 0x19:
-				case 0x1A:
-				case 0x1B:
-				case 0x1C:
-				case 0x1D:
-				case 0x1E:
-				case 0x1F:
-					break;
-
-				case 0x02:
-					// TODO: check special bit
-					m_listener->insertField(WPSContentListener::PageNumber);
-					break;
-
-				case 0x0C:
-					m_listener->insertBreak(WPS_PAGE_BREAK);
-					break;
-
-				case 0x0D:
-					m_listener->insertEOL();
-					break;
-
-				default:
-				{
-					unsigned long unicode =
-					    libwps_tools_win::Font::unicode(readVal, font.m_type);
-					if (unicode != 0xfffd)
-						m_listener->insertUnicode(unicode);
-					break;
-				}
-				}
-			}
-
-			len1 -= len;
-			len2 -= len;
-
-			if (len2 == 0) PFOD_iter++;
-
-			last_fcLim += len;
-		}
-		while (len1 > 0);
-	}
-}
-
-
-/**
- * Read the page format from the file.  It seems that WPS4 files
- * can only have one page format throughout the whole document.
- *
- */
-void WPS4Parser::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input)
-{
-	/* read page format */
-	input->seek(0x64, WPX_SEEK_SET);
-	uint16_t margin_top = libwps::readU16(input);
-	//input->seek(0x66, WPX_SEEK_SET);
-	uint16_t margin_bottom = libwps::readU16(input);
-	//input->seek(0x68, WPX_SEEK_SET);
-	uint16_t margin_left = libwps::readU16(input);
-	//input->seek(0x6A, WPX_SEEK_SET);
-	uint16_t margin_right = libwps::readU16(input);
-	//input->seek(0x6C, WPX_SEEK_SET);
-	uint16_t page_height = libwps::readU16(input);
-	//input->seek(0x6E, WPX_SEEK_SET);
-	uint16_t page_width = libwps::readU16(input);
-	input->seek(0x7A, WPX_SEEK_SET);
-	uint8_t page_orientation = libwps::readU8(input);
-
-	/* convert units */
-	float margin_top_inches = (float)margin_top / (float)1440;
-	float margin_left_inches = (float)margin_left / (float)1440;
-	float margin_right_inches = (float)margin_right / (float)1440;
-	float margin_bottom_inches = (float)margin_bottom / (float)1440;
-	float page_width_inches = (float)page_width / (float)1440;
-	float page_height_inches = (float)page_height / (float)1440;
-
-	/* check page format */
-	WPS_DEBUG_MSG(("Works: info: page margins (t,l,r,b): raw(%i,%i,%i,%i), inches(%f,%f,%f,%f)\n",
-	               margin_top, margin_left, margin_right, margin_bottom,
-	               margin_top_inches, margin_left_inches, margin_right_inches, margin_bottom_inches));
-
-	WPS_DEBUG_MSG(("Works: info: page size (w,h): raw(%i,%i), inches(%2.1f,%2.1f)\n",
-	               page_width, page_height, page_width_inches, page_height_inches));
-
-	if ((margin_left_inches + margin_right_inches) > page_width_inches
-	        || (margin_top_inches + margin_bottom_inches) > page_height_inches)
-	{
-		WPS_DEBUG_MSG(("Works: error: the margins are too large for the page size\n"));
-		throw libwps::ParseException();
+		ascii().addPos(zone.begin());
+		std::string nm = "ZZ";
+		nm+= name;
+		ascii().addNote(nm.c_str());
+		ascii().addPos(zone.end());
+		ascii().addNote("_");
 	}
 
-	if (page_orientation != 0 && page_orientation != 1)
-	{
-		WPS_DEBUG_MSG(("Works: error: bad page orientation code\n"));
-		throw libwps::ParseException();
-	}
-
-	/* record page format */
-	WPSPageSpan ps;
-	ps.setMarginTop(margin_top_inches);
-	ps.setMarginBottom(margin_bottom_inches);
-	ps.setMarginLeft(margin_left_inches);
-	ps.setMarginRight(margin_right_inches);
-	ps.setFormLength(page_height_inches);
-	ps.setFormWidth(page_width_inches);
-	if (0 == page_orientation)
-		ps.setFormOrientation(WPSPageSpan::PORTRAIT);
+	libwps::DebugStream f;
+	if (ok)
+		f << "Entries(ZZ"<< name << ")="
+		  << std::hex << zone.begin() << "(" << zone.length() << ")";
 	else
-		ps.setFormOrientation(WPSPageSpan::LANDSCAPE);
+		f << "___";
+	ascii().addPos(actPos);
+	ascii().addNote(f.str().c_str());
 
-	pageList.push_back(ps);
-
-	/* process page breaks */
-	input->seek(0x100, WPX_SEEK_SET);
-	uint8_t ch;
-	while (!input->atEOS() && 0x00 != (ch = libwps::readU8(input)))
-	{
-		if (0x0C == ch)
-			pageList.push_back(ps);
-	}
+	return ok;
 }
 
-void WPS4Parser::parse(WPXInputStreamPtr &input)
+// read the document structure ...
+bool WPS4Parser::findZones()
 {
-	if (!m_listener)
+	WPXInputStreamPtr input = getInput();
+
+	if (input->seek(0x100, WPX_SEEK_SET) != 0 || input->tell() != 0x100)
 	{
-		WPS_DEBUG_MSG(("WPS4Parser::parse(): the listener is not set, stop parsing\n"));
-		return;
-	}
-	WPS_DEBUG_MSG(("WPS4Parser::parse()\n"));
-
-	m_listener->startDocument();
-
-	/* find beginning of character FODs */
-	int const fcmacOffset=0x26;
-	input->seek(fcmacOffset, WPX_SEEK_SET);
-	m_offset_eot = libwps::readU32(input); /* stream offset to end of text */
-	WPS_DEBUG_MSG(("Works: info: location WPS4_FCMAC_OFFSET (0x%X) has offset_eot = 0x%X (%i)\n",
-	               fcmacOffset, m_offset_eot, m_offset_eot));
-	uint32_t pnChar = (m_offset_eot+127)/128; /* page number of character information */
-	WPS_DEBUG_MSG(("Works: info: 128*pnChar = 0x%X (%i)\n", pnChar*128, pnChar*128));
-
-	/* sanity check */
-	if (0 == pnChar)
-	{
-		WPS_DEBUG_MSG(("Works: error: pnChar is 0, so file may be corrupt\n"));
+		WPS_DEBUG_MSG(("WPS4Parser::findZones: error: incomplete header\n"));
 		throw libwps::ParseException();
 	}
-	input->seek(128*pnChar, WPX_SEEK_SET);
-	uint32_t v = libwps::readU32(input);
-	if (0x0100 != v)
+
+	input->seek(0x0, WPX_SEEK_SET);
+	libwps::DebugStream f, f2;
+	f << "Entries(ZZHeader):";
+	int vers = libwps::read8(input);
+	long val = libwps::read8(input); // always 0xfe?
+	int subVers = libwps::readU16(input);
+	int worksVersion = 0;
+	switch(vers)
 	{
-		WPS_DEBUG_MSG(("Works: warning: expected value 0x0100 at location 0x%X but got 0x%X (%i)\n",
-		               128*pnChar, v, v));
+	case 1:
+		m_state->m_isDosFile = true;
+		switch(subVers)
+		{
+		case 0xda1:
+			subVers = 2;
+		case 0:
+		case 1:
+			worksVersion = 1;
+			f << "vers=dos" << 1+subVers << ",";
+			subVers = 0;
+			break;
+		default:
+			//  checkme: can this be Win2 file?
+			worksVersion=2;
+			f << "vers=dos3/win2,";
+			break;
+		}
+		break;
+	case 4:
+		worksVersion=3;
+		f << "vers=Win3,";
+		break;
+	case 6:
+		worksVersion=4;
+		f << "vers=Win4,";
+		break;
+	default:
+		WPS_DEBUG_MSG(("WPS4Parser::findZones: can not read the version\n"));
+		f << "vers=unkn:" << vers << ",";
+		break;
+	}
+	if (worksVersion)
+		m_state->m_version = worksVersion;
+	if (val != -2) f << "##unk=" << val << ",";
+	if (subVers && subVers != 0x4755) f << "##subVers=" << std::hex << subVers << std::dec << ",";
+
+	f << "unkn1=("; // in general : same number appear two time
+	for (int i = 0; i < 2; i++)
+		f << std::hex << libwps::readU32(input) << ",";
+	f << "),dim?=(";
+	for (int i = 0; i < 2; i++)
+		f << libwps::readU16(input)/1440. << ",";
+	f << "), unkn2=(";
+	for (int i = 0; i < 2; i++)
+		f << std::hex << libwps::readU16(input) << std::dec << ",";
+	f << "), dim2=" << libwps::read16(input)/1440. << ",";
+
+	val = libwps::read32(input);
+	if (val) f << std::dec << "unkn3=" << val <<",";
+	ascii().addPos(0);
+	ascii().addNote(f.str().c_str());
+
+	f.str("");
+
+	// 0x1e -> 0x64
+	if (!m_textParser->readEntries()) return false;
+	// 0x64 -> 0x80
+	long actPos = 0x64;
+	input->seek(actPos, WPX_SEEK_SET);
+	readDocDim();
+
+	if (m_state->m_version <= 1)
+	{
+		// CHECKME:
+		ascii().addPos(0x80);
+		ascii().addNote("ZZHeader-I");
+		ascii().addPos(0xd0);
+		ascii().addNote("ZZHeader-filename");
+		return true;
 	}
 
-	/* go to beginning of character FODs */
-	input->seek(128*pnChar, WPX_SEEK_SET);
+	actPos = 0x80;
+	input->seek(actPos, WPX_SEEK_SET);
+	parseEntry("EOBJ");
 
-	/* read character FODs */
-	while (readFODPage(input, m_CHFODs))
+	actPos = 0x86;
+	input->seek(actPos, WPX_SEEK_SET);
+	f.str("");
+	f << std::hex;
+	// {-1,-1}|{0,0}, 0,0, 0x[08][03][235=2col 6=3col 8=4col], 0|425|720
+	for (int i = 0; i < 4; i++)
 	{
+		val = libwps::readU16(input);
+		if (!val)
+		{
+			f << "_,";
+			continue;
+		}
+		f << val << ",";
 	}
-	// fixme: verify: final FOD covers end of text
-
-	/* read paragraph formatting */
-	while (readFODPage(input, m_PAFODs))
+	f << std::dec;
+	val = libwps::readU16(input);
+	if (val & 0xFF00) f << "#unkn=" << (val >> 8) << ",";
+	val &= 0xFF;
+	int numCols = val/2;
+	if (numCols >= 1 && numCols <= 13)
 	{
+		if (version() >= 3)
+			m_state->m_numColumns = numCols;
+		else
+		{
+			// can this happen ?
+			WPS_DEBUG_MSG(("WPS4Parser::findZones: find some column in dos file: ignored\n"));
+		}
+		if (numCols != 1)
+		{
+			f << "numCols=" << numCols;
+			if (val & 1) f << "[borderLim]";
+		}
+		f << ",";
+	}
+	else if (val)
+		f << "##cols,";
+	int colSep = libwps::readU16(input);
+	if (colSep)
+		f << "colSep=" << colSep/1440. << ",";
+	ascii().addPos(actPos);
+	if (f.str().length())
+	{
+		f2.str("");
+		f2 << "ZZHeader-I(unkn):"<< f.str();
+		ascii().addNote(f2.str().c_str());
+	}
+	else ascii().addNote("___");
+
+	parseEntry("End1");
+
+	actPos = 0x98;
+	input->seek(actPos, WPX_SEEK_SET);
+	f.str("");
+	f << "ZZHeader-II:";
+	bool empty = true;
+	long begP = libwps::readU32(input);
+	if (begP)
+	{
+		if (begP <= 0 || !checkInFile(begP)) f << "###";
+		else
+		{
+			ascii().addPos(begP);
+			ascii().addNote("EOText");
+		}
+		f << std::hex << "EOText=" << begP << ",";
+		empty = false;
 	}
 
-	/* read fonts table */
-	if ( m_worksVersion > 2)
-		readFontsTable(input);
+	int num = libwps::readU16(input);
+	int sz = libwps::readU16(input);
+	begP = libwps::readU32(input);
+	if (begP)
+	{
+		if (begP <= 0 || !checkInFile(begP)) f << "###";
+		else if (checkInFile(begP+num *sz))
+		{
+			WPSEntry zone;
+			zone.setType("PRNT");
+			for (int i = 0; i < num; i++)
+			{
+				zone.setBegin(begP + i*sz);
+				zone.setLength(sz);
+				zone.setId(i);
+				m_nameMultiMap.insert(NameMultiMap::value_type(zone.type(), zone));
 
-	/* process text file using previously-read character formatting */
-	readText(input);
+				ascii().addPos(zone.begin());
+				std::string nm = "ZZPRNT(";
+				nm+= '0'+i;
+				nm+=')';
+				ascii().addNote(nm.c_str());
+				ascii().addPos(zone.end());
+				ascii().addNote("_");
+			}
+		}
+		else
+		{
+			ascii().addPos(begP);
+			ascii().addNote("ZZPRNT");
+		}
 
-	m_listener->endDocument();
+		f << std::hex << "Entries(ZZPRNT)=" << begP << "(" << sz << ")";
+		if (num != 1) f << "x" << num;
+		empty = false;
+	}
+
+	ascii().addPos(actPos);
+	if (empty) ascii().addNote("___");
+	else ascii().addNote(f.str().c_str());
+
+	parseEntry("DTTM");
+	parseEntry("DocWInfo");
+
+	actPos = 0xb0;
+	input->seek(actPos, WPX_SEEK_SET);
+	f.str("");
+	f << "ZZHeader-III:";
+	empty = true;
+
+	// ok, try to see if we can find other things...
+	int i = 0;
+	while (input->tell()+4 <= 0xd0)
+	{
+		val = libwps::readU32(input);
+		if (val)
+		{
+			f << "f" << std::dec << i << "=" << std::hex << val << ",";
+			empty = false;
+		}
+		i++;
+	}
+
+	ascii().addPos(actPos);
+	if (empty) ascii().addNote("___");
+	else ascii().addNote(f.str().c_str());
+
+	// find always a list of 0 here
+	ascii().addPos(0xd0);
+	ascii().addNote("ZZHeader-filename");
+
+	return true;
 }
 
-#ifdef DEBUG
-std::string WPS4Parser::to_bits(std::string s)
+// Read the page format from the file.
+bool WPS4Parser::readDocDim()
 {
-	std::string r;
-	for (unsigned int i = 0; i < s.length(); i++)
+	WPSPageSpan page = WPSPageSpan();
+	WPXInputStreamPtr &input = getInput();
+	input->seek(0x64, WPX_SEEK_SET);
+	long actPos = input->tell();
+
+	libwps::DebugStream f;
+	f << "Entries(DocDim):";
+	double margin[4], size[2];
+	for (int i = 0; i < 4; i++) margin[i] = libwps::readU16(input)/1440.;
+	for (int i = 0; i < 2; i++) size[i] = libwps::readU16(input)/1440.;
+
+	if (margin[0]+margin[1] > size[0] || margin[2]+margin[3] > size[1])
 	{
-		std::bitset<8> b(s[i]);
-		r.append(b.to_string<char,std::char_traits<char>,std::allocator<char> >());
-		WPXString buf;
-		buf.sprintf("(%02u,0x%02x)  ", (uint8_t)s[i],(uint8_t)s[i]);
-		r.append(buf.cstr());
+		WPS_DEBUG_MSG(("WPS4Parser::readDocDim: error: the margins are too large for the page size\n"));
+		return false;
 	}
-	return r;
+	page.setMarginTop(margin[0]);
+	page.setMarginBottom(margin[1]);
+	page.setMarginLeft(margin[2]);
+	// decrease a little right margin if possible
+	double rMargin = margin[3] > 0.4 ? margin[3]-0.2 : 0.5*margin[3];
+	page.setMarginRight(rMargin);
+	page.setFormLength(size[0]);
+	page.setFormWidth(size[1]);
+
+	int unkns[8];
+	for (int i = 0; i < 8; i++) unkns[i] = libwps::readU16(input);
+	int page_orientation = unkns[5];
+	if (page_orientation == 0)
+		page.setFormOrientation(WPSPageSpan::PORTRAIT);
+	else if (page_orientation == 1)
+		page.setFormOrientation(WPSPageSpan::LANDSCAPE);
+	else
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::readDocDim: error: bad page orientation code\n"));
+	}
+	m_state->m_pageSpan = page;
+
+	f << "margin=("<<  margin[2] << "x" << margin[0]
+	  << ", " << margin[3] << "x" << margin[1] << "), ";
+	f << "size=" << size[1] << "x" << size[0] << ",";
+	if (page_orientation) f << "orien=" << page_orientation << ",";
+	if (unkns[0]!=1) f << "firstPage=" << unkns[0] << ",";
+	if (unkns[1]==1)
+	{
+		m_state->m_noFirstPageHeader=true;
+		f << "noPage1Header,";
+	}
+	else if (unkns[1]) f << "#noPage1Header=" << unkns[1] << ",";
+	if (unkns[2]==1)
+	{
+		m_state->m_noFirstPageHeader=true;
+		f << "noPage1Footer,";
+	}
+	else if (unkns[2]) f << "#noPage1Footer=" << unkns[2] << ",";
+	f << "headerH=" << unkns[3]/1440. << ",";
+	f << "footerH=" << unkns[4]/1440. << ",";
+	if (unkns[6] != 100) f << "zoom=" << unkns[6] << "%,";
+	if (unkns[7]) f << "#unkn=" << unkns[7] << ","; // alway 0 ?
+	ascii().addPos(actPos);
+	ascii().addNote(f.str().c_str());
+	return true;
 }
-#endif
+
+// PRNT : the printer definition
+bool WPS4Parser::readPrnt(WPSEntry const &entry)
+{
+	if (!entry.valid()) return false;
+
+	WPXInputStreamPtr &input = getInput();
+	input->seek(entry.begin(), WPX_SEEK_SET);
+	libwps::DebugStream f;
+
+	long length = entry.length();
+	if (length < 0x174)
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::readPrnt: length::=%ld is to short\n", length));
+		return false;
+	}
+	f << std::hex;
+
+	for (int st = 0; st < 2; st++)
+	{
+		float dim[8];
+		for (int i = 0; i < 8; i++)
+		{
+			if (i == 4 || i == 5)
+				dim[i] = libwps::readU32(input)/1440.;
+			else
+				dim[i] = libwps::read32(input)/1440.;
+		}
+		f << "dim"<< st << "=" << dim[5] << "x" << dim[4] << ",";
+		f << "margin"<< st << "=[" << dim[0] << "x" << dim[2] << ","
+		  << dim[3] << "x" << dim[1] << "],";
+		f << "head/foot??"<< st << "=" << dim[6] << "x" << dim[7] << ",";
+	}
+
+	f << std::dec;
+	long val;
+
+	/* I find f0=1, f1=0|1, f2=0|1, f4=100, f5=0|15, f23=0|372
+	   Note: f23=372 and strLen!=0 only when f1=1 and f2=1 ( probably related)
+	 */
+	for (int i = 0; i < 24; i++)
+	{
+		val = libwps::read32(input);
+		if (val) f << "f" << i << "=" << val << ",";
+	}
+	val = libwps::read32(input);
+	if (val) f << "strLen?=" << val << ",";
+
+	/* I only find 0 here */
+	for (int i = 0; i < 52; i++)
+	{
+		val = libwps::read32(input);
+		if (val) f << "g" << i << "=" << val << ",";
+	}
+
+	ascii().addPos(entry.begin());
+	ascii().addNote(f.str().c_str());
+
+	length -= 372;
+
+	if (length)
+	{
+		/* In my files, I find one time a strLen string: a header/footer? */
+		ascii().addPos(input->tell());
+		f.str("");
+		f << "ZZPRNT(II):";
+		for (int i = 0; i < length; i++)
+			f << (char) libwps::readU8(input);
+		ascii().addNote(f.str().c_str());
+	}
+	return true;
+}
+
+// Link : in Works4 seems to contain data corresponding to the page border, ...
+bool WPS4Parser::readDocWindowsInfo(WPSEntry const &entry)
+{
+	if (!entry.valid()) return false;
+
+	WPXInputStreamPtr &input = getInput();
+	long length = entry.length();
+	if (length < 0x154)
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::readDocWindowsInfo: length::=%ld is to short\n", length));
+		return false;
+	}
+
+	input->seek(entry.begin(), WPX_SEEK_SET);
+	libwps::DebugStream f;
+
+	std::string str("");
+	int pos = 0, debSPos = -1;
+	// Find in one file str[0]="C:\Databases\Elem 02-03.wdb",str[120]="Query1"
+	while (pos++ < 0x132)   // try to find some strings
+	{
+		char c = libwps::read8(input);
+		if (c == '\0')
+		{
+			if (debSPos>=0)
+				f << "str[" << std::hex << debSPos << "]=\"" << str << "\",";
+			debSPos = -1;
+			str = std::string("");
+			continue;
+		}
+
+		if (debSPos < 0) debSPos = pos-1;
+		str += c;
+	}
+	if (debSPos>=0)
+		f << "str[" << debSPos << "]=\"" << str << "\",";
+	ascii().addPos(entry.begin());
+	ascii().addNote(f.str().c_str());
+	f.str("");
+
+
+	input->seek(entry.begin()+0x132, WPX_SEEK_SET);
+	f << "ZZDocWInfo(II):" << std::hex;
+	// f0=f1=-1 in one file, f0=f1=0 in another file
+	// f0=e6|1b0|2d0 ( but 2d0 in 2/3 of the files), 100<f1<438
+	for (int i = 0; i < 2; i++)
+	{
+		long val = libwps::read32(input);
+		if (val)
+			f << "f" << i << "=" << val << ",";
+	}
+
+	int dim[2]; // TB, LR
+	for (int i = 0; i < 2; i++) dim[i] = libwps::read16(input);
+	if (dim[0] || dim[1])
+		f << "pageBorderDist=" << dim[1]/1440. << "x" << dim[0]/1440. << ",";
+	long val = libwps::readU8(input);
+	uint32_t color;
+	if (val && getColor(val, color))
+		f << "pageBorderColor=" << std::hex << color << std::dec << ",";
+	else if (val)
+		f << "#pageBorderColor=" << std::hex << val << std::dec << ",";
+	val = libwps::readU8(input);
+	if (val)
+		f << "pageBorderStyle=" << val << ",";
+	val = libwps::readU32(input);
+	if (val&2)
+		f << "pageBorderShaded,";
+	if (val&1)
+		f << "firstPageBorder,";
+	val &= 0xFFFFFFFCL;
+	if (val)
+		f << "#pageBorder?=" << std::hex << val << std::dec << ",";
+
+	// in one file: nothing ( case when f0=f1=-1)
+	//
+	//        h0-h1: seems to correspond to a text zone
+	for (int i = 0; i < 4; i++)
+	{
+		long val = libwps::read32(input);
+		if (i == 0)
+		{
+			f << "textpos?=[" << 0x100+val<< ",";
+			continue;
+		}
+		if (i == 1)
+		{
+			f << 0x100+val << "],";
+			continue;
+		}
+		if (val)
+			f << "h" << i << "=" << val << ",";
+	}
+
+	ascii().addPos(entry.begin()+0x132);
+	ascii().addNote(f.str().c_str());
+
+	if (input->tell() != entry.end())
+	{
+		// can this happens ?
+		ascii().addPos(input->tell());
+		ascii().addNote("ZZDocWInfo(III)");
+	}
+	return true;
+}
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

@@ -41,7 +41,7 @@ class WPXPropertyList;
 class WPSContentListener;
 typedef shared_ptr<WPSContentListener> WPSContentListenerPtr;
 
-/** a structure used to defined the cell format, .. */
+/** a structure used to defined the cell format */
 class WPSCellFormat
 {
 public:

@@ -32,8 +32,8 @@
 
 #include "WPSList.h"
 
-#include <cstring>
 #include <iostream>
+#include <cstring>
 
 void WPSList::Level::addTo(WPXPropertyList &propList, int startVal) const
 {
@@ -42,7 +42,13 @@ void WPSList::Level::addTo(WPXPropertyList &propList, int startVal) const
 	switch(m_type)
 	{
 	case libwps::BULLET:
-		propList.insert("text:bullet-char", m_bullet.cstr());
+		if (m_bullet.len())
+			propList.insert("text:bullet-char", m_bullet.cstr());
+		else
+		{
+			WPS_DEBUG_MSG(("WPSList::Level::addTo: the bullet char is not defined\n"));
+			propList.insert("text:bullet-char", "*");
+		}
 		break;
 	case libwps::ARABIC:
 	case libwps::LOWERCASE:

@@ -35,6 +35,8 @@
 #include <libwpd-stream/libwpd-stream.h>
 #include <libwpd/libwpd.h>
 
+class WPXBinaryData;
+
 #if defined(_MSC_VER) || defined(__DJGPP__)
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
@@ -139,6 +141,9 @@ inline int32_t read32(WPXInputStreamPtr &input)
 {
 	return read32(input.get());
 }
+
+bool readData(WPXInputStreamPtr &input, unsigned long sz, WPXBinaryData &data);
+bool readDataToEnd(WPXInputStreamPtr &input, WPXBinaryData &data);
 }
 
 #define WPS_LE_GET_GUINT16(p)				  \
@@ -153,6 +158,49 @@ inline int32_t read32(WPXInputStreamPtr &input)
 // Various helper structures for the parser..
 /* ---------- small enum/class ------------- */
 class WPXPropertyListVector;
+struct WPSFont
+{
+	//! constructor
+	WPSFont() : m_name(""), m_size(0), m_attributes(0), m_color(0), m_languageId(-1), m_extra("") {}
+	static WPSFont getDefault()
+	{
+		WPSFont res;
+		res.m_name = "Courier";
+		res.m_size = 12;
+		return res;
+	}
+
+	virtual ~WPSFont() {}
+	//! operator<<
+	friend std::ostream &operator<<(std::ostream &o, WPSFont const &ft);
+
+	//! accessor
+	bool isSet() const
+	{
+		return !m_name.empty();
+	}
+
+	//! compares to font
+	bool operator==(WPSFont const &ft) const;
+	bool operator!=(WPSFont const &ft) const
+	{
+		return !operator==(ft);
+	}
+
+	//! font name
+	std::string m_name;
+	//! font size
+	int m_size;
+	//! the font attributes defined as a set of bits
+	uint32_t m_attributes;
+	//! the font color
+	uint32_t m_color;
+	//! the language (simplified locale name id) if known
+	int m_languageId;
+
+	//! public field use to add a message when the font is printed
+	std::string m_extra;
+};
 
 struct WPSColumnDefinition
 {
@@ -173,20 +221,6 @@ struct WPSColumnProperties
 	uint8_t m_alignment;
 };
 
-struct WPSTabStop
-{
-	enum Alignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
-	WPSTabStop(double position = 0.0, Alignment alignment = LEFT, uint16_t leaderCharacter='\0', uint8_t leaderNumSpaces = 0)  :
-		m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_leaderNumSpaces(leaderNumSpaces)
-	{
-	}
-	void addTo(WPXPropertyListVector &propList, double decalX=0.0);
-	double m_position;
-	Alignment m_alignment;
-	uint16_t m_leaderCharacter;
-	uint8_t m_leaderNumSpaces;
-};
-
 namespace libwps
 {
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
@@ -195,9 +229,11 @@ enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEX
 enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
                      JustificationRight, JustificationFullAllLines
                    };
+enum { NoBreakBit = 0x1, NoBreakWithNextBit=0x2};
 enum { LeftBorderBit = 0x01,  RightBorderBit = 0x02, TopBorderBit=0x4,
        BottomBorderBit = 0x08
      };
+enum BorderStyle { BorderSingle, BorderDouble, BorderDot, BorderLargeDot, BorderDash };
 }
 
 // ATTRIBUTE bits
@@ -224,10 +260,6 @@ enum { LeftBorderBit = 0x01,  RightBorderBit = 0x02, TopBorderBit=0x4,
 #define WPS_ENGRAVE_BIT 0x100000L
 #define WPS_OVERLINE_BIT 0x400000L
 #define WPS_HIDDEN_BIT 0x800000L
-
-
-#define WPS_PARAGRAPH_LAYOUT_NO_BREAK  0x01
-#define WPS_PARAGRAPH_LAYOUT_WITH_NEXT 0x02
 
 // BREAK bits
 #define WPS_PAGE_BREAK 0x00

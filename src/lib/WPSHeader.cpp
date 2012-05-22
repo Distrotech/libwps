@@ -20,17 +20,15 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/*
- * This file is in sync with CVS
- * /libwpd2/src/lib/WPXHeader.cpp 1.29
- */
-
-#include "WPSHeader.h"
-#include "libwps_internal.h"
 #include <string.h>
 
-WPSHeader::WPSHeader(WPXInputStreamPtr &input, uint8_t majorVersion) :
-	m_input(input),
+#include "libwps_internal.h"
+#include "WPSOLEStream.h"
+
+#include "WPSHeader.h"
+
+WPSHeader::WPSHeader(WPXInputStreamPtr &input, shared_ptr<libwps::Storage>& storage, uint8_t majorVersion) :
+	m_input(input), m_oleStorage(storage),
 	m_majorVersion(majorVersion)
 {
 }
@@ -52,14 +50,37 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
 
-	WPXInputStreamPtr document_mn0(input->getDocumentOLEStream("MN0"));
-	if (document_mn0)
+	shared_ptr<libwps::Storage> oleStorage(new libwps::Storage(input));
+	if (oleStorage && !oleStorage->isOLEStream())
+		oleStorage.reset();
+	if (!oleStorage)
 	{
-		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));
-		return new WPSHeader(document_mn0, 4);
+		input->seek(0, WPX_SEEK_SET);
+		if (libwps::readU8(input.get()) < 6
+		        && 0xFE == libwps::readU8(input.get()))
+		{
+			WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
+			return new WPSHeader(input, oleStorage, 2);
+		}
+		return 0;
 	}
 
-	WPXInputStreamPtr document_contents(input->getDocumentOLEStream("CONTENTS"));
+	WPXInputStreamPtr document_mn0(oleStorage->getDocumentOLEStream("MN0"));
+	if (document_mn0)
+	{
+		// can be a mac or a pc document
+		// each must contains a MM Ole which begins by 0x444e: Mac or 0x4e44: PC
+		WPXInputStreamPtr document_mm(oleStorage->getDocumentOLEStream("MM"));
+		if (document_mm && libwps::readU16(document_mm) == 0x4e44)
+		{
+			WPS_DEBUG_MSG(("Microsoft Works Mac v4 format detected\n"));
+			return 0;
+		}
+		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));
+		return new WPSHeader(document_mn0, oleStorage, 4);
+	}
+
+	WPXInputStreamPtr document_contents(oleStorage->getDocumentOLEStream("CONTENTS"));
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */
@@ -70,26 +91,21 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 			fileMagic[i] = libwps::readU8(document_contents.get());
 		fileMagic[7] = '\0';
 
+		// WPS8Parser only look for the main storage, so we can delete storage
+		oleStorage.reset();
 
 		/* Works 7/8 */
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
 		{
 			WPS_DEBUG_MSG(("Microsoft Works v8 (maybe 7) format detected\n"));
-			return new WPSHeader(document_contents, 8);
+			return new WPSHeader(document_contents, oleStorage, 8);
 		}
 
 		/* Works 2000 */
 		if (0 == strcmp(fileMagic, "CHNKINK"))
 		{
-			return new WPSHeader(document_contents, 5);
+			return new WPSHeader(document_contents, oleStorage, 5);
 		}
-	}
-
-	input->seek(0, WPX_SEEK_SET);
-	if (libwps::readU8(input.get()) < 6 && 0xFE == libwps::readU8(input.get()))
-	{
-		WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
-		return new WPSHeader(input, 2);
 	}
 
 	return NULL;

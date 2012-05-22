@@ -31,10 +31,16 @@
 #include "libwps_internal.h"
 #include <libwpd-stream/libwpd-stream.h>
 
+namespace libwps
+{
+class Storage;
+}
+
 class WPSHeader
 {
 public:
-	WPSHeader(WPXInputStreamPtr &input, uint8_t majorVersion);
+	WPSHeader(WPXInputStreamPtr &input, shared_ptr<libwps::Storage> &ole,
+	          uint8_t majorVersion);
 	virtual ~WPSHeader();
 
 	static WPSHeader *constructHeader(WPXInputStreamPtr &input);
@@ -42,6 +48,11 @@ public:
 	WPXInputStreamPtr &getInput()
 	{
 		return m_input;
+	}
+
+	shared_ptr<libwps::Storage> &getOLEStorage()
+	{
+		return m_oleStorage;
 	}
 
 	uint8_t getMajorVersion() const
@@ -53,6 +64,7 @@ private:
 	WPSHeader(const WPSHeader &);
 	WPSHeader &operator=(const WPSHeader &);
 	WPXInputStreamPtr m_input;
+	shared_ptr<libwps::Storage> m_oleStorage;
 	uint8_t m_majorVersion;
 };
 

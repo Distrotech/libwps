@@ -2,6 +2,7 @@
 /* libwps
  * Copyright (C) 2003 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003-2004 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
  * Copyright (C) 2006, 2007 Andrew Ziem (andrewziem users sourceforge net)
  *
  * This library is free software; you can redistribute it and/or
@@ -46,7 +47,8 @@ If you are interrested in the structure of libwps itself, this whole document
 would be a good starting point for exploring the interals of libwps. Mind that
 this document is a work-in-progress, and will most likely not cover libwps for
 the full 100%.
-*/
+
+ \warning When compiled with -DDEBUG_WITH__FILES, code is added to store the results of the parsing in different files: one file by Ole parts and some files to store the read pictures. These files are created in the current repository, therefore it is recommended to launch the tests in an empty repository...*/
 
 /**
 Analyzes the content of an input stream to see if it can be parsed
