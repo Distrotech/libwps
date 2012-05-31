@@ -58,9 +58,9 @@ public:
 		return m_id;
 	}
 	/// set the identificator
-	void setId(int id)
+	void setId(int i)
 	{
-		m_id = id;
+		m_id = i;
 	}
 
 	/// an operator =

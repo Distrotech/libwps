@@ -822,11 +822,11 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				WPSEntry ent = m_state->m_dosLinkList[id].m_pos;
 				ent.setType("TEXT");
 				ent.setId(WPS4TextInternal::Z_DLink);
-				WPSPosition pos(Vec2f(),Vec2f(3.0,0.2));
-				pos.setRelativePosition(WPSPosition::Paragraph, WPSPosition::XCenter);
-				pos.m_wrapping = WPSPosition::WNone;
+				WPSPosition pos_(Vec2f(),Vec2f(3.0,0.2));
+				pos_.setRelativePosition(WPSPosition::Paragraph, WPSPosition::XCenter);
+				pos_.m_wrapping = WPSPosition::WNone;
 				WPXPropertyList extras;
-				m_mainParser.createTextBox(ent, pos, extras);
+				m_mainParser.createTextBox(ent, pos_, extras);
 				m_listener->insertEOL();
 				break;
 			}

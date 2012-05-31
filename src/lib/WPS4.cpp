@@ -975,19 +975,19 @@ bool WPS4Parser::readDocWindowsInfo(WPSEntry const &entry)
 	//        h0-h1: seems to correspond to a text zone
 	for (int i = 0; i < 4; i++)
 	{
-		long val = libwps::read32(input);
+		long val_ = libwps::read32(input);
 		if (i == 0)
 		{
-			f << "textpos?=[" << 0x100+val<< ",";
+			f << "textpos?=[" << 0x100+val_<< ",";
 			continue;
 		}
 		if (i == 1)
 		{
-			f << 0x100+val << "],";
+			f << 0x100+val_ << "],";
 			continue;
 		}
-		if (val)
-			f << "h" << i << "=" << val << ",";
+		if (val_)
+			f << "h" << i << "=" << val_ << ",";
 	}
 
 	ascii().addPos(entry.begin()+0x132);

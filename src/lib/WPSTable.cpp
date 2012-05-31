@@ -69,14 +69,14 @@ bool WPSTable::buildStructures()
 	if (m_colsSize.size())
 		return true;
 
-	int numCells = m_cellsList.size();
+	int cellsNum = m_cellsList.size();
 	std::vector<float> listPositions[2];
 	for (int dim = 0; dim < 2; dim++)
 	{
 		WPSCell::Compare compareFunction(dim);
 		std::set<WPSCell::Compare::Point,
 		    WPSCell::Compare> set(compareFunction);
-		for (int c = 0; c < numCells; c++)
+		for (int c = 0; c < cellsNum; c++)
 		{
 			set.insert(WPSCell::Compare::Point(0, m_cellsList[c].get()));
 			set.insert(WPSCell::Compare::Point(1, m_cellsList[c].get()));
@@ -101,7 +101,7 @@ bool WPSTable::buildStructures()
 		}
 		listPositions[dim] = positions;
 	}
-	for (int c = 0; c < numCells; c++)
+	for (int c = 0; c < cellsNum; c++)
 	{
 		int cellPos[2], spanCell[2];
 		for (int dim = 0; dim < 2; dim++)
@@ -160,13 +160,13 @@ bool WPSTable::sendTable(WPSContentListenerPtr listener)
 	if (!listener)
 		return true;
 
-	int numCells = m_cellsList.size();
+	int cellsNum = m_cellsList.size();
 	int numCols = m_colsSize.size();
 	int numRows = m_rowsSize.size();
 	if (!numCols || !numRows)
 		return false;
 	std::vector<int> cellsId(numCols*numRows, -1);
-	for (int c = 0; c < numCells; c++)
+	for (int c = 0; c < cellsNum; c++)
 	{
 		if (!m_cellsList[c]) continue;
 		Vec2i const &pos=m_cellsList[c]->m_position;
@@ -225,8 +225,8 @@ bool WPSTable::sendAsText(WPSContentListenerPtr listener)
 {
 	if (!listener) return true;
 
-	int numCells = m_cellsList.size();
-	for (int i = 0; i < numCells; i++)
+	int cellsNum = m_cellsList.size();
+	for (int i = 0; i < cellsNum; i++)
 	{
 		if (!m_cellsList[i]) continue;
 		m_cellsList[i]->sendContent(listener);

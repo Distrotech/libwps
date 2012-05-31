@@ -55,9 +55,9 @@ public:
 
 public:
 	//! constructor
-	WPSPosition(Vec2f const &origin=Vec2f(), Vec2f const &size=Vec2f(), WPXUnit unit=WPX_INCH):
+	WPSPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), WPXUnit unt=WPX_INCH):
 		m_anchorTo(Char), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
-		m_page(0), m_orig(origin), m_size(size), m_naturalSize(), m_unit(unit), m_order(0) {}
+		m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_unit(unt), m_order(0) {}
 
 	virtual ~WPSPosition() {}
 	//! operator<<
@@ -156,40 +156,40 @@ public:
 		return actSc/newSc;
 	}
 	//! returns a float which can be used to scale some data in object unit
-	float getInvUnitScale(WPXUnit unit) const
+	float getInvUnitScale(WPXUnit unt) const
 	{
-		return getScaleFactor(unit, m_unit);
+		return getScaleFactor(unt, m_unit);
 	}
 
 	//! sets the page
-	void setPage(int page) const
+	void setPage(int pg) const
 	{
-		const_cast<WPSPosition *>(this)->m_page = page;
+		const_cast<WPSPosition *>(this)->m_page = pg;
 	}
 	//! sets the frame origin
-	void setOrigin(Vec2f const &origin)
+	void setOrigin(Vec2f const &orig)
 	{
-		m_orig = origin;
+		m_orig = orig;
 	}
 	//! sets the frame size
-	void setSize(Vec2f const &size)
+	void setSize(Vec2f const &sz)
 	{
-		m_size = size;
+		m_size = sz;
 	}
 	//! sets the natural size (if known)
-	void setNaturalSize(Vec2f const &naturalSize)
+	void setNaturalSize(Vec2f const &natSize)
 	{
-		m_naturalSize = naturalSize;
+		m_naturalSize = natSize;
 	}
 	//! sets the dimension unit
-	void setUnit(WPXUnit unit)
+	void setUnit(WPXUnit unt)
 	{
-		m_unit = unit;
+		m_unit = unt;
 	}
 	//! sets/resets the page and the origin
-	void setPagePos(int page, Vec2f const &newOrig) const
+	void setPagePos(int pg, Vec2f const &newOrig) const
 	{
-		const_cast<WPSPosition *>(this)->m_page = page;
+		const_cast<WPSPosition *>(this)->m_page = pg;
 		const_cast<WPSPosition *>(this)->m_orig = newOrig;
 	}
 
@@ -207,9 +207,9 @@ public:
 		return m_order;
 	}
 	//! set background/foward order
-	void setOrder(int order) const
+	void setOrder(int ord) const
 	{
-		m_order = order;
+		m_order = ord;
 	}
 
 	//! anchor position

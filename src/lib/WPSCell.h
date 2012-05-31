@@ -109,9 +109,9 @@ public:
 	WPSCell() : WPSCellFormat(), m_box(), m_position(0,0), m_numberCellSpanned(1,1) {}
 
 	//! set the bounding box (units in point)
-	void setBox(Box2f const &box)
+	void setBox(Box2f const &b)
 	{
-		m_box = box;
+		m_box = b;
 	}
 	//! return the bounding box
 	Box2f const &box() const

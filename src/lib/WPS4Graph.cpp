@@ -266,8 +266,8 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 			// list of ole object, metafile, ...
 			int val = libwps::readU16(input);
 			if (val) f << "#unkn=" << val << ",";
-			int type = libwps::read32(input);
-			f << "type=" << type << ",";
+			int type_ = libwps::read32(input);
+			f << "type=" << type_ << ",";
 			long nSize = libwps::read32(input);
 			if (nSize <= 0 || lastPos+22+nSize > endPos) break;
 

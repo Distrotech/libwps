@@ -43,8 +43,8 @@ public:
 	enum Type { Unknown, Footnote, Endnote };
 
 	//! constructor for a text entry
-	SubDocument(WPXInputStreamPtr input, WPS8Parser &pars, Type type, int id) :
-		WPSSubDocument (input, &pars, id), m_type(type) {}
+	SubDocument(WPXInputStreamPtr input, WPS8Parser &pars, Type type, int i) :
+		WPSSubDocument (input, &pars, i), m_type(type) {}
 	//! destructor
 	~SubDocument() {}
 

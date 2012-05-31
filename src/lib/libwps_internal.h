@@ -281,7 +281,7 @@ template <class T> class Vec2
 {
 public:
 	//! constructor
-	Vec2(T x=0,T y=0) : m_x(x), m_y(y) { }
+	Vec2(T xx=0,T yy=0) : m_x(xx), m_y(yy) { }
 	//! generic copy constructor
 	template <class U> Vec2(Vec2<U> const &p) : m_x(T(p.x())), m_y(T(p.y())) {}
 
@@ -309,20 +309,20 @@ public:
 	}
 
 	//! resets the two elements
-	void set(T x, T y)
+	void set(T xx, T yy)
 	{
-		m_x = x;
-		m_y = y;
+		m_x = xx;
+		m_y = yy;
 	}
 	//! resets the first element
-	void setX(T x)
+	void setX(T xx)
 	{
-		m_x = x;
+		m_x = xx;
 	}
 	//! resets the second element
-	void setY(T y)
+	void setY(T yy)
 	{
-		m_y = y;
+		m_y = yy;
 	}
 
 	//! increases the actuals values by \a dx and \a dy
@@ -547,9 +547,9 @@ public:
 	//!  resize the box keeping the center
 	void resizeFromCenter(Vec2<T> const &sz)
 	{
-		Vec2<T> center = 0.5*(m_pt[0]+m_pt[1]);
-		m_pt[0] = center - 0.5*sz;
-		m_pt[1] = center + (sz - 0.5*sz);
+		Vec2<T> ctr = 0.5*(m_pt[0]+m_pt[1]);
+		m_pt[0] = ctr - 0.5*sz;
+		m_pt[1] = ctr + (sz - 0.5*sz);
 	}
 
 	//! scales all points of the box by \a factor
