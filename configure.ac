@@ -143,12 +143,12 @@ AS_IF([test "x$native_win32" = "xyes"], [
 		])
 	])
 	CFLAGS="$CFLAGS -Wall -Wextra -pedantic"
-	CXXFLAGS="$CXXFLAGS -Wall -Wextra -pedantic"
+	CXXFLAGS="$CXXFLAGS -Wall -Wextra -Wshadow -pedantic"
 ], [
 	AS_IF([test x"$GCC" = xyes], [
 		# Be tough with warnings and produce less careless code
 		CFLAGS="$CFLAGS -Wall -Wextra -pedantic"
-		CXXFLAGS="$CXXFLAGS -Wall -Wextra -pedantic"
+		CXXFLAGS="$CXXFLAGS -Wall -Wextra -Wshadow -pedantic"
 		AS_IF([test x"$enable_weffc" != "xno"], [
 			CXXFLAGS="$CXXFLAGS -Weffc++"
 		])
