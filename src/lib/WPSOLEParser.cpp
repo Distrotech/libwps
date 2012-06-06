@@ -242,7 +242,7 @@ WPSOLEParser::~WPSOLEParser()
 // interface
 bool WPSOLEParser::getObject(int id, WPXBinaryData &obj, WPSPosition &pos)  const
 {
-	for (int i = 0; i < int(m_objectsId.size()); i++)
+	for (size_t i = 0; i < m_objectsId.size(); i++)
 	{
 		if (m_objectsId[i] != id) continue;
 		obj = m_objects[i];
@@ -255,7 +255,7 @@ bool WPSOLEParser::getObject(int id, WPXBinaryData &obj, WPSPosition &pos)  cons
 
 void WPSOLEParser::setObject(int id, WPXBinaryData const &obj, WPSPosition const &pos)
 {
-	for (int i = 0; i < int(m_objectsId.size()); i++)
+	for (size_t i = 0; i < m_objectsId.size(); i++)
 	{
 		if (m_objectsId[i] != id) continue;
 		m_objects[i] = obj;
@@ -288,7 +288,7 @@ bool WPSOLEParser::parse(shared_ptr<libwps::Storage> file)
 	//
 	std::multimap<int, WPSOLEParserInternal::OleDef> listsById;
 	std::vector<int> listIds;
-	for (int i = 0; i < int(namesList.size()); i++)
+	for (size_t i = 0; i < namesList.size(); i++)
 	{
 		std::string const &name = namesList[i];
 
@@ -345,7 +345,7 @@ bool WPSOLEParser::parse(shared_ptr<libwps::Storage> file)
 		listsById.insert(std::multimap<int, WPSOLEParserInternal::OleDef>::value_type(data.m_id, data));
 	}
 
-	for (int i = 0; i < int(listIds.size()); i++)
+	for (size_t i = 0; i < listIds.size(); i++)
 	{
 		int id = listIds[i];
 
@@ -601,7 +601,7 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 
 	for (int i = 0; i < 6; i++)
 	{
-		int16_t val = libwps::readU16(ip);
+		long val = long(libwps::readU16(ip));
 		f << val << ", ";
 	}
 
@@ -662,7 +662,7 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 		else
 		{
 			for (int i = 0; i < sz; i++)
-				st += libwps::readU8(ip);
+				st += char(libwps::readU8(ip));
 		}
 
 		f.str("");
@@ -678,6 +678,8 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 		case 2:
 			f << "ProgIdName=";
 			break;
+		default:
+			break;
 		}
 		f << st;
 		ascii.addPos(actPos);
@@ -687,7 +689,7 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 	if (ip->atEOS()) return true;
 
 	long actPos = ip->tell();
-	int nbElt = 4;
+	long nbElt = 4;
 	if (ip->seek(actPos+16,WPX_SEEK_SET) != 0 ||
 	        ip->tell() != actPos+16)
 	{
@@ -808,7 +810,7 @@ bool WPSOLEParser::readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data, WPSPo
 						find = true;
 						break;
 					}
-					str += c;
+					str += char(c);
 				}
 				if (!find)
 				{
@@ -839,9 +841,10 @@ bool WPSOLEParser::readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data, WPSPo
 		f << val << ", ";
 	}
 	// dim in TWIP ?
-	int extendX = libwps::readU32(ip);
-	int extendY = libwps::readU32(ip);
-	if (extendX > 0 && extendY > 0) pos.setNaturalSize(Vec2f(extendX/20., extendY/20.));
+	long extendX = libwps::readU32(ip);
+	long extendY = libwps::readU32(ip);
+	if (extendX > 0 && extendY > 0)
+		pos.setNaturalSize(Vec2f(float(extendX)/20.f, float(extendY)/20.f));
 	long fSize = libwps::read32(ip);
 	f << "extendX="<< extendX << ", extendY=" << extendY << ", fSize=" << fSize;
 
@@ -851,7 +854,7 @@ bool WPSOLEParser::readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data, WPSPo
 	if (fSize == 0) return ip->atEOS();
 
 	data.clear();
-	if (!libwps::readData(ip, fSize, data)) return false;
+	if (!libwps::readData(ip, (unsigned long)fSize, data)) return false;
 
 	if (!ip->atEOS())
 	{
@@ -902,7 +905,7 @@ bool WPSOLEParser::readOle10Native(WPXInputStreamPtr &ip,
 	ascii.addNote(f.str().c_str());
 
 	data.clear();
-	if (!libwps::readData(ip, fSize, data)) return false;
+	if (!libwps::readData(ip, (unsigned long) fSize, data)) return false;
 
 	if (!ip->atEOS())
 	{
@@ -968,14 +971,14 @@ bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
 	}
 	if (dim[0] > 0 && dim[0] < 3000 &&
 	        dim[1] > 0 && dim[1] < 3000)
-		pos.setSize(Vec2f(dim[0],dim[1]));
+		pos.setSize(Vec2f(float(dim[0]),float(dim[1])));
 	else
 	{
 		WPS_DEBUG_MSG(("WPSOLEParser: warning: Contents odd size : %d %d\n", dim[0], dim[1]));
 	}
 	if (naturalSize[0] > 0 && naturalSize[0] < 5000 &&
 	        naturalSize[1] > 0 && naturalSize[1] < 5000)
-		pos.setNaturalSize(Vec2f(naturalSize[0],naturalSize[1]));
+		pos.setNaturalSize(Vec2f(float(naturalSize[0]),float(naturalSize[1])));
 	else
 	{
 		WPS_DEBUG_MSG(("WPSOLEParser: warning: Contents odd naturalsize : %d %d\n", naturalSize[0], naturalSize[1]));
@@ -1005,7 +1008,7 @@ bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
 
 	if (ok)
 	{
-		if (libwps::readData(input,size, pict))
+		if (libwps::readData(input,(unsigned long) size, pict))
 			ascii.skipZone(actPos+4, actPos+size+4-1);
 		else
 		{
@@ -1048,21 +1051,21 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 	input->seek(0, WPX_SEEK_SET);
 	f << "@@CONTENTS:";
 
-	int hSize = libwps::readU32(input);
+	long hSize = libwps::readU32(input);
 	if (input->atEOS()) return false;
 	f << "hSize=" << std::hex << hSize << std::dec;
 
 	if (hSize <= 52 || input->seek(hSize+8,WPX_SEEK_SET) != 0
 	        || input->tell() != hSize+8)
 	{
-		WPS_DEBUG_MSG(("WPSOLEParser: warning: CONTENTS headerSize=%d\n",
+		WPS_DEBUG_MSG(("WPSOLEParser: warning: CONTENTS headerSize=%ld\n",
 		               hSize));
 		return false;
 	}
 
 	// minimal checking of the "copied" header
 	input->seek(4, WPX_SEEK_SET);
-	int type = libwps::readU32(input);
+	long type = libwps::readU32(input);
 	if (type < 0 || type > 4) return false;
 	long newSize = libwps::readU32(input);
 
@@ -1080,7 +1083,7 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 		for (int i = 0; i < 4; i++) dim[i] = libwps::read32(input);
 
 		bool ok = dim[0] >= 0 && dim[2] > dim[0] && dim[1] >= 0 && dim[3] > dim[2];
-		if (ok && st==0) pos.setNaturalSize(Vec2f(dim[2]-dim[0], dim[3]-dim[1]));
+		if (ok && st==0) pos.setNaturalSize(Vec2f(float(dim[2]-dim[0]), float(dim[3]-dim[1])));
 		if (st==0) f << ", bdbox(Text)";
 		else f << ", bdbox(Data)";
 		if (!ok) f << "###";

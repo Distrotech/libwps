@@ -90,7 +90,7 @@ int WPS4Graph::numPages() const
 
 void WPS4Graph::computePositions() const
 {
-	int numObject = m_state->m_objects.size();
+	size_t numObject = m_state->m_objects.size();
 	m_state->m_numPages = numObject ? 1 : 0;
 	m_state->m_parsed.resize(numObject, false);
 }
@@ -100,13 +100,13 @@ void WPS4Graph::storeObjects(std::vector<WPXBinaryData> const &objects,
                              std::vector<int> const &ids,
                              std::vector<WPSPosition> const &positions)
 {
-	int numObject = objects.size();
-	if (numObject != int(ids.size()))
+	size_t numObject = objects.size();
+	if (numObject != ids.size())
 	{
 		WPS_DEBUG_MSG(("WPS4Graph::storeObjects: unconsistent arguments\n"));
 		return;
 	}
-	for (int i = 0; i < numObject; i++)
+	for (size_t i = 0; i < numObject; i++)
 	{
 		m_state->m_objects.push_back(objects[i]);
 		m_state->m_objectsPosition.push_back(positions[i]);
@@ -123,12 +123,12 @@ void WPS4Graph::sendObject(Vec2f const &sz, int id)
 		return;
 	}
 
-	int numObject = m_state->m_objects.size();
+	size_t numObject = m_state->m_objects.size();
 	int pos = -1;
-	for (int g = 0; g < numObject; g++)
+	for (size_t g = 0; g < numObject; g++)
 	{
 		if (m_state->m_objectsId[g] != id) continue;
-		pos = g;
+		pos = int(g);
 	}
 
 	if (pos < 0)
@@ -137,13 +137,13 @@ void WPS4Graph::sendObject(Vec2f const &sz, int id)
 		return;
 	}
 
-	m_state->m_parsed[pos] = true;
+	m_state->m_parsed[size_t(pos)] = true;
 	WPSPosition posi(Vec2f(),sz);
 	posi.setRelativePosition(WPSPosition::CharBaseLine);
 	posi.m_wrapping = WPSPosition::WDynamic;
-	float scale = 1.0/m_state->m_objectsPosition[pos].getInvUnitScale(WPX_INCH);
-	posi.setNaturalSize(scale*m_state->m_objectsPosition[pos].naturalSize());
-	m_listener->insertPicture(posi, m_state->m_objects[pos]);
+	float scale = float(1.0/m_state->m_objectsPosition[size_t(pos)].getInvUnitScale(WPX_INCH));
+	posi.setNaturalSize(scale*m_state->m_objectsPosition[size_t(pos)].naturalSize());
+	m_listener->insertPicture(posi, m_state->m_objects[size_t(pos)]);
 }
 
 void WPS4Graph::sendObjects(int page)
@@ -155,11 +155,11 @@ void WPS4Graph::sendObjects(int page)
 		return;
 	}
 
-	int numObject = m_state->m_objects.size();
+	size_t numObject = m_state->m_objects.size();
 #ifdef DEBUG
 	bool firstSend = false;
 #endif
-	for (int g = 0; g < numObject; g++)
+	for (size_t g = 0; g < numObject; g++)
 	{
 		if (m_state->m_parsed[g]) continue;
 #ifdef DEBUG
@@ -230,7 +230,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 			f << val << ",";
 			if (lastPos+10 <= endPos) f << std::hex << libwps::read16(input);
 
-			for (int i = 0; i < int(m_state->m_objectsId.size()); i++)
+			for (size_t i = 0; i < m_state->m_objectsId.size(); i++)
 			{
 				if (m_state->m_objectsId[i] != oleId) continue;
 				if (0 > actConfidence)
@@ -252,7 +252,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 			if (lastPos+6 > endPos) break;
 			// a simple metafile object ?
 			float dim[2];
-			for (int i = 0; i < 2; i++) dim[i] = libwps::read16(input)/1440.;
+			for (int i = 0; i < 2; i++) dim[i] = float(libwps::read16(input)/1440.);
 			// look like the final size : so we can use it as the picture size :-~
 			f << "sz=(" << dim[0] << "," << dim[1] << ")," << libwps::read16(input);
 			readData = true;
@@ -264,7 +264,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 			// find some metafile picture and MSDraw picture in v2 file
 			if (lastPos+24 > endPos) break;
 			// list of ole object, metafile, ...
-			int val = libwps::readU16(input);
+			long val = libwps::readU16(input);
 			if (val) f << "#unkn=" << val << ",";
 			int type_ = libwps::read32(input);
 			f << "type=" << type_ << ",";
@@ -274,7 +274,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 			std::string name;
 			for (int i = 0; i < nSize; i++)
 			{
-				unsigned char c = libwps::readU8(input);
+				char c = char(libwps::readU8(input));
 				if (c==0) break;
 				name+= c;
 			}
@@ -312,7 +312,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 
 		WPXBinaryData data;
 		long actPos = input->tell();
-		bool ok = readData && libwps::readData(input,endDataPos+1-actPos, data);
+		bool ok = readData && libwps::readData(input,(unsigned long)(endDataPos+1-actPos), data);
 		if (confidence > actConfidence && data.size())
 		{
 			confidence = actConfidence;
@@ -359,7 +359,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 	{
 		bool found = false;
 		int maxId = -1;
-		for (int i = 0; i < int(m_state->m_objectsId.size()); i++)
+		for (size_t i = 0; i < m_state->m_objectsId.size(); i++)
 		{
 			if (m_state->m_objectsId[i] != oleId)
 			{
@@ -369,7 +369,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 			m_state->m_objects[i] = pict;
 			if (pictPos.naturalSize().x() > 0 && pictPos.naturalSize().y() > 0)
 			{
-				float scale = 1.0/pictPos.getInvUnitScale(m_state->m_objectsPosition[i].unit());
+				float scale = float(1.0/pictPos.getInvUnitScale(m_state->m_objectsPosition[i].unit()));
 				m_state->m_objectsPosition[i].setNaturalSize(scale*pictPos.naturalSize());
 			}
 			found = true;

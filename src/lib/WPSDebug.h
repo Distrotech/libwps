@@ -99,9 +99,9 @@ public:
 	void addDelimiter(long pos, char c);
 
 	//! skips the file zone defined by beginPos-endPos
-	void skipZone(int beginPos, int endPos)
+	void skipZone(long beginPos, long endPos)
 	{
-		if (m_on) m_skipZones.push_back(Vec2i(beginPos, endPos));
+		if (m_on) m_skipZones.push_back(Vec2<long>(beginPos, endPos));
 	}
 
 protected:
@@ -160,11 +160,11 @@ protected:
 	};
 
 	//! the actual offset (used to store note)
-	int m_actOffset;
+	long m_actOffset;
 	//! list of notes
 	std::vector<NotePos> m_notes;
 	//! list of skipZone
-	std::vector<Vec2i> m_skipZones;
+	std::vector<Vec2<long> > m_skipZones;
 };
 }
 #  else
@@ -218,7 +218,7 @@ public:
 
 	void reset() { }
 
-	void skipZone(int , int ) {}
+	void skipZone(long , long ) {}
 };
 }
 #  endif

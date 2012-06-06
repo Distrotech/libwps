@@ -61,6 +61,7 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 	case WPSCellFormat::HALIGN_FULL:
 		o << ",full";
 		break;
+	case WPSCellFormat::HALIGN_DEFAULT:
 	default:
 		break; // default
 	}

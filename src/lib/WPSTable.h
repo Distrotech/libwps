@@ -61,7 +61,7 @@ public:
 	//! returns the number of cell
 	int numCells() const
 	{
-		return m_cellsList.size();
+		return int(m_cellsList.size());
 	}
 	//! returns the i^th cell
 	WPSCellPtr get(int id);

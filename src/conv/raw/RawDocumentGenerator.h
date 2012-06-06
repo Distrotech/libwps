@@ -28,6 +28,10 @@
 #include <libwpd/WPXDocumentInterface.h>
 #include <stack>
 
+#ifndef __GNUC__
+#define __attribute__(x)
+#endif
+
 using namespace std;
 
 enum ListenerCallback
@@ -136,9 +140,9 @@ private:
 		if (m_indent > 0) m_indent--;
 	}
 
-	void __iprintf(const char *format, ...);
-	void __iuprintf(const char *format, ...);
-	void __idprintf(const char *format, ...);
+	void __iprintf(const char *format, ...) __attribute__((format(printf,2,3)));
+	void __iuprintf(const char *format, ...) __attribute__((format(printf,2,3)));
+	void __idprintf(const char *format, ...) __attribute__((format(printf,2,3)));
 
 };
 

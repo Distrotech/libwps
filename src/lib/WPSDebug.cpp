@@ -57,7 +57,7 @@ void DebugFile::addNote(char const *note)
 {
 	if (!m_on || note == 0L) return;
 
-	int numNotes = m_notes.size();
+	size_t numNotes = m_notes.size();
 
 	if (!numNotes || m_notes[numNotes-1].m_pos != m_actOffset)
 	{
@@ -80,7 +80,7 @@ void DebugFile::addDelimiter(long pos, char c)
 void DebugFile::sort()
 {
 	if (!m_on) return;
-	int numNotes = m_notes.size();
+	size_t numNotes = m_notes.size();
 
 	if (m_actOffset >= 0 && (numNotes == 0 || m_notes[numNotes-1].m_pos != m_actOffset))
 	{
@@ -90,16 +90,16 @@ void DebugFile::sort()
 	}
 
 	NotePos::Map map;
-	for (int i = 0; i < numNotes; i++) map[m_notes[i]] = 0;
+	for (size_t i = 0; i < numNotes; i++) map[m_notes[i]] = 0;
 
-	int i = 0;
+	size_t i = 0;
 	for (NotePos::Map::iterator it = map.begin(); it != map.end(); i++, it++)
 		m_notes[i] = it->first;
 	if (i != numNotes) m_notes.resize(i);
 
 	Vec2i::MapX sMap;
-	int numSkip = m_skipZones.size();
-	for (i = 0; i < numSkip; i++) sMap[m_skipZones[i]] = 0;
+	size_t numSkip = m_skipZones.size();
+	for (size_t s = 0; s < numSkip; s++) sMap[m_skipZones[s]] = 0;
 
 	i = 0;
 	for (Vec2i::MapX::iterator it = sMap.begin();
@@ -126,7 +126,7 @@ void DebugFile::write()
 	}
 
 	long actualPos = 0;
-	int numSkip = m_skipZones.size(), actSkip = (numSkip == 0) ? -1 : 0;
+	int numSkip = int(m_skipZones.size()), actSkip = (numSkip == 0) ? -1 : 0;
 	long actualSkipEndPos = (numSkip == 0) ? -1 : m_skipZones[0].x();
 
 	m_input->seek(0,WPX_SEEK_SET);
@@ -139,13 +139,13 @@ void DebugFile::write()
 		while (actualSkipEndPos != -1 && actualPos >= actualSkipEndPos)
 		{
 			printAdr = true;
-			actualPos = m_skipZones[actSkip].y()+1;
+			actualPos = m_skipZones[size_t(actSkip)].y()+1;
 			m_file << "\nSkip : " << std::hex << std::setw(6) << actualSkipEndPos << "-"
 			       << actualPos-1 << "\n\n";
 			m_input->seek(actualPos, WPX_SEEK_SET);
 			stop = m_input->atEOS();
 			actSkip++;
-			actualSkipEndPos = (actSkip < numSkip) ? m_skipZones[actSkip].x() : -1;
+			actualSkipEndPos = (actSkip < numSkip) ? m_skipZones[size_t(actSkip)].x() : -1;
 		}
 		if (stop) break;
 		while(noteIter != m_notes.end() && noteIter->m_pos < actualPos)
@@ -211,9 +211,9 @@ bool dumpFile(WPXBinaryData &data, char const *fileName)
 std::string flattenFileName(std::string const &name)
 {
 	std::string res;
-	for (int i = 0; i < int(name.length()); i++)
+	for (size_t i = 0; i < name.length(); i++)
 	{
-		unsigned char c = name[i];
+		char c = name[i];
 		switch(c)
 		{
 		case '\0':
@@ -226,8 +226,7 @@ std::string flattenFileName(std::string const &name)
 			res += '_';
 			break;
 		default:
-			if (c <= 28) res += '#'; // other trouble potential char
-			else if (c > 0x80) res += '#'; // other trouble potential char
+			if (c <= 28) res += '#'; // potential trouble potential char
 			else res += c;
 		}
 	}

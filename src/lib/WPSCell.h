@@ -181,12 +181,14 @@ protected:
 		bool operator()(Point const &c1, Point const &c2) const
 		{
 			float diffF = c1.getPos(m_coord)-c2.getPos(m_coord);
-			if (diffF) return (diffF < 0);
+			if (diffF < 0) return true;
+			if (diffF > 0) return false;
 			int diff = c2.m_which - c1.m_which;
 			if (diff) return (diff < 0);
 			diffF = c1.m_cell->box().size()[m_coord]
 			        - c2.m_cell->box().size()[m_coord];
-			if (diffF) return (diffF < 0);
+			if (diffF < 0) return true;
+			if (diffF > 0) return false;
 			return long(c1.m_cell) < long(c2.m_cell);
 		}
 

@@ -167,12 +167,12 @@ int WPS4Parser::version() const
 
 float WPS4Parser::pageHeight() const
 {
-	return m_state->m_pageSpan.getFormLength()-m_state->m_pageSpan.getMarginTop()-m_state->m_pageSpan.getMarginBottom();
+	return float(m_state->m_pageSpan.getFormLength()-m_state->m_pageSpan.getMarginTop()-m_state->m_pageSpan.getMarginBottom());
 }
 
 float WPS4Parser::pageWidth() const
 {
-	return m_state->m_pageSpan.getFormWidth()-m_state->m_pageSpan.getMarginLeft()-m_state->m_pageSpan.getMarginRight();
+	return float(m_state->m_pageSpan.getFormWidth()-m_state->m_pageSpan.getMarginLeft()-m_state->m_pageSpan.getMarginRight());
 }
 
 int WPS4Parser::numColumns() const
@@ -335,12 +335,10 @@ void WPS4Parser::createDocument(WPSEntry const &entry, libwps::SubDocumentType t
 	if (m_listener.get() == 0L) return;
 	WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
 	                         (getInput(), *this, entry));
-	switch(type)
-	{
-	case libwps::DOC_COMMENT_ANNOTATION:
+	if(type == libwps::DOC_COMMENT_ANNOTATION)
 		m_listener->insertComment(subdoc);
-		break;
-	default:
+	else
+	{
 		WPS_DEBUG_MSG(("WPS4Parser:createDocument error: unknown type: \"%d\"\n", (int) type));
 	}
 }
@@ -451,9 +449,9 @@ bool WPS4Parser::createOLEStructures()
 	// with name MN0 and some unknown picture ole
 	std::vector<std::string> unparsed = oleParser.getNotParse();
 
-	int numUnparsed = unparsed.size();
+	size_t numUnparsed = unparsed.size();
 
-	for (int i = 0; i < numUnparsed; i++)
+	for (size_t i = 0; i < numUnparsed; i++)
 	{
 		std::string const &name = unparsed[i];
 		if (name == "MN0")
@@ -632,7 +630,7 @@ bool WPS4Parser::findZones()
 	val = libwps::readU16(input);
 	if (val & 0xFF00) f << "#unkn=" << (val >> 8) << ",";
 	val &= 0xFF;
-	int numCols = val/2;
+	int numCols = int(val/2);
 	if (numCols >= 1 && numCols <= 13)
 	{
 		if (version() >= 3)
@@ -702,7 +700,7 @@ bool WPS4Parser::findZones()
 
 				ascii().addPos(zone.begin());
 				std::string nm = "ZZPRNT(";
-				nm+= '0'+i;
+				nm+= char('0'+i);
 				nm+=')';
 				ascii().addNote(nm.c_str());
 				ascii().addPos(zone.end());
@@ -847,9 +845,9 @@ bool WPS4Parser::readPrnt(WPSEntry const &entry)
 		for (int i = 0; i < 8; i++)
 		{
 			if (i == 4 || i == 5)
-				dim[i] = libwps::readU32(input)/1440.;
+				dim[i] = float(libwps::readU32(input)/1440.);
 			else
-				dim[i] = libwps::read32(input)/1440.;
+				dim[i] = float(libwps::read32(input)/1440.);
 		}
 		f << "dim"<< st << "=" << dim[5] << "x" << dim[4] << ",";
 		f << "margin"<< st << "=[" << dim[0] << "x" << dim[2] << ","
@@ -954,7 +952,7 @@ bool WPS4Parser::readDocWindowsInfo(WPSEntry const &entry)
 		f << "pageBorderDist=" << dim[1]/1440. << "x" << dim[0]/1440. << ",";
 	long val = libwps::readU8(input);
 	uint32_t color;
-	if (val && getColor(val, color))
+	if (val && getColor(int(val), color))
 		f << "pageBorderColor=" << std::hex << color << std::dec << ",";
 	else if (val)
 		f << "#pageBorderColor=" << std::hex << val << std::dec << ",";

@@ -104,7 +104,7 @@ int WPSStringStream::seek(long _offset, WPX_SEEK_TYPE seekType)
 	}
 	if ((long)offset > (long)buffer.size())
 	{
-		offset = buffer.size();
+		offset = long(buffer.size());
 		return 1;
 	}
 	return 0;
@@ -117,12 +117,12 @@ const unsigned char *WPSStringStream::read(unsigned long numBytes, unsigned long
 	if (numBytes == 0)
 		return 0;
 
-	int numBytesToRead;
+	unsigned long numBytesToRead;
 
-	if ((offset+numBytes) < buffer.size())
+	if (((unsigned long) offset+numBytes) < buffer.size())
 		numBytesToRead = numBytes;
 	else
-		numBytesToRead = buffer.size() - offset;
+		numBytesToRead = (unsigned long)buffer.size() -(unsigned long)offset;
 
 	numBytesRead = numBytesToRead; // about as paranoid as we can be..
 
@@ -132,7 +132,7 @@ const unsigned char *WPSStringStream::read(unsigned long numBytes, unsigned long
 	long oldOffset = offset;
 	offset += numBytesToRead;
 
-	return &buffer[oldOffset];
+	return &buffer[size_t(oldOffset)];
 }
 }
 
@@ -294,12 +294,12 @@ private:
 
 static inline unsigned long readU16( const unsigned char *ptr )
 {
-	return ptr[0]+(ptr[1]<<8);
+	return (unsigned long)(ptr[0]+(ptr[1]<<8));
 }
 
 static inline unsigned long readU32( const unsigned char *ptr )
 {
-	return ptr[0]+(ptr[1]<<8)+(ptr[2]<<16)+(ptr[3]<<24);
+	return (unsigned long)(ptr[0]+(ptr[1]<<8)+(ptr[2]<<16)+(ptr[3]<<24));
 }
 
 static const unsigned char wpsole_magic[] =
@@ -342,15 +342,15 @@ void libwps::Header::load( const unsigned char *buffer, unsigned long size )
 {
 	if (size < 512)
 		return;
-	b_shift      = ::readU16( buffer + 0x1e );
-	s_shift      = ::readU16( buffer + 0x20 );
-	num_bat      = ::readU32( buffer + 0x2c );
-	dirent_start = ::readU32( buffer + 0x30 );
-	threshold    = ::readU32( buffer + 0x38 );
-	sbat_start   = ::readU32( buffer + 0x3c );
-	num_sbat     = ::readU32( buffer + 0x40 );
-	mbat_start   = ::readU32( buffer + 0x44 );
-	num_mbat     = ::readU32( buffer + 0x48 );
+	b_shift      = (unsigned int) ::readU16( buffer + 0x1e );
+	s_shift      = (unsigned int) ::readU16( buffer + 0x20 );
+	num_bat      = (unsigned int) ::readU32( buffer + 0x2c );
+	dirent_start = (unsigned int) ::readU32( buffer + 0x30 );
+	threshold    = (unsigned int) ::readU32( buffer + 0x38 );
+	sbat_start   = (unsigned int) ::readU32( buffer + 0x3c );
+	num_sbat     = (unsigned int) ::readU32( buffer + 0x40 );
+	mbat_start   = (unsigned int) ::readU32( buffer + 0x44 );
+	num_mbat     = (unsigned int) ::readU32( buffer + 0x48 );
 
 	for( unsigned i = 0; i < 8; i++ )
 		id[i] = buffer[i];
@@ -382,7 +382,7 @@ unsigned long libwps::AllocTable::count()
 
 void libwps::AllocTable::resize( unsigned long newsize )
 {
-	unsigned oldsize = data.size();
+	unsigned oldsize = unsigned(data.size());
 	data.resize( newsize );
 	if( newsize > oldsize )
 		for( unsigned i = oldsize; i<newsize; i++ )
@@ -467,7 +467,7 @@ void libwps::DirTree::clear()
 
 unsigned libwps::DirTree::entryCount()
 {
-	return entries.size();
+	return unsigned(entries.size());
 }
 
 libwps::DirEntry *libwps::DirTree::entry( unsigned index )
@@ -499,7 +499,7 @@ libwps::DirEntry *libwps::DirTree::entry( const std::string &name )
 	}
 
 	// start from root
-	int index = 0 ;
+	unsigned index = 0 ;
 
 	// trace one by one
 	std::list<std::string>::iterator it;
@@ -561,10 +561,10 @@ void libwps::DirTree::load( unsigned char *buffer, unsigned size )
 
 		// parse name of this entry, which stored as Unicode 16-bit
 		std::string name;
-		int name_len = ::readU16( buffer + 0x40+p );
+		unsigned name_len = (unsigned) ::readU16( buffer + 0x40+p );
 		if( name_len > 64 ) name_len = 64;
-		for( int j=0; ( buffer[j+p]) && (j<name_len); j+= 2 )
-			name.append( 1, buffer[j+p] );
+		for( unsigned j=0; ( buffer[j+p]) && (j<name_len); j+= 2 )
+			name.append( 1, char(buffer[j+p]) );
 
 		// would be < 32 if first char in the name isn't printable
 		// first char isn't printable ? remove it...
@@ -577,11 +577,11 @@ void libwps::DirTree::load( unsigned char *buffer, unsigned size )
 		libwps::DirEntry e;
 		e.valid = true;
 		e.name = name;
-		e.start = ::readU32( buffer + 0x74+p );
-		e.size = ::readU32( buffer + 0x78+p );
-		e.prev = ::readU32( buffer + 0x44+p );
-		e.next = ::readU32( buffer + 0x48+p );
-		e.child = ::readU32( buffer + 0x4C+p );
+		e.start = (unsigned int) ::readU32( buffer + 0x74+p );
+		e.size = (unsigned int) ::readU32( buffer + 0x78+p );
+		e.prev = (unsigned int) ::readU32( buffer + 0x44+p );
+		e.next = (unsigned int) ::readU32( buffer + 0x48+p );
+		e.child = (unsigned int) ::readU32( buffer + 0x4C+p );
 		e.dir = ( type!=2 );
 
 		// sanity checks
@@ -733,7 +733,7 @@ void libwps::StorageIO::load()
 	{
 		std::vector<unsigned char> buffer2( bbat->blockSize );
 		unsigned k = 109;
-		unsigned sector;
+		unsigned long sector;
 		for( unsigned r = 0; r < header->num_mbat; r++ )
 		{
 			if(r == 0) // 1st meta bat location is in file header.
@@ -754,7 +754,7 @@ void libwps::StorageIO::load()
 	{
 		std::vector<unsigned char> buffer( blocks.size()*bbat->blockSize );
 		loadBigBlocks( blocks, &buffer[0], buffer.size() );
-		bbat->load( &buffer[0], buffer.size() );
+		bbat->load( &buffer[0], (unsigned int)buffer.size() );
 	}
 
 	// load small bat
@@ -764,7 +764,7 @@ void libwps::StorageIO::load()
 	{
 		std::vector<unsigned char> buffer( blocks.size()*bbat->blockSize );
 		loadBigBlocks( blocks, &buffer[0], buffer.size() );
-		sbat->load( &buffer[0], buffer.size() );
+		sbat->load( &buffer[0], (unsigned int) buffer.size() );
 	}
 
 	// load directory tree
@@ -772,8 +772,8 @@ void libwps::StorageIO::load()
 	blocks = bbat->follow( header->dirent_start );
 	std::vector<unsigned char> buffer(blocks.size()*bbat->blockSize);
 	loadBigBlocks( blocks, &buffer[0], buffer.size() );
-	dirtree->load( &buffer[0], buffer.size() );
-	unsigned sb_start = ::readU32( &buffer[0x74] );
+	dirtree->load( &buffer[0], (unsigned int) buffer.size() );
+	unsigned sb_start = (unsigned) ::readU32( &buffer[0x74] );
 
 	// fetch block chain as data for small-files
 	sb_blocks = bbat->follow( sb_start ); // small files
@@ -815,7 +815,7 @@ unsigned long libwps::StorageIO::loadBigBlocks( std::vector<unsigned long> block
 		unsigned long pos =  bbat->blockSize * ( block+1 );
 		unsigned long p = (bbat->blockSize < maxlen-bytes) ? bbat->blockSize : maxlen-bytes;
 
-		input->seek(pos, WPX_SEEK_SET);
+		input->seek(long(pos), WPX_SEEK_SET);
 		unsigned long numBytesRead = 0;
 		const unsigned char *buf = input->read(p, numBytesRead);
 		memcpy(data+bytes, buf, numBytesRead);
@@ -865,7 +865,7 @@ unsigned long libwps::StorageIO::loadSmallBlocks( std::vector<unsigned long> blo
 		loadBigBlock( sb_blocks[ bbindex ], &tmpBuf[0], bbat->blockSize );
 
 		// copy the data
-		unsigned offset = pos % bbat->blockSize;
+		unsigned offset = unsigned(pos % bbat->blockSize);
 		unsigned long p = (maxlen-bytes < bbat->blockSize-offset ) ? maxlen-bytes :  bbat->blockSize-offset;
 		p = (sbat->blockSize<p ) ? sbat->blockSize : p;
 		memcpy( data + bytes, &tmpBuf[offset], p );
@@ -1062,7 +1062,7 @@ shared_ptr<WPXInputStream> libwps::Storage::getDocumentOLEStream(const std::stri
 		WPS_DEBUG_MSG(("libwps::Storage::getDocumentOLEStream: tries to use damaged OLE: %s\n", name.c_str()));
 	}
 
-	res.reset(new libwps_internal::WPSStringStream(buf, oleLength));
+	res.reset(new libwps_internal::WPSStringStream(buf, (unsigned int) oleLength));
 	delete [] buf;
 	return res;
 }

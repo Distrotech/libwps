@@ -76,6 +76,8 @@ public:
 		case WPX_TWIP:
 			o << "(tw)";
 			break;
+		case WPX_PERCENT:
+		case WPX_GENERIC:
 		default:
 			break;
 		}
@@ -137,6 +139,8 @@ public:
 		case WPX_INCH:
 			actSc = 1440;
 			break;
+		case WPX_PERCENT:
+		case WPX_GENERIC:
 		default:
 			WPS_DEBUG_MSG(("WPSPosition::getScaleFactor %d unit must not appear\n", int(orig)));
 		}
@@ -150,6 +154,8 @@ public:
 		case WPX_INCH:
 			newSc = 1440;
 			break;
+		case WPX_PERCENT:
+		case WPX_GENERIC:
 		default:
 			WPS_DEBUG_MSG(("WPSPosition::getScaleFactor %d unit must not appear\n", int(dest)));
 		}

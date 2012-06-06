@@ -88,7 +88,7 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 
 		char fileMagic[8];
 		for (int i=0; i<7 && !document_contents->atEOS(); i++)
-			fileMagic[i] = libwps::readU8(document_contents.get());
+			fileMagic[i] = char(libwps::readU8(document_contents.get()));
 		fileMagic[7] = '\0';
 
 		// WPS8Parser only look for the main storage, so we can delete storage

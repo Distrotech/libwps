@@ -55,9 +55,9 @@ int8_t read8(WPXInputStream *input)
 
 uint16_t readU16(WPXInputStream *input)
 {
-	unsigned short p0 = (unsigned short)readU8(input);
-	unsigned short p1 = (unsigned short)readU8(input);
-	return p0|(p1<<8);
+	uint8_t p0 = readU8(input);
+	uint8_t p1 = readU8(input);
+	return (uint16_t) (p0|(p1<<8));
 }
 
 int16_t read16(WPXInputStream *input)
@@ -126,6 +126,8 @@ std::string numberingTypeToString(NumberingType type)
 		return "i";
 	case UPPERCASE_ROMAN:
 		return "I";
+	case NONE:
+	case BULLET:
 	default:
 		break;
 	}
@@ -136,7 +138,7 @@ std::string numberingTypeToString(NumberingType type)
 
 std::ostream &operator<<(std::ostream &o, WPSFont const &ft)
 {
-	int flags = ft.m_attributes;
+	uint32_t flags = ft.m_attributes;
 	if (!ft.m_name.empty())
 		o << "nam='" << ft.m_name << "',";
 	if (ft.m_size > 0) o << "sz=" << ft.m_size << ",";

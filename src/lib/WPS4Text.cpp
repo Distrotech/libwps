@@ -131,6 +131,17 @@ std::ostream &operator<<(std::ostream &o, FontName const &ft)
 	case libwps_tools_win::Font::WIN3_BALTIC:
 		o << ",type=Baltic";
 		break;
+	case libwps_tools_win::Font::WIN3_ARABIC:
+		o << ",type=Arabic";
+		break;
+	case libwps_tools_win::Font::WIN3_HEBREW:
+		o << ",type=Hebrew";
+		break;
+	case libwps_tools_win::Font::WIN3_VIETNAMESE:
+		o << ",type=Vietnamese";
+		break;
+	case libwps_tools_win::Font::WIN3_WEUROPE:
+	case libwps_tools_win::Font::DOS_850:
 	default:
 		break;
 	}
@@ -331,7 +342,7 @@ std::ostream &operator<<(std::ostream &o, DosLink const &dlink)
 		break;
 	}
 	if (dlink.m_width >= 0) o << "width?=" << dlink.m_width << ",";
-	if (dlink.m_size.x() >= 0 && dlink.m_size.y())
+	if (dlink.m_size.x() >= 0 && (dlink.m_size.y()<0 || dlink.m_size.y()>0))
 		o <<"size=" << dlink.m_size << ",";
 	if (dlink.m_name.length()) o << "name='" << dlink.m_name << "',";
 	if (!dlink.m_extra.empty()) o << ", err=" << dlink.m_extra;
@@ -536,8 +547,8 @@ std::vector<DataFOD> State::mergeSortedFODList(std::vector<DataFOD> const &lst1,
 {
 	std::vector<DataFOD> res;
 	// we regroup these two lists in one list
-	int num1 = lst1.size(), i1 = 0;
-	int num2 = lst2.size(), i2 = 0;
+	size_t num1 = lst1.size(), i1 = 0;
+	size_t num2 = lst2.size(), i2 = 0;
 
 	while (i1 < num1 || i2 < num2)
 	{
@@ -634,7 +645,7 @@ WPSEntry WPS4Text::getAllTextEntry() const
 ////////////////////////////////////////////////////////////
 void WPS4Text::flushExtra()
 {
-	int numExtra = m_state->m_otherZones.size();
+	size_t numExtra = m_state->m_otherZones.size();
 	if (numExtra == 0 || m_listener.get() == 0L) return;
 
 	setProperty(WPS4TextInternal::Font::getDefault(version()));
@@ -644,7 +655,7 @@ void WPS4Text::flushExtra()
 	WPXString message = "--------- extra text zone -------- ";
 	m_listener->insertUnicodeString(message);
 #endif
-	for (int i = 0; i < numExtra; i++)
+	for (size_t i = 0; i < numExtra; i++)
 		readText(m_state->m_otherZones[i]);
 }
 
@@ -680,7 +691,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			{
 				int w = int(72.0*m_mainParser.pageWidth())/numCols;
 				std::vector<int> width;
-				width.resize(numCols, w);
+				width.resize(size_t(numCols), w);
 				m_listener->openSection(width,WPX_POINT);
 			}
 		}
@@ -710,13 +721,13 @@ bool WPS4Text::readText(WPSEntry const &zone)
 
 	WPS4TextInternal::Font actFont;
 	if (prevFId != -1)
-		actFont = m_state->m_fontList[prevFId];
+		actFont = m_state->m_fontList[size_t(prevFId)];
 	else
 		actFont = WPS4TextInternal::Font::getDefault(version());
 	setProperty(actFont);
 
 	if (prevPId != -1)
-		setProperty(m_state->m_paragraphList[prevPId]);
+		setProperty(m_state->m_paragraphList[size_t(prevPId)]);
 	else
 		setProperty(WPS4TextInternal::Paragraph());
 
@@ -729,8 +740,8 @@ bool WPS4Text::readText(WPSEntry const &zone)
 	int actPage = 1;
 	for ( ; simpleString || FODs_iter!= m_state->m_FODList.end(); FODs_iter++)
 	{
-		uint32_t actPos;
-		uint32_t lastPos;
+		long actPos;
+		long lastPos;
 
 		WPS4TextInternal::DataFOD fod;
 		WPS4TextInternal::DataFOD::Type type = WPS4TextInternal::DataFOD::ATTR_UNKN;
@@ -760,7 +771,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			if (type == WPS4TextInternal::DataFOD::ATTR_TEXT)
 			{
 				if (fId >= 0)
-					actFont = m_state->m_fontList[fId];
+					actFont = m_state->m_fontList[size_t(fId)];
 				else
 					actFont = WPS4TextInternal::Font::getDefault(version());
 				setProperty(actFont);
@@ -768,12 +779,12 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			else if (type == WPS4TextInternal::DataFOD::ATTR_PARAG)
 			{
 				if (fId >= 0)
-					setProperty(m_state->m_paragraphList[fId]);
+					setProperty(m_state->m_paragraphList[size_t(fId)]);
 				else setProperty(WPS4TextInternal::Paragraph());
 			}
 			else if (type == WPS4TextInternal::DataFOD::ATTR_PLC)
 			{
-				if (fId >= 0 && m_state->m_plcList[fId].m_type == WPS4TextInternal::BKMK)
+				if (fId >= 0 && m_state->m_plcList[size_t(fId)].m_type == WPS4TextInternal::BKMK)
 				{
 					WPSEntry bkmk;
 					if (m_state->m_bookmarkMap.find(actPos) == m_state->m_bookmarkMap.end())
@@ -789,11 +800,11 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			}
 		}
 		m_input->seek(actPos, WPX_SEEK_SET);
-		std::string chaine;
-		int len = lastPos-actPos;
-		for (uint32_t i = len; i>0; i--)
+		std::string chaine("");
+		long len = lastPos-actPos;
+		for (long i = len; i>0; i--)
 		{
-			uint32_t pos = m_input->tell();
+			long pos = m_input->tell();
 			uint8_t readVal = libwps::readU8(m_input);
 			if (0x00 == readVal)
 			{
@@ -806,7 +817,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				continue;
 			}
 
-			chaine += readVal;
+			chaine += char(readVal);
 			switch (readVal)
 			{
 			case 0x01: // chart ?
@@ -819,10 +830,10 @@ bool WPS4Text::readText(WPSEntry const &zone)
 					break;
 				}
 				int id = actFont.m_dlinkId >= 0 ? actFont.m_dlinkId : 0;
-				WPSEntry ent = m_state->m_dosLinkList[id].m_pos;
+				WPSEntry ent = m_state->m_dosLinkList[size_t(id)].m_pos;
 				ent.setType("TEXT");
 				ent.setId(WPS4TextInternal::Z_DLink);
-				WPSPosition pos_(Vec2f(),Vec2f(3.0,0.2));
+				WPSPosition pos_(Vec2f(),Vec2f(float(3.0),float(0.2)));
 				pos_.setRelativePosition(WPSPosition::Paragraph, WPSPosition::XCenter);
 				pos_.m_wrapping = WPSPosition::WNone;
 				WPXPropertyList extras;
@@ -846,7 +857,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			{
 				if (m_state->m_objectMap.find(actPos) == m_state->m_objectMap.end())
 				{
-					WPS_DEBUG_MSG(("WPS4Text::readText: can not find object for position : %X\n", actPos));
+					WPS_DEBUG_MSG(("WPS4Text::readText: can not find object for position : %lX\n", actPos));
 				}
 				else
 				{
@@ -861,7 +872,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			{
 				if (m_state->m_dateTimeMap.find(actPos) == m_state->m_dateTimeMap.end())
 				{
-					WPS_DEBUG_MSG(("WPS4Text::readText: can not find date/time for position : %X\n", actPos));
+					WPS_DEBUG_MSG(("WPS4Text::readText: can not find date/time for position : %lX\n", actPos));
 				}
 				else
 				{
@@ -871,7 +882,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 						m_listener->insertDateTimeField(format.c_str());
 					else
 					{
-						WPS_DEBUG_MSG(("WPS4Text::readText: unknown date/time format for position : %X\n", actPos));
+						WPS_DEBUG_MSG(("WPS4Text::readText: unknown date/time format for position : %lX\n", actPos));
 					}
 				}
 				break;
@@ -963,7 +974,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 					chaine += '#';
 					break;
 				}
-				m_listener->insertUnicode(libwps_tools_win::Font::unicode(readVal, actFont.m_type));
+				m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(readVal, actFont.m_type));
 				break;
 			}
 		}
@@ -977,24 +988,25 @@ bool WPS4Text::readText(WPSEntry const &zone)
 		case WPS4TextInternal::DataFOD::ATTR_TEXT:
 #if DEBUG_FP
 			f << "[";
-			if (fId >= 0) f << "C" << fId << ":" << m_state->m_fontList[fId] << "]";
+			if (fId >= 0) f << "C" << fId << ":" << m_state->m_fontList[size_t(fId)] << "]";
 			else f << "_]";
 #endif
 			break;
 		case WPS4TextInternal::DataFOD::ATTR_PARAG:
 #if DEBUG_PP
 			f << "[";
-			if (fId >= 0) f << "P" << fId << ":" << m_state->m_paragraphList[fId] << "]";
+			if (fId >= 0) f << "P" << fId << ":" << m_state->m_paragraphList[size_t(fId)] << "]";
 			else f << "_]";
 #endif
 			break;
 		case WPS4TextInternal::DataFOD::ATTR_PLC:
 #if DEBUG_PLC_POS
 			f << "[PLC";
-			if (fId>= 0) f << m_state->m_plcList[fId] << "]";
+			if (fId>= 0) f << m_state->m_plcList[size_t(fId)] << "]";
 			else f << "_]";
 #endif
 			break;
+		case WPS4TextInternal::DataFOD::ATTR_UNKN:
 		default:
 #if DEBUG_PLC_POS
 			f << "[WPS4TextInternal::DataFOD(###Unknown)]";
@@ -1081,7 +1093,7 @@ bool WPS4Text::readEntries()
 		ascii().addPos(zone.begin());
 		std::string name = "ZZ";
 		name+= zone.type();
-		name+='0'+i;
+		name+=char('0'+i);
 		ascii().addNote(name.c_str());
 		ascii().addPos(zone.end());
 		ascii().addNote("_");
@@ -1153,9 +1165,9 @@ bool WPS4Text::readStructures()
 	}
 
 	/* read character FODs (FOrmatting Descriptors) */
-	int numFDP = m_state->m_FDPCs.size();
+	size_t numFDP = m_state->m_FDPCs.size();
 	std::vector<WPS4TextInternal::DataFOD> fdps;
-	for (int i = 0; i < numFDP; i++)
+	for (size_t i = 0; i < numFDP; i++)
 		readFDP(m_state->m_FDPCs[i], fdps, &WPS4Text::readFont);
 	m_state->m_FODList = m_state->mergeSortedFODList(fdps, m_state->m_FODList);
 
@@ -1163,7 +1175,7 @@ bool WPS4Text::readStructures()
 	/* read paragraphs FODs (FOrmatting Descriptors) */
 	fdps.resize(0);
 	numFDP = m_state->m_FDPPs.size();
-	for (int i = 0; i < numFDP; i++)
+	for (size_t i = 0; i < numFDP; i++)
 		readFDP(m_state->m_FDPPs[i], fdps, &WPS4Text::readParagraph);
 	m_state->m_FODList = m_state->mergeSortedFODList(fdps, m_state->m_FODList);
 
@@ -1208,7 +1220,7 @@ bool WPS4Text::readStructures()
 	// finally, we must remove the footnote of textposition...
 	long bot = m_state->m_main.begin();
 	long endPos = m_state->m_main.end();
-	int numFootNotes = m_state->m_footnoteList.size(), actNote = 0;
+	size_t numFootNotes = m_state->m_footnoteList.size(), actNote = 0;
 	bool textPosUpdated = false;
 	while (bot < endPos)
 	{
@@ -1269,13 +1281,13 @@ bool WPS4Text::findFDPStructures(int which)
 
 	if (!readPLC(pos->second, textPtrs, listValues)) return false;
 
-	int numV = listValues.size();
-	if (int(textPtrs.size()) != numV+1) return false;
+	size_t numV = listValues.size();
+	if (textPtrs.size() != numV+1) return false;
 
 	WPSEntry zone;
 	zone.setType(sIndexName);
 
-	for (int i = 0; i < numV; i++)
+	for (size_t i = 0; i < numV; i++)
 	{
 		long bPos = listValues[i];
 		if (bPos <= 0) return false;
@@ -1301,7 +1313,7 @@ bool WPS4Text::findFDPStructuresByHand(int which)
 	{
 		// hack: each fdp block is aligned with 0x80,
 		//       and appears consecutively just after the text
-		uint32_t pnChar = (m_state->m_text.end()+127)/128;
+		uint32_t pnChar = uint32_t((m_state->m_text.end()+127)>>7);
 		/* sanity check */
 		if (0 == pnChar)
 		{
@@ -1312,7 +1324,7 @@ bool WPS4Text::findFDPStructuresByHand(int which)
 	}
 	else
 	{
-		int nFDPC = m_state->m_FDPCs.size();
+		size_t nFDPC = m_state->m_FDPCs.size();
 		if (!nFDPC)
 		{
 			WPS_DEBUG_MSG(("WPS4Text::findFDPStructuresByHand: can not find last fdpc pos\n"));
@@ -1381,7 +1393,7 @@ bool WPS4Text::readFDP(WPSEntry const &entry,
 	}
 
 	entry.setParsed();
-	uint32_t page_offset = entry.begin();
+	uint32_t page_offset = uint32_t(entry.begin());
 	long length = entry.length();
 	long endPage = entry.end();
 
@@ -1404,7 +1416,7 @@ bool WPS4Text::readFDP(WPSEntry const &entry,
 	}
 	else
 		m_input->seek(page_offset, WPX_SEEK_SET);
-	uint16_t cfod = deplSize == 1 ? libwps::readU8(m_input) : libwps::readU16(m_input);
+	uint16_t cfod = deplSize == 1 ? (uint16_t) libwps::readU8(m_input) : libwps::readU16(m_input);
 
 	f << "Entries(" << entry.type() << "): N="<<(int) cfod;
 	if (smallFDP) m_input->seek(page_offset, WPX_SEEK_SET);
@@ -1416,7 +1428,7 @@ bool WPS4Text::readFDP(WPSEntry const &entry,
 		return false;
 	}
 
-	int firstFod = fods.size();
+	int firstFod = int(fods.size());
 	long lastLimit = firstFod ? fods.back().m_pos : 0;
 
 	long lastReadPos = 0L;
@@ -1468,10 +1480,10 @@ bool WPS4Text::readFDP(WPSEntry const &entry,
 	f << ", Tpos:defP=(" << std::hex;
 	for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); fods_iter++)
 	{
-		int depl = deplSize == 1 ? libwps::readU8(m_input) : libwps::readU16(m_input);
+		unsigned depl = deplSize == 1 ? libwps::readU8(m_input) : libwps::readU16(m_input);
 		/* check size of bfprop  */
-		if ((depl < headerSize+(4+deplSize)*cfod && depl > 0) ||
-		        long(page_offset)+depl  > endPage)
+		if ((depl < unsigned(headerSize+(4+deplSize)*cfod) && depl > 0) ||
+		        long(page_offset+depl)  > endPage)
 		{
 			WPS_DEBUG_MSG(("WPS4Text::readFDP: pos of bfprop is bad "
 			               "%i (0x%X)\n", depl, depl));
@@ -1614,7 +1626,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 		f << "unk=" << (int)unknown_byte << ", ";
 
 		std::string s;
-		int nChar = libwps::readU8(m_input);
+		uint8_t nChar = libwps::readU8(m_input);
 		for (uint8_t i = nChar; i>0; i--)
 		{
 			if (m_input->atEOS())
@@ -1625,7 +1637,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 			}
 			unsigned char val = libwps::readU8(m_input);
 			// sanity check (because sometimes contains char > 0x80 .. )
-			if (val >= ' ' && val <= 'z') s.append(1,val);
+			if (val >= ' ' && val <= 'z') s.append(1,char(val));
 			else
 			{
 				static bool first = true;
@@ -1676,7 +1688,7 @@ bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 	if (m_input->tell() < endPos) fl[0] = libwps::readU8(m_input);
 
 	/* set difference from default properties */
-	int attributes = 0;
+	uint32_t attributes = 0;
 	if (fl[0] & 0x01) attributes |= WPS_BOLD_BIT;
 	if (fl[0] & 0x02) attributes |= WPS_ITALICS_BIT;
 	if (fl[0] & 0x04) attributes |= WPS_STRIKEOUT_BIT;
@@ -1793,7 +1805,7 @@ bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 	font.m_attributes = attributes;
 	font.m_extra = f.str();
 
-	id = m_state->m_fontList.size();
+	id = int(m_state->m_fontList.size());
 	m_state->m_fontList.push_back(font);
 	f.str("");
 	f << font;
@@ -1818,9 +1830,9 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 
 	m_input->seek(entry.begin(), WPX_SEEK_SET);
 	libwps::DebugStream f;
-	int numElt = length/44;
+	long numElt = length/44;
 	long val;
-	for (int n = 0; n < numElt; n++)
+	for (long n = 0; n < numElt; n++)
 	{
 		WPS4TextInternal::DosLink link;
 		long pos = m_input->tell();
@@ -1831,7 +1843,7 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 			val = libwps::readU16(m_input);
 			if (val) f << "unkn" << i << "=" << std::hex << val << std::dec << ",";
 		}
-		link.m_width = libwps::readU16(m_input)/1440.;
+		link.m_width = float(libwps::readU16(m_input)/1440.);
 		for (int i = 2; i < 4; i++) // always f0, f0
 		{
 			val = libwps::readU16(m_input);
@@ -1847,7 +1859,7 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 		{
 			long dim[2];
 			for (int i = 0; i < 2; i++) dim[i] = libwps::readU16(m_input);
-			link.m_size = Vec2f(dim[0]/1440., dim[1]/1440.);
+			link.m_size = Vec2f(float(dim[0])/1440.f, float(dim[1])/1440.f);
 			val = libwps::readU16(m_input); // always 0
 			if (val) f << "g0=" << val << ",";
 			val = libwps::readU16(m_input); // always 4
@@ -1860,7 +1872,7 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 			link.m_pos.setBegin(m_input->tell());
 			while (!m_input->atEOS() && long(m_input->tell()) < endPos)
 			{
-				char c = libwps::readU8(m_input);
+				char c = char(libwps::readU8(m_input));
 				if (!c)
 				{
 					m_input->seek(-1, WPX_SEEK_CUR);
@@ -2183,16 +2195,16 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			}
 			int flag = libwps::readU8(m_input);
 			if (flag) f << "#tabsFl=" << flag << ",";
-			int nItem = libwps::readU8(m_input);
-			if (nVal != 2 + 3*nItem)
+			size_t nItem = libwps::readU8(m_input);
+			if ((unsigned long)nVal != 2 + 3*nItem)
 			{
 				ok = false;
 				break;
 			}
 			pp.m_tabs.resize(nItem);
-			for (int i = 0; i < nItem; i++)
+			for (size_t i = 0; i < nItem; i++)
 				pp.m_tabs[i].m_position = libwps::read16(m_input)/1440.;
-			for (int i = 0; i < nItem; i++)
+			for (size_t i = 0; i < nItem; i++)
 			{
 				enum WPSTabStop::Alignment align = WPSTabStop::LEFT;
 				int val = libwps::readU8(m_input);
@@ -2316,7 +2328,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 	}
 	pp.m_extra = f.str();
 
-	id = m_state->m_paragraphList.size();
+	id = int(m_state->m_paragraphList.size());
 	m_state->m_paragraphList.push_back(pp);
 
 	f.str("");
@@ -2362,7 +2374,7 @@ bool WPS4Text::readFootNotes(WPSEntry const &ftnD, WPSEntry const &ftnP)
 	m_state->m_footnoteList.resize(0);
 
 	std::vector<int> corresp;
-	for (int i = 0; i < numFootNotes; i++)
+	for (size_t i = 0; i < size_t(numFootNotes); i++)
 	{
 		WPS4TextInternal::Note fZone;
 		fZone.setBegin(footNoteDef[i]);
@@ -2370,10 +2382,10 @@ bool WPS4Text::readFootNotes(WPSEntry const &ftnD, WPSEntry const &ftnP)
 		fZone.setType("TEXT");
 		fZone.setId(WPS4TextInternal::Z_Note);
 		m_state->m_footnoteList.push_back(fZone);
-		corresp.push_back(i);
+		corresp.push_back(int(i));
 
 		// sort the footnote
-		for (int j = i; j > 0; j++)
+		for (size_t j = i; j > 0; j--)
 		{
 			if (m_state->m_footnoteList[j].begin() >=
 			        m_state->m_footnoteList[j-1].end()) break;
@@ -2399,11 +2411,11 @@ bool WPS4Text::readFootNotes(WPSEntry const &ftnD, WPSEntry const &ftnP)
 		}
 	}
 	// ok, we can create the map, ...
-	for (int i = 0; i < numFootNotes; i++)
+	for (size_t i = 0; i < size_t(numFootNotes); i++)
 	{
-		int id = corresp[i];
+		size_t id = size_t(corresp[i]);
 		WPS4TextInternal::Note &z = m_state->m_footnoteList[id];
-		if (id < int(noteTypes.size()))
+		if (id < noteTypes.size())
 		{
 			z.m_label = noteTypes[id].m_label;
 			z.m_error = noteTypes[id].m_error;
@@ -2447,7 +2459,7 @@ bool WPS4Text::footNotesDataParser (long /*bot*/, long /*eot*/, int id,
 		{
 			unsigned char c = libwps::readU8(m_input);
 			if (c >= 0x20)
-				WPSContentListener::appendUnicode(libwps_tools_win::Font::unicode(c, actType),label);
+				WPSContentListener::appendUnicode(uint32_t(libwps_tools_win::Font::unicode(c, actType)),label);
 			else
 				f << "#(" << std::hex << int(c) << std::dec << ")";
 		}
@@ -2455,8 +2467,8 @@ bool WPS4Text::footNotesDataParser (long /*bot*/, long /*eot*/, int id,
 	}
 	note.m_error=f.str();
 	if (id >= int(m_state->m_footnoteList.size()))
-		m_state->m_footnoteList.resize(id+1);
-	m_state->m_footnoteList[id]=note;
+		m_state->m_footnoteList.resize(size_t(id+1));
+	m_state->m_footnoteList[size_t(id)]=note;
 	f.str("");
 	f << note;
 	mess = f.str();
@@ -2487,7 +2499,7 @@ bool WPS4Text::bkmkDataParser(long bot, long /*eot*/, int /*id*/,
 
 	for (int i = 0; i < 16; i++)
 	{
-		char c = libwps::readU8(m_input);
+		char c = char(libwps::readU8(m_input));
 		if (c == '\0') break;
 		mess += c;
 	}
@@ -2529,9 +2541,9 @@ bool WPS4Text::objectDataParser (long bot, long /*eot*/, int id,
 		int v =libwps::read16(m_input);
 		if (v) f << "unkn1:" << i << "=" << v << ",";
 	}
-	double dim[4];
+	float dim[4];
 	for (int i = 0; i < 4; i++)
-		dim[i] =libwps::read16(m_input)/1440.;
+		dim[i] =float(libwps::read16(m_input)/1440.);
 
 	// CHECKME: the next two sizes are often simillar,
 	//         maybe the first one is the original size and the second
@@ -2708,7 +2720,7 @@ bool WPS4Text::readPLC
 {
 	textPtrs.resize(0);
 	listValues.resize(0);
-	int size = zone.length();
+	long size = zone.length();
 	if (zone.begin() <= 0 || size < 8) return false;
 	WPS4PLCInternal::PLC plcType = m_state->m_knownPLC.get(zone.type());
 
@@ -2718,9 +2730,9 @@ bool WPS4Text::readPLC
 
 	long lastPos = 0;
 	std::vector<WPS4TextInternal::DataFOD> fods;
-	int numElt = 0;
+	unsigned numElt = 0;
 	f << "pos=(";
-	while (numElt*4+4 <= size)
+	while (numElt*4+4 <= unsigned(size))
 	{
 		long newPos = libwps::readU32(m_input);
 		if (plcType.m_pos == WPS4PLCInternal::PLC::P_UNKNOWN)
@@ -2777,18 +2789,18 @@ bool WPS4Text::readPLC
 
 	if (numElt < 1) return false;
 
-	int dataSize = (size-4*numElt-4)/numElt;
+	long dataSize = (size-4*numElt-4)/numElt;
 	if (dataSize > 100) return false;
-	if (size!= numElt*(4+dataSize)+4) return false;
+	if (unsigned(size)!= numElt*(4+dataSize)+4) return false;
 
 	ascii().addNote(f.str().c_str());
 
 	if (!dataSize)
 	{
-		for (int i = 0; i < numElt; i++)
+		for (size_t i = 0; i < numElt; i++)
 		{
 			listValues.push_back(-1);
-			fods[i].m_id = m_state->m_plcList.size();
+			fods[i].m_id = int(m_state->m_plcList.size());
 		}
 		WPS4TextInternal::DataPLC plc;
 		plc.m_name = zone.type();
@@ -2805,7 +2817,7 @@ bool WPS4Text::readPLC
 	if ((dataSize == 3 || dataSize > 4) && !pars)
 		pars = &WPS4Text::defDataParser;
 
-	for (int i = 0; i < numElt; i++)
+	for (size_t i = 0; i < numElt; i++)
 	{
 		WPS4TextInternal::DataPLC plc;
 
@@ -2832,7 +2844,7 @@ bool WPS4Text::readPLC
 		else
 		{
 			std::string mess;
-			if (!(this->*pars)(textPtrs[i], textPtrs[i+1], i, pos+dataSize-1, mess))
+			if (!(this->*pars)(textPtrs[i], textPtrs[i+1], int(i), pos+dataSize-1, mess))
 			{
 				ok = false;
 				break;
@@ -2843,7 +2855,7 @@ bool WPS4Text::readPLC
 
 		listValues.push_back(plc.m_value);
 
-		fods[i].m_id = m_state->m_plcList.size();
+		fods[i].m_id = int(m_state->m_plcList.size());
 		fods[i].m_defPos = pos;
 
 		plc.m_name = zone.type();

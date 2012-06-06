@@ -42,7 +42,7 @@ namespace libwps_tools_win
 
 Font::Type Font::getWin3Type(std::string &fName)
 {
-	int len = fName.length();
+	size_t len = fName.length();
 	if (len && fName[len-1] != ')')
 	{
 		if (fName == "Baltica" || fName == "Pragmatica")
@@ -308,7 +308,7 @@ unsigned long Font::unicodeFromCP1255(unsigned char c)
 		0x05E8, 0x05E9, 0x05EA, UNDEF /* 0xfb */, UNDEF /* 0xfc */, 0x200E, 0x200F, UNDEF /* 0xff */,
 	};
 	if (c < 0x80) return c;
-	return cp1255[c - 0x80];
+	return (unsigned long)cp1255[c - 0x80];
 }
 
 /**
@@ -337,7 +337,7 @@ unsigned long Font::unicodeFromCP1256(unsigned char c)
 		0x0651, 0x00F9, 0x0652, 0x00FB, 0x00FC, 0x200E, 0x200F, 0x06D2,
 	};
 	if (c < 0x80) return c;
-	return cp1256[c - 0x80];
+	return (unsigned long) cp1256[c - 0x80];
 }
 
 
@@ -492,7 +492,8 @@ std::string Language::name(long id)
 		return "english(Philippines)";
 	case 0x480A:
 		return "spanish(Honduras)";
-
+	default:
+		break;
 	}
 
 	std::stringstream f;

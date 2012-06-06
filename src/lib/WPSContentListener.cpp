@@ -158,7 +158,7 @@ void WPSContentListener::insertCharacter(uint8_t character)
 	}
 	_flushDeferredTabs ();
 	if (!m_ps->m_isSpanOpened) _openSpan();
-	m_ps->m_textBuffer.append(character);
+	m_ps->m_textBuffer.append(char(character));
 }
 
 void WPSContentListener::insertUnicode(uint32_t val)
@@ -217,11 +217,11 @@ void WPSContentListener::appendUnicode(uint32_t val, WPXString &buffer)
 	int i;
 	for (i = len - 1; i > 0; --i)
 	{
-		outbuf[i] = (val & 0x3f) | 0x80;
+		outbuf[i] = uint8_t((val & 0x3f) | 0x80);
 		val >>= 6;
 	}
-	outbuf[0] = val | first;
-	for (i = 0; i < len; i++) buffer.append(outbuf[i]);
+	outbuf[0] = uint8_t(val | first);
+	for (i = 0; i < len; i++) buffer.append(char(outbuf[i]));
 }
 
 void WPSContentListener::insertEOL(bool soft)
@@ -276,7 +276,8 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 			_closeParagraph();
 		m_ps->m_isParagraphPageBreak = true;
 		break;
-		// TODO: (.. line break?)
+	default:
+		break;
 	}
 
 	if (m_ps->m_inSubDocument)
@@ -326,7 +327,7 @@ void WPSContentListener::setFont(const WPSFont &font)
 {
 	setFontAttributes(font.m_attributes);
 	if (font.m_size > 0)
-		setFontSize(font.m_size);
+		setFontSize((uint16_t) font.m_size);
 	if (!font.m_name.empty())
 		setTextFont(font.m_name.c_str());
 	setTextColor(font.m_color);
@@ -354,10 +355,11 @@ void WPSContentListener::setTextFont(const WPXString &fontName)
 void WPSContentListener::setFontSize(const uint16_t fontSize)
 {
 	float fSize = fontSize;
-	if (m_ps->m_fontSize==fSize) return;
-
-	_closeSpan();
-	m_ps->m_fontSize=fSize;
+	if (m_ps->m_fontSize<fSize || m_ps->m_fontSize>fSize)
+	{
+		_closeSpan();
+		m_ps->m_fontSize=fSize;
+	}
 }
 
 void WPSContentListener::setTextColor(const uint32_t rgb)
@@ -450,7 +452,7 @@ void WPSContentListener::setParagraphBorders(int which, libwps::BorderStyle styl
 ///////////////////
 void WPSContentListener::setCurrentListLevel(int level)
 {
-	m_ps->m_currentListLevel = level;
+	m_ps->m_currentListLevel = (uint8_t)level;
 	// to be compatible with WPSContentListerner
 	if (level)
 		m_ps->m_listBeginPosition =
@@ -506,6 +508,7 @@ void WPSContentListener::insertField(WPSContentListener::FieldType type)
 	case Time:
 		insertDateTimeField("%I:%M:%S %p");
 		break;
+	case Link:
 	default:
 		WPS_DEBUG_MSG(("WPSContentListener::insertField: must not be called with type=%d\n", int(type)));
 		break;
@@ -545,7 +548,7 @@ bool WPSContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
 		return false;
 	}
 
-	int numCols = colsWidth.size();
+	size_t numCols = colsWidth.size();
 	if (numCols <= 1)
 	{
 		m_ps->m_textColumns.resize(0);
@@ -562,16 +565,18 @@ bool WPSContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
 			break;
 		case WPX_INCH:
 			break;
+		case WPX_PERCENT:
+		case WPX_GENERIC:
 		default:
 			WPS_DEBUG_MSG(("WPSContentListener::openSection: unknown unit\n"));
 			return false;
 		}
 		m_ps->m_textColumns.resize(numCols);
-		m_ps->m_numColumns=numCols;
-		for (int col = 0; col < numCols; col++)
+		m_ps->m_numColumns=int(numCols);
+		for (size_t col = 0; col < numCols; col++)
 		{
 			WPSColumnDefinition column;
-			column.m_width = factor*colsWidth[col];
+			column.m_width = factor*float(colsWidth[col]);
 			m_ps->m_textColumns[col] = column;
 		}
 	}
@@ -670,7 +675,7 @@ void WPSContentListener::_openPageSpan()
 	std::vector<WPSPageSpan>::iterator it = m_ds->m_pageList.begin();
 	while(actPage < m_ps->m_currentPage)
 	{
-		actPage+=it->getPageSpan();
+		actPage+=(unsigned) it->getPageSpan();
 		it++;
 		if (it == m_ds->m_pageList.end())
 		{
@@ -726,9 +731,9 @@ void WPSContentListener::_updatePageSpanDependent(bool set)
 {
 	double deltaRight = set ? -m_ps->m_pageMarginRight : m_ps->m_pageMarginRight;
 	double deltaLeft = set ? -m_ps->m_pageMarginLeft : m_ps->m_pageMarginLeft;
-	if (m_ps->m_sectionMarginLeft)
+	if (m_ps->m_sectionMarginLeft < 0 || m_ps->m_sectionMarginLeft > 0)
 		m_ps->m_sectionMarginLeft += deltaLeft;
-	if (m_ps->m_sectionMarginRight)
+	if (m_ps->m_sectionMarginRight < 0 || m_ps->m_sectionMarginRight > 0)
 		m_ps->m_sectionMarginRight += deltaRight;
 	m_ps->m_listReferencePosition += deltaLeft;
 	m_ps->m_listBeginPosition += deltaLeft;
@@ -764,13 +769,13 @@ void WPSContentListener::_openSection()
 	propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
 	if (m_ps->m_numColumns > 1)
 		propList.insert("text:dont-balance-text-columns", false);
-	if (m_ps->m_sectionMarginTop)
+	if (m_ps->m_sectionMarginTop < 0 || m_ps->m_sectionMarginTop > 0)
 		propList.insert("libwpd:margin-top", m_ps->m_sectionMarginTop);
-	if (m_ps->m_sectionMarginBottom)
+	if (m_ps->m_sectionMarginBottom < 0 || m_ps->m_sectionMarginBottom > 0)
 		propList.insert("libwpd:margin-bottom", m_ps->m_sectionMarginBottom);
 
 	WPXPropertyListVector columns;
-	for (int i = 0; i < int(m_ps->m_textColumns.size()); i++)
+	for (size_t i = 0; i < m_ps->m_textColumns.size(); i++)
 	{
 		WPSColumnDefinition const &col = m_ps->m_textColumns[i];
 		WPXPropertyList column;
@@ -902,6 +907,8 @@ void WPSContentListener::_appendJustification(WPXPropertyList &propList, libwps:
 		propList.insert("fo:text-align", "justify");
 		propList.insert("fo:text-align-last", "justify");
 		break;
+	default:
+		break;
 	}
 }
 
@@ -938,6 +945,9 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 			case libwps::BorderDouble:
 				stream << " double";
 				break;
+			default:
+				WPS_DEBUG_MSG(("WPSContentListener::_appendParagraphProperties: unexpected value\n"));
+				break;
 			}
 			stream << " #" << std::hex << std::setfill('0') << std::setw(6)
 			       << (m_ps->m_paragraphBordersColor&0xFFFFFF);
@@ -972,7 +982,7 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 			if (it == m_ds->m_pageList.end())
 				break;
 
-			actPage+=it->getPageSpan();
+			actPage+=unsigned(it->getPageSpan());
 			it++;
 		}
 		WPSPageSpan const &currentPage = *it;
@@ -987,7 +997,7 @@ void WPSContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 {
 	double decalX = m_ps->m_isTabPositionRelative ? -m_ps->m_leftMarginByTabs :
 	                -m_ps->m_paragraphMarginLeft-m_ps->m_sectionMarginLeft-m_ps->m_pageMarginLeft;
-	for (int i=0; i<(int)m_ps->m_tabStops.size(); i++)
+	for (size_t i=0; i< m_ps->m_tabStops.size(); i++)
 		m_ps->m_tabStops[i].addTo(tabStops, decalX);
 }
 
@@ -1049,8 +1059,8 @@ void WPSContentListener::_changeList()
 
 	// FIXME: even if nobody really care, if we close an ordered or an unordered
 	//      elements, we must keep the previous to close this part...
-	int actualListLevel = m_ps->m_listOrderedLevels.size();
-	for (int i=actualListLevel; i > m_ps->m_currentListLevel; i--)
+	size_t actualListLevel = m_ps->m_listOrderedLevels.size();
+	for (size_t i=actualListLevel; i > m_ps->m_currentListLevel; i--)
 	{
 		if (m_ps->m_listOrderedLevels[i-1])
 			m_documentInterface->closeOrderedListLevel();
@@ -1098,9 +1108,9 @@ void WPSContentListener::_changeList()
 	if (actualListLevel == m_ps->m_currentListLevel) return;
 
 	m_ps->m_listOrderedLevels.resize(m_ps->m_currentListLevel, false);
-	for (int i=actualListLevel+1; i<= m_ps->m_currentListLevel; i++)
+	for (size_t i=actualListLevel+1; i<= m_ps->m_currentListLevel; i++)
 	{
-		if (m_ps->m_list->isNumeric(i))
+		if (m_ps->m_list->isNumeric(int(i)))
 		{
 			m_ps->m_listOrderedLevels[i-1] = true;
 			m_documentInterface->openOrderedListLevel(propList2);
@@ -1229,8 +1239,8 @@ void WPSContentListener::_flushDeferredTabs()
 
 	// CHECKME: the tab are not underline even if the underline bit is set
 	uint32_t oldTextAttributes = m_ps->m_textAttributeBits;
-	uint32_t newAttributes = oldTextAttributes & (~WPS_UNDERLINE_BIT) &
-	                         (~WPS_OVERLINE_BIT);
+	uint32_t newAttributes = oldTextAttributes & uint32_t(~WPS_UNDERLINE_BIT) &
+	                         uint32_t(~WPS_OVERLINE_BIT);
 	if (oldTextAttributes != newAttributes) setFontAttributes(newAttributes);
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	for (; m_ps->m_numDeferredTabs > 0; m_ps->m_numDeferredTabs--)
@@ -1305,7 +1315,7 @@ void WPSContentListener::insertLabelNote(const NoteType noteType, WPXString cons
 		m_ps->m_currentListLevel = 0;
 		_changeList(); // flush the list exterior
 		handleSubDocument(subDocument, libwps::DOC_NOTE);
-		m_ps->m_currentListLevel = prevListLevel;
+		m_ps->m_currentListLevel = (uint8_t)prevListLevel;
 	}
 	else
 	{
@@ -1491,42 +1501,43 @@ void WPSContentListener::_handleFrameParameters
 		switch ( pos.m_xPos)
 		{
 		case WPSPosition::XRight:
-			if (origin[0] == 0.0)
+			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
-				propList.insert("style:horizontal-pos", "right");
-				break;
+				propList.insert( "style:horizontal-pos", "from-left");
+				propList.insert( "svg:x", double(origin[0] - pos.size()[0] + w), unit);
 			}
-			propList.insert( "style:horizontal-pos", "from-left");
-			propList.insert( "svg:x", double(origin[0] - pos.size()[0] + w), unit);
+			else
+				propList.insert("style:horizontal-pos", "right");
 			break;
 		case WPSPosition::XCenter:
-			if (origin[0] == 0.0)
+			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
-				propList.insert("style:horizontal-pos", "center");
-				break;
+				propList.insert( "style:horizontal-pos", "from-left");
+				propList.insert( "svg:x", double(origin[0] - pos.size()[0]/2.0 + w/2.0), unit);
 			}
-			propList.insert( "style:horizontal-pos", "from-left");
-			propList.insert( "svg:x", double(origin[0] - pos.size()[0]/2.0 + w/2.0), unit);
+			else
+				propList.insert("style:horizontal-pos", "center");
 			break;
 		case WPSPosition::XLeft:
+		case WPSPosition::XFull:
 		default:
-			if (origin[0] == 0.0)
-				propList.insert("style:horizontal-pos", "left");
-			else
+			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
 				propList.insert( "style:horizontal-pos", "from-left");
 				propList.insert( "svg:x", double(origin[0]), unit);
 			}
+			else
+				propList.insert("style:horizontal-pos", "left");
 			break;
 		}
 
-		if (origin[1] == 0.0)
-			propList.insert( "style:vertical-pos", "top" );
-		else
+		if (origin[1] < 0.0 || origin[1] > 0.0)
 		{
 			propList.insert( "style:vertical-pos", "from-top" );
 			propList.insert( "svg:y", double(origin[1]), unit);
 		}
+		else
+			propList.insert( "style:vertical-pos", "top" );
 
 		return;
 	}
@@ -1547,39 +1558,41 @@ void WPSContentListener::_handleFrameParameters
 		case WPSPosition::YFull:
 			propList.insert("svg:height", double(h), unit);
 		case WPSPosition::YTop:
-			if ( origin[1] == 0.0)
+			if (origin[1] < 0.0 || origin[1] > 0.0)
 			{
-				propList.insert("style:vertical-pos", "top" );
-				break;
+				propList.insert("style:vertical-pos", "from-top" );
+				newPosition = origin[1];
+				if (newPosition > h -pos.size()[1])
+					newPosition = h - pos.size()[1];
+				propList.insert("svg:y", double(newPosition), unit);
 			}
-			propList.insert("style:vertical-pos", "from-top" );
-			newPosition = origin[1];
-			if (newPosition > h -pos.size()[1])
-				newPosition = h - pos.size()[1];
-			propList.insert("svg:y", double(newPosition), unit);
+			else
+				propList.insert("style:vertical-pos", "top" );
 			break;
 		case WPSPosition::YCenter:
-			if (origin[1] == 0.0)
+			if (origin[1] < 0.0 || origin[1] > 0.0)
 			{
-				propList.insert("style:vertical-pos", "middle" );
-				break;
+				propList.insert("style:vertical-pos", "from-top" );
+				newPosition = (h - pos.size()[1])/2.0;
+				if (newPosition > h -pos.size()[1]) newPosition = h - pos.size()[1];
+				propList.insert("svg:y", double(newPosition), unit);
 			}
-			propList.insert("style:vertical-pos", "from-top" );
-			newPosition = (h - pos.size()[1])/2.0;
-			if (newPosition > h -pos.size()[1]) newPosition = h - pos.size()[1];
-			propList.insert("svg:y", double(newPosition), unit);
+			else
+				propList.insert("style:vertical-pos", "middle" );
 			break;
 		case WPSPosition::YBottom:
-			if (origin[1] == 0.0)
+			if (origin[1] < 0.0 || origin[1] > 0.0)
 			{
-				propList.insert("style:vertical-pos", "bottom" );
-				break;
+				propList.insert("style:vertical-pos", "from-top" );
+				newPosition = h - pos.size()[1]-origin[1];
+				if (newPosition > h -pos.size()[1]) newPosition = h -pos.size()[1];
+				else if (newPosition < 0) newPosition = 0;
+				propList.insert("svg:y", double(newPosition), unit);
 			}
-			propList.insert("style:vertical-pos", "from-top" );
-			newPosition = h - pos.size()[1]-origin[1];
-			if (newPosition > h -pos.size()[1]) newPosition = h -pos.size()[1];
-			else if (newPosition < 0) newPosition = 0;
-			propList.insert("svg:y", double(newPosition), unit);
+			else
+				propList.insert("style:vertical-pos", "bottom" );
+			break;
+		default:
 			break;
 		}
 
@@ -1588,31 +1601,32 @@ void WPSContentListener::_handleFrameParameters
 		case WPSPosition::XFull:
 			propList.insert("svg:width", double(w), unit);
 		case WPSPosition::XLeft:
-			if ( origin[0] == 0.0 )
-				propList.insert( "style:horizontal-pos", "left");
-			else
+			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
 				propList.insert( "style:horizontal-pos", "from-left");
 				propList.insert( "svg:x", double(origin[0]), unit);
 			}
+			else
+				propList.insert( "style:horizontal-pos", "left");
 			break;
 		case WPSPosition::XRight:
-			if ( origin[0] == 0.0 )
-				propList.insert( "style:horizontal-pos", "right");
-			else
+			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
 				propList.insert( "style:horizontal-pos", "from-left");
 				propList.insert( "svg:x",double( w - pos.size()[0] + origin[0]), unit);
 			}
+			else
+				propList.insert( "style:horizontal-pos", "right");
 			break;
 		case WPSPosition::XCenter:
-			if ( origin[0] == 0.0 )
-				propList.insert( "style:horizontal-pos", "center" );
-			else
+		default:
+			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
 				propList.insert( "style:horizontal-pos", "from-left");
 				propList.insert( "svg:x", double((w - pos.size()[0])/2. + origin[0]), unit);
 			}
+			else
+				propList.insert( "style:horizontal-pos", "center" );
 			break;
 		}
 		return;
@@ -1629,32 +1643,32 @@ void WPSContentListener::_handleFrameParameters
 	{
 	case WPSPosition::YFull:
 	case WPSPosition::YTop:
-		if ( origin[1] == 0.0 )
-			propList.insert( "style:vertical-pos", "top" );
-		else
+		if (origin[1] < 0.0 || origin[1] > 0.0)
 		{
 			propList.insert( "style:vertical-pos", "from-top" );
 			propList.insert( "svg:y", double(origin[1]), unit);
 		}
+		else
+			propList.insert( "style:vertical-pos", "top" );
 		break;
 	case WPSPosition::YCenter:
-		if ( origin[1] == 0.0 )
-			propList.insert( "style:vertical-pos", "middle" );
-		else
+		if (origin[1] < 0.0 || origin[1] > 0.0)
 		{
 			propList.insert( "style:vertical-pos", "from-top" );
 			propList.insert( "svg:y", double(origin[1] - pos.size()[1]/2.0), unit);
 		}
+		else
+			propList.insert( "style:vertical-pos", "middle" );
 		break;
 	case WPSPosition::YBottom:
 	default:
-		if ( origin[1] == 0.0 )
-			propList.insert( "style:vertical-pos", "bottom" );
-		else
+		if (origin[1] < 0.0 || origin[1] > 0.0)
 		{
 			propList.insert( "style:vertical-pos", "from-top" );
 			propList.insert( "svg:y", double(origin[1] - pos.size()[1]), unit);
 		}
+		else
+			propList.insert( "style:vertical-pos", "bottom" );
 		break;
 	}
 }
@@ -1682,13 +1696,17 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 		m_ps->m_isHeaderFooterWithoutParagraph = true;
 		m_ds->m_isHeaderFooterStarted = true;
 		break;
+	case libwps::DOC_NONE:
+	case libwps::DOC_NOTE:
+	case libwps::DOC_TABLE:
+	case libwps::DOC_COMMENT_ANNOTATION:
 	default:
 		break;
 	}
 
 	// Check whether the document is calling itself
 	bool sendDoc = true;
-	for (int i = 0; i < int(m_ds->m_subDocuments.size()); i++)
+	for (size_t i = 0; i < m_ds->m_subDocuments.size(); i++)
 	{
 		if (!subDocument)
 			break;
@@ -1726,6 +1744,10 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 		break;
 	case libwps::DOC_HEADER_FOOTER:
 		m_ds->m_isHeaderFooterStarted = false;
+	case libwps::DOC_NONE:
+	case libwps::DOC_NOTE:
+	case libwps::DOC_TABLE:
+	case libwps::DOC_COMMENT_ANNOTATION:
 	default:
 		break;
 	}
@@ -1780,8 +1802,8 @@ void WPSContentListener::openTable(std::vector<float> const &colWidth, WPXUnit u
 	float tableWidth = 0;
 	WPXPropertyListVector columns;
 
-	int nCols = colWidth.size();
-	for (int c = 0; c < nCols; c++)
+	size_t nCols = colWidth.size();
+	for (size_t c = 0; c < nCols; c++)
 	{
 		WPXPropertyList column;
 		column.insert("style:column-width", colWidth[c], unit);
@@ -1916,7 +1938,7 @@ shared_ptr<WPSContentParsingState> WPSContentListener::_pushParsingState()
 	// BEGIN: copy page properties into the new parsing state
 	m_ps->m_pageFormLength = actual->m_pageFormLength;
 	m_ps->m_pageFormWidth = actual->m_pageFormWidth;
-	m_ps->m_pageFormOrientationIsPortrait =	actual->m_pageFormWidth;
+	m_ps->m_pageFormOrientationIsPortrait =	actual->m_pageFormOrientationIsPortrait;
 	m_ps->m_pageMarginLeft = actual->m_pageMarginLeft;
 	m_ps->m_pageMarginRight = actual->m_pageMarginRight;
 	m_ps->m_pageMarginTop = actual->m_pageMarginTop;

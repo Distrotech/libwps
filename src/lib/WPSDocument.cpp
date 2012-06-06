@@ -72,16 +72,16 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *ip)
 
 		switch (header->getMajorVersion())
 		{
-
 		case 8:
 		case 7:
 		case 4:
 			confidence = WPS_CONFIDENCE_EXCELLENT;
 			break;
-
 		case 5:
 		case 2:
 			confidence = WPS_CONFIDENCE_GOOD;
+			break;
+		default:
 			break;
 		}
 
@@ -127,7 +127,6 @@ WPSResult WPSDocument::parse(WPXInputStream *ip, WPXDocumentInterface *documentI
 
 		switch (header->getMajorVersion())
 		{
-
 		case 8:
 		case 7:
 		case 6:
@@ -148,6 +147,8 @@ WPSResult WPSDocument::parse(WPXInputStream *ip, WPXDocumentInterface *documentI
 			parser->parse(documentInterface);
 			break;
 		}
+		default:
+			break;
 		}
 	}
 	catch (libwps::FileException)

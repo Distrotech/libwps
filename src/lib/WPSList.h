@@ -127,7 +127,7 @@ public:
 	/** returns the number of level */
 	int numLevels() const
 	{
-		return m_levels.size();
+		return int(m_levels.size());
 	}
 	/** sets a level */
 	void set(int levl, Level const &level);

@@ -181,7 +181,7 @@ void WPS8Parser::readFontsTable(WPXInputStreamPtr &input)
 
 		std::string s;
 		for (; string_size>0; string_size--)
-			s.append(1, (uint16_t)libwps::readU16(input));
+			s.append(1, (char)libwps::readU16(input));
 		s.append(1, (char)0);
 		if (s.empty())
 			continue;
@@ -274,7 +274,7 @@ void WPS8Parser::readStreams(WPXInputStreamPtr &input)
 		if (z == Stream::Z_Dummy) WPS_DEBUG_MSG(("Default strm[%d] type\n",k));
 		if (z == Stream::Z_Body)
 		{
-			if (bodypos < 0) bodypos = k;
+			if (bodypos < 0) bodypos = int(k);
 			else WPS_DEBUG_MSG(("Duplicating body (strm[%d])\n",k));
 		}
 	}
@@ -591,10 +591,10 @@ void WPS8Parser::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
 		if (m_listener) m_listener->insertCharacter(' ');
 		return;
 	}
-	Note const &note =notes[id];
+	Note const &note =notes[size_t(id)];
 	Stream stream;
 	Stream::Type streamkey = is_endnote ? Stream::Z_Endnotes : Stream::Z_Footnotes;
-	for (unsigned i=0; i<m_streams.size(); i++)
+	for (size_t i=0; i<m_streams.size(); i++)
 	{
 		if (m_streams[i].m_type == streamkey)
 		{
@@ -605,7 +605,7 @@ void WPS8Parser::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
 
 	WPS_DEBUG_MSG(("Reading footnote [%d;%d)\n",note.begin(),note.end()));
 
-	uint32_t pos = input->tell();
+	long pos = input->tell();
 	uint32_t beginPos = stream.begin()+note.begin();
 	uint32_t endPos = stream.begin()+note.end();
 	// try to remove the end of lines which can appear after the footnote
@@ -633,7 +633,7 @@ void WPS8Parser::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
 
 bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, uint16_t page_size)
 {
-	uint32_t page_offset = input->tell();
+	uint32_t page_offset = (uint32_t) input->tell();
 	uint16_t cfod = libwps::readU16(input); /* number of FODs on this page */
 
 	//fixme: what is the largest possible cfod?
@@ -645,7 +645,7 @@ bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs
 
 	input->seek(page_offset + 2 + 6, WPX_SEEK_SET);	// fixme: unknown
 
-	int first_fod = FODs.size();
+	int first_fod = int(FODs.size());
 
 	/* Read array of m_fcLim of FODs.  The m_fcLim refers to the offset of the
 	       last character covered by the formatting. */
@@ -728,7 +728,7 @@ bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs
 		(*FODs_iter).m_fprop.m_cch--;
 
 		for (int i = 0; (*FODs_iter).m_fprop.m_cch > i; i++)
-			(*FODs_iter).m_fprop.m_rgchProp.append(1, (uint8_t)libwps::readU8(input));
+			(*FODs_iter).m_fprop.m_rgchProp.append(1, (char)libwps::readU8(input));
 	}
 
 	/* go to end of page */
@@ -764,10 +764,9 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStreamPtr &input)
 	std::string name;
 
 	// sanity check
-	int i;
-	for (i =0; i < 4; i++)
+	for (size_t i =0; i < 4; i++)
 	{
-		name.append(1, libwps::readU8(input));
+		name.append(1, (char) libwps::readU8(input));
 
 		if ((uint8_t)name[i] != 0 && (uint8_t)name[i] != 0x20 &&
 		        (41 > (uint8_t)name[i] || (uint8_t)name[i] > 90))
@@ -780,12 +779,12 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStreamPtr &input)
 	name.append(1, (char)0);
 
 	std::string unknown1;
-	for (i = 0; i < 6; i ++)
-		unknown1.append(1, libwps::readU8(input));
+	for (int i = 0; i < 6; i ++)
+		unknown1.append(1, (char)libwps::readU8(input));
 
 	std::string name2;
-	for (i =0; i < 4; i++)
-		name2.append(1, libwps::readU8(input));
+	for (int i =0; i < 4; i++)
+		name2.append(1, (char)libwps::readU8(input));
 	name2.append(1, (char)0);
 
 	if (name != name2)
@@ -923,9 +922,9 @@ void WPS8Parser::parse(WPXInputStreamPtr &input)
 				               name,entry.begin(), entry.length()));
 			}
 			if (wh==0)
-				readFODPage(input, m_CHFODs, entry.length());
+				readFODPage(input, m_CHFODs, (uint16_t)entry.length());
 			else
-				readFODPage(input, m_PAFODs, entry.length());
+				readFODPage(input, m_PAFODs, (uint16_t)entry.length());
 		}
 	}
 
@@ -1078,8 +1077,8 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 			continue;
 		}
 
-		uint16_t format_code = rgchProp[x] | (rgchProp[x+1] << 8);
-		int unparsedChar = rgchProp.length()-x-2;
+		uint16_t format_code = uint16_t(rgchProp[x] | (rgchProp[x+1] << 8));
+		int unparsedChar = int(rgchProp.length())-int(x)-2;
 		bool ok = true;
 		switch (format_code)
 		{
@@ -1126,7 +1125,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 				break;
 			}
 			uint32_t font_size = WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			m_listener->setFontSize(font_size/12700);
+			m_listener->setFontSize(uint16_t(font_size/12700));
 			x += 4;
 			break;
 		}
@@ -1146,7 +1145,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 				ok = false;
 				break;
 			}
-			m_listener->setTextLanguage(WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str()));
+			m_listener->setTextLanguage((int)WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str()));
 			x += 4;
 			break;
 
@@ -1200,7 +1199,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 				m_listener->setTextFont(m_fontNames[font_n].c_str());
 
 			//x++;
-			x += rgchProp[x+2];
+			x += (unsigned int)rgchProp[x+2];
 		}
 		break;
 		default:
@@ -1219,7 +1218,9 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 					ok = false;
 					break;
 				}
-				x += rgchProp[x+2];
+				x += (unsigned int)rgchProp[x+2];
+				break;
+			default:
 				break;
 			}
 			//throw libwps::ParseException();
@@ -1259,9 +1260,9 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 	WPSList::Level level;
 	for (uint32_t x = 3; x < rgchProp.length(); x += 2)
 	{
-		uint16_t format_code = rgchProp[x] | (rgchProp[x+1] << 8);
+		uint16_t format_code = uint16_t(rgchProp[x] | (rgchProp[x+1] << 8));
 
-		int unparsedChar = rgchProp.length()-x-2;
+		int unparsedChar = int(rgchProp.length())-int(x)-2;
 		bool ok = true;
 		switch (format_code)
 		{
@@ -1292,7 +1293,7 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 				break;
 			}
 			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			textIndent=iv/914400.0;
+			textIndent=float(iv/914400.0);
 			x+=4;
 			break;
 
@@ -1303,7 +1304,7 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 				break;
 			}
 			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			leftIndent=iv/914400.0;
+			leftIndent=float(iv/914400.0);
 			x+=4;
 			break;
 
@@ -1390,14 +1391,14 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 			WPSTabStop tab;
 			const char *ts = rgchProp.c_str();
 			unsigned  t_count = 0;
-			int  t_size = WPS_LE_GET_GUINT32(&ts[x+2]);
+			int  t_size = (int) WPS_LE_GET_GUINT32(&ts[x+2]);
 			if (unparsedChar < t_size)
 			{
 				ok = false;
 				break;
 			}
 			int  tp_rem = 0;
-			int  id = x+6;
+			int  id = int(x)+6;
 			int  t_rem = t_size-4; // we skip 4 characters
 			uint16_t prop;
 
@@ -1420,7 +1421,7 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 				prop = WPS_LE_GET_GUINT16(&ts[id]);
 				if (prop == 0x8A28)
 				{
-					tp_rem = WPS_LE_GET_GUINT32(&ts[id+2]);
+					tp_rem = (int) WPS_LE_GET_GUINT32(&ts[id+2]);
 					id += 6;
 					t_rem -= 6;
 					tp_rem -= 4;
@@ -1446,7 +1447,7 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 				{
 				case 0x2000:
 				{
-					float tabpos = WPS_LE_GET_GUINT32(&ts[id]) / 914400.0;
+					float tabpos = float(WPS_LE_GET_GUINT32(&ts[id]) / 914400.0);
 					tabList[iid].m_position = tabpos;
 					id += 4;
 					tp_rem -=4;
@@ -1463,6 +1464,8 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 						break;
 					case 3:
 						tabList[iid].m_alignment = WPSTabStop::DECIMAL;
+						break;
+					default:
 						break;
 					};
 					id += 2;
@@ -1490,7 +1493,7 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 
 			m_listener->setTabs(tabList);
 
-			x += t_size;
+			x += unsigned(t_size);
 		}
 		break;
 
@@ -1510,7 +1513,9 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 					ok = false;
 					break;
 				}
-				x += rgchProp[x+2];
+				x += unsigned(rgchProp[x+2]);
+				break;
+			default:
 				break;
 			}
 			//throw libwps::ParseException();
