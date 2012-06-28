@@ -202,6 +202,7 @@ bool dumpFile(WPXBinaryData &data, char const *fileName)
 
 	WPXInputStream *tmpStream =
 	    const_cast<WPXInputStream *>(data.getDataStream());
+	if (!tmpStream) return false;
 	while (!tmpStream->atEOS())
 		fprintf(file, "%c", libwps::readU8(tmpStream));
 	fclose(file);
