@@ -1741,8 +1741,8 @@ bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 		int underlinePos = libwps::readU8(m_input);
 		if (underlinePos)
 		{
-			if (!what & 0x20) f << "undFl,";
-			what &= 0xdf;
+			if (!(what & 0x20)) f << "undFl,";
+			else what &= 0xdf;
 			attributes |= WPS_UNDERLINE_BIT;
 		}
 	}
