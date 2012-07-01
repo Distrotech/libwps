@@ -940,6 +940,9 @@ void WPS8Parser::parse(WPXInputStreamPtr &input)
 
 	m_actualFootnote = m_actualEndnote = 0;
 
+	if (m_offset_eot < 0x200)
+	    m_offset_eot = 0x200;
+
 	/* process text file using previously-read character formatting */
 	uint32_t doc_start = 0, doc_end = (m_offset_eot - 0x200) >> 1; // character offsets
 	uint32_t doc_start2 = doc_start, doc_end2 = doc_end;
