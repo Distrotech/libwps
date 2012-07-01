@@ -162,7 +162,7 @@ std::ostream &operator<<(std::ostream &o, WPSFont const &ft)
 	if (flags&WPS_SUBSCRIPT_BIT) o << "subS:";
 	if (flags) o << ",";
 
-	if (ft.m_color) o << "col=" << std::hex << ft.m_color << ",";
+	if (ft.m_color) o << "col=" << std::hex << ft.m_color << std::dec << ",";
 	if (ft.m_extra.length()) o << "extra=" << ft.m_extra << ",";
 	return o;
 }
