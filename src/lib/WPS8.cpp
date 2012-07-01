@@ -897,8 +897,11 @@ void WPS8Parser::parse(WPXInputStreamPtr &input)
 	{
 		WPS_DEBUG_MSG(("Works: error: no TEXT in header index table\n"));
 	}
-	m_offset_eot = pos->second.end();
-	WPS_DEBUG_MSG(("Works: debug: TEXT m_offset_eot = 0x%04X\n", m_offset_eot));
+	else
+	{
+		m_offset_eot = pos->second.end();
+		WPS_DEBUG_MSG(("Works: debug: TEXT m_offset_eot = 0x%04X\n", m_offset_eot));
+	}
 
 	/* read character/para FODs (FOrmatting Descriptors) */
 	for (int wh = 0; wh < 2; wh++)
