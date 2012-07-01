@@ -57,7 +57,6 @@ public:
 	                        };
 public:
 	WPSPageSpan();
-	WPSPageSpan(const WPSPageSpan &page);
 	virtual ~WPSPageSpan();
 
 	double getFormLength() const

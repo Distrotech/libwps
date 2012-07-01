@@ -44,11 +44,6 @@ public:
 	{
 	}
 
-	HeaderFooter(const HeaderFooter &headerFooter) :
-		m_type(headerFooter.getType()), m_occurence(headerFooter.getOccurence()), m_subDocument(headerFooter.m_subDocument)
-	{
-	}
-
 	~HeaderFooter()
 	{
 	}
@@ -107,24 +102,6 @@ WPSPageSpan::WPSPageSpan() :
 	m_pageNumberingFontSize(12.0),
 	m_headerFooterList(),
 	m_pageSpan(1)
-{
-}
-
-WPSPageSpan::WPSPageSpan(const WPSPageSpan &page) :
-	m_formLength(page.getFormLength()),
-	m_formWidth(page.getFormWidth()),
-	m_formOrientation(page.getFormOrientation()),
-	m_marginLeft(page.getMarginLeft()),
-	m_marginRight(page.getMarginRight()),
-	m_marginTop(page.getMarginTop()),
-	m_marginBottom(page.getMarginBottom()),
-	m_pageNumberPosition(page.getPageNumberPosition()),
-	m_pageNumber(page.getPageNumber()),
-	m_pageNumberingType(page.getPageNumberingType()),
-	m_pageNumberingFontName(page.getPageNumberingFontName()),
-	m_pageNumberingFontSize(page.getPageNumberingFontSize()),
-	m_headerFooterList(page.getHeaderFooterList()),
-	m_pageSpan(page.getPageSpan())
 {
 }
 
