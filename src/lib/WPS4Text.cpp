@@ -294,7 +294,7 @@ std::ostream &operator<<(std::ostream &o, Object const &obj)
 {
 	if (obj.m_id > -1) o << "ole" << obj.m_id;
 	o <<": size(" << obj.m_size << ")";
-	if (obj.m_pos.valid()) o << std::hex << ", def=(0x" << obj.m_pos.begin() << "->" << obj.m_pos.end() << ")";
+	if (obj.m_pos.valid()) o << std::hex << ", def=(0x" << obj.m_pos.begin() << "->" << obj.m_pos.end() << ")" << std::dec;
 	if (obj.m_unknown) o << std::hex << ", unkn=" << obj.m_unknown << std::dec;
 	if (!obj.m_extra.empty()) o << ", err=" << obj.m_extra;
 	return o;
