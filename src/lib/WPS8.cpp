@@ -54,9 +54,7 @@ public:
 		if (!WPSSubDocument::operator==(doc))
 			return false;
 		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
-		if (m_type != sDoc->m_type)
-			return false;
-		return true;
+		return sDoc && (m_type == sDoc->m_type);
 	}
 
 	//! the parser function
