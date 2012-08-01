@@ -196,13 +196,18 @@ namespace Debug
 bool dumpFile(WPXBinaryData &data, char const *fileName)
 {
 	if (!fileName) return false;
+	WPXInputStream *tmpStream =
+	    const_cast<WPXInputStream *>(data.getDataStream());
+	if (!tmpStream)
+	{
+		WPS_DEBUG_MSG(("Debug::dumpFile: can not find data for %s\n", fileName));
+		return false;
+	}
+
 	std::string fName = Debug::flattenFileName(fileName);
 	FILE *file = fopen(fName.c_str(), "wb");
 	if (!file) return false;
 
-	WPXInputStream *tmpStream =
-	    const_cast<WPXInputStream *>(data.getDataStream());
-	if (!tmpStream) return false;
 	while (!tmpStream->atEOS())
 		fprintf(file, "%c", libwps::readU8(tmpStream));
 	fclose(file);

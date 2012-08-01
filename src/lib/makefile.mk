@@ -29,6 +29,7 @@ SLOFILES= \
 	$(SLO)$/WPS4Graph.obj		\
 	$(SLO)$/WPS4Text.obj		\
 	$(SLO)$/WPS8.obj		\
+	$(SLO)$/WPS8Struct.obj		\
 	$(SLO)$/WPSCell.obj		\
 	$(SLO)$/WPSContentListener.obj	\
 	$(SLO)$/WPSDebug.obj		\

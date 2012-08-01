@@ -2841,7 +2841,7 @@ bool WPS4Text::readPLC
 			}
 			plc.m_value *=plcType.m_cstFactor;
 		}
-		else
+		else if (pars)
 		{
 			std::string mess;
 			if (!(this->*pars)(textPtrs[i], textPtrs[i+1], int(i), pos+dataSize-1, mess))

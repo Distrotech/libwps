@@ -22,6 +22,7 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPS4Graph.cpp		\
 	WPS4Text.cpp		\
 	WPS8.cpp		\
+	WPS8Struct.cpp		\
 	WPSCell.cpp		\
 	WPSContentListener.cpp	\
 	WPSDebug.cpp		\
@@ -43,6 +44,7 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPS4Graph.h		\
 	WPS4Text.h		\
 	WPS8.h			\
+	WPS8Struct.h		\
 	WPSCell.h		\
 	WPSContentListener.h	\
 	WPSDebug.h		\
