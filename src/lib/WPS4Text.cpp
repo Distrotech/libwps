@@ -1380,7 +1380,7 @@ bool WPS4Text::findFDPStructuresByHand(int which)
 }
 
 ////////////////////////////////////////////////////////////
-// read a fdp ( note this function may also be used in WPS8 )
+// read a fdp ( note this function may also be used in WPS8Text )
 ////////////////////////////////////////////////////////////
 bool WPS4Text::readFDP(WPSEntry const &entry,
                        std::vector<WPS4TextInternal::DataFOD> &fods,

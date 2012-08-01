@@ -34,19 +34,19 @@
 namespace WPS8Struct
 {
 // try to read a block, which can be or not a list of data
-bool Data::readArrayBlock() const
+bool FileData::readArrayBlock() const
 {
 	if (isRead()) return isArray();
 	long actPos = m_input->tell();
 	m_input->seek(m_beginOffset, WPX_SEEK_SET);
 	std::string error;
-	bool ok = readBlockData(m_input, m_endOffset, const_cast<Data &>(*this), error);
+	bool ok = readBlockData(m_input, m_endOffset, const_cast<FileData &>(*this), error);
 	m_input->seek(actPos, WPX_SEEK_SET);
 	return ok;
 }
 
 // create a message to store unparsed data
-std::string Data::createErrorString(WPXInputStreamPtr input, long endPos)
+std::string FileData::createErrorString(WPXInputStreamPtr input, long endPos)
 {
 	libwps::DebugStream f;
 	f << ",###unread=(" << std::hex;
@@ -58,10 +58,10 @@ std::string Data::createErrorString(WPXInputStreamPtr input, long endPos)
 }
 
 // operator <<
-std::ostream &operator<< (std::ostream &o, Data const &dt)
+std::ostream &operator<< (std::ostream &o, FileData const &dt)
 {
 	o << "unkn" << std::hex << dt.id() << "[typ=" << dt.m_type << "]:" << std::dec;
-	Data &DT = const_cast<Data &>(dt);
+	FileData &DT = const_cast<FileData &>(dt);
 	// If the data are unread, try to read them as a block list
 	if (!dt.isRead() && !dt.readArrayBlock())
 	{
@@ -102,11 +102,11 @@ std::ostream &operator<< (std::ostream &o, Data const &dt)
 	if (dt.hasStr()) o << "('" << dt.m_text << "')";
 	if ((dt.m_type & 0x30) || dt.m_value)
 		o << "=" << dt.m_value << ":" << std::hex << dt.m_value << std::dec;
-	int numChild = dt.m_recursData.size();
+	size_t numChild = dt.m_recursData.size();
 	if (!numChild) return o;
 
 	o << ",ch=(";
-	for (int i = 0; i < numChild; i++)
+	for (size_t i = 0; i < numChild; i++)
 	{
 		if (dt.m_recursData[i].isBad()) continue;
 		o << dt.m_recursData[i] << ",";
@@ -116,7 +116,7 @@ std::ostream &operator<< (std::ostream &o, Data const &dt)
 }
 
 // try to read a data : which can be an item, a list or unknown zone
-bool readBlockData(WPXInputStreamPtr input, long endPos, Data &dt, std::string &error)
+bool readBlockData(WPXInputStreamPtr input, long endPos, FileData &dt, std::string &error)
 {
 	std::string saveError = error;
 	long actPos = input->tell();
@@ -124,7 +124,7 @@ bool readBlockData(WPXInputStreamPtr input, long endPos, Data &dt, std::string &
 
 	if (actPos+2 > endPos)   // to short
 	{
-		error += Data::createErrorString(input, endPos);
+		error += FileData::createErrorString(input, endPos);
 		return false;
 	}
 
@@ -135,7 +135,7 @@ bool readBlockData(WPXInputStreamPtr input, long endPos, Data &dt, std::string &
 	bool ok = true;
 	while (input->tell() != endPos)
 	{
-		Data child;
+		FileData child;
 		if (!readData(input, endPos, child, error))
 		{
 			ok = false;
@@ -165,10 +165,10 @@ bool readBlockData(WPXInputStreamPtr input, long endPos, Data &dt, std::string &
 
 // try to read an item
 bool readData(WPXInputStreamPtr input, long endPos,
-              Data &dt, std::string &/*error*/)
+              FileData &dt, std::string &/*error*/)
 {
 	long actPos = input->tell();
-	dt = Data();
+	dt = FileData();
 
 	if (actPos >= endPos) return false;
 

@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef WPS8_H
-#define WPS8_H
+#ifndef WPS8_TEXT_H
+#define WPS8_TEXT_H
 
 #include <vector>
 #include <map>
@@ -34,20 +34,20 @@
 #include "WPSContentListener.h"
 #include "WPSParser.h"
 
-typedef WPSContentListener WPS8ContentListener;
-typedef shared_ptr<WPS8ContentListener> WPS8ContentListenerPtr;
+typedef WPSContentListener WPS8TextContentListener;
+typedef shared_ptr<WPS8TextContentListener> WPS8TextContentListenerPtr;
 
-namespace WPS8ParserInternal
+namespace WPS8TextInternal
 {
 class SubDocument;
 }
 
-class WPS8Parser : public WPSParser
+class WPS8Text : public WPSParser
 {
-	friend class WPS8ParserInternal::SubDocument;
+	friend class WPS8TextInternal::SubDocument;
 public:
-	WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
-	~WPS8Parser();
+	WPS8Text(WPXInputStreamPtr &input, WPSHeaderPtr &header);
+	~WPS8Text();
 
 	void parse(WPXDocumentInterface *documentInterface);
 protected:
@@ -73,7 +73,7 @@ private:
 	void sendNote(WPXInputStreamPtr &input, int noteId, bool is_endnote);
 
 	/// the listener
-	shared_ptr<WPS8ContentListener> m_listener;
+	shared_ptr<WPS8TextContentListener> m_listener;
 	uint32_t m_offset_eot; /* stream offset to end of text */
 	uint32_t m_oldTextAttributeBits;
 	IndexMultiMap m_headerIndexTable;
@@ -142,5 +142,5 @@ protected:
 };
 
 
-#endif /* WPS8_H */
+#endif /* WPS8_TEXT_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

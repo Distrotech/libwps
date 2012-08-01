@@ -42,13 +42,13 @@
 /** namespace used to read the structures stored in a WPS8 files */
 namespace WPS8Struct
 {
-struct Data;
+struct FileData;
 /** tries to read a block zone as a Data */
-bool readData(WPXInputStreamPtr input, long endPos, Data &dt, std::string &error);
+bool readData(WPXInputStreamPtr input, long endPos, FileData &dt, std::string &error);
 /** tries to read a block zone as a list of Data */
-bool readBlockData(WPXInputStreamPtr input, long endPos, Data &dt, std::string &error);
+bool readBlockData(WPXInputStreamPtr input, long endPos, FileData &dt, std::string &error);
 //! operator<< which allows to print for debugging the content of a Data
-std::ostream &operator<< (std::ostream &o, Data const &dt);
+std::ostream &operator<< (std::ostream &o, FileData const &dt);
 
 /** A recursif structure which seems generally used to store complex memory structures in a file
  *
@@ -64,10 +64,10 @@ std::ostream &operator<< (std::ostream &o, Data const &dt);
  * - the case typeId = 0x2a seems to correspond to an entry id (4 letters + id), it is the only special case ?
  * - the difference between signed and unsigned field must be checked.
  */
-struct Data
+struct FileData
 {
 	//! constructor
-	Data() : m_value(0), m_text(""), m_recursData(), m_type(-1), m_id(-1), m_beginOffset(-1), m_endOffset(-1), m_input() {}
+	FileData() : m_value(0), m_text(""), m_recursData(), m_type(-1), m_id(-1), m_beginOffset(-1), m_endOffset(-1), m_input() {}
 	//! returns true if the field was not read
 	bool isBad() const
 	{
@@ -119,7 +119,7 @@ struct Data
 	//! the string values
 	std::string m_text;
 	//! the list of children
-	std::vector<Data> m_recursData;
+	std::vector<FileData> m_recursData;
 
 	//! beginning of data position
 	long begin() const
@@ -145,11 +145,11 @@ protected:
 	WPXInputStreamPtr m_input;
 
 	//! operator<<
-	friend std::ostream &operator<< (std::ostream &o, Data const &dt);
+	friend std::ostream &operator<< (std::ostream &o, FileData const &dt);
 	//! function which parses an element
-	friend bool readData(WPXInputStreamPtr input, long endPos, Data &dt, std::string &error);
+	friend bool readData(WPXInputStreamPtr input, long endPos, FileData &dt, std::string &error);
 	//! function which parses a set of elements
-	friend bool readBlockData(WPXInputStreamPtr input, long endPos, Data &dt, std::string &error);
+	friend bool readBlockData(WPXInputStreamPtr input, long endPos, FileData &dt, std::string &error);
 };
 }
 

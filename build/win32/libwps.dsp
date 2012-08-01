@@ -107,7 +107,7 @@ SOURCE=..\..\src\lib\WPS4Text.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPS8.cpp
+SOURCE=..\..\src\lib\WPS8Text.cpp
 # End Source File
 # Begin Source File
 
@@ -199,7 +199,7 @@ SOURCE=..\..\src\lib\WPS4Text.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPS8.h
+SOURCE=..\..\src\lib\WPS8Text.h
 # End Source File
 # Begin Source File
 

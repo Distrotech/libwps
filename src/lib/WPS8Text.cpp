@@ -31,7 +31,7 @@
 #include "WPSParagraph.h"
 #include "WPSSubDocument.h"
 
-#include "WPS8.h"
+#include "WPS8Text.h"
 
 #ifdef DEBUG
 #  undef DEBUG
@@ -39,9 +39,9 @@
 #define WPS_DEBUG_MSG(x)
 #endif
 
-namespace WPS8ParserInternal
+namespace WPS8TextInternal
 {
-//! Internal: the subdocument of a WPS8
+//! Internal: the subdocument of a WPS8Text
 class SubDocument : public WPSSubDocument
 {
 public:
@@ -49,7 +49,7 @@ public:
 	enum Type { Unknown, Footnote, Endnote };
 
 	//! constructor for a text entry
-	SubDocument(WPXInputStreamPtr input, WPS8Parser &pars, Type type, int i) :
+	SubDocument(WPXInputStreamPtr input, WPS8Text &pars, Type type, int i) :
 		WPSSubDocument (input, &pars, i), m_type(type) {}
 	//! destructor
 	~SubDocument() {}
@@ -76,12 +76,12 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 		WPS_DEBUG_MSG(("SubDocument::parse: no listener\n"));
 		return;
 	}
-	if (!dynamic_cast<WPS8ContentListener *>(listener.get()))
+	if (!dynamic_cast<WPS8TextContentListener *>(listener.get()))
 	{
 		WPS_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
 		return;
 	}
-	WPS8ContentListenerPtr &listen =  reinterpret_cast<WPS8ContentListenerPtr &>(listener);
+	WPS8TextContentListenerPtr &listen =  reinterpret_cast<WPS8TextContentListenerPtr &>(listener);
 
 	if (!m_parser)
 	{
@@ -98,7 +98,7 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 	}
 
 	long actPos = m_input->tell();
-	WPS8Parser *mnParser = reinterpret_cast<WPS8Parser *>(m_parser);
+	WPS8Text *mnParser = reinterpret_cast<WPS8Text *>(m_parser);
 	if (type == libwps::DOC_NOTE)
 		mnParser->sendNote(m_input, m_id, m_type == Endnote);
 	else
@@ -111,10 +111,10 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 }
 
 /*
-WPS8Parser public
+WPS8Text public
 */
 
-WPS8Parser::WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
+WPS8Text::WPS8Text(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 	WPSParser(input, header),
 	m_listener(),
 	m_offset_eot(0),
@@ -129,28 +129,28 @@ WPS8Parser::WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 {
 }
 
-WPS8Parser::~WPS8Parser ()
+WPS8Text::~WPS8Text ()
 {
 }
 
-void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
+void WPS8Text::parse(WPXDocumentInterface *documentInterface)
 {
 	std::vector<WPSPageSpan> pageList;
 
-	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));
+	WPS_DEBUG_MSG(("WPS8Text::parse()\n"));
 
 	/* parse pages */
 	parsePages(pageList, getInput());
 
 	/* parse document */
-	m_listener.reset(new WPS8ContentListener(pageList, documentInterface));
+	m_listener.reset(new WPS8TextContentListener(pageList, documentInterface));
 	parse(getInput());
 	m_listener.reset();
 }
 
 
 /*
-WPS8Parser private
+WPS8Text private
 */
 
 
@@ -158,7 +158,7 @@ WPS8Parser private
  * Reads fonts table into memory.
  *
  */
-void WPS8Parser::readFontsTable(WPXInputStreamPtr &input)
+void WPS8Text::readFontsTable(WPXInputStreamPtr &input)
 {
 	/* find the fonts page offset, fonts array offset, and ending offset */
 	IndexMultiMap::iterator pos;
@@ -205,7 +205,7 @@ void WPS8Parser::readFontsTable(WPXInputStreamPtr &input)
  * Reads streams (subdocuments) information
  */
 
-void WPS8Parser::readStreams(WPXInputStreamPtr &input)
+void WPS8Text::readStreams(WPXInputStreamPtr &input)
 {
 	IndexMultiMap::iterator pos;
 	pos = m_headerIndexTable.lower_bound("STRS");
@@ -286,7 +286,7 @@ void WPS8Parser::readStreams(WPXInputStreamPtr &input)
 #endif
 }
 
-void WPS8Parser::readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key)
+void WPS8Text::readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key)
 {
 	IndexMultiMap::iterator pos;
 	pos = m_headerIndexTable.lower_bound(key);
@@ -336,7 +336,7 @@ void WPS8Parser::readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, co
 
 #define SURROGATE_VALUE(h,l) (((h) - 0xd800) * 0x400 + (l) - 0xdc00 + 0x10000)
 
-void WPS8Parser::appendUTF16LE(WPXInputStreamPtr &input)
+void WPS8Text::appendUTF16LE(WPXInputStreamPtr &input)
 {
 	uint16_t high_surrogate = 0;
 	bool fail = false;
@@ -395,10 +395,10 @@ void WPS8Parser::appendUTF16LE(WPXInputStreamPtr &input)
  *
  */
 
-void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
-                               uint32_t startpos, uint32_t endpos, uint16_t stream)
+void WPS8Text::readTextRange(WPXInputStreamPtr &input,
+                                   uint32_t startpos, uint32_t endpos, uint16_t stream)
 {
-	WPS_DEBUG_MSG(("WPS8Parser::readTextRange(stream=%d)\n",stream));
+	WPS_DEBUG_MSG(("WPS8Text::readTextRange(stream=%d)\n",stream));
 
 	std::vector<WPSFOD>::iterator FODs_iter;
 	std::vector<WPSFOD>::iterator PFOD_iter;
@@ -510,7 +510,7 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 						{
 							if (stream != Stream::Z_Body) break;
 							shared_ptr<WPSSubDocument> doc
-							(new WPS8ParserInternal::SubDocument(input, *this, WPS8ParserInternal::SubDocument::Footnote, m_actualFootnote++));
+							(new WPS8TextInternal::SubDocument(input, *this, WPS8TextInternal::SubDocument::Footnote, m_actualFootnote++));
 							m_listener->insertNote(WPSContentListener::FOOTNOTE, doc);
 							break;
 						}
@@ -518,7 +518,7 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 						{
 							if (stream != Stream::Z_Body) break;
 							shared_ptr<WPSSubDocument> doc
-							(new WPS8ParserInternal::SubDocument(input, *this, WPS8ParserInternal::SubDocument::Endnote, m_actualEndnote++));
+							(new WPS8TextInternal::SubDocument(input, *this, WPS8TextInternal::SubDocument::Endnote, m_actualEndnote++));
 							m_listener->insertNote(WPSContentListener::ENDNOTE, doc);
 							break;
 						}
@@ -554,7 +554,7 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 					if (readVal < 28 && readVal != 9)
 					{
 						// do not add unprintable control which can create invalid odt file
-						WPS_DEBUG_MSG(("WPS8Parser::readTextRange(find unprintable character: ignored)\n"));
+						WPS_DEBUG_MSG(("WPS8Text::readTextRange(find unprintable character: ignored)\n"));
 						break;
 					}
 					// fixme: convert UTF-16LE to UTF-8
@@ -586,12 +586,12 @@ void WPS8Parser::readTextRange(WPXInputStreamPtr &input,
 	m_oldTextAttributeBits = oldTextAttributes;
 }
 
-void WPS8Parser::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
+void WPS8Text::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
 {
 	std::vector<Note> const &notes = is_endnote ? m_endnotes : m_footnotes;
 	if (id < 0 || id >= int(notes.size()))
 	{
-		WPS_DEBUG_MSG(("WPS8Parser::sendNote: can not find footnote\n"));
+		WPS_DEBUG_MSG(("WPS8Text::sendNote: can not find footnote\n"));
 		if (m_listener) m_listener->insertCharacter(' ');
 		return;
 	}
@@ -635,7 +635,7 @@ void WPS8Parser::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
 
 //fixme: this readFODPage is mostly the same as in WPS4
 
-bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, uint16_t page_size)
+bool WPS8Text::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, uint16_t page_size)
 {
 	uint32_t page_offset = (uint32_t) input->tell();
 	uint16_t cfod = libwps::readU16(input); /* number of FODs on this page */
@@ -749,7 +749,7 @@ bool WPS8Parser::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs
  *
  */
 
-void WPS8Parser::parseHeaderIndexEntry(WPXInputStreamPtr &input)
+void WPS8Text::parseHeaderIndexEntry(WPXInputStreamPtr &input)
 {
 	WPS_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos 0x%lX\n", input->tell()));
 
@@ -816,7 +816,7 @@ void WPS8Parser::parseHeaderIndexEntry(WPXInputStreamPtr &input)
  * the CONTENTS stream.
  *
  */
-void WPS8Parser::parseHeaderIndex(WPXInputStreamPtr &input)
+void WPS8Text::parseHeaderIndex(WPXInputStreamPtr &input)
 {
 	input->seek(0x0C, WPX_SEEK_SET);
 	uint16_t n_entries = libwps::readU16(input);
@@ -868,11 +868,11 @@ void WPS8Parser::parseHeaderIndex(WPXInputStreamPtr &input)
 }
 
 /**
- * Read the page format from the file.  It seems that WPS8 files
+ * Read the page format from the file.  It seems that WPS8Text files
  * can only have one page format throughout the whole document.
  *
  */
-void WPS8Parser::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr & /* input */)
+void WPS8Text::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr & /* input */)
 {
 	//fixme: this method doesn't do much
 
@@ -881,9 +881,9 @@ void WPS8Parser::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPt
 	pageList.push_back(ps);
 }
 
-void WPS8Parser::parse(WPXInputStreamPtr &input)
+void WPS8Text::parse(WPXInputStreamPtr &input)
 {
-	WPS_DEBUG_MSG(("WPS8Parser::parse()\n"));
+	WPS_DEBUG_MSG(("WPS8Text::parse()\n"));
 
 	m_listener->startDocument();
 
@@ -978,7 +978,7 @@ void WPS8Parser::parse(WPXInputStreamPtr &input)
  * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
  *
  */
-void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits)
+void WPS8Text::propertyChangeDelta(uint32_t newTextAttributeBits)
 {
 	if (newTextAttributeBits == m_oldTextAttributeBits)
 		return;
@@ -989,7 +989,7 @@ void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits)
 	{
 		if (diffAttributes & listAttributes[i])
 		{
-			WPS_DEBUG_MSG(("WPS8Parser::propertyChangeDelta: attribute %i changed, now = %i\n", i, newTextAttributeBits & listAttributes[i]));
+			WPS_DEBUG_MSG(("WPS8Text::propertyChangeDelta: attribute %i changed, now = %i\n", i, newTextAttributeBits & listAttributes[i]));
 		}
 	}
 #endif
@@ -1007,7 +1007,7 @@ void WPS8Parser::propertyChangeDelta(uint32_t newTextAttributeBits)
  * codes.
  *
  */
-void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int &fieldType)
+void WPS8Text::propertyChange(std::string rgchProp, uint16_t &specialCode, int &fieldType)
 {
 	//fixme: this method is immature
 
@@ -1238,7 +1238,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 		}
 		if (!ok)
 		{
-			WPS_DEBUG_MSG(("WPS8Parser::propertyChange: problem with field size, stop\n"));
+			WPS_DEBUG_MSG(("WPS8Text::propertyChange: problem with field size, stop\n"));
 			break;
 		}
 	}
@@ -1246,7 +1246,7 @@ void WPS8Parser::propertyChange(std::string rgchProp, uint16_t &specialCode, int
 	propertyChangeDelta(textAttributeBits);
 }
 
-void WPS8Parser::propertyChangePara(std::string rgchProp)
+void WPS8Text::propertyChangePara(std::string rgchProp)
 {
 	static const libwps::Justification _align[]=
 	{
@@ -1533,7 +1533,7 @@ void WPS8Parser::propertyChangePara(std::string rgchProp)
 		}
 		if (!ok)
 		{
-			WPS_DEBUG_MSG(("WPS8Parser::propertyChangePara: problem with field size, stop\n"));
+			WPS_DEBUG_MSG(("WPS8Text::propertyChangePara: problem with field size, stop\n"));
 			break;
 		}
 	}

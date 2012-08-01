@@ -60,7 +60,7 @@ struct State;
  *
  * This class must be associated with a WPS4Parser.
  * \note As the pictures seems always be given with character' position, many functions
- * which exists to maintain the same structures that exist(will) in WPS8Graph class
+ * which exists to maintain the same structures that exist(will) in WPS8TextGraph class
  * do almost nothing.
  */
 class WPS4Graph
