@@ -107,11 +107,11 @@ SOURCE=..\..\src\lib\WPS4Text.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPS8Text.cpp
+SOURCE=..\..\src\lib\WPS8Struct.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPS8Struct.cpp
+SOURCE=..\..\src\lib\WPS8Text.cpp
 # End Source File
 # Begin Source File
 
@@ -199,11 +199,11 @@ SOURCE=..\..\src\lib\WPS4Text.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPS8Text.h
+SOURCE=..\..\src\lib\WPS8Struct.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPS8Struct.h
+SOURCE=..\..\src\lib\WPS8Text.h
 # End Source File
 # Begin Source File
 

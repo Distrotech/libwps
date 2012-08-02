@@ -21,18 +21,7 @@
 #ifndef WPS_H
 #define WPS_H
 
-/**
- * CHaracter Properties (CHP) or
- * PAragraph Properties (PAP)
- *
- **/
-class WPSFPROP
-{
-public:
-	WPSFPROP() : m_cch(0), m_rgchProp() {};
-	uint8_t	m_cch; /* number of bytes in this FPROP */
-	std::string m_rgchProp; /* Prefix for a CHP or PAP sufficient to handle differing bits from default */
-};
+#include "WPS8Struct.h"
 
 /**
  * FOrmatting Descriptor (FOD)
@@ -44,7 +33,7 @@ public:
 	uint32_t	m_fcLim; /* byte number of last character covered by this FOD */
 	uint16_t	m_bfprop; /* byte offset from beginning of FOD array to corresponding FPROP */
 	uint32_t        m_bfpropAbs; /* bfprop from beginning of stream offset */
-	WPSFPROP		m_fprop;	/* character or paragraph formatting */
+	WPS8Struct::FileData		m_fprop;	/* character or paragraph formatting */
 };
 
 #endif

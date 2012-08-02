@@ -365,7 +365,7 @@ void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
 	WPXInputStreamPtr input=getInput();
 	if (!input)
 	{
-		WPS_DEBUG_MSG(("Works: does not find main ole\n"));
+		WPS_DEBUG_MSG(("WPS4Parser::parse: does not find main ole\n"));
 		throw(libwps::ParseException());
 	}
 

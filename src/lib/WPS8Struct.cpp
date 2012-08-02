@@ -60,15 +60,16 @@ std::string FileData::createErrorString(WPXInputStreamPtr input, long endPos)
 // operator <<
 std::ostream &operator<< (std::ostream &o, FileData const &dt)
 {
-	o << "unkn" << std::hex << dt.id() << "[typ=" << dt.m_type << "]:" << std::dec;
+	if (dt.id() != -1)
+		o << "unkn" << std::hex << dt.id() << "[typ=" << dt.m_type << "]:" << std::dec;
 	FileData &DT = const_cast<FileData &>(dt);
 	// If the data are unread, try to read them as a block list
 	if (!dt.isRead() && !dt.readArrayBlock())
 	{
 		// if this fails...
-		int size = dt.m_endOffset-dt.m_beginOffset-2;
+		long size = dt.m_endOffset-dt.m_beginOffset-2;
 		int sz = (size%4) == 0 ? 4 : (size%2) == 0 ? 2 : 1;
-		int numElt = size/sz;
+		int numElt = int(size/sz);
 
 		long actPos = DT.m_input->tell();
 		DT.m_input->seek(dt.m_beginOffset, WPX_SEEK_SET);
@@ -173,7 +174,7 @@ bool readData(WPXInputStreamPtr input, long endPos,
 	if (actPos >= endPos) return false;
 
 	long val = (long) libwps::readU16(input);
-	dt.m_type = ((val & 0xFF00)>>8);
+	dt.m_type = int((val & 0xFF00)>>8);
 	dt.m_id = (val & 0xFF);
 
 	if (dt.m_type & 5)

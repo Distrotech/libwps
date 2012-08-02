@@ -32,10 +32,16 @@
 #include "libwps_internal.h"
 #include "WPS.h"
 #include "WPSContentListener.h"
+#include "WPSDebug.h"
 #include "WPSParser.h"
 
 typedef WPSContentListener WPS8TextContentListener;
 typedef shared_ptr<WPS8TextContentListener> WPS8TextContentListenerPtr;
+
+namespace WPS8Struct
+{
+struct FileData;
+}
 
 namespace WPS8TextInternal
 {
@@ -67,8 +73,8 @@ private:
 	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
 	void parse(WPXInputStreamPtr &stream);
 	void propertyChangeDelta(uint32_t newTextAttributeBits);
-	void propertyChange(std::string rgchProp, uint16_t &specialCode, int &fieldType);
-	void propertyChangePara(std::string rgchProp);
+	void propertyChange(WPS8Struct::FileData const &rgchProp, uint16_t &specialCode, int &fieldType);
+	void propertyChangePara(WPS8Struct::FileData const &rgchProp);
 	// interface with subdocument
 	void sendNote(WPXInputStreamPtr &input, int noteId, bool is_endnote);
 
@@ -85,6 +91,13 @@ private:
 	int m_actualFootnote;
 	std::vector<Note> m_endnotes;
 	int m_actualEndnote;
+
+protected:
+	//! returns the debug file
+	libwps::DebugFile &ascii()
+	{
+		return m_asciiFile;
+	}
 
 protected:
 	/** Starting near beginning of CONTENTS stream, there is an index
@@ -139,6 +152,9 @@ protected:
 
 		enum Type {Z_Dummy=0, Z_Body=1, Z_Footnotes=2, Z_Endnotes = 3}  m_type;
 	};
+
+	//! the ascii file
+	libwps::DebugFile m_asciiFile;
 };
 
 

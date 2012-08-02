@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <map>
+
 #include "libwps_internal.h"
 
 #include "WPSContentListener.h"
@@ -31,13 +33,10 @@
 #include "WPSParagraph.h"
 #include "WPSSubDocument.h"
 
-#include "WPS8Text.h"
+#include "WPS.h"
 
-#ifdef DEBUG
-#  undef DEBUG
-#  undef WPS_DEBUG_MSG
-#define WPS_DEBUG_MSG(x)
-#endif
+#include "WPS8Struct.h"
+#include "WPS8Text.h"
 
 namespace WPS8TextInternal
 {
@@ -125,7 +124,8 @@ WPS8Text::WPS8Text(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 	m_fontNames(),
 	m_streams(),
 	m_footnotes(), m_actualFootnote(0),
-	m_endnotes(), m_actualEndnote(0)
+	m_endnotes(), m_actualEndnote(0),
+	m_asciiFile()
 {
 }
 
@@ -135,17 +135,35 @@ WPS8Text::~WPS8Text ()
 
 void WPS8Text::parse(WPXDocumentInterface *documentInterface)
 {
-	std::vector<WPSPageSpan> pageList;
 
 	WPS_DEBUG_MSG(("WPS8Text::parse()\n"));
+	WPXInputStreamPtr input=getInput();
+	if (!input)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::parse: does not find main ole\n"));
+		throw(libwps::ParseException());
+	}
 
-	/* parse pages */
-	parsePages(pageList, getInput());
+	ascii().setStream(input);
+	ascii().open("CONTENTS");
+	try
+	{
+		/* parse pages */
+		std::vector<WPSPageSpan> pageList;
+		parsePages(pageList, input);
 
-	/* parse document */
-	m_listener.reset(new WPS8TextContentListener(pageList, documentInterface));
-	parse(getInput());
-	m_listener.reset();
+		/* parse document */
+		m_listener.reset(new WPS8TextContentListener(pageList, documentInterface));
+		parse(input);
+		m_listener.reset();
+	}
+	catch (...)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::parse: exception catched when parsing CONTENTS\n"));
+		throw(libwps::ParseException());
+	}
+
+	m_asciiFile.reset();
 }
 
 
@@ -396,7 +414,7 @@ void WPS8Text::appendUTF16LE(WPXInputStreamPtr &input)
  */
 
 void WPS8Text::readTextRange(WPXInputStreamPtr &input,
-                                   uint32_t startpos, uint32_t endpos, uint16_t stream)
+                             uint32_t startpos, uint32_t endpos, uint16_t stream)
 {
 	WPS_DEBUG_MSG(("WPS8Text::readTextRange(stream=%d)\n",stream));
 
@@ -445,25 +463,17 @@ void WPS8Text::readTextRange(WPXInputStreamPtr &input,
 		}
 		len /= 2;
 
-		/* print rgchProp as hex bytes */
-		WPS_DEBUG_MSG(("rgch="));
-		for (unsigned int blah=0; blah < (*FODs_iter).m_fprop.m_rgchProp.length(); blah++)
-		{
-			WPS_DEBUG_MSG(("%02X ", (uint8_t) (*FODs_iter).m_fprop.m_rgchProp[blah]));
-		}
-		WPS_DEBUG_MSG(("\n"));
 
 		/* process character formatting */
-		if ((*FODs_iter).m_fprop.m_cch > 0)
-			propertyChange((*FODs_iter).m_fprop.m_rgchProp, specialCode, fieldType);
+		if ((*FODs_iter).m_bfprop!=0)
+			propertyChange((*FODs_iter).m_fprop, specialCode, fieldType);
 
 		/* loop until character format not exhausted */
 		do
 		{
 			/* paragraph format may change here*/
-
-			if ((*PFOD_iter).m_fprop.m_cch > 0)
-				propertyChangePara((*PFOD_iter).m_fprop.m_rgchProp);
+			if ((*PFOD_iter).m_bfprop!=0)
+				propertyChangePara((*PFOD_iter).m_fprop);
 
 			/* plain text */
 			input->seek(last_fcLim, WPX_SEEK_SET);
@@ -710,29 +720,26 @@ bool WPS8Text::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, 
 			break;
 
 		if (0 == (*FODs_iter).m_bfprop)
+			continue;
+		long actPos = (*FODs_iter).m_bfpropAbs;
+		input->seek(actPos, WPX_SEEK_SET);
+
+		long size = (long) libwps::readU16(input);
+		if (actPos+size > long(page_offset+page_size) || size < 2)
 		{
-			(*FODs_iter).m_fprop.m_cch = 0;
+			WPS_DEBUG_MSG(("WPS8Text::readFODPage: error: size = %ld is very odd\n", size));
 			continue;
 		}
 
-		input->seek((*FODs_iter).m_bfpropAbs, WPX_SEEK_SET);
-		(*FODs_iter).m_fprop.m_cch = libwps::readU8(input);
-		if (0 == (*FODs_iter).m_fprop.m_cch)
-		{
-			WPS_DEBUG_MSG(("Works: error: 0 == cch at file offset 0x%lx", (input->tell())-1));
-			throw libwps::ParseException();
-		}
-		// check that the property remains in the FOD zone
-		if ((*FODs_iter).m_bfpropAbs+(*FODs_iter).m_fprop.m_cch > page_offset+page_size)
-		{
-			WPS_DEBUG_MSG(("Works: error: cch = %i, too large ", (*FODs_iter).m_fprop.m_cch));
-			throw libwps::ParseException();
-		}
+		std::string error;
+		readBlockData(input, actPos+size, (*FODs_iter).m_fprop, error);
 
-		(*FODs_iter).m_fprop.m_cch--;
-
-		for (int i = 0; (*FODs_iter).m_fprop.m_cch > i; i++)
-			(*FODs_iter).m_fprop.m_rgchProp.append(1, (char)libwps::readU8(input));
+		libwps::DebugStream f;
+		f << "PLC=" << (*FODs_iter).m_fprop;
+		ascii().addPos(actPos);
+		ascii().addNote(f.str().c_str());
+		ascii().addPos(actPos+size);
+		ascii().addNote("_");
 	}
 
 	/* go to end of page */
@@ -1007,238 +1014,159 @@ void WPS8Text::propertyChangeDelta(uint32_t newTextAttributeBits)
  * codes.
  *
  */
-void WPS8Text::propertyChange(std::string rgchProp, uint16_t &specialCode, int &fieldType)
+void WPS8Text::propertyChange(WPS8Struct::FileData const &mainData, uint16_t &specialCode, int &fieldType)
 {
-	//fixme: this method is immature
-
 	/* set default properties */
 	uint32_t textAttributeBits = 0;
 	m_listener->setTextColor(0);
 	propertyChangeDelta(0);
 	m_listener->setFontSize(10);
-	/* maybe other stuff */
 
-	/* check */
-	/* sometimes, the rgchProp is blank */
-	if (0 == rgchProp.length())
-	{
-		return;
-	}
-	/* other than blank, the shortest should be 9 bytes */
-	if (rgchProp.length() < 3)
-	{
-		WPS_DEBUG_MSG(("Works8: error: rgchProp.length() < 9\n"));
-		throw libwps::ParseException();
-	}
-	if (0 == (rgchProp.length() % 2))
-	{
-		WPS_DEBUG_MSG(("Works8: error: rgchProp.length() is even\n"));
-		throw libwps::ParseException();
-	}
-	if (0 != rgchProp[0] || 0 != rgchProp[1] || 0 != rgchProp[2])
-	{
-		WPS_DEBUG_MSG(("Works8: error: rgchProp does not begin 0x000000\n"));
-		throw libwps::ParseException();
-	}
+	libwps::DebugStream f;
+	if (mainData.m_value) f << "unk=" << mainData.m_value << ",";
 
-	/* set difference from default properties */
-	for (uint32_t x = 3; x < rgchProp.length(); x += 2)
+	/* move the map in state to be ok */
+	static const int expextedTypes[] =
 	{
-		if (0x0A == rgchProp[x+1])
+		0, 0x12, 0x2, 0xA, 0x3, 0xA, 0x4, 0xA, 0x5, 0xA,
+		0xc, 0x22, 0xf, 0x12,
+		0x10, 0xA, 0x12, 0x22, 0x13, 0xA, 0x14, 0xA, /*0x15, 0xA,*/ 0x16, 0xA, 0x17, 0xA,
+		/*0x18, 0x22,*/ 0x1e, 0x12,
+		0x22, 0x22, /*0x23, 0x22,*/ 0x24, 0x8A,
+		0x2e, 0x22,
+	};
+	static bool mapInit = false;
+	static std::map<int, int> expextedTypesMap; // map id->type
+	if (!mapInit)
+	{
+		int numData = sizeof(expextedTypes)/sizeof(int);
+		for (int i = 0; i+1 < numData; i+=2)
+			expextedTypesMap[expextedTypes[i]] = expextedTypes[i+1];
+		mapInit = true;
+	}
+	for (size_t c = 0; c < mainData.m_recursData.size(); c++)
+	{
+		WPS8Struct::FileData const &data = mainData.m_recursData[c];
+		if (data.isBad()) continue;
+		if (expextedTypesMap.find(data.id())==expextedTypesMap.end())
 		{
-			switch(rgchProp[x])
-			{
-			case 0x02:
-				textAttributeBits |= WPS_BOLD_BIT;
-				break;
-			case 0x03:
-				textAttributeBits |= WPS_ITALICS_BIT;
-				break;
-			case 0x04:
-				textAttributeBits |= WPS_OUTLINE_BIT;
-				break;
-			case 0x05:
-				textAttributeBits |= WPS_SHADOW_BIT;
-				break;
-			case 0x10:
-				textAttributeBits |= WPS_STRIKEOUT_BIT;
-				break;
-			case 0x13:
-				textAttributeBits |= WPS_SMALL_CAPS_BIT;
-				break;
-			case 0x15:
-				//fixme: unknown
-				break;
-			case 0x14:
-				textAttributeBits |= WPS_ALL_CAPS_BIT;
-				break;
-			case 0x16:
-				textAttributeBits |= WPS_EMBOSS_BIT;
-				break;
-			case 0x17:
-				textAttributeBits |= WPS_ENGRAVE_BIT;
-				break;
-			default:
-				WPS_DEBUG_MSG(("Works8: error: unknown 0x0A format code 0x%04X\n", rgchProp[x]));
-				// OSNOLA: ok to continue, this is a bool field
-				// ( without any data )
-				//throw libwps::ParseException();
-			}
+			f << data << ",";
 			continue;
 		}
-
-		uint16_t format_code = uint16_t(rgchProp[x] | (rgchProp[x+1] << 8));
-		int unparsedChar = int(rgchProp.length())-int(x)-2;
-		bool ok = true;
-		switch (format_code)
+		if (expextedTypesMap.find(data.id())->second != data.type())
 		{
-		case 0x0000:
-			break;
-
-		case 0x1200:
-		{
-			if (unparsedChar < 2)
-			{
-				ok = false;
-				break;
-			}
-			// special code
-			specialCode = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str());
-			x += 2;
+			WPS_DEBUG_MSG(("WPS8Text::propertyChange: unexpected type for %d\n", data.id()));
+			f << "###" << data << ",";
+			continue;
 		}
-		break;
-
-		case 0x120F:
-			if (unparsedChar < 2)
-			{
-				ok = false;
-				break;
-			}
-			if (1 == rgchProp[x+2])
-				textAttributeBits |= WPS_SUPERSCRIPT_BIT;
-			if (2 == rgchProp[x+2])
-				textAttributeBits |= WPS_SUBSCRIPT_BIT;
-			x += 2;
+		switch(data.id())
+		{
+		case 0x0:
+			specialCode = (uint16_t) data.m_value;
 			break;
-
-		case 0x121E:
+		case 0x02:
+			textAttributeBits |= WPS_BOLD_BIT;
+			break;
+		case 0x03:
+			textAttributeBits |= WPS_ITALICS_BIT;
+			break;
+		case 0x04:
+			textAttributeBits |= WPS_OUTLINE_BIT;
+			break;
+		case 0x05:
+			textAttributeBits |= WPS_SHADOW_BIT;
+			break;
+		case 0x0c:
+			m_listener->setFontSize(uint16_t(data.m_value/12700));
+			break;
+		case 0x0F:
+			if ((data.m_value&0xFF) == 1) textAttributeBits |= WPS_SUPERSCRIPT_BIT;
+			else if ((data.m_value&0xFF) == 2) textAttributeBits |= WPS_SUBSCRIPT_BIT;
+			else f << "###ff=" << std::hex << data.m_value << std::dec << ",";
+			break;
+		case 0x10:
+			textAttributeBits |= WPS_STRIKEOUT_BIT;
+			break;
+		case 0x12:
+			m_listener->setTextLanguage(int(data.m_value));
+			break;
+		case 0x13:
+			textAttributeBits |= WPS_SMALL_CAPS_BIT;
+			break;
+		case 0x14:
+			textAttributeBits |= WPS_ALL_CAPS_BIT;
+			break;
+		case 0x16:
+			textAttributeBits |= WPS_EMBOSS_BIT;
+			break;
+		case 0x17:
+			textAttributeBits |= WPS_ENGRAVE_BIT;
+			break;
 			// fixme: there are various styles of underline
+		case 0x1e:
 			textAttributeBits |= WPS_UNDERLINE_BIT;
-			x += 2;
 			break;
-
-		case 0x220C:
+		case 0x22:
+			fieldType = int(data.m_value);
+			break;
+		case 0x24:
 		{
-			if (unparsedChar < 4)
+			if ((!data.isRead() && !data.readArrayBlock() && data.m_recursData.size() == 0) ||
+			        !data.isArray())
 			{
-				ok = false;
+				WPS_DEBUG_MSG(("WPS8Text::propertyChange: can not read font array\n"));
+				f << "###fontPb";
 				break;
 			}
-			uint32_t font_size = WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			m_listener->setFontSize(uint16_t(font_size/12700));
-			x += 4;
-			break;
-		}
 
-		case 0x2218:
-			if (unparsedChar < 4)
+			size_t nChild = data.m_recursData.size();
+			if (!nChild || data.m_recursData[0].isBad() || data.m_recursData[0].type() != 0x18)
 			{
-				ok = false;
+				WPS_DEBUG_MSG(("WPS8Text::propertyChange: can not read font id\n"));
+				f << "###fontPb";
 				break;
 			}
-			x += 4;
-			break;
-
-		case 0x2212:
-			if (unparsedChar < 4)
-			{
-				ok = false;
-				break;
-			}
-			m_listener->setTextLanguage((int)WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str()));
-			x += 4;
-			break;
-
-		case 0x2222:
-			if (unparsedChar < 4)
-			{
-				ok = false;
-				break;
-			}
-			fieldType = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			x += 4;
-			break;
-
-		case 0x2223:
-			if (unparsedChar < 4)
-			{
-				ok = false;
-				break;
-			}
-			//fixme: date and time field?
-			x += 4;
-			break;
-
-		case 0x222E:
-			if (unparsedChar < 4)
-			{
-				ok = false;
-				break;
-			}
-			m_listener->setTextColor((((unsigned char)rgchProp[x+2]<<16)+((unsigned char)rgchProp[x+3]<<8)+
-			                          (unsigned char)rgchProp[x+4])&0xFFFFFF);
-			x += 4;
-			break;
-
-		case 0x8A24:
-		{
-			if (unparsedChar < 7)
-			{
-				ok = false;
-				break;
-			}
-			/* font change */
-			uint8_t font_n = (uint8_t)rgchProp[x+8];
-			if (font_n > m_fontNames.size())
-			{
-				WPS_DEBUG_MSG(("Works: error: encountered font %i (0x%02x) which is not indexed\n",
-				               font_n,font_n ));
-				throw libwps::ParseException();
-			}
+			uint8_t fId = (uint8_t)data.m_recursData[0].m_value;
+			if (fId < m_fontNames.size())
+				m_listener->setTextFont(m_fontNames[fId].c_str());
 			else
-				m_listener->setTextFont(m_fontNames[font_n].c_str());
-
-			//x++;
-			x += (unsigned int)rgchProp[x+2];
-		}
-		break;
-		default:
-			WPS_DEBUG_MSG(("Works8: error: unknown format code 0x%04X\n", format_code));
-			switch ((format_code>>12)&0xF)
 			{
-			case 1:
-				x+=2;
-				break;
-			case 2:
-				x+=4;
-				break;
-			case 8:
-				if (unparsedChar < 2)
-				{
-					ok = false;
-					break;
-				}
-				x += (unsigned int)rgchProp[x+2];
-				break;
-			default:
-				break;
+				WPS_DEBUG_MSG(("WPS8Text::propertyChange: can not read find font %d\n", int(fId)));
 			}
-			//throw libwps::ParseException();
+			std::vector<int> formats;
+			for (size_t i = 0; i < nChild; i++)
+			{
+				WPS8Struct::FileData const &subD = data.m_recursData[i];
+				if (subD.isBad()) continue;
+				int formId = subD.id() >> 3;
+				int sId = subD.id() & 0x7;
+				if (sId == 0)
+				{
+					formats.resize(size_t(formId)+1,-1);
+					formats[size_t(formId)] = int(subD.m_value);
+				}
+				else
+					f << "###formats"<<formId<<"." << sId << "=" << data.m_recursData[i] << ",";
+			}
+			f << "formats=[" << std::hex;
+			for (size_t i = 0; i < formats.size(); i++)
+			{
+				if (formats[i] != -1)
+					f << "f" << i << "=" << formats[i] << ",";
+			}
+			f << "],";
 			break;
 		}
-		if (!ok)
+		case 0x2e:
 		{
-			WPS_DEBUG_MSG(("WPS8Text::propertyChange: problem with field size, stop\n"));
+			uint32_t col = (uint32_t) (data.m_value&0xFFFFFF);
+			m_listener->setTextColor((col>>16)|(col&0xFF00)|((col&0xFF)<<16));;
+			if (data.m_value &0xFF000000) f << "#f2e=" << std::hex << data.m_value << std::dec;
+			break;
+		}
+		default:
+			WPS_DEBUG_MSG(("WPS8Text::propertyChange: unexpected %d\n", data.id()));
+			f << "###" << data << ",";
 			break;
 		}
 	}
@@ -1246,7 +1174,7 @@ void WPS8Text::propertyChange(std::string rgchProp, uint16_t &specialCode, int &
 	propertyChangeDelta(textAttributeBits);
 }
 
-void WPS8Text::propertyChangePara(std::string rgchProp)
+void WPS8Text::propertyChangePara(WPS8Struct::FileData const &mainData)
 {
 	static const libwps::Justification _align[]=
 	{
@@ -1255,102 +1183,77 @@ void WPS8Text::propertyChangePara(std::string rgchProp)
 	};
 	libwps::Justification align = libwps::JustificationLeft;
 
-	int iv = 0;
 	std::vector<WPSTabStop> tabList;
 	m_listener->setTabs(tabList);
 
-	/* sometimes, the rgchProp is blank */
-	if (0 == rgchProp.length())
+	libwps::DebugStream f;
+	if (mainData.m_value) f << "unk=" << mainData.m_value << ",";
+
+	/* move the map in state to be ok */
+	static const int expextedTypes[] =
 	{
-		m_listener->setCurrentListLevel(0);
-		return;
+		0x3, 0x1A, 0x4, 0x12,
+		0xc, 0x22, 0xd, 0x22, /* 0xe, 0x22, */
+		/* 0x12, 0x22, 0x13, 0x22, */ 0x14, 0x22,
+		0x32, 0x82,
+	};
+	static bool mapInit = false;
+	static std::map<int, int> expextedTypesMap; // map id->type
+	if (!mapInit)
+	{
+		int numData = sizeof(expextedTypes)/sizeof(int);
+		for (int i = 0; i+1 < numData; i+=2)
+			expextedTypesMap[expextedTypes[i]] = expextedTypes[i+1];
+		mapInit = true;
 	}
+
 	float leftIndent=0.0, textIndent=0.0;
 	int listLevel = 0;
 	WPSList::Level level;
-	for (uint32_t x = 3; x < rgchProp.length(); x += 2)
+	for (size_t c = 0; c < mainData.m_recursData.size(); c++)
 	{
-		uint16_t format_code = uint16_t(rgchProp[x] | (rgchProp[x+1] << 8));
-
-		int unparsedChar = int(rgchProp.length())-int(x)-2;
-		bool ok = true;
-		switch (format_code)
+		WPS8Struct::FileData const &data = mainData.m_recursData[c];
+		if (data.isBad()) continue;
+		if (expextedTypesMap.find(data.id())==expextedTypesMap.end())
 		{
-		case 0x1A03:
-			// iv = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str()) & 0xF;
+			f << data << ",";
+			continue;
+		}
+		if (expextedTypesMap.find(data.id())->second != data.type())
+		{
+			WPS_DEBUG_MSG(("WPS8Text::propertyChangePara: unexpected type for %d\n", data.id()));
+			f << "###" << data << ",";
+			continue;
+		}
+
+		switch(data.id())
+		{
 			/* paragraph has a bullet specified in num format*/
+		case 0x3:
 			level.m_type = libwps::BULLET;
 			level.m_bullet = "*";
 			listLevel = 1;
-			x+=2;
 			break;
-
-		case 0x1204:
-			if (unparsedChar < 2)
-			{
-				ok = false;
-				break;
-			}
-			iv = WPS_LE_GET_GUINT16(rgchProp.substr(x+2,2).c_str()) & 0xF;
-			if (iv >= 0 && iv < 4) align = _align[iv];
-			x+=2;
+		case 0x04:
+			if (data.m_value >= 0 && data.m_value < 4) align = _align[data.m_value];
+			else f << "###align=" << data.m_value << ",";
 			break;
-
-		case 0x220C:
-			if (unparsedChar < 4)
-			{
-				ok = false;
-				break;
-			}
-			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			textIndent=float(iv/914400.0);
-			x+=4;
+		case 0x0C:
+			textIndent=float(data.m_value)/914400.0f;
 			break;
-
-		case 0x220D:
-			if (unparsedChar < 4)
-			{
-				ok = false;
-				break;
-			}
-			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
-			leftIndent=float(iv/914400.0);
-			x+=4;
+		case 0x0D:
+			leftIndent=float(data.m_value)/914400.0f;
 			break;
-
-			/*case 0x220E:
-				dw=*(int*)c;
-				ps->cur_pf.right=dw/635;
-				c+=4;
-				break;
-
-			case 0x2212:
-				dw=*(int*)c;
-				ps->cur_pf.before=dw/635;
-				c+=4;
-				break;
-
-			case 0x2213:
-				dw=*(int*)c;
-				ps->cur_pf.after=dw/635;
-				c+=4;
-				break;
-			*/
-		case 0x2214:
+			/* 0x0E: right/635, 0x12: before/635, 0x13: after/635 */
+		case 0x14:
 		{
-			if (unparsedChar < 4)
-			{
-				ok = false;
-				break;
-			}
 			/* numbering style */
-			iv = (int) WPS_LE_GET_GUINT32(rgchProp.substr(x+2,4).c_str());
 			int oldListLevel = listLevel;
 			listLevel = 1;
-			switch(iv & 0xFFFF)
+			switch(data.m_value & 0xFFFF)
 			{
 			case 0: // checkme
-				WPS_DEBUG_MSG(("Find list flag=0\n"));
+				WPS_DEBUG_MSG(("WPS8Text::propertyChangePara: Find list flag=0\n"));
 				level.m_type = libwps::NONE;
 				listLevel = 0;
 				break;
@@ -1371,169 +1274,131 @@ void WPS8Text::propertyChangePara(std::string rgchProp)
 				break;
 			default:
 				listLevel=-1;
-				WPS_DEBUG_MSG(("Unknown style %04x\n",(iv & 0xFFFF)));
+				WPS_DEBUG_MSG(("WPS8Text::propertyChangePara style %04lx\n",(data.m_value & 0xFFFF)));
 				break;
 			}
-			if (listLevel == -1) listLevel = oldListLevel;
+			if (listLevel == -1)
+				listLevel = oldListLevel;
 			else
-			{
-				switch(iv>>16)
-				{
-				case 2:
-					level.m_suffix = ".";
-					break;
-				default:
-					level.m_suffix = ")";
-					break;
-				}
-			}
-			x+=4;
+				level.m_suffix=((data.m_value>>16) == 2) ? "." : ")";
 		}
 		break;
-
-		case 0x8232:
+		case 0x32:
 		{
-			if (unparsedChar < 2)
+			if (!data.isRead() && !data.readArrayBlock() && data.m_recursData.size() == 0)
 			{
-				ok = false;
+				WPS_DEBUG_MSG(("WPS8Text::propertyChangePara can not find tabs array\n"));
+				f << "###tabs,";
 				break;
 			}
-			WPSTabStop tab;
-			const char *ts = rgchProp.c_str();
-			unsigned  t_count = 0;
-			int  t_size = (int) WPS_LE_GET_GUINT32(&ts[x+2]);
-			if (unparsedChar < t_size)
+			size_t nChild = data.m_recursData.size();
+			if (nChild < 1 ||
+			        data.m_recursData[0].isBad() || data.m_recursData[0].id() != 0x27)
 			{
-				ok = false;
+				WPS_DEBUG_MSG(("WPS8Text::propertyChangePara can not find first child\n"));
+				f << "###tabs,";
 				break;
 			}
-			int  tp_rem = 0;
-			int  id = int(x)+6;
-			int  t_rem = t_size-4; // we skip 4 characters
-			uint16_t prop;
+			if (nChild == 1) break;
 
-			if (t_rem > 2)
+			int numTabs = int(data.m_recursData[0].m_value);
+			if (numTabs == 0 || nChild < 2 ||
+			        data.m_recursData[1].isBad() || data.m_recursData[1].id() != 0x28)
 			{
-				prop = WPS_LE_GET_GUINT16(&ts[id]);
-				if (prop == 0x1A27)
-				{
-					t_count = WPS_LE_GET_GUINT16(&ts[id+2]);
-					id += 4;
-					t_rem -= 4;
-
-					if (t_count > 20) break; /* obviously wrong */
-				}
-				else break;   /* wrong format */
-			}
-
-			if (t_count > 0 && t_rem > 2)
-			{
-				prop = WPS_LE_GET_GUINT16(&ts[id]);
-				if (prop == 0x8A28)
-				{
-					tp_rem = (int) WPS_LE_GET_GUINT32(&ts[id+2]);
-					id += 6;
-					t_rem -= 6;
-					tp_rem -= 4;
-
-					if (tp_rem > t_rem) break; /* truncated? */
-				}
-				else break;   /* wrong format */
-			}
-
-			while (/*tabList.size() < t_count && */ tp_rem > 0)
-			{
-				prop = WPS_LE_GET_GUINT16(&ts[id]);
-				id += 2;
-				tp_rem -= 2;
-
-				unsigned iid = (prop >> 3) & 0xF; /* TODO: verify*/
-				int iprop = (prop & 0xFF87);
-
-				if (iid >= t_count) break; /* sanity */
-				while (iid >= tabList.size())
-					tabList.resize(iid+1);
-				switch (iprop)
-				{
-				case 0x2000:
-				{
-					float tabpos = float(WPS_LE_GET_GUINT32(&ts[id]) / 914400.0);
-					tabList[iid].m_position = tabpos;
-					id += 4;
-					tp_rem -=4;
-				}
+				WPS_DEBUG_MSG(("WPS8Text::propertyChangePara can not find second child\n"));
+				f << "###tabs,";
 				break;
-				case 0x1001:
-					switch (ts[id] & 0xF)
+			}
+
+			WPS8Struct::FileData const &mData = data.m_recursData[1];
+			size_t lastParsed = 0;
+			if (mData.id() == 0x28 && mData.isArray() &&
+			        (mData.isRead() || mData.readArrayBlock() || mData.m_recursData.size() != 0))
+			{
+				lastParsed = 1;
+				size_t nTabsChilds = mData.m_recursData.size();
+				int actTab = 0;
+				tabList.resize(size_t(numTabs));
+
+				for (size_t i = 0; i < nTabsChilds; i++)
+				{
+					if (mData.m_recursData[i].isBad()) continue;
+					int value = mData.m_recursData[i].id();
+					int wTab = value/8;
+					int what = value%8;
+
+					// the first tab can be skipped
+					// so this may happens only one time
+					if (wTab > actTab && actTab < numTabs)
 					{
-					case 1:
-						tabList[iid].m_alignment = WPSTabStop::RIGHT;
-						break;
-					case 2:
-						tabList[iid].m_alignment = WPSTabStop::CENTER;
-						break;
-					case 3:
-						tabList[iid].m_alignment = WPSTabStop::DECIMAL;
-						break;
-					default:
-						break;
-					};
-					id += 2;
-					tp_rem -= 2;
-					break;
-				case 0x1802:
-					// TODO: leader
-					id += 2;
-					tp_rem -= 2;
-					break;
-				default:
-					WPS_DEBUG_MSG(("Unknown tab prop %04x\n",iprop));
-					break;// TODO: handle!
-				};
-			};
+						tabList[size_t(actTab)].m_alignment = WPSTabStop::LEFT;
+						tabList[size_t(actTab)].m_position =  0.;
 
-			/*while (t_rem > 4) {
-				float tabpos = WPS_LE_GET_GUINT32(&ts[id]) / 914400.0;
-				tab.m_pos = tabpos;
-				tabList.push_back(tab);
-				break;
-				id += 4;
-				t_rem -= 4;
-			}*/
+						actTab++;
+					}
 
+					if (mData.m_recursData[i].isNumber() && wTab==actTab && what == 0
+					        && actTab < numTabs)
+					{
+						tabList[size_t(actTab)].m_alignment = WPSTabStop::LEFT;
+						tabList[size_t(actTab)].m_position =  float(mData.m_recursData[i].m_value)/914400.f;
+
+						actTab++;
+						continue;
+					}
+					if (mData.m_recursData[i].isNumber() && wTab == actTab-1 && what == 1)
+					{
+						int actVal = int(mData.m_recursData[i].m_value);
+						switch((actVal & 0x3))
+						{
+						case 0:
+							tabList[size_t(actTab-1)].m_alignment = WPSTabStop::LEFT;
+							break;
+						case 1:
+							tabList[size_t(actTab-1)].m_alignment = WPSTabStop::RIGHT;
+							break;
+						case 2:
+							tabList[size_t(actTab-1)].m_alignment = WPSTabStop::CENTER;
+							break;
+						case 3:
+							tabList[size_t(actTab-1)].m_alignment = WPSTabStop::DECIMAL;
+							break;
+						default:
+							break;
+						}
+						if (actVal&0xC)
+							f << "###tabFl" << actTab<<":low=" << (actVal&0xC) << ",";
+						actVal = (actVal>>8);
+						/* not frequent:
+						   but fl1:high=db[C], fl2:high=b7[R] appear relatively often*/
+						if (actVal)
+							f << "###tabFl" << actTab<<":high=" << actVal << ",";
+						continue;
+					}
+					if (mData.m_recursData[i].isNumber() && wTab == actTab-1 && what == 2)
+					{
+						// tabList[actTab-1].m_leaderCharacter = mData.m_recursData[i].m_value;
+						continue;
+					}
+					f << "###tabData:fl" << actTab << "=" << mData.m_recursData[i] << ",";
+				}
+				if (actTab != numTabs)
+				{
+					f << "NTabs[###founds]="<<actTab << ",";
+					tabList.resize(size_t(actTab));
+				}
+			}
+			for (size_t ch =lastParsed+1; ch < nChild; ch++)
+			{
+				if (data.m_recursData[ch].isBad()) continue;
+				f << "extra[tabs]=[" << data.m_recursData[ch] << "],";
+			}
 			m_listener->setTabs(tabList);
-
-			x += unsigned(t_size);
 		}
 		break;
-
 		default:
-			WPS_DEBUG_MSG(("Works8: error: unknown pformat code 0x%04X\n", format_code));
-			switch ((format_code>>12)&0xF)
-			{
-			case 1:
-				x+=2;
-				break;
-			case 2:
-				x+=4;
-				break;
-			case 8:
-				if (unparsedChar < 2)
-				{
-					ok = false;
-					break;
-				}
-				x += unsigned(rgchProp[x+2]);
-				break;
-			default:
-				break;
-			}
-			//throw libwps::ParseException();
-			break;
-		}
-		if (!ok)
-		{
-			WPS_DEBUG_MSG(("WPS8Text::propertyChangePara: problem with field size, stop\n"));
+			WPS_DEBUG_MSG(("WPS8Text::propertyChangePara: unexpected %d\n", data.id()));
+			f << "###" << data << ",";
 			break;
 		}
 	}
