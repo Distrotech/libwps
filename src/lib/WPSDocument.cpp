@@ -22,14 +22,9 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/*
- * This file is in sync with CVS
- * /libwpd2/src/lib/WPDocument.cpp 1.34
- */
-
 #include "WPSDocument.h"
 #include "WPS4.h"
-#include "WPS8Text.h"
+#include "WPS8.h"
 #include "WPSHeader.h"
 #include "WPSParser.h"
 #include "libwps_internal.h"
@@ -132,7 +127,7 @@ WPSResult WPSDocument::parse(WPXInputStream *ip, WPXDocumentInterface *documentI
 		case 6:
 		case 5:
 		{
-			parser.reset(new WPS8Text(header->getInput(), header));
+			parser.reset(new WPS8Parser(header->getInput(), header));
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
 			break;

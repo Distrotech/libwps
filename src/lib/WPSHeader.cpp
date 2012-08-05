@@ -91,9 +91,6 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 			fileMagic[i] = char(libwps::readU8(document_contents.get()));
 		fileMagic[7] = '\0';
 
-		// WPS8Parser only look for the main storage, so we can delete storage
-		oleStorage.reset();
-
 		/* Works 7/8 */
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
 		{

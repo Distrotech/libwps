@@ -1,5 +1,5 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
-/* libwpd
+/* libwps
  * Copyright (C) 2006, 2007 Andrew Ziem
  * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
@@ -24,19 +24,18 @@
 #define WPS8_TEXT_H
 
 #include <vector>
-#include <map>
-
-#include <libwpd/WPXString.h>
-#include <libwpd-stream/WPXStream.h>
 
 #include "libwps_internal.h"
-#include "WPS.h"
-#include "WPSContentListener.h"
-#include "WPSDebug.h"
-#include "WPSParser.h"
 
-typedef WPSContentListener WPS8TextContentListener;
-typedef shared_ptr<WPS8TextContentListener> WPS8TextContentListenerPtr;
+#include "WPS.h"
+#include "WPSDebug.h"
+#include "WPSEntry.h"
+
+class WPS8Parser;
+class WPSPosition;
+
+typedef class WPSContentListener WPS8ContentListener;
+typedef shared_ptr<WPS8ContentListener> WPS8ContentListenerPtr;
 
 namespace WPS8Struct
 {
@@ -48,17 +47,22 @@ namespace WPS8TextInternal
 class SubDocument;
 }
 
-class WPS8Text : public WPSParser
+class WPS8Text
 {
 	friend class WPS8TextInternal::SubDocument;
+	friend class WPS8Parser;
 public:
-	WPS8Text(WPXInputStreamPtr &input, WPSHeaderPtr &header);
+	WPS8Text(WPS8Parser &parser);
 	~WPS8Text();
+
+	//! sets the listener
+	void setListener(WPS8ContentListenerPtr &listen)
+	{
+		m_listener = listen;
+	}
 
 	void parse(WPXDocumentInterface *documentInterface);
 protected:
-	struct Zone;
-	typedef std::multimap<std::string, Zone> IndexMultiMap; /* string is name */
 	struct Note;
 	struct Stream;
 private:
@@ -68,8 +72,6 @@ private:
 	void appendUTF16LE(WPXInputStreamPtr &input);
 	void readTextRange(WPXInputStreamPtr &input, uint32_t startpos, uint32_t endpos, uint16_t stream);
 	bool readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, uint16_t page_size);
-	void parseHeaderIndexEntry(WPXInputStreamPtr &input);
-	void parseHeaderIndex(WPXInputStreamPtr &input);
 	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
 	void parse(WPXInputStreamPtr &stream);
 	void propertyChangeDelta(uint32_t newTextAttributeBits);
@@ -78,11 +80,23 @@ private:
 	// interface with subdocument
 	void sendNote(WPXInputStreamPtr &input, int noteId, bool is_endnote);
 
-	/// the listener
-	shared_ptr<WPS8TextContentListener> m_listener;
+protected:
+	//! returns the debug file
+	libwps::DebugFile &ascii()
+	{
+		return m_asciiFile;
+	}
+	//! the main input
+	WPXInputStreamPtr m_input;
+
+	//! the main parser
+	WPS8Parser &m_mainParser;
+
+	//! the listener
+	WPS8ContentListenerPtr m_listener;
+
 	uint32_t m_offset_eot; /* stream offset to end of text */
 	uint32_t m_oldTextAttributeBits;
-	IndexMultiMap m_headerIndexTable;
 	std::vector<WPSFOD> m_CHFODs; /* CHaracter FOrmatting Descriptors */
 	std::vector<WPSFOD> m_PAFODs; /* PAragraph FOrmatting Descriptors */
 	std::vector<std::string> m_fontNames;
@@ -92,69 +106,21 @@ private:
 	std::vector<Note> m_endnotes;
 	int m_actualEndnote;
 
+	//! the ascii file
+	libwps::DebugFile &m_asciiFile;
 protected:
-	//! returns the debug file
-	libwps::DebugFile &ascii()
+	struct Note : public WPSEntry
 	{
-		return m_asciiFile;
-	}
-
-protected:
-	/** Starting near beginning of CONTENTS stream, there is an index
-	 * to various types of pages in the document. */
-	struct Zone
-	{
-		Zone() : m_offset(0), m_length(0) {}
-		virtual ~Zone() {}
-		uint32_t const &begin() const
-		{
-			return m_offset;
-		}
-		uint32_t end() const
-		{
-			return m_offset+m_length;
-		}
-		uint32_t const &length() const
-		{
-			return m_length;
-		}
-		void setBegin(uint32_t pos)
-		{
-			m_offset = pos;
-		}
-		void setLength(uint32_t _length)
-		{
-			m_length = _length;
-		}
-		void setEnd(uint32_t _end)
-		{
-			m_length = _end-m_offset;
-		}
-
-		bool valid() const
-		{
-			return m_offset && m_length;
-		}
-	protected:
-		uint32_t m_offset;
-		uint32_t m_length;
-	};
-
-	struct Note : public Zone
-	{
-		Note() : Zone(), m_textOffset(0) {}
+		Note() : WPSEntry(), m_textOffset(0) {}
 		uint32_t m_textOffset;
 	};
 
-	struct Stream : public Zone
+	struct Stream : public WPSEntry
 	{
-		Stream() : Zone(), m_type(Z_Dummy) {}
+		Stream() : WPSEntry(), m_type(Z_Dummy) {}
 
 		enum Type {Z_Dummy=0, Z_Body=1, Z_Footnotes=2, Z_Endnotes = 3}  m_type;
 	};
-
-	//! the ascii file
-	libwps::DebugFile m_asciiFile;
 };
 
 

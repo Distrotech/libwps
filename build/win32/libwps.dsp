@@ -107,7 +107,19 @@ SOURCE=..\..\src\lib\WPS4Text.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPS8.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPS8Graph.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPS8Struct.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPS8Table.cpp
 # End Source File
 # Begin Source File
 
@@ -199,7 +211,19 @@ SOURCE=..\..\src\lib\WPS4Text.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPS8.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPS8Graph.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPS8Struct.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPS8Table.h
 # End Source File
 # Begin Source File
 

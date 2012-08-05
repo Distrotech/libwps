@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef WPS4_H
-#define WPS4_H
+#ifndef WPS8_H
+#define WPS8_H
 
 #include <vector>
 #include <map>
@@ -34,61 +34,56 @@
 
 class WPXString;
 class WPSContentListener;
-typedef WPSContentListener WPS4ContentListener;
+typedef WPSContentListener WPS8ContentListener;
 class WPSEntry;
 class WPSPosition;
 class WPSPageSpan;
 
-namespace WPS4ParserInternal
+namespace WPS8ParserInternal
 {
 class SubDocument;
 struct State;
 }
 
-class WPS4Graph;
-class WPS4Text;
+class WPS8Graph;
+class WPS8Table;
+class WPS8Text;
 
 /**
  * This class parses Works version 2 through 4.
  *
  */
-class WPS4Parser : public WPSParser
+class WPS8Parser : public WPSParser
 {
-	friend class WPS4ParserInternal::SubDocument;
-	friend class WPS4Graph;
-	friend class WPS4Text;
+	friend class WPS8ParserInternal::SubDocument;
+	friend class WPS8Graph;
+	friend class WPS8Table;
+	friend class WPS8Text;
 
 public:
 	//! constructor
-	WPS4Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
+	WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
 	//! destructor
-	~WPS4Parser();
+	~WPS8Parser();
 	//! called by WPSDocument to parse the file
 	void parse(WPXDocumentInterface *documentInterface);
 protected:
 	//! version
 	int version() const;
-	//! color
-	bool getColor(int id, uint32_t &color) const;
-
-	//! returns the file size (or the ole zone size)
-	long getSizeFile() const;
-	//! sets the file size ( filled by WPS4Text )
-	void setSizeFile(long sz);
 	//! return true if the pos is in the file, update the file size if need
 	bool checkInFile(long pos);
 
 	//! adds a new page
 	void newPage(int number);
 	//! set the listener
-	void setListener(shared_ptr<WPS4ContentListener> listener);
+	void setListener(shared_ptr<WPS8ContentListener> listener);
+	/** creates the main listener */
+	shared_ptr<WPS8ContentListener> createListener(WPXDocumentInterface *interface);
 
 	/** tries to parse the main zone, ... */
 	bool createStructures();
 	/** tries to parse the different OLE zones ( except the main zone ) */
 	bool createOLEStructures();
-	/** creates the main listener */
-	shared_ptr<WPS4ContentListener> createListener(WPXDocumentInterface *interface);
 
 	// interface with text parser
 
@@ -96,55 +91,56 @@ protected:
 	float pageHeight() const;
 	//! returns the page width, ie. paper size less margin (in inches)
 	float pageWidth() const;
-	//! returns the number of columns
-	int numColumns() const;
-
-	/** creates a document for a comment entry and then send the data
-	 *
-	 * \note actually all bookmarks (comments) are empty */
-	void createDocument(WPSEntry const &entry, libwps::SubDocumentType type);
-	/** creates a document for a footnote entry with label and then send the data*/
-	void createNote(WPSEntry const &entry, WPXString const &label);
-	//! creates a textbox and then send the data
-	void createTextBox(WPSEntry const &entry, WPSPosition const &pos, WPXPropertyList &extras);
-	//! sends text corresponding to the entry to the listener (via WPS4MNText)
-	void send(WPSEntry const &entry, libwps::SubDocumentType type);
+	//! creates a subdocument to send a textbox which correspond to the strsid text zone
+	void sendTextBox(WPSPosition const &/*pos*/, int /*strsid*/) {}
 
 	// interface with graph parser
-
-	/** tries to read a picture ( via its WPS4Graph )
-	 *
-	 * \note returns the object id or -1 if find nothing */
-	int readObject(WPXInputStreamPtr input, WPSEntry const &entry);
-
-	/** sends an object with given id ( via its WPS4Graph )
-	 *
-	 * The object is sent as a character with given size \a size */
-	void sendObject(Vec2f const &size, int id);
 
 	//
 	// low level
 	//
 
-	/** finds the different zones (text, print, ...) and updates nameMultiMap */
-	bool findZones();
+	//! parses an index entry
+	bool parseHeaderIndexEntry();
+	/** function which is called, if some data remains after the basic content
+		of an entry: by default does nothing */
+	bool parseHeaderIndexEntryEnd(long endPos, WPSEntry &hie,std::string &mess);
 
-	/** parses an entry
+	/** tries to find the beginning of the list of indices,
+	 * then try to find all entries in this list.
 	 *
-	 * reads a zone offset and a zone size and checks if this entry is valid */
-	bool parseEntry(std::string const &name);
+	 * Stores result in nameTable, offsetTable */
+	bool parseHeaderIndex();
 
-	/** tries to read the document dimension */
-	bool readDocDim();
+	/** \brief reads the DOP zone: the document properties
+	 *
+	 * Contains the page dimension, the background picture, ... */
+	bool readDocProperties(WPSEntry const &entry, WPSPageSpan &page);
 
-	/// tries to read the printer information
-	bool readPrnt(WPSEntry const &entry);
+	/** \brief reads the FRAM zone: ie a zone which can contains textbox, picture, ...
+		and have some borders */
+	bool readFRAM(WPSEntry const &entry);
 
-	/** reads the additional windows info
-
-		\note this zone contains many unknown data
+	/** \brief parses a SGP zone
+	 *
+	 * an unknown zone which seems to have the contains some size
+	 * \note the four SGP, STRS, STSH, SYID zones seem to exist in all files
 	 */
-	bool readDocWindowsInfo(WPSEntry const &entry);
+	bool readSGP(WPSEntry const &entry);
+
+	/** \brief parses a SYID zone
+	 *
+	 * an unknown zone which seems to have the same number of entries
+	 * than the text zones (STRS) */
+	bool readSYID(WPSEntry const &entry, std::vector<int> &listId);
+
+	/** \brief parses the WNPR zone : a zone which seems to contain the printer preferences.
+	 *
+	 * \warning: read data are not used */
+	bool readWNPR(WPSEntry const &entry);
+
+	//! finds the structures of the Ole zone "SPELLING"
+	bool readSPELLING(WPXInputStreamPtr input, std::string const &oleName);
 
 	//! a DebugFile used to write what we recognize when we parse the document
 	libwps::DebugFile &ascii()
@@ -152,13 +148,15 @@ protected:
 		return m_asciiFile;
 	}
 
-	shared_ptr<WPS4ContentListener> m_listener; /* the listener (if set)*/
+	shared_ptr<WPS8ContentListener> m_listener; /* the listener (if set)*/
 	//! the graph parser
-	shared_ptr<WPS4Graph> m_graphParser;
+	shared_ptr<WPS8Graph> m_graphParser;
+	//! the table parser
+	shared_ptr<WPS8Table> m_tableParser;
 	//! the text parser
-	shared_ptr<WPS4Text> m_textParser;
+	shared_ptr<WPS8Text> m_textParser;
 	//! the internal state
-	shared_ptr<WPS4ParserInternal::State> m_state;
+	shared_ptr<WPS8ParserInternal::State> m_state;
 
 	//! a map to retrieve a file entry by name
 	typedef std::multimap <std::string, WPSEntry> NameMultiMap;
@@ -168,5 +166,5 @@ protected:
 	libwps::DebugFile m_asciiFile;
 };
 
-#endif /* WPS4_H */
+#endif /* WPS8_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

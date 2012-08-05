@@ -36,7 +36,7 @@
 */
 
 /*
- This file taken from libwpd WPXOLEStream.cpp
+ This file is largly inspirated from libwpd WPXOLEStream.cpp
 */
 
 #include <cstring>

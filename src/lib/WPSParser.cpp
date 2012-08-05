@@ -20,11 +20,6 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/*
- * This file is in sync with CVS
- * /libwpd2/src/lib/WPXParser.cpp 1.18
- */
-
 #include "WPSParser.h"
 #include "libwps_internal.h"
 

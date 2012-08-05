@@ -20,12 +20,6 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-/*
- * This file is in sync with CVS
- * /libwpd2/src/lib/WPXParser.h 1.22
- */
-
-
 #ifndef WPSPARSER_H
 #define WPSPARSER_H
 

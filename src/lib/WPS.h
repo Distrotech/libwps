@@ -1,5 +1,5 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
-/* libwpd
+/* libwps
  * Copyright (C) 2006, 2007 Andrew Ziem
  *
  * This library is free software; you can redistribute it and/or
@@ -38,4 +38,3 @@ public:
 
 #endif
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
-

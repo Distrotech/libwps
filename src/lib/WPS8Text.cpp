@@ -35,7 +35,9 @@
 
 #include "WPS.h"
 
+#include "WPS8.h"
 #include "WPS8Struct.h"
+
 #include "WPS8Text.h"
 
 namespace WPS8TextInternal
@@ -49,7 +51,7 @@ public:
 
 	//! constructor for a text entry
 	SubDocument(WPXInputStreamPtr input, WPS8Text &pars, Type type, int i) :
-		WPSSubDocument (input, &pars, i), m_type(type) {}
+		WPSSubDocument (input, 0, i), m_type(type), m_textParser(&pars) {}
 	//! destructor
 	~SubDocument() {}
 
@@ -59,13 +61,20 @@ public:
 		if (!WPSSubDocument::operator==(doc))
 			return false;
 		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
-		return sDoc && (m_type == sDoc->m_type);
+		if (!sDoc) return false;
+		if (m_type != sDoc->m_type) return false;
+		if (m_textParser != sDoc->m_textParser) return false;
+		return true;
 	}
 
 	//! the parser function
 	void parse(WPSContentListenerPtr &listener, libwps::SubDocumentType type);
 
 	Type m_type;
+	WPS8Text *m_textParser;
+private:
+	SubDocument(SubDocument const &orig);
+	SubDocument &operator=(SubDocument const &orig);
 };
 
 void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType type)
@@ -75,14 +84,14 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 		WPS_DEBUG_MSG(("SubDocument::parse: no listener\n"));
 		return;
 	}
-	if (!dynamic_cast<WPS8TextContentListener *>(listener.get()))
+	if (!dynamic_cast<WPS8ContentListener *>(listener.get()))
 	{
 		WPS_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
 		return;
 	}
-	WPS8TextContentListenerPtr &listen =  reinterpret_cast<WPS8TextContentListenerPtr &>(listener);
+	WPS8ContentListenerPtr &listen =  reinterpret_cast<WPS8ContentListenerPtr &>(listener);
 
-	if (!m_parser)
+	if (!m_textParser)
 	{
 		listen->insertCharacter(' ');
 		WPS_DEBUG_MSG(("SubDocument::parse: bad parser\n"));
@@ -97,9 +106,8 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 	}
 
 	long actPos = m_input->tell();
-	WPS8Text *mnParser = reinterpret_cast<WPS8Text *>(m_parser);
 	if (type == libwps::DOC_NOTE)
-		mnParser->sendNote(m_input, m_id, m_type == Endnote);
+		m_textParser->sendNote(m_input, m_id, m_type == Endnote);
 	else
 	{
 		WPS_DEBUG_MSG(("SubDocument::parse: find unknown type of document...\n"));
@@ -113,19 +121,19 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 WPS8Text public
 */
 
-WPS8Text::WPS8Text(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
-	WPSParser(input, header),
+WPS8Text::WPS8Text(WPS8Parser &parser) :
+	m_input(parser.getInput()),
+	m_mainParser(parser),
 	m_listener(),
 	m_offset_eot(0),
 	m_oldTextAttributeBits(0),
-	m_headerIndexTable(),
 	m_CHFODs(),
 	m_PAFODs(),
 	m_fontNames(),
 	m_streams(),
 	m_footnotes(), m_actualFootnote(0),
 	m_endnotes(), m_actualEndnote(0),
-	m_asciiFile()
+	m_asciiFile(parser.ascii())
 {
 }
 
@@ -137,24 +145,21 @@ void WPS8Text::parse(WPXDocumentInterface *documentInterface)
 {
 
 	WPS_DEBUG_MSG(("WPS8Text::parse()\n"));
-	WPXInputStreamPtr input=getInput();
-	if (!input)
+	if (!m_input)
 	{
 		WPS_DEBUG_MSG(("WPS8Text::parse: does not find main ole\n"));
 		throw(libwps::ParseException());
 	}
 
-	ascii().setStream(input);
-	ascii().open("CONTENTS");
 	try
 	{
 		/* parse pages */
 		std::vector<WPSPageSpan> pageList;
-		parsePages(pageList, input);
+		parsePages(pageList, m_input);
 
 		/* parse document */
-		m_listener.reset(new WPS8TextContentListener(pageList, documentInterface));
-		parse(input);
+		m_listener.reset(new WPS8ContentListener(pageList, documentInterface));
+		parse(m_input);
 		m_listener.reset();
 	}
 	catch (...)
@@ -162,8 +167,6 @@ void WPS8Text::parse(WPXDocumentInterface *documentInterface)
 		WPS_DEBUG_MSG(("WPS8Text::parse: exception catched when parsing CONTENTS\n"));
 		throw(libwps::ParseException());
 	}
-
-	m_asciiFile.reset();
 }
 
 
@@ -179,20 +182,20 @@ WPS8Text private
 void WPS8Text::readFontsTable(WPXInputStreamPtr &input)
 {
 	/* find the fonts page offset, fonts array offset, and ending offset */
-	IndexMultiMap::iterator pos;
-	pos = m_headerIndexTable.lower_bound("FONT");
-	if (m_headerIndexTable.end() == pos)
+	WPS8Parser::NameMultiMap::iterator pos;
+	pos = m_mainParser.m_nameMultiMap.lower_bound("FONT");
+	if (m_mainParser.m_nameMultiMap.end() == pos)
 	{
 		WPS_DEBUG_MSG(("Works8: error: no FONT in header index table\n"));
 		throw libwps::ParseException();
 	}
-	Zone const &entry = pos->second;
+	WPSEntry const &entry = pos->second;
 	input->seek(entry.begin() + 0x04, WPX_SEEK_SET);
 	uint32_t n_fonts = libwps::readU32(input);
 	input->seek(entry.begin() + 0x10 + (4*n_fonts), WPX_SEEK_SET);
 
 	/* read each font in the table */
-	while (input->tell() > 0 && (unsigned long)(input->tell()+8) < entry.end() && m_fontNames.size() < n_fonts)
+	while (input->tell() > 0 && input->tell()+8 < entry.end() && m_fontNames.size() < n_fonts)
 	{
 #ifdef DEBUG
 		uint32_t unknown = libwps::readU32(input);
@@ -225,14 +228,14 @@ void WPS8Text::readFontsTable(WPXInputStreamPtr &input)
 
 void WPS8Text::readStreams(WPXInputStreamPtr &input)
 {
-	IndexMultiMap::iterator pos;
-	pos = m_headerIndexTable.lower_bound("STRS");
-	if (m_headerIndexTable.end() == pos)
+	WPS8Parser::NameMultiMap::iterator pos;
+	pos = m_mainParser.m_nameMultiMap.lower_bound("STRS");
+	if (m_mainParser.m_nameMultiMap.end() == pos)
 	{
 		WPS_DEBUG_MSG(("Works8: error: no STRS in header index table\n"));
 		throw libwps::ParseException();
 	}
-	Zone const &entry = pos->second;
+	WPSEntry const &entry = pos->second;
 	uint32_t last_pos = 0;
 
 	uint32_t n_streams;
@@ -306,9 +309,9 @@ void WPS8Text::readStreams(WPXInputStreamPtr &input)
 
 void WPS8Text::readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key)
 {
-	IndexMultiMap::iterator pos;
-	pos = m_headerIndexTable.lower_bound(key);
-	if (m_headerIndexTable.end() == pos)
+	WPS8Parser::NameMultiMap::iterator pos;
+	pos = m_mainParser.m_nameMultiMap.lower_bound(key);
+	if (m_mainParser.m_nameMultiMap.end() == pos)
 		return;
 
 	uint32_t boff;
@@ -337,12 +340,12 @@ void WPS8Text::readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, cons
 		boff = libwps::readU32(input);
 		if (!unk1 && dest.size()>0) dest[dest.size()-1].setEnd(boff);
 
-		while (++pos != m_headerIndexTable.end())
+		while (++pos != m_mainParser.m_nameMultiMap.end())
 		{
 			if (!strcmp(pos->first.c_str(),key)) break;
 		}
 	}
-	while (pos != m_headerIndexTable.end());
+	while (pos != m_mainParser.m_nameMultiMap.end());
 	/* some kind of loop needed */
 }
 
@@ -617,11 +620,11 @@ void WPS8Text::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
 		}
 	}
 
-	WPS_DEBUG_MSG(("Reading footnote [%d;%d)\n",note.begin(),note.end()));
+	WPS_DEBUG_MSG(("Reading footnote [%ld;%ld)\n",note.begin(),note.end()));
 
 	long pos = input->tell();
-	uint32_t beginPos = stream.begin()+note.begin();
-	uint32_t endPos = stream.begin()+note.end();
+	long beginPos = stream.begin()+note.begin();
+	long endPos = stream.begin()+note.end();
 	// try to remove the end of lines which can appear after the footnote
 	while (endPos-1 > beginPos)
 	{
@@ -630,7 +633,7 @@ void WPS8Text::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
 		if (readVal != 0xd) break;
 		endPos -= 1;
 	}
-	readTextRange(input,beginPos,endPos,streamkey);
+	readTextRange(input,(uint32_t)beginPos,(uint32_t)endPos,streamkey);
 	input->seek(pos,WPX_SEEK_SET);
 }
 
@@ -749,132 +752,6 @@ bool WPS8Text::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, 
 }
 
 /**
- * Parse an index entry in the file format's header.  For example,
- * this function may be called multiple times to parse several FDPP
- * entries.  This functions begins at the current position of the
- * input stream, which will be advanced.
- *
- */
-
-void WPS8Text::parseHeaderIndexEntry(WPXInputStreamPtr &input)
-{
-	WPS_DEBUG_MSG(("Works8: debug: parseHeaderIndexEntry() at file pos 0x%lX\n", input->tell()));
-
-	uint16_t cch = libwps::readU16(input);
-	if (0x18 != cch)
-	{
-		WPS_DEBUG_MSG(("Works8: error: parseHeaderIndexEntry cch = %i (0x%X)\n", cch, cch));
-		/* Osnola: normally, this size must be >= 0x18
-		   In my code, I throw an exception when this size is less than 10
-		   to try to continue the parsing ( but I do not accept this entry)
-		 */
-		if (cch < 10)
-			throw libwps::ParseException();
-	}
-
-	std::string name;
-
-	// sanity check
-	for (size_t i =0; i < 4; i++)
-	{
-		name.append(1, (char) libwps::readU8(input));
-
-		if ((uint8_t)name[i] != 0 && (uint8_t)name[i] != 0x20 &&
-		        (41 > (uint8_t)name[i] || (uint8_t)name[i] > 90))
-		{
-			WPS_DEBUG_MSG(("Works8: error: bad character=%u (0x%02x) in name in header index\n",
-			               (uint8_t)name[i], (uint8_t)name[i]));
-			throw libwps::ParseException();
-		}
-	}
-	name.append(1, (char)0);
-
-	std::string unknown1;
-	for (int i = 0; i < 6; i ++)
-		unknown1.append(1, (char)libwps::readU8(input));
-
-	std::string name2;
-	for (int i =0; i < 4; i++)
-		name2.append(1, (char)libwps::readU8(input));
-	name2.append(1, (char)0);
-
-	if (name != name2)
-	{
-		WPS_DEBUG_MSG(("Works8: error: name != name2, %s != %s\n",
-		               name.c_str(), name2.c_str()));
-		// fixme: what to do with this?
-//		throw libwps::ParseException();
-	}
-
-	Zone hie;
-	hie.setBegin(libwps::readU32(input));
-	hie.setLength(libwps::readU32(input));
-
-	WPS_DEBUG_MSG(("Works8: debug: header index entry %s with offset=0x%04X, length=0x%04X\n",
-	               name.c_str(), hie.begin(), hie.end()));
-
-	m_headerIndexTable.insert(std::multimap<std::string, Zone>::value_type(name, hie));
-	// OSNOLA: cch is the length of the entry, so we must advance by cch-0x18
-	input->seek(input->tell() + cch - 0x18, WPX_SEEK_SET);
-}
-
-/**
- * In the header, parse the index to the different sections of
- * the CONTENTS stream.
- *
- */
-void WPS8Text::parseHeaderIndex(WPXInputStreamPtr &input)
-{
-	input->seek(0x0C, WPX_SEEK_SET);
-	uint16_t n_entries = libwps::readU16(input);
-	// fixme: sanity check n_entries
-
-	input->seek(0x18, WPX_SEEK_SET);
-	do
-	{
-		uint16_t unknown1 = libwps::readU16(input);
-		if (0x01F8 != unknown1)
-		{
-			WPS_DEBUG_MSG(("Works8: error: unknown1=0x%X\n", unknown1));
-#if 0
-			throw libwps::ParseException();
-#endif
-		}
-
-		uint16_t n_entries_local = libwps::readU16(input);
-
-		if (n_entries_local > 0x20)
-		{
-			WPS_DEBUG_MSG(("Works8: error: n_entries_local=%i\n", n_entries_local));
-			throw libwps::ParseException();
-		}
-
-		uint32_t next_index_table = libwps::readU32(input);
-
-		do
-		{
-			parseHeaderIndexEntry(input);
-			n_entries--;
-			n_entries_local--;
-		}
-		while (n_entries > 0 && n_entries_local);
-
-		if (0xFFFFFFFF == next_index_table && n_entries > 0)
-		{
-			WPS_DEBUG_MSG(("Works8: error: expected more header index entries\n"));
-			throw libwps::ParseException();
-		}
-
-		if (0xFFFFFFFF == next_index_table)
-			break;
-
-		WPS_DEBUG_MSG(("Works8: debug: seeking to position 0x%X\n", next_index_table));
-		input->seek(next_index_table, WPX_SEEK_SET);
-	}
-	while (n_entries > 0);
-}
-
-/**
  * Read the page format from the file.  It seems that WPS8Text files
  * can only have one page format throughout the whole document.
  *
@@ -894,25 +771,16 @@ void WPS8Text::parse(WPXInputStreamPtr &input)
 
 	m_listener->startDocument();
 
-	/* header index */
-	parseHeaderIndex(input);
-
-	IndexMultiMap::iterator pos;
-	for (pos = m_headerIndexTable.begin(); pos != m_headerIndexTable.end(); ++pos)
-	{
-		WPS_DEBUG_MSG(("Works: debug: m_headerIndexTable: %s, offset=0x%X, length=0x%X, end=0x%X\n",
-		               pos->first.c_str(), pos->second.begin(), pos->second.length(), pos->second.end()));
-	}
-
+	WPS8Parser::NameMultiMap::iterator pos;
 	/* What is the total length of the text? */
-	pos = m_headerIndexTable.lower_bound("TEXT");
-	if (m_headerIndexTable.end() == pos)
+	pos = m_mainParser.m_nameMultiMap.lower_bound("TEXT");
+	if (m_mainParser.m_nameMultiMap.end() == pos)
 	{
 		WPS_DEBUG_MSG(("Works: error: no TEXT in header index table\n"));
 	}
 	else
 	{
-		m_offset_eot = pos->second.end();
+		m_offset_eot = (u_int32_t) pos->second.end();
 		WPS_DEBUG_MSG(("Works: debug: TEXT m_offset_eot = 0x%04X\n", m_offset_eot));
 	}
 
@@ -920,19 +788,16 @@ void WPS8Text::parse(WPXInputStreamPtr &input)
 	for (int wh = 0; wh < 2; wh++)
 	{
 		char const *name = wh==0 ? "FDPC" : "FDPP";
-		for (pos = m_headerIndexTable.begin(); pos != m_headerIndexTable.end(); ++pos)
+		for (pos = m_mainParser.m_nameMultiMap.begin(); pos != m_mainParser.m_nameMultiMap.end(); ++pos)
 		{
 			if (0 != strcmp(name,pos->first.c_str()))
 				continue;
 
-			Zone const &entry = pos->second;
-			WPS_DEBUG_MSG(("Works: debug: %s offset=0x%X, length=0x%X\n",
-			               name, entry.begin(), entry.length()));
-
+			WPSEntry const &entry = pos->second;
 			input->seek(entry.begin(), WPX_SEEK_SET);
 			if (entry.length() != 512)
 			{
-				WPS_DEBUG_MSG(("Works: warning: %s offset=0x%X, length=0x%X\n",
+				WPS_DEBUG_MSG(("Works: warning: %s offset=0x%lX, length=0x%lX\n",
 				               name,entry.begin(), entry.length()));
 			}
 			if (wh==0)
@@ -968,8 +833,10 @@ void WPS8Text::parse(WPXInputStreamPtr &input)
 		} else*/ if (m_streams[i].m_type == Stream::Z_Footnotes ||
 		             m_streams[i].m_type == Stream::Z_Endnotes)
 		{
-			if (m_streams[i].begin() < doc_end) doc_end = m_streams[i].begin();
-			if (m_streams[i].end() > doc_start2) doc_start2 = m_streams[i].end();
+			if ((uint32_t)m_streams[i].begin() < doc_end)
+				doc_end = (uint32_t) m_streams[i].begin();
+			if ((uint32_t)m_streams[i].end() > doc_start2)
+				doc_start2 = (uint32_t) m_streams[i].end();
 		}
 	}
 	if (doc_end > doc_start2) doc_start2 = doc_end;
