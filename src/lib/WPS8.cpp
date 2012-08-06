@@ -147,16 +147,13 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
 //! the state of WPS8
 struct State
 {
-	State() : m_version(0), m_eof(-1), m_pageSpan(),
-		m_localeLanguage(""), m_background(),
+	State() : m_eof(-1), m_pageSpan(), m_localeLanguage(""), m_background(),
 		m_frameList(), m_docPropertyTypes(), m_frameTypes(), m_actPage(0), m_numPages(0)
 	{
 		initTypeMaps();
 	}
 	//! initialize the type map
 	void initTypeMaps();
-	//! the version
-	int m_version;
 	//! the end of file
 	long m_eof;
 	//! the actual document size
@@ -207,11 +204,10 @@ void State::initTypeMaps()
 // constructor, destructor
 WPS8Parser::WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 	WPSParser(input, header),
-	m_listener(), m_graphParser(), m_tableParser(), m_textParser(), m_state(), m_nameMultiMap(),
-	m_asciiFile()
+	m_listener(), m_graphParser(), m_tableParser(), m_textParser(), m_state()
 {
+	if (version()<5) setVersion(5);
 	m_state.reset(new WPS8ParserInternal::State);
-	m_state->m_version = header->getMajorVersion();
 	m_graphParser.reset(new WPS8Graph(*this));
 	m_tableParser.reset(new WPS8Table(*this));
 	m_textParser.reset(new WPS8Text(*this));
@@ -221,12 +217,7 @@ WPS8Parser::~WPS8Parser ()
 {
 }
 
-// small funtion ( version, dimension, ...)
-int WPS8Parser::version() const
-{
-	return m_state->m_version;
-}
-
+// small funtion ( dimension, ...)
 float WPS8Parser::pageHeight() const
 {
 	return float(m_state->m_pageSpan.getFormLength()-m_state->m_pageSpan.getMarginTop()-m_state->m_pageSpan.getMarginBottom());
@@ -364,7 +355,7 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 	m_listener->endDocument();
 	m_listener.reset();
 
-	m_asciiFile.reset();
+	ascii().reset();
 }
 
 // find and create all the zones ( normal/ole )
@@ -386,8 +377,8 @@ bool WPS8Parser::createStructures()
 	NameMultiMap::iterator pos;
 
 	// read DOP zone (document properties)
-	pos = m_nameMultiMap.lower_bound("DOP ");
-	while (m_nameMultiMap.end() != pos)
+	pos = getNameEntryMap().lower_bound("DOP ");
+	while (getNameEntryMap().end() != pos)
 	{
 		WPSEntry const &entry = pos->second;
 		pos++;
@@ -399,8 +390,8 @@ bool WPS8Parser::createStructures()
 	}
 
 	// printer data
-	pos = m_nameMultiMap.lower_bound("PRNT");
-	while (m_nameMultiMap.end() != pos)
+	pos = getNameEntryMap().lower_bound("PRNT");
+	while (getNameEntryMap().end() != pos)
 	{
 		WPSEntry const &entry = pos->second;
 		pos++;
@@ -411,8 +402,8 @@ bool WPS8Parser::createStructures()
 	}
 
 	// read SGP zone (unknown)
-	pos = m_nameMultiMap.lower_bound("SGP ");
-	while (m_nameMultiMap.end() != pos)
+	pos = getNameEntryMap().lower_bound("SGP ");
+	while (getNameEntryMap().end() != pos)
 	{
 		WPSEntry const &entry = pos->second;
 		pos++;
@@ -423,8 +414,8 @@ bool WPS8Parser::createStructures()
 	}
 
 	// SYID
-	pos = m_nameMultiMap.lower_bound("SYID");
-	while (m_nameMultiMap.end() != pos)
+	pos = getNameEntryMap().lower_bound("SYID");
+	while (getNameEntryMap().end() != pos)
 	{
 		WPSEntry const &entry = pos->second;
 		pos++;
@@ -436,9 +427,9 @@ bool WPS8Parser::createStructures()
 	}
 
 	// document title
-	pos = m_nameMultiMap.find("TITL");
+	pos = getNameEntryMap().find("TITL");
 	WPXString title;
-	if (m_nameMultiMap.end() != pos && pos->second.hasType("TITL"))
+	if (getNameEntryMap().end() != pos && pos->second.hasType("TITL"))
 	{
 		pos->second.setParsed(true);
 #if 0
@@ -451,8 +442,8 @@ bool WPS8Parser::createStructures()
 	}
 
 	// ok, we can now read the frame
-	pos = m_nameMultiMap.lower_bound("FRAM");
-	while (m_nameMultiMap.end() != pos)
+	pos = getNameEntryMap().lower_bound("FRAM");
+	while (getNameEntryMap().end() != pos)
 	{
 		WPSEntry const &entry = pos->second;
 		pos++;
@@ -604,7 +595,7 @@ bool WPS8Parser::parseHeaderIndexEntry()
 		return true;
 	}
 
-	m_nameMultiMap.insert(NameMultiMap::value_type(name, hie));
+	getNameEntryMap().insert(NameMultiMap::value_type(name, hie));
 
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
@@ -668,7 +659,7 @@ bool WPS8Parser::parseHeaderIndexEntryEnd(long endPos, WPSEntry &/*hie*/, std::s
 bool WPS8Parser::parseHeaderIndex()
 {
 	WPXInputStreamPtr input = getInput();
-	m_nameMultiMap.clear();
+	getNameEntryMap().clear();
 	input->seek(0x08, WPX_SEEK_SET);
 
 	long pos = input->tell();

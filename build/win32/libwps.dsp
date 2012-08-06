@@ -177,6 +177,10 @@ SOURCE=..\..\src\lib\WPSSubDocument.cpp
 
 SOURCE=..\..\src\lib\WPSTable.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSTextParser.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -288,6 +292,10 @@ SOURCE=..\..\src\lib\WPSSubDocument.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSTable.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSTextParser.h
 # End Source File
 # End Group
 # End Target

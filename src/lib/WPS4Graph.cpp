@@ -68,7 +68,7 @@ struct State
 // constructor/destructor
 WPS4Graph::WPS4Graph(WPS4Parser &parser):
 	m_listener(), m_mainParser(parser), m_state(new WPS4GraphInternal::State),
-	m_asciiFile(parser.m_asciiFile)
+	m_asciiFile(parser.ascii())
 {
 }
 

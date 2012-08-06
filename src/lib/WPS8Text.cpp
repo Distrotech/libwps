@@ -121,9 +121,7 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 WPS8Text public
 */
 
-WPS8Text::WPS8Text(WPS8Parser &parser) :
-	m_input(parser.getInput()),
-	m_mainParser(parser),
+WPS8Text::WPS8Text(WPS8Parser &parser) : WPSTextParser(parser, parser.getInput()),
 	m_listener(),
 	m_offset_eot(0),
 	m_oldTextAttributeBits(0),
@@ -132,8 +130,7 @@ WPS8Text::WPS8Text(WPS8Parser &parser) :
 	m_fontNames(),
 	m_streams(),
 	m_footnotes(), m_actualFootnote(0),
-	m_endnotes(), m_actualEndnote(0),
-	m_asciiFile(parser.ascii())
+	m_endnotes(), m_actualEndnote(0)
 {
 }
 
@@ -175,51 +172,83 @@ WPS8Text private
 */
 
 
-/**
- * Reads fonts table into memory.
- *
- */
-void WPS8Text::readFontsTable(WPXInputStreamPtr &input)
+////////////////////////////////////////////////////////////
+// the fontname:
+////////////////////////////////////////////////////////////
+bool WPS8Text::readFontNames(WPSEntry const &entry)
 {
-	/* find the fonts page offset, fonts array offset, and ending offset */
-	WPS8Parser::NameMultiMap::iterator pos;
-	pos = m_mainParser.m_nameMultiMap.lower_bound("FONT");
-	if (m_mainParser.m_nameMultiMap.end() == pos)
+	WPXInputStreamPtr input = getInput();
+	if (!entry.hasType(entry.name()))
 	{
-		WPS_DEBUG_MSG(("Works8: error: no FONT in header index table\n"));
-		throw libwps::ParseException();
+		WPS_DEBUG_MSG(("WPS8Text::readFonts: FONT name=%s, type=%s\n",
+		               entry.name().c_str(), entry.type().c_str()));
+		return false;
 	}
-	WPSEntry const &entry = pos->second;
-	input->seek(entry.begin() + 0x04, WPX_SEEK_SET);
-	uint32_t n_fonts = libwps::readU32(input);
-	input->seek(entry.begin() + 0x10 + (4*n_fonts), WPX_SEEK_SET);
+
+	if (entry.length() < 20)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readFonts: FONT length=0x%ld\n", entry.length()));
+		return false;
+	}
+
+	long debPos = entry.begin();
+	input->seek(debPos, WPX_SEEK_SET);
+
+	long len = libwps::readU32(input); // len + 0x14 = size
+	size_t n_fonts = (size_t) libwps::readU32(input);
+
+	if (long(4*n_fonts) > len)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readFonts: FONT number=%d\n", int(n_fonts)));
+		return false;
+	}
+	libwps::DebugStream f;
+
+	entry.setParsed();
+	f << "N=" << n_fonts;
+	if (len+20 != entry.length()) f << ", ###L=" << std::hex << len+0x14;
+
+	f << ", unkn=(" << std::hex;
+	for (int i = 0; i < 3; i++) f << libwps::readU32(input) << ", ";
+	f << "), dec=[";
+	for (int i = 0; i < int(n_fonts); i++) f << ", " << libwps::read32(input);
+	f << "]" << std::dec;
+
+	ascii().addPos(debPos);
+	ascii().addNote(f.str().c_str());
+
+	long pageEnd = entry.end();
 
 	/* read each font in the table */
-	while (input->tell() > 0 && input->tell()+8 < entry.end() && m_fontNames.size() < n_fonts)
+	while (input->tell() > 0 && m_fontNames.size() < n_fonts)
 	{
-#ifdef DEBUG
-		uint32_t unknown = libwps::readU32(input);
-#else
-		input->seek(4, WPX_SEEK_CUR);
-#endif
-		uint16_t string_size = libwps::readU16(input);
+		debPos = input->tell();
+		if (debPos+6 > long(pageEnd)) break;
+
+		int string_size = (int) libwps::readU16(input);
+		if (debPos+2*string_size+6 > long(pageEnd)) break;
 
 		std::string s;
 		for (; string_size>0; string_size--)
-			s.append(1, (char)libwps::readU16(input));
-		s.append(1, (char)0);
-		if (s.empty())
-			continue;
-		WPS_DEBUG_MSG(("Works: debug: unknown={0x%08X}, name=%s\n",
-		               unknown, s.c_str()));
+			s.append(1, (char) libwps::readU16(input));
+
+		f.str("");
+		f << "FONT("<<m_fontNames.size()<<"): " << s;
+		f << ", unkn=(";
+		for (int i = 0; i < 4; i++) f << (int) libwps::read8(input) << ", ";
+		f << ")";
+		ascii().addPos(debPos);
+		ascii().addNote(f.str().c_str());
+
 		m_fontNames.push_back(s);
 	}
 
 	if (m_fontNames.size() != n_fonts)
 	{
-		WPS_DEBUG_MSG(("Works: warning: expected %i fonts but only found %i\n",
-		               n_fonts, int(m_fontNames.size())));
+		WPS_DEBUG_MSG(("WPS8Text::readFonts: expected %i fonts but only found %i\n",
+		               int(n_fonts), int(m_fontNames.size())));
 	}
+	return true;
 }
 
 /**
@@ -229,8 +258,8 @@ void WPS8Text::readFontsTable(WPXInputStreamPtr &input)
 void WPS8Text::readStreams(WPXInputStreamPtr &input)
 {
 	WPS8Parser::NameMultiMap::iterator pos;
-	pos = m_mainParser.m_nameMultiMap.lower_bound("STRS");
-	if (m_mainParser.m_nameMultiMap.end() == pos)
+	pos = mainParser().getNameEntryMap().lower_bound("STRS");
+	if (mainParser().getNameEntryMap().end() == pos)
 	{
 		WPS_DEBUG_MSG(("Works8: error: no STRS in header index table\n"));
 		throw libwps::ParseException();
@@ -310,8 +339,8 @@ void WPS8Text::readStreams(WPXInputStreamPtr &input)
 void WPS8Text::readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key)
 {
 	WPS8Parser::NameMultiMap::iterator pos;
-	pos = m_mainParser.m_nameMultiMap.lower_bound(key);
-	if (m_mainParser.m_nameMultiMap.end() == pos)
+	pos = mainParser().getNameEntryMap().lower_bound(key);
+	if (mainParser().getNameEntryMap().end() == pos)
 		return;
 
 	uint32_t boff;
@@ -340,12 +369,12 @@ void WPS8Text::readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, cons
 		boff = libwps::readU32(input);
 		if (!unk1 && dest.size()>0) dest[dest.size()-1].setEnd(boff);
 
-		while (++pos != m_mainParser.m_nameMultiMap.end())
+		while (++pos != mainParser().getNameEntryMap().end())
 		{
 			if (!strcmp(pos->first.c_str(),key)) break;
 		}
 	}
-	while (pos != m_mainParser.m_nameMultiMap.end());
+	while (pos != mainParser().getNameEntryMap().end());
 	/* some kind of loop needed */
 }
 
@@ -770,11 +799,11 @@ void WPS8Text::parse(WPXInputStreamPtr &input)
 	WPS_DEBUG_MSG(("WPS8Text::parse()\n"));
 
 	m_listener->startDocument();
-
+	WPS8Parser::NameMultiMap &nameTable = mainParser().getNameEntryMap();
 	WPS8Parser::NameMultiMap::iterator pos;
 	/* What is the total length of the text? */
-	pos = m_mainParser.m_nameMultiMap.lower_bound("TEXT");
-	if (m_mainParser.m_nameMultiMap.end() == pos)
+	pos = nameTable.lower_bound("TEXT");
+	if (nameTable.end() == pos)
 	{
 		WPS_DEBUG_MSG(("Works: error: no TEXT in header index table\n"));
 	}
@@ -788,7 +817,7 @@ void WPS8Text::parse(WPXInputStreamPtr &input)
 	for (int wh = 0; wh < 2; wh++)
 	{
 		char const *name = wh==0 ? "FDPC" : "FDPP";
-		for (pos = m_mainParser.m_nameMultiMap.begin(); pos != m_mainParser.m_nameMultiMap.end(); ++pos)
+		for (pos = nameTable.begin(); pos != nameTable.end(); ++pos)
 		{
 			if (0 != strcmp(name,pos->first.c_str()))
 				continue;
@@ -811,7 +840,13 @@ void WPS8Text::parse(WPXInputStreamPtr &input)
 	readStreams(input);
 
 	/* read fonts table */
-	readFontsTable(input);
+	pos = nameTable.find("FONT");
+	if (nameTable.end() == pos)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::parse: error: no FONT in header index table\n"));
+		throw libwps::ParseException();
+	}
+	readFontNames(pos->second);
 
 	readNotes(m_footnotes,input,"FTN ");
 	readNotes(m_endnotes,input,"EDN ");

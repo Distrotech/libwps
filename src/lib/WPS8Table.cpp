@@ -408,7 +408,7 @@ bool WPS8Table::readStructures(WPXInputStreamPtr input)
 {
 	m_state->m_tableMap.clear();
 
-	WPS8Parser::NameMultiMap &nameTable = m_mainParser.m_nameMultiMap;
+	WPS8Parser::NameMultiMap &nameTable = m_mainParser.getNameEntryMap();
 	WPS8Parser::NameMultiMap::iterator pos;
 	pos = nameTable.lower_bound("MCLD");
 	while (pos != nameTable.end())

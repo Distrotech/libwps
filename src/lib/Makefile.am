@@ -39,6 +39,7 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSParser.cpp		\
 	WPSSubDocument.cpp	\
 	WPSTable.cpp		\
+	WPSTextParser.cpp	\
 	libwps.h		\
 	libwps_tools_win.h	\
 	libwps_internal.h	\
@@ -65,7 +66,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSParser.h		\
 	WPSPosition.h		\
 	WPSSubDocument.h	\
-	WPSTable.h
+	WPSTable.h		\
+	WPSTextParser.h
 
 if OS_WIN32
 

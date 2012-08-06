@@ -166,7 +166,7 @@ void WPS8Graph::storeObjects(std::vector<WPXBinaryData> const &objects,
 ////////////////////////////////////////////////////////////
 bool WPS8Graph::readStructures(WPXInputStreamPtr input)
 {
-	WPS8Parser::NameMultiMap &nameTable = m_mainParser.m_nameMultiMap;
+	WPS8Parser::NameMultiMap &nameTable = m_mainParser.getNameEntryMap();
 	WPS8Parser::NameMultiMap::iterator pos;
 
 	// contains a text and 8 borders cells?

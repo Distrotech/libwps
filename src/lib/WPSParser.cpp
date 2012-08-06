@@ -20,13 +20,19 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#include "WPSParser.h"
 #include "libwps_internal.h"
 
+#include "WPSEntry.h"
+#include "WPSHeader.h"
+
+#include "WPSParser.h"
+
 WPSParser::WPSParser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
-	m_input(input),
-	m_header(header)
+	m_input(input), m_header(header), m_version(0),
+	m_nameMultiMap(), m_asciiFile()
 {
+	if (header)
+		m_version = header->getMajorVersion();
 }
 
 WPSParser::~WPSParser()

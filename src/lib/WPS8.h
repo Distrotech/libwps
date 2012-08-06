@@ -24,11 +24,9 @@
 #define WPS8_H
 
 #include <vector>
-#include <map>
 
 #include <libwpd-stream/WPXStream.h>
 #include "libwps_internal.h"
-#include "WPSDebug.h"
 
 #include "WPSParser.h"
 
@@ -50,7 +48,7 @@ class WPS8Table;
 class WPS8Text;
 
 /**
- * This class parses Works version 2 through 4.
+ * This class parses Works version 2000 through 8.
  *
  */
 class WPS8Parser : public WPSParser
@@ -68,8 +66,6 @@ public:
 	//! called by WPSDocument to parse the file
 	void parse(WPXDocumentInterface *documentInterface);
 protected:
-	//! version
-	int version() const;
 	//! return true if the pos is in the file, update the file size if need
 	bool checkInFile(long pos);
 
@@ -142,12 +138,6 @@ protected:
 	//! finds the structures of the Ole zone "SPELLING"
 	bool readSPELLING(WPXInputStreamPtr input, std::string const &oleName);
 
-	//! a DebugFile used to write what we recognize when we parse the document
-	libwps::DebugFile &ascii()
-	{
-		return m_asciiFile;
-	}
-
 	shared_ptr<WPS8ContentListener> m_listener; /* the listener (if set)*/
 	//! the graph parser
 	shared_ptr<WPS8Graph> m_graphParser;
@@ -157,13 +147,6 @@ protected:
 	shared_ptr<WPS8Text> m_textParser;
 	//! the internal state
 	shared_ptr<WPS8ParserInternal::State> m_state;
-
-	//! a map to retrieve a file entry by name
-	typedef std::multimap <std::string, WPSEntry> NameMultiMap;
-	//! a map to retrieve a file entry by name
-	NameMultiMap m_nameMultiMap;
-	//! the debug file
-	libwps::DebugFile m_asciiFile;
 };
 
 #endif /* WPS8_H */

@@ -123,13 +123,11 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 //! the state of WPS4
 struct State
 {
-	State() : m_version(0), m_isDosFile(false), m_eof(-1),
+	State() : m_isDosFile(false), m_eof(-1),
 		m_pageSpan(), m_noFirstPageHeader(false), m_noFirstPageFooter(false),
 		m_numColumns(1), m_actPage(0), m_numPages(0)
 	{
 	}
-	//! the version
-	int m_version;
 	//! flag to know if the file is or not a dos file
 	bool m_isDosFile;
 	//! the last file position
@@ -146,11 +144,9 @@ struct State
 // constructor, destructor
 WPS4Parser::WPS4Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 	WPSParser(input, header),
-	m_listener(), m_graphParser(), m_textParser(), m_state(), m_nameMultiMap(),
-	m_asciiFile()
+	m_listener(), m_graphParser(), m_textParser(), m_state()
 {
 	m_state.reset(new WPS4ParserInternal::State);
-	m_state->m_version = header->getMajorVersion();
 	m_graphParser.reset(new WPS4Graph(*this));
 	m_textParser.reset(new WPS4Text(*this, input));
 }
@@ -159,12 +155,7 @@ WPS4Parser::~WPS4Parser ()
 {
 }
 
-// small funtion ( version, dimension, color, fileSize, ...)
-int WPS4Parser::version() const
-{
-	return m_state->m_version;
-}
-
+// small funtion ( dimension, color, fileSize, ...)
 float WPS4Parser::pageHeight() const
 {
 	return float(m_state->m_pageSpan.getFormLength()-m_state->m_pageSpan.getMarginTop()-m_state->m_pageSpan.getMarginBottom());
@@ -412,7 +403,7 @@ void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
 	m_listener->endDocument();
 	m_listener.reset();
 
-	m_asciiFile.reset();
+	ascii().reset();
 }
 
 // find and create all the zones ( normal/ole )
@@ -424,10 +415,10 @@ bool WPS4Parser::createStructures()
 
 #ifdef DEBUG
 	WPS4Parser::NameMultiMap::iterator pos;
-	pos = m_nameMultiMap.find("PRNT");
-	if (pos != m_nameMultiMap.end()) readPrnt(pos->second);
-	pos = m_nameMultiMap.find("DocWInfo");
-	if (pos != m_nameMultiMap.end()) readDocWindowsInfo(pos->second);
+	pos = getNameEntryMap().find("PRNT");
+	if (pos != getNameEntryMap().end()) readPrnt(pos->second);
+	pos = getNameEntryMap().find("DocWInfo");
+	if (pos != getNameEntryMap().end()) readDocWindowsInfo(pos->second);
 #endif
 
 	return true;
@@ -493,7 +484,7 @@ bool WPS4Parser::parseEntry(std::string const &name)
 
 	if (ok)
 	{
-		m_nameMultiMap.insert(NameMultiMap::value_type(zone.type(), zone));
+		getNameEntryMap().insert(NameMultiMap::value_type(zone.type(), zone));
 
 		ascii().addPos(zone.begin());
 		std::string nm = "ZZ";
@@ -568,7 +559,7 @@ bool WPS4Parser::findZones()
 		break;
 	}
 	if (worksVersion)
-		m_state->m_version = worksVersion;
+		setVersion(worksVersion);
 	if (val != -2) f << "##unk=" << val << ",";
 	if (subVers && subVers != 0x4755) f << "##subVers=" << std::hex << subVers << std::dec << ",";
 
@@ -597,7 +588,7 @@ bool WPS4Parser::findZones()
 	input->seek(actPos, WPX_SEEK_SET);
 	readDocDim();
 
-	if (m_state->m_version <= 1)
+	if (version() <= 1)
 	{
 		// CHECKME:
 		ascii().addPos(0x80);
@@ -696,7 +687,7 @@ bool WPS4Parser::findZones()
 				zone.setBegin(begP + i*sz);
 				zone.setLength(sz);
 				zone.setId(i);
-				m_nameMultiMap.insert(NameMultiMap::value_type(zone.type(), zone));
+				getNameEntryMap().insert(NameMultiMap::value_type(zone.type(), zone));
 
 				ascii().addPos(zone.begin());
 				std::string nm = "ZZPRNT(";

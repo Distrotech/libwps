@@ -24,11 +24,9 @@
 #define WPS4_H
 
 #include <vector>
-#include <map>
 
 #include <libwpd-stream/WPXStream.h>
 #include "libwps_internal.h"
-#include "WPSDebug.h"
 
 #include "WPSParser.h"
 
@@ -66,8 +64,6 @@ public:
 	//! called by WPSDocument to parse the file
 	void parse(WPXDocumentInterface *documentInterface);
 protected:
-	//! version
-	int version() const;
 	//! color
 	bool getColor(int id, uint32_t &color) const;
 
@@ -146,12 +142,6 @@ protected:
 	 */
 	bool readDocWindowsInfo(WPSEntry const &entry);
 
-	//! a DebugFile used to write what we recognize when we parse the document
-	libwps::DebugFile &ascii()
-	{
-		return m_asciiFile;
-	}
-
 	shared_ptr<WPS4ContentListener> m_listener; /* the listener (if set)*/
 	//! the graph parser
 	shared_ptr<WPS4Graph> m_graphParser;
@@ -159,13 +149,6 @@ protected:
 	shared_ptr<WPS4Text> m_textParser;
 	//! the internal state
 	shared_ptr<WPS4ParserInternal::State> m_state;
-
-	//! a map to retrieve a file entry by name
-	typedef std::multimap <std::string, WPSEntry> NameMultiMap;
-	//! a map to retrieve a file entry by name
-	NameMultiMap m_nameMultiMap;
-	//! the debug file
-	libwps::DebugFile m_asciiFile;
 };
 
 #endif /* WPS4_H */

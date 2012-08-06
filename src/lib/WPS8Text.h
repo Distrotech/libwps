@@ -31,6 +31,8 @@
 #include "WPSDebug.h"
 #include "WPSEntry.h"
 
+#include "WPSTextParser.h"
+
 class WPS8Parser;
 class WPSPosition;
 
@@ -47,7 +49,7 @@ namespace WPS8TextInternal
 class SubDocument;
 }
 
-class WPS8Text
+class WPS8Text : public WPSTextParser
 {
 	friend class WPS8TextInternal::SubDocument;
 	friend class WPS8Parser;
@@ -65,8 +67,22 @@ public:
 protected:
 	struct Note;
 	struct Stream;
+	//! return the main parser
+	WPS8Parser &mainParser()
+	{
+		return reinterpret_cast<WPS8Parser &> (m_mainParser);
+	}
+	//! return the main parser
+	WPS8Parser const &mainParser() const
+	{
+		return reinterpret_cast<WPS8Parser const &> (m_mainParser);
+	}
+
+	//! the font
+	//! reads the font names
+	bool readFontNames(WPSEntry const &entry);
+
 private:
-	void readFontsTable(WPXInputStreamPtr &input);
 	void readStreams(WPXInputStreamPtr &input);
 	void readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key);
 	void appendUTF16LE(WPXInputStreamPtr &input);
@@ -81,17 +97,6 @@ private:
 	void sendNote(WPXInputStreamPtr &input, int noteId, bool is_endnote);
 
 protected:
-	//! returns the debug file
-	libwps::DebugFile &ascii()
-	{
-		return m_asciiFile;
-	}
-	//! the main input
-	WPXInputStreamPtr m_input;
-
-	//! the main parser
-	WPS8Parser &m_mainParser;
-
 	//! the listener
 	WPS8ContentListenerPtr m_listener;
 
@@ -106,8 +111,6 @@ protected:
 	std::vector<Note> m_endnotes;
 	int m_actualEndnote;
 
-	//! the ascii file
-	libwps::DebugFile &m_asciiFile;
 protected:
 	struct Note : public WPSEntry
 	{

@@ -30,16 +30,15 @@
 #ifndef WPS4_TEXT_H
 #define WPS4_TEXT_H
 
-#include <ostream>
 #include <vector>
 
 #include "WPSEntry.h"
 #include "WPSDebug.h"
+#include "WPSTextParser.h"
 
 class WPS4Parser;
 namespace WPS4TextInternal
 {
-struct DataFOD;
 struct Font;
 struct Paragraph;
 struct State;
@@ -67,7 +66,7 @@ typedef shared_ptr<WPS4ContentListener> WPS4ContentListenerPtr;
  * between the "entries" which defines the text positions and the BTEC
  * positions...
  */
-class WPS4Text
+class WPS4Text : public WPSTextParser
 {
 	friend class WPS4Parser;
 
@@ -87,11 +86,21 @@ public:
 	//! returns the number of pages
 	int numPages() const;
 
-
 	//! sends the data which have not yet been sent to the listener
 	void flushExtra();
 
 protected:
+	//! return the main parser
+	WPS4Parser &mainParser()
+	{
+		return reinterpret_cast<WPS4Parser &> (m_mainParser);
+	}
+	//! return the main parser
+	WPS4Parser const &mainParser() const
+	{
+		return reinterpret_cast<WPS4Parser const &> (m_mainParser);
+	}
+
 	//! returns the header entry (if such entry exists, if not returns an invalid entry)
 	WPSEntry getHeaderEntry() const;
 
@@ -127,20 +136,6 @@ protected:
 	//----------------------------------------
 	// PLC parsing, setting
 	//----------------------------------------
-
-	/** callback when a new attribute is found in an FDPP/FDPC entry
-	 *
-	 * \return true and filled id if this attribute can be parsed
-	 * \note mess can be filled to add a message in debugFile */
-	typedef bool (WPS4Text::* FDPParser) (long endPos, int &id, std::string &mess);
-
-	/** parses a FDPP or a FDPC entry (which contains a list of ATTR_TEXT/ATTR_PARAG
-	 * with their definition ) and adds found data in listFODs
-	 *
-	 * this data are stored similarly in Mac v4 and all PC version
-	 * \note only their contents definition differs */
-	bool readFDP(WPSEntry const &entry,
-	             std::vector<WPS4TextInternal::DataFOD> &fods, FDPParser parser);
 
 	/** definition of the plc data parser (low level)
 	 *
@@ -202,29 +197,11 @@ protected:
 	bool dttmDataParser (long bot, long eot, int id, long endPos, std::string &mess);
 
 protected:
-	//! returns the file version : 1-4
-	int version() const;
-
-	//! returns the debug file
-	libwps::DebugFile &ascii()
-	{
-		return m_asciiFile;
-	}
-protected:
-	//! the main input
-	WPXInputStreamPtr m_input;
-
-	//! the main parser
-	WPS4Parser &m_mainParser;
-
 	//! the listener
 	WPS4ContentListenerPtr m_listener;
 
 	//! the internal state
 	mutable shared_ptr<WPS4TextInternal::State> m_state;
-
-	//! the ascii file
-	libwps::DebugFile &m_asciiFile;
 };
 #endif
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
