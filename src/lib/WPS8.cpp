@@ -38,6 +38,7 @@
 #include "WPSSubDocument.h"
 
 #include "WPS8Graph.h"
+#include "WPS8Struct.h"
 #include "WPS8Table.h"
 #include "WPS8Text.h"
 
@@ -152,7 +153,7 @@ struct State
 	{
 		initTypeMaps();
 	}
-	//! initialize the type map
+	//! initializes the type map
 	void initTypeMaps();
 	//! the end of file
 	long m_eof;
@@ -177,9 +178,9 @@ void State::initTypeMaps()
 	static int const docTypes[] =
 	{
 		0, 0x22, 1, 0x22, 2, 0x22, 3, 0x22, 4, 0x22, 5, 0x22, 6, 0x22, 7, 0x22,
-		8, 0x1a, 0xa, 0xa,
+		8, 0x1a, 0xa, 0x2,
 		0x13, 0x2a, 0x15, 0x2a,
-		0x18, 0x12, 0x19, 0xa, 0x1b, 0x12, 0x1c, 0x22, 0x1e, 0x22,
+		0x18, 0x12, 0x19, 0x2, 0x1b, 0x12, 0x1c, 0x22, 0x1e, 0x22,
 		0x26, 0x22, 0x27, 0x22,
 		0x28, 0x22, 0x29, 0x22, 0x2a, 0x22, 0x2b, 0x22, 0x2c, 0x82, 0x2d, 0x82, 0x2e, 0x82
 	};
@@ -187,12 +188,12 @@ void State::initTypeMaps()
 		m_docPropertyTypes[docTypes[i]] = docTypes[i+1];
 	static int const frameTypes[] =
 	{
-		0, 0x1a, 1, 0x12, 2, 0x12, 3, 0xa, 4, 0x22, 5, 0x22, 6, 0x22, 7, 0x22,
+		0, 0x1a, 1, 0x12, 2, 0x12, 3, 0x2, 4, 0x22, 5, 0x22, 6, 0x22, 7, 0x22,
 		8, 0x22, 9, 0x22, 0xa, 0x22,
-		0x10, 0x2a, 0x11, 0x82, 0x13, 0x12, 0x14, 0x12, 0x17, 0xa,
+		0x10, 0x2a, 0x11, 0x82, 0x13, 0x12, 0x14, 0x12, 0x17, 0x2,
 		0x18, 0x22, 0x19, 0x22, 0x1a, 0x12, 0x1b, 0x22, 0x1d, 0x22, 0x1e, 0x22, 0x1f, 0x22,
 		0x20, 0x22,
-		0x2a, 0x22, 0x2c, 0x1a, 0x2d, 0x1a, 0x2e, 0x22, 0x2f, 0xa,
+		0x2a, 0x22, 0x2c, 0x1a, 0x2d, 0x1a, 0x2e, 0x22, 0x2f, 0x2,
 		0x30, 0x22
 	};
 	for (int i = 0; i+1 < int(sizeof(frameTypes)/sizeof(int)); i+=2)
@@ -320,7 +321,7 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 	ascii().open("CONTENTS");
 	try
 	{
-		createStructures();
+		if (!createStructures()) throw(libwps::ParseException());
 		m_textParser->parse(documentInterface);
 	}
 	catch (...)
@@ -366,11 +367,9 @@ bool WPS8Parser::createStructures()
 	WPXInputStreamPtr input = getInput();
 	parseHeaderIndex();
 
-#if 0
 	// initialize the text, table, ..
-	if (!m_textParser->readEntries(input,mainOle) ||
-	        !m_textParser->readStructures(input)) return false;
-#endif
+	if (!m_textParser->readStructures(input))
+		return false;
 	m_graphParser->readStructures(input);
 	m_tableParser->readStructures(input);
 
@@ -432,12 +431,9 @@ bool WPS8Parser::createStructures()
 	if (getNameEntryMap().end() != pos && pos->second.hasType("TITL"))
 	{
 		pos->second.setParsed(true);
-#if 0
-		// FIXME
 		input->seek(pos->second.begin(), WPX_SEEK_SET);
 		m_textParser->readString(input, pos->second.length(), title);
 		ascii().addPos(pos->second.begin());
-#endif
 		ascii().addNote(title.cstr());
 	}
 
@@ -617,23 +613,15 @@ bool WPS8Parser::parseHeaderIndexEntry()
 //
 // read the end the entry index: normally a string name
 //
-bool WPS8Parser::parseHeaderIndexEntryEnd(long endPos, WPSEntry &/*hie*/, std::string &/*mess*/)
+bool WPS8Parser::parseHeaderIndexEntryEnd(long endPos, WPSEntry &hie, std::string &mess)
 {
 	WPXInputStreamPtr input = getInput();
 
 	long pos = input->tell();
 	long len = endPos-pos;
-	if (1 || len < 2 || (len%2))
-	{
-		ascii().addPos(pos);
-		ascii().addNote("Entries: ###end(ignored)");
-		return true;
-	}
-
-#if 0
 	libwps::DebugStream f;
 
-	int size = input->readLong(2);
+	int size = (int) libwps::read16(input);
 	WPXString str;
 	if (2*(size+1) != len || !m_textParser->readString(input, 2*size, str))
 	{
@@ -643,11 +631,10 @@ bool WPS8Parser::parseHeaderIndexEntryEnd(long endPos, WPSEntry &/*hie*/, std::s
 	}
 	else
 	{
-		hie.setExtraString(str);
+		hie.setExtra(str.cstr());
 		f << "'" << str.cstr() << "'";
 		mess = f.str();
 	}
-#endif
 	return true;
 }
 
@@ -830,7 +817,10 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 			break;
 		case 0xa: // not frequent
 		case 0x19: // almost always set
-			f2 <<  "f" << dt.id() << ",";
+			if (dt.isFalse())
+				f2 <<  "f" << dt.id() << "=false,";
+			else
+				f2 <<  "f" << dt.id() << ",";
 			break;
 		case 0x1c:   // 0.1
 			f2 <<  "f" << dt.id() << "(inch)=" << float(dt.m_value)/914400.f << ",";
@@ -1149,7 +1139,9 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				break;
 			}
 			case 0x3: // seem to exist iff type=12
-				if (frame.m_type != Frame::Table) f2 <<  "isTable?,";
+				if ((frame.m_type == Frame::Table) != dt.isTrue())
+					f2 <<  "isTable?["
+					   <<  (dt.isTrue() ? "true" : "false") << "],";
 				break;
 			case 0x10:   // an entry index always a BDR ?
 				frame.m_idBorder.setName(dt.m_text);
@@ -1197,7 +1189,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			}
 			// associated with a tex box and field 0x19
 			case 0x17:
-				color = true;
+				color = dt.isTrue();
 				break;
 			case 0x18:
 			{
@@ -1293,7 +1285,10 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				break;
 			}
 			case 0x2f:
-				f2 <<  "f" << dt.id() << ",";
+				if (dt.isTrue())
+					f2 <<  "f" << dt.id() << ",";
+				else
+					f2 <<  "f" << dt.id() << "=false,";
 				break;
 			case 0x1D:
 			case 0x1E:
@@ -1309,7 +1304,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			}
 
 			if (ok) continue;
-			f2 << mainData.m_recursData[c] << ",";
+			f2 << "#" << dt << ",";
 		}
 		frame.m_pos.setOrigin(minP);
 		frame.m_pos.setSize(sizeP);

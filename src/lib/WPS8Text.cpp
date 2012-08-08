@@ -28,20 +28,297 @@
 #include "libwps_internal.h"
 
 #include "WPSContentListener.h"
+#include "WPSEntry.h"
 #include "WPSList.h"
 #include "WPSPageSpan.h"
 #include "WPSParagraph.h"
 #include "WPSSubDocument.h"
-
-#include "WPS.h"
 
 #include "WPS8.h"
 #include "WPS8Struct.h"
 
 #include "WPS8Text.h"
 
+/** Internal and low level: the structures of a WPS8Text used to parse PLC*/
+namespace WPS8PLCInternal
+{
+/** Internal and low level: the PLC different types and their structures */
+struct PLC;
+
+//! a map of known plc
+struct KnownPLC
+{
+public:
+	//! constructor
+	KnownPLC();
+	//! destructor
+	~KnownPLC();
+	//! returns the PLC corresponding to a name
+	PLC get(std::string const &name);
+protected:
+	//! creates the map of known PLC
+	void createMapping();
+	//! map name -> known PLC
+	std::map<std::string, PLC> m_knowns;
+};
+}
+
 namespace WPS8TextInternal
 {
+/** different types
+ *
+ * - BTE: font/paragraph properties
+ * - OBJECT: object properties: image, table, ..
+ * - STRS: the text zones
+ * - TCD: the text subdivision ( cells subdivision in a table, ...)
+ * - TOKEN: field type: date/time/..
+ * - BMKT: bookmark, or a field in a datafile ?
+ */
+enum PLCType { BTE=0, TCD, STRS, OBJECT, TOKEN, BMKT, Unknown};
+
+/** Internal: class to store a field definition (BKMT) */
+struct Bookmark
+{
+	//! constructor
+	Bookmark() : m_id(-1), m_text(""), m_error("") {}
+	//! operator <<
+	friend std::ostream &operator<<(std::ostream &o, Bookmark const &tok);
+
+	//! an index
+	int m_id;
+	//! the field value
+	WPXString m_text;
+	//! a string used to store the parsing errors
+	std::string m_error;
+};
+//! operator<< for a Bookmark
+std::ostream &operator<<(std::ostream &o, Bookmark const &bmk)
+{
+	o << std::dec << "Bookm" << bmk.m_id << "='" << bmk.m_text.cstr() << "'";
+	if (!bmk.m_error.empty()) o << ", err=[" << bmk.m_error << "]";
+	return o;
+}
+/** Internal: class to store an object definition */
+struct Object
+{
+	//! the object type
+	enum Type { Unknown = 0, Table, Image };
+
+	//! constructor
+	Object() : m_type(Unknown), m_id(-1), m_size(), m_unknown(0), m_error("") {}
+	//! operator <<
+	friend std::ostream &operator<<(std::ostream &o, Object const &obj);
+
+	//! the type (normally a Type, ...)
+	int m_type;
+	//! an identificator
+	int m_id;
+	//! the size of the object in a page
+	Vec2f m_size;
+	//! unknown data
+	long m_unknown;
+	//! a string used to store the parsing errors
+	std::string m_error;
+};
+
+//! operator<< for an object
+std::ostream &operator<<(std::ostream &o, Object const &obj)
+{
+	o << std::dec;
+	switch (obj.m_type)
+	{
+	case Object::Table:
+		o << "Table";
+		break;
+		// an object store in another Ole: id-> gives a pointer
+	case Object::Image:
+		o << "Object";
+		break;
+	default:
+		o << "Unknown" << -1-obj.m_type;
+		break;
+	}
+	if (obj.m_id > -1) o << ",eobj(id)=" << obj.m_id;
+	o <<": size(" << obj.m_size << ")";
+
+	// Object : unkn=0,1
+	// Table : unkn = 609a1b52, 64cf1858, 64e5da2f, 3311ef0
+	if (obj.m_unknown) o << std::hex << ", unkn=" << obj.m_unknown << std::dec;
+	if (!obj.m_error.empty()) o << ", err=" << obj.m_error;
+	return o;
+}
+
+/** Internal: class to store a field definition (TOKN) */
+struct Token
+{
+	//! constructor
+	Token() : m_type(WPSContentListener::None), m_textLength(-1), m_unknown(-1), m_text(""), m_error("") {}
+	//! operator <<
+	friend std::ostream &operator<<(std::ostream &o, Token const &tok);
+
+	//! the field type
+	WPSContentListener::FieldType m_type;
+	//! the length of the text corresponding to the token
+	int m_textLength;
+	//! an unknown value
+	int m_unknown;
+	//! the field value
+	WPXString m_text;
+	//! a string used to store the parsing errors
+	std::string m_error;
+};
+//! operator<< for a Token
+std::ostream &operator<<(std::ostream &o, Token const &tok)
+{
+	o << std::dec;
+	switch (tok.m_type)
+	{
+	case WPSContentListener::PageNumber:
+		o << "field[page],";
+		break;
+	case WPSContentListener::Date:
+		o << "field[date],";
+		break;
+	case WPSContentListener::Time:
+		o << "field[time],";
+		break;
+	case WPSContentListener::Title:
+		o << "field[title],";
+		break;
+	case WPSContentListener::Link:
+		o << "field[link],";
+		break;
+	case WPSContentListener::Database:
+	case WPSContentListener::None:
+	default:
+		o << "##field[unknown]" << ",";
+		break;
+	}
+	if (tok.m_text.len()) o << "value='" << tok.m_text.cstr() << "',";
+	if (tok.m_textLength != -1) o << "textLen=" << tok.m_textLength << ",";
+	if (tok.m_unknown != -1) o << "unkn=" << tok.m_unknown << ",";
+	if (!tok.m_error.empty()) o << "err=[" << tok.m_error << "]";
+	return o;
+}
+/** Internal: class to store the PLC: Pointer List Content ? */
+struct DataPLC
+{
+	//! constructor
+	DataPLC(): m_name(""), m_type(Unknown), m_value(-1), m_error("") {}
+	//! operator<<
+	friend std::ostream &operator<<(std::ostream &o, DataPLC const &plc);
+	//! the entry name
+	std::string m_name;
+	//! the plc type
+	PLCType m_type;
+	//! a potential value
+	long m_value;
+	//! a string used to store the parsing errors
+	std::string m_error;
+};
+//! operator<< for a DataPLC
+std::ostream &operator<<(std::ostream &o, DataPLC const &plc)
+{
+	o << "type=" << plc.m_name << ",";
+	if (plc.m_value != -1) o << "val=" << std::hex << plc.m_value << std::dec << ", ";
+	if (!plc.m_error.empty()) o << "errors=(" << plc.m_error << ")";
+	return o;
+}
+
+struct Note : public WPSEntry
+{
+	Note() : WPSEntry(), m_textOffset(0) {}
+	uint32_t m_textOffset;
+};
+
+/** Internal: the state of a WPS4Text */
+struct State
+{
+	//! constructor
+	State() : m_textZones(), m_fontNames(),
+		m_fontList(), m_paragraphList(),
+		m_bookmarkMap(), m_object(), m_objectMap(), m_tokenMap(),
+		m_footnotes(), m_actualFootnote(0), m_endnotes(), m_actualEndnote(0),
+		m_characterTypes(), m_paragraphTypes(), m_objectTypes(),
+		m_plcList(), m_knownPLC()
+	{
+		initTypeMaps();
+	}
+
+	//! initializes the type map
+	void initTypeMaps();
+	//! the list of different text zones
+	std::vector<WPSEntry> m_textZones;
+
+	//! the font names
+	std::vector<std::string> m_fontNames;
+
+	//! a list of all font properties
+	std::vector<WPS8Struct::FileData> m_fontList;
+	//! a list of paragraph properties
+	std::vector<WPS8Struct::FileData> m_paragraphList;
+
+	//! a map text offset->bookmark
+	std::map<long, Bookmark> m_bookmarkMap;
+
+	//! actual object
+	Object m_object;
+	//! a map text offset->object
+	std::map<long, Object> m_objectMap;
+
+	//! a map text offset->token
+	std::map<long, Token> m_tokenMap;
+
+	std::vector<Note> m_footnotes;
+	int m_actualFootnote;
+	std::vector<Note> m_endnotes;
+	int m_actualEndnote;
+
+	//! the character type
+	std::map<int,int> m_characterTypes;
+	//! the paragraph type
+	std::map<int,int> m_paragraphTypes;
+	//! the object type
+	std::map<int,int> m_objectTypes;
+	//! a list of all plcs
+	std::vector<DataPLC> m_plcList;
+	//! the known plc
+	WPS8PLCInternal::KnownPLC m_knownPLC;
+};
+
+void State::initTypeMaps()
+{
+	static int const characterTypes[] =
+	{
+		0, 0x12, 2, 0x2, 3, 0x2, 4, 0x2, 5, 0x2,
+		0xc, 0x22, 0xf, 0x12,
+		0x10, 0x2, 0x12, 0x22, 0x13, 0x2, 0x14, 0x2, 0x15, 0x2, 0x16, 0x2, 0x17, 0x2,
+		0x18, 0x22, 0x1a, 0x22, 0x1b, 0x22, 0x1e, 0x12,
+		0x22, 0x22, 0x23, 0x22, 0x24, 0x8A,
+		0x2d, 0x2, 0x2e, 0x22,
+	};
+	for (int i = 0; i+1 < int(sizeof(characterTypes)/sizeof(int)); i+=2)
+		m_characterTypes[characterTypes[i]] = characterTypes[i+1];
+	static int const paragraphTypes[] =
+	{
+		2, 0x22, 3, 0x1A, 4, 0x12, 6, 0x22,
+		0xc, 0x22, 0xd, 0x22, 0xe, 0x22,
+		0x12, 0x22, 0x13, 0x22, 0x14, 0x22, 0x15, 0x22, 0x17, 0x2,
+		0x18, 0x2, 0x19, 0x1A, 0x1c, 0x2, 0x1d, 0x2, 0x1e, 0x12, 0x1f, 0x22,
+		0x20, 0x12, 0x21, 0x22, 0x22, 0x22, 0x23, 0x22, 0x24, 0x22, 0x25, 0x12,
+		0x2a, 0x12,
+		0x31, 0x12, 0x32, 0x82, 0x34, 0x22
+	};
+	for (int i = 0; i+1 < int(sizeof(paragraphTypes)/sizeof(int)); i+=2)
+		m_paragraphTypes[paragraphTypes[i]] = paragraphTypes[i+1];
+	static int const objectTypes[] =
+	{
+		0, 0x1A, 1, 0x22, 2, 0x22, 3, 0x22, 4, 0x22
+	};
+	for (int i = 0; i+1 < int(sizeof(objectTypes)/sizeof(int)); i+=2)
+		m_objectTypes[objectTypes[i]] = objectTypes[i+1];
+}
+
 //! Internal: the subdocument of a WPS8Text
 class SubDocument : public WPSSubDocument
 {
@@ -122,16 +399,9 @@ WPS8Text public
 */
 
 WPS8Text::WPS8Text(WPS8Parser &parser) : WPSTextParser(parser, parser.getInput()),
-	m_listener(),
-	m_offset_eot(0),
-	m_oldTextAttributeBits(0),
-	m_CHFODs(),
-	m_PAFODs(),
-	m_fontNames(),
-	m_streams(),
-	m_footnotes(), m_actualFootnote(0),
-	m_endnotes(), m_actualEndnote(0)
+	m_listener(), m_state()
 {
+	m_state.reset(new WPS8TextInternal::State);
 }
 
 WPS8Text::~WPS8Text ()
@@ -180,14 +450,14 @@ bool WPS8Text::readFontNames(WPSEntry const &entry)
 	WPXInputStreamPtr input = getInput();
 	if (!entry.hasType(entry.name()))
 	{
-		WPS_DEBUG_MSG(("WPS8Text::readFonts: FONT name=%s, type=%s\n",
+		WPS_DEBUG_MSG(("WPS8Text::readFontNames: name=%s, type=%s\n",
 		               entry.name().c_str(), entry.type().c_str()));
 		return false;
 	}
 
 	if (entry.length() < 20)
 	{
-		WPS_DEBUG_MSG(("WPS8Text::readFonts: FONT length=0x%ld\n", entry.length()));
+		WPS_DEBUG_MSG(("WPS8Text::readFontNames: length=0x%ld\n", entry.length()));
 		return false;
 	}
 
@@ -199,7 +469,7 @@ bool WPS8Text::readFontNames(WPSEntry const &entry)
 
 	if (long(4*n_fonts) > len)
 	{
-		WPS_DEBUG_MSG(("WPS8Text::readFonts: FONT number=%d\n", int(n_fonts)));
+		WPS_DEBUG_MSG(("WPS8Text::readFontNames: number=%d\n", int(n_fonts)));
 		return false;
 	}
 	libwps::DebugStream f;
@@ -220,7 +490,7 @@ bool WPS8Text::readFontNames(WPSEntry const &entry)
 	long pageEnd = entry.end();
 
 	/* read each font in the table */
-	while (input->tell() > 0 && m_fontNames.size() < n_fonts)
+	while (input->tell() > 0 && m_state->m_fontNames.size() < n_fonts)
 	{
 		debPos = input->tell();
 		if (debPos+6 > long(pageEnd)) break;
@@ -233,110 +503,25 @@ bool WPS8Text::readFontNames(WPSEntry const &entry)
 			s.append(1, (char) libwps::readU16(input));
 
 		f.str("");
-		f << "FONT("<<m_fontNames.size()<<"): " << s;
+		f << "FONT("<<m_state->m_fontNames.size()<<"): " << s;
 		f << ", unkn=(";
 		for (int i = 0; i < 4; i++) f << (int) libwps::read8(input) << ", ";
 		f << ")";
 		ascii().addPos(debPos);
 		ascii().addNote(f.str().c_str());
 
-		m_fontNames.push_back(s);
+		m_state->m_fontNames.push_back(s);
 	}
 
-	if (m_fontNames.size() != n_fonts)
+	if (m_state->m_fontNames.size() != n_fonts)
 	{
-		WPS_DEBUG_MSG(("WPS8Text::readFonts: expected %i fonts but only found %i\n",
-		               int(n_fonts), int(m_fontNames.size())));
+		WPS_DEBUG_MSG(("WPS8Text::readFontNames: expected %i fonts but only found %i\n",
+		               int(n_fonts), int(m_state->m_fontNames.size())));
 	}
 	return true;
 }
 
-/**
- * Reads streams (subdocuments) information
- */
-
-void WPS8Text::readStreams(WPXInputStreamPtr &input)
-{
-	WPS8Parser::NameMultiMap::iterator pos;
-	pos = mainParser().getNameEntryMap().lower_bound("STRS");
-	if (mainParser().getNameEntryMap().end() == pos)
-	{
-		WPS_DEBUG_MSG(("Works8: error: no STRS in header index table\n"));
-		throw libwps::ParseException();
-	}
-	WPSEntry const &entry = pos->second;
-	uint32_t last_pos = 0;
-
-	uint32_t n_streams;
-	input->seek(entry.begin(), WPX_SEEK_SET);
-	n_streams = libwps::readU32(input);
-
-	if (n_streams > 100)
-	{
-		WPS_DEBUG_MSG(("Probably garbled STRS: count = %u\n",n_streams));
-	}
-
-	/* skip mysterious header*/
-	input->seek(8, WPX_SEEK_CUR);
-
-	Stream s;
-	uint32_t offset;
-	for (unsigned i=0; i < n_streams; i++)
-	{
-		offset = libwps::readU32(input);
-		// TODO: assert index in within text
-		s.setBegin(last_pos);
-		s.setLength(offset);
-		s.m_type = Stream::Z_Dummy;
-		m_streams.push_back(s);
-
-		last_pos += offset;
-	}
-	offset = libwps::readU32(input);
-	if (offset)
-	{
-		WPS_DEBUG_MSG(("Offset table is not 0-terminated!\n"));
-	}
-
-	for (unsigned j=0; j < n_streams; j++)
-	{
-		uint16_t len;
-		Stream::Type type = Stream::Z_Dummy;
-
-		len = libwps::readU16(input);
-		if (len > 10)
-		{
-			WPS_DEBUG_MSG(("Rogue strm[%d] def len (%d)\n",j,len));
-			input->seek(len-2,WPX_SEEK_CUR);
-		}
-
-		if (len > 4)
-		{
-			libwps::readU32(input); // assume == 0x22000000
-			type = Stream::Type(libwps::readU32(input));
-		}
-		else input->seek(len-2,WPX_SEEK_CUR);
-
-		m_streams[j].m_type = type;
-	}
-
-#ifdef DEBUG
-	int bodypos = -1;
-	for (unsigned k=0; k < n_streams; k++)
-	{
-		int z = m_streams[k].m_type;
-		if (z == Stream::Z_Dummy) WPS_DEBUG_MSG(("Default strm[%d] type\n",k));
-		if (z == Stream::Z_Body)
-		{
-			if (bodypos < 0) bodypos = int(k);
-			else WPS_DEBUG_MSG(("Duplicating body (strm[%d])\n",k));
-		}
-	}
-	if (bodypos < 0) WPS_DEBUG_MSG(("Doc body not found!\n"));
-#endif
-}
-
-void WPS8Text::readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key)
+void WPS8Text::readNotes(std::vector<WPS8TextInternal::Note> &dest, WPXInputStreamPtr &input, const char *key)
 {
 	WPS8Parser::NameMultiMap::iterator pos;
 	pos = mainParser().getNameEntryMap().lower_bound(key);
@@ -450,334 +635,370 @@ void WPS8Text::readTextRange(WPXInputStreamPtr &input,
 {
 	WPS_DEBUG_MSG(("WPS8Text::readTextRange(stream=%d)\n",stream));
 
-	std::vector<WPSFOD>::iterator FODs_iter;
-	std::vector<WPSFOD>::iterator PFOD_iter;
-
-	// save old text attribute
-	uint32_t oldTextAttributes = m_oldTextAttributeBits;
-
-	uint32_t last_fcLim = 0x200;
-	uint32_t start_fcLim = 0x200 + startpos*2;
-	uint32_t total_fcLim = start_fcLim + (endpos - startpos)*2;
-	PFOD_iter = m_PAFODs.begin();
-	FODs_iter = m_CHFODs.begin();
-
-	while (last_fcLim < start_fcLim)
+	int lastCId=-1, lastPId=-1;
+	std::vector<DataFOD>::iterator plcIt =	m_FODList.begin();
+	while (plcIt != m_FODList.end() && plcIt->m_pos < long(startpos))
 	{
-		uint32_t c_len = (*FODs_iter).m_fcLim - last_fcLim;
-		uint32_t p_len = (*PFOD_iter).m_fcLim - last_fcLim;
-		uint32_t len = (c_len > p_len)? p_len : c_len;
-
-		last_fcLim += len;
-		if (len == c_len) FODs_iter++;
-		if (len == p_len) PFOD_iter++;
+		DataFOD const &plc = *plcIt;
+		if (plc.m_type==DataFOD::ATTR_TEXT)
+			lastCId = plc.m_id;
+		else if (plc.m_type==DataFOD::ATTR_PARAG)
+			lastPId = plc.m_id;
+		plcIt++;
 	}
-
-	/* should never happen? */
-	if (last_fcLim > start_fcLim) last_fcLim = start_fcLim;
 
 	uint16_t specialCode=0;
 	int fieldType = 0;
-	for (; last_fcLim < total_fcLim; FODs_iter++)
+	input->seek(startpos, WPX_SEEK_SET);
+	while (!input->atEOS())
 	{
-		WPSFOD fod = *(FODs_iter);
-		uint32_t c_len = (*FODs_iter).m_fcLim - last_fcLim;
-		uint32_t p_len = (*PFOD_iter).m_fcLim - last_fcLim;
-
-		if (last_fcLim + c_len > total_fcLim) c_len = total_fcLim - last_fcLim;
-		uint32_t len = (c_len > p_len)? p_len : c_len;
-
-
-		if (len % 2 != 0)
+		long pos = input->tell();
+		libwps::DebugStream f;
+		f << "TEXT:";
+		if (pos+1 >= long(endpos))
+			break;
+		uint32_t finalPos = endpos;
+		while (plcIt != m_FODList.end())
 		{
-			WPS_DEBUG_MSG(("Works: error: len %i is odd\n", len));
+			DataFOD const &plc = *plcIt;
+			if (plc.m_pos < pos)
+			{
+				WPS_DEBUG_MSG(("WPS8Text::readTextRange: ### problem with pos\n"));
+				continue;
+			}
+			if (plc.m_pos > pos)
+			{
+				if (uint32_t(plc.m_pos) < finalPos)
+					finalPos = uint32_t(plc.m_pos);
+				break;
+			}
+			switch(plc.m_type)
+			{
+			case DataFOD::ATTR_TEXT:
+			{
+				lastCId = -1;
+				if (plc.m_id < 0)
+				{
+					f << "[F_]";
+					break;
+				}
+				f << "[F" << plc.m_id << "]";
+				if (plc.m_id >= int(m_state->m_fontList.size()))
+				{
+					f << "#";
+					WPS_DEBUG_MSG(("WPS8Text::readTextRange: can not find font %d\n",plc.m_id));
+					break;
+				}
+				propertyChange(m_state->m_fontList[size_t(plc.m_id)], specialCode, fieldType);
+				break;
+			}
+			case DataFOD::ATTR_PARAG:
+			{
+				lastPId = -1;
+				if (plc.m_id < 0)
+				{
+					f << "[P_]";
+					break;
+				}
+				f << "[P" << plc.m_id << "]";
+				if (plc.m_id >= int(m_state->m_paragraphList.size()))
+				{
+					f << "#";
+					WPS_DEBUG_MSG(("WPS8Text::readTextRange: can not find paragraph %d\n",plc.m_id));
+					break;
+				}
+				propertyChangePara(m_state->m_paragraphList[size_t(plc.m_id)]);
+				break;
+			}
+			case DataFOD::ATTR_PLC:
+				if (plc.m_id < 0) break;
+				if (plc.m_id >= int(m_state->m_plcList.size()))
+				{
+					f << "#[PLC"<< plc.m_id << "]";
+					WPS_DEBUG_MSG(("WPS8Text::readTextRange: can not find plc %d\n",plc.m_id));
+					break;
+				}
+				f << "[" << m_state->m_plcList[size_t(plc.m_id)] << "]";
+				break;
+			case DataFOD::ATTR_UNKN:
+			default:
+				break;
+			}
+			plcIt++;
+		}
+		if (lastCId >= 0 && lastCId < int(m_state->m_fontList.size()))
+		{
+			propertyChange(m_state->m_fontList[size_t(lastCId)], specialCode, fieldType);
+			lastCId = -1;
+		}
+		if (lastPId >= 0 && lastPId < int(m_state->m_paragraphList.size()))
+		{
+			propertyChangePara(m_state->m_paragraphList[size_t(lastPId)]);
+			lastPId = -1;
+		}
+		f << ":";
+		if ((finalPos-uint32_t(pos))%2)
+		{
+			WPS_DEBUG_MSG(("WPS8Text::readTextRange: ### len is odd\n"));
 			throw libwps::ParseException();
 		}
-		len /= 2;
-
-
-		/* process character formatting */
-		if ((*FODs_iter).m_bfprop!=0)
-			propertyChange((*FODs_iter).m_fprop, specialCode, fieldType);
-
-		/* loop until character format not exhausted */
-		do
+		while (!input->atEOS())
 		{
-			/* paragraph format may change here*/
-			if ((*PFOD_iter).m_bfprop!=0)
-				propertyChangePara((*PFOD_iter).m_fprop);
+			if (input->tell()+1 >= finalPos) break;
 
-			/* plain text */
-			input->seek(last_fcLim, WPX_SEEK_SET);
-			for (uint32_t i = len; i>0; i--)
+			uint16_t readVal = libwps::readU16(input);
+			if (0x00 == readVal)
+				continue;
+			f << (char) readVal;
+
+			switch (readVal)
 			{
-				uint16_t readVal = libwps::readU16(input);
+			case 0x0A:
+				break;
 
-				if (0x00 == readVal)
-					break;
+			case 0x0C:
+				//fixme: add a page to list of pages
+				//m_listener->insertBreak(WPS_PAGE_BREAK);
+				break;
 
-				switch (readVal)
+			case 0x0D:
+				m_listener->insertEOL();
+				break;
+
+			case 0x0E:
+				m_listener->insertBreak(WPS_COLUMN_BREAK);
+				break;
+
+			case 0x1E:
+				//fixme: non-breaking hyphen
+				break;
+
+			case 0x1F:
+				//fixme: optional breaking hyphen
+				break;
+
+			case 0x23:
+				if (specialCode)
 				{
-				case 0x0A:
-					break;
-
-				case 0x0C:
-					//fixme: add a page to list of pages
-					//m_listener->insertBreak(WPS_PAGE_BREAK);
-					break;
-
-				case 0x0D:
-					m_listener->insertEOL();
-					break;
-
-				case 0x0E:
-					m_listener->insertBreak(WPS_COLUMN_BREAK);
-					break;
-
-				case 0x1E:
-					//fixme: non-breaking hyphen
-					break;
-
-				case 0x1F:
-					//fixme: optional breaking hyphen
-					break;
-
-				case 0x23:
-					if (specialCode)
+					//	TODO: fields, pictures, etc.
+					switch (specialCode)
 					{
-						//	TODO: fields, pictures, etc.
-						switch (specialCode)
+					case 3:
+					{
+						if (stream != 1) break;
+						shared_ptr<WPSSubDocument> doc
+						(new WPS8TextInternal::SubDocument(input, *this, WPS8TextInternal::SubDocument::Footnote, m_state->m_actualFootnote++));
+						m_listener->insertNote(WPSContentListener::FOOTNOTE, doc);
+						break;
+					}
+					case 4:
+					{
+						if (stream != 1) break;
+						shared_ptr<WPSSubDocument> doc
+						(new WPS8TextInternal::SubDocument(input, *this, WPS8TextInternal::SubDocument::Endnote, m_state->m_actualEndnote++));
+						m_listener->insertNote(WPSContentListener::ENDNOTE, doc);
+						break;
+					}
+					case 5:
+						switch (fieldType)
 						{
-						case 3:
-						{
-							if (stream != Stream::Z_Body) break;
-							shared_ptr<WPSSubDocument> doc
-							(new WPS8TextInternal::SubDocument(input, *this, WPS8TextInternal::SubDocument::Footnote, m_actualFootnote++));
-							m_listener->insertNote(WPSContentListener::FOOTNOTE, doc);
+						case -1:
+							m_listener->insertField(WPSContentListener::PageNumber);
 							break;
-						}
-						case 4:
-						{
-							if (stream != Stream::Z_Body) break;
-							shared_ptr<WPSSubDocument> doc
-							(new WPS8TextInternal::SubDocument(input, *this, WPS8TextInternal::SubDocument::Endnote, m_actualEndnote++));
-							m_listener->insertNote(WPSContentListener::ENDNOTE, doc);
+						case -4:
+							m_listener->insertField(WPSContentListener::Date);
 							break;
-						}
-						case 5:
-							switch (fieldType)
-							{
-							case -1:
-								m_listener->insertField(WPSContentListener::PageNumber);
-								break;
-							case -4:
-								m_listener->insertField(WPSContentListener::Date);
-								break;
-							case -5:
-								m_listener->insertField(WPSContentListener::Time);
-								break;
-							default:
-								break;
-							}
+						case -5:
+							m_listener->insertField(WPSContentListener::Time);
 							break;
 						default:
-							m_listener->insertCharacter(0xE2/*0x263B*/);
-							m_listener->insertCharacter(0x98);
-							m_listener->insertCharacter(0xBB);
+							break;
 						}
 						break;
+					default:
+						m_listener->insertCharacter(0xE2/*0x263B*/);
+						m_listener->insertCharacter(0x98);
+						m_listener->insertCharacter(0xBB);
 					}
-					// ! fallback to default
-
-				case 0xfffc:
-					// ! fallback to default
-
-				default:
-					if (readVal < 28 && readVal != 9)
-					{
-						// do not add unprintable control which can create invalid odt file
-						WPS_DEBUG_MSG(("WPS8Text::readTextRange(find unprintable character: ignored)\n"));
-						break;
-					}
-					// fixme: convert UTF-16LE to UTF-8
-					input->seek(-2, WPX_SEEK_CUR);
-					this->appendUTF16LE(input);
 					break;
 				}
-			}
+				// ! fallback to default
 
-			len *= 2;
-			c_len -= len;
-			p_len -= len;
-			last_fcLim += len;
+			case 0xfffc:
+				// ! fallback to default
 
-			if (p_len == 0)
-			{
-				PFOD_iter++;
-				if (c_len > 0)   /* otherwise will be set by outside loop */
+			default:
+				if (readVal < 28 && readVal != 9)
 				{
-					p_len = (*PFOD_iter).m_fcLim - last_fcLim;
-					len = (c_len > p_len)? p_len : c_len;
-					len /= 2;
+					// do not add unprintable control which can create invalid odt file
+					WPS_DEBUG_MSG(("WPS8Text::readTextRange(find unprintable character: ignored)\n"));
+					break;
 				}
+				// fixme: convert UTF-16LE to UTF-8
+				input->seek(-2, WPX_SEEK_CUR);
+				this->appendUTF16LE(input);
+				break;
 			}
 		}
-		while (c_len > 0);
-
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
 	}
-	m_oldTextAttributeBits = oldTextAttributes;
 }
 
 void WPS8Text::sendNote(WPXInputStreamPtr &input, int id, bool is_endnote)
 {
-	std::vector<Note> const &notes = is_endnote ? m_endnotes : m_footnotes;
+	std::vector<WPS8TextInternal::Note> const &notes = is_endnote ? m_state->m_endnotes : m_state->m_footnotes;
 	if (id < 0 || id >= int(notes.size()))
 	{
 		WPS_DEBUG_MSG(("WPS8Text::sendNote: can not find footnote\n"));
 		if (m_listener) m_listener->insertCharacter(' ');
 		return;
 	}
-	Note const &note =notes[size_t(id)];
-	Stream stream;
-	Stream::Type streamkey = is_endnote ? Stream::Z_Endnotes : Stream::Z_Footnotes;
-	for (size_t i=0; i<m_streams.size(); i++)
+	WPS8TextInternal::Note const &note =notes[size_t(id)];
+	WPSEntry stream;
+	int wh = is_endnote ? 3 : 2;
+	for (size_t i=0; i<m_state->m_textZones.size(); i++)
 	{
-		if (m_streams[i].m_type == streamkey)
+		if (m_state->m_textZones[i].id() == wh)
 		{
-			stream = m_streams[i];
+			stream = m_state->m_textZones[i];
 			break;
 		}
+	}
+	if (!stream.valid())
+	{
+		WPS_DEBUG_MSG(("WPS8Text::sendNote: can not find note zone\n"));
+		if (m_listener) m_listener->insertCharacter(' ');
+		return;
 	}
 
 	WPS_DEBUG_MSG(("Reading footnote [%ld;%ld)\n",note.begin(),note.end()));
 
 	long pos = input->tell();
-	long beginPos = stream.begin()+note.begin();
-	long endPos = stream.begin()+note.end();
+	long beginPos = stream.begin()+note.begin()*2;
+	long endPos = stream.begin()+note.end()*2;
 	// try to remove the end of lines which can appear after the footnote
-	while (endPos-1 > beginPos)
+	while (endPos-2 > beginPos)
 	{
-		input->seek(0x200+2*(endPos-1),WPX_SEEK_SET);
+		input->seek(endPos-2,WPX_SEEK_SET);
 		uint16_t readVal =libwps::readU16(input);
 		if (readVal != 0xd) break;
-		endPos -= 1;
+		endPos -= 2;
 	}
-	readTextRange(input,(uint32_t)beginPos,(uint32_t)endPos,streamkey);
+	readTextRange(input,(uint32_t)beginPos,(uint32_t)endPos,(uint16_t) wh);
 	input->seek(pos,WPX_SEEK_SET);
 }
 
-
 /**
- * Read a single page (of size page_size bytes) that contains formatting descriptors
- * for either characters OR paragraphs.  Starts reading at current position in stream.
- *
- * Return: true if more pages of this type exist, otherwise false
- *
+ * create the main structures
  */
-
-//fixme: this readFODPage is mostly the same as in WPS4
-
-bool WPS8Text::readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, uint16_t page_size)
+bool WPS8Text::readStructures(WPXInputStreamPtr)
 {
-	uint32_t page_offset = (uint32_t) input->tell();
-	uint16_t cfod = libwps::readU16(input); /* number of FODs on this page */
-
-	//fixme: what is the largest possible cfod?
-	if (cfod > 0x54)
+	WPS8Parser::NameMultiMap &nameTable = mainParser().getNameEntryMap();
+	WPS8Parser::NameMultiMap::iterator pos;
+	/* What is the total length of the text? */
+	pos = nameTable.lower_bound("TEXT");
+	if (nameTable.end() == pos)
 	{
-		WPS_DEBUG_MSG(("Works8: error: cfod = %i (0x%X)\n", cfod, cfod));
-		throw libwps::ParseException();
+		WPS_DEBUG_MSG(("Works: error: no TEXT in header index table\n"));
+		return false;
+	}
+	else
+		m_textPositions = pos->second;
+
+	// determine the text subpart
+	pos = nameTable.find("STRS");
+	bool ok = nameTable.end() != pos && pos->second.hasType("PLC ");
+	if (ok)
+	{
+		std::vector<long> textPtrs;
+		std::vector<long> listValues;
+		m_state->m_textZones.resize(0);
+		ok = readPLC(pos->second, textPtrs, listValues, &WPS8Text::textZonesDataParser);
+	}
+	if (!ok)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readEntries: error: can not find the TEXT subdivision\n"));
+		m_state->m_textZones.resize(0);
+		// we create a false zone
+		WPSEntry zone = m_textPositions;
+		zone.setId(1);
+		m_state->m_textZones.push_back(zone);
 	}
 
-	input->seek(page_offset + 2 + 6, WPX_SEEK_SET);	// fixme: unknown
-
-	int first_fod = int(FODs.size());
-
-	/* Read array of m_fcLim of FODs.  The m_fcLim refers to the offset of the
-	       last character covered by the formatting. */
-	for (int i = 0; i < cfod; i++)
+	/* read fonts table */
+	pos = nameTable.find("FONT");
+	if (nameTable.end() == pos)
 	{
-		WPSFOD fod;
-		fod.m_fcLim = libwps::readU32(input);
-//		WPS_DEBUG_MSG(("Works: info: m_fcLim = %i (0x%X)\n", fod.m_fcLim, fod.m_fcLim));
+		WPS_DEBUG_MSG(("WPS8Text::parse: error: no FONT in header index table\n"));
+		return false;
+	}
+	readFontNames(pos->second);
 
-		/* check that m_fcLim is not too large */
-		if (fod.m_fcLim > m_offset_eot)
-		{
-			WPS_DEBUG_MSG(("Works: error: length of 'text selection' %i > "
-			               "total text length %i\n", fod.m_fcLim, m_offset_eot));
-			throw libwps::ParseException();
-		}
+	// find the FDDP and FDPC positions
+	for (int st = 0; st < 2; st++)
+	{
+		std::vector<WPSEntry> zones;
+		if (!findFDPStructures(st, zones))
+			findFDPStructuresByHand(st, zones);
 
-		/* check that m_fcLim is monotonic */
-		if (FODs.size() > 0 && FODs.back().m_fcLim > fod.m_fcLim)
-		{
-			WPS_DEBUG_MSG(("Works: error: character position list must "
-			               "be monotonic, but found %i, %i\n", FODs.back().m_fcLim, fod.m_fcLim));
-			throw libwps::ParseException();
-		}
-		FODs.push_back(fod);
+		size_t numZones = zones.size();
+		std::vector<DataFOD> fdps;
+		FDPParser parser = st==0  ? (FDPParser) &WPS8Text::readParagraph
+		                   : (FDPParser) &WPS8Text::readFont;
+		for (size_t i = 0; i < numZones; i++)
+			readFDP(zones[i], fdps, parser);
+		m_FODList = mergeSortedFODLists(m_FODList, fdps);
 	}
 
-	/* Read array of m_bfprop of FODs.  The m_bfprop is the offset where
-	   the FPROP is located. */
-	std::vector<WPSFOD>::iterator FODs_iter;
-	for (FODs_iter = FODs.begin() + first_fod; FODs_iter!= FODs.end(); FODs_iter++)
+	// BMKT : text position of bookmark ?
+	pos = nameTable.lower_bound("BMKT");
+	while (pos != nameTable.end())
 	{
-		if ((*FODs_iter).m_fcLim == m_offset_eot)
-			break;
+		WPSEntry const &entry = pos->second;
+		pos++;
+		if (!entry.hasName("BMKT")) break;
+		if (!entry.hasType("PLC ")) continue;
 
-		(*FODs_iter).m_bfprop = libwps::readU16(input);
+		std::vector<long> textPtrs;
+		std::vector<long> listValues;
 
-		/* check size of m_bfprop  */
-		if (((*FODs_iter).m_bfprop < (8 + (6*cfod)) && (*FODs_iter).m_bfprop > 0) ||
-		        (*FODs_iter).m_bfprop  > (page_size - 1))
-		{
-			WPS_DEBUG_MSG(("Works: error: size of m_bfprop is bad "
-			               "%i (0x%X)\n", (*FODs_iter).m_bfprop, (*FODs_iter).m_bfprop));
-			throw libwps::ParseException();
-		}
-
-		(*FODs_iter).m_bfpropAbs = (*FODs_iter).m_bfprop + page_offset;
-//		WPS_DEBUG_MSG(("Works: debug: m_bfprop = 0x%03X, m_bfpropAbs = 0x%03X\n",
-//                       (*FODs_iter).m_bfprop, (*FODs_iter).m_bfpropAbs));
+		if (!readPLC(entry, textPtrs, listValues,
+		             &WPS8Text::defDataParser, &WPS8Text::bmktEndDataParser)) continue;
 	}
 
-
-	/* Read array of FPROPs.  These contain the actual formatting
-	   codes (bold, alignment, etc.) */
-	for (FODs_iter = FODs.begin()+first_fod; FODs_iter!= FODs.end(); FODs_iter++)
+	// read EOBJ zone : object position
+	pos = nameTable.lower_bound("EOBJ");
+	while (pos != nameTable.end())
 	{
-		if ((*FODs_iter).m_fcLim == m_offset_eot)
-			break;
+		WPSEntry const &entry = pos->second;
+		pos++;
+		if (!entry.hasName("EOBJ")) break;
+		if (!entry.hasType("PLC ")) continue;
 
-		if (0 == (*FODs_iter).m_bfprop)
+		std::vector<long> textPtrs;
+		std::vector<long> listValues;
+		m_state->m_object = WPS8TextInternal::Object();
+		if (!readPLC(entry, textPtrs, listValues, &WPS8Text::objectDataParser))
 			continue;
-		long actPos = (*FODs_iter).m_bfpropAbs;
-		input->seek(actPos, WPX_SEEK_SET);
-
-		long size = (long) libwps::readU16(input);
-		if (actPos+size > long(page_offset+page_size) || size < 2)
-		{
-			WPS_DEBUG_MSG(("WPS8Text::readFODPage: error: size = %ld is very odd\n", size));
-			continue;
-		}
-
-		std::string error;
-		readBlockData(input, actPos+size, (*FODs_iter).m_fprop, error);
-
-		libwps::DebugStream f;
-		f << "PLC=" << (*FODs_iter).m_fprop;
-		ascii().addPos(actPos);
-		ascii().addNote(f.str().c_str());
-		ascii().addPos(actPos+size);
-		ascii().addNote("_");
 	}
 
-	/* go to end of page */
-	input->seek(page_offset	+ page_size, WPX_SEEK_SET);
+	// TOKN : text position of token
+	pos = nameTable.lower_bound("TOKN");
+	while (pos != nameTable.end())
+	{
+		WPSEntry const &entry = pos->second;
+		pos++;
+		if (!entry.hasName("TOKN")) break;
+		if (!entry.hasType("PLC ")) continue;
 
-	return (m_offset_eot > FODs.back().m_fcLim);
+		std::vector<long> textPtrs;
+		std::vector<long> listValues;
+
+		if (!readPLC(entry, textPtrs, listValues,
+		             &WPS8Text::defDataParser, &WPS8Text::tokenEndDataParser)) continue;
+	}
+	return true;
 }
 
 /**
@@ -798,115 +1019,20 @@ void WPS8Text::parse(WPXInputStreamPtr &input)
 {
 	WPS_DEBUG_MSG(("WPS8Text::parse()\n"));
 
+	m_state->m_actualFootnote = m_state->m_actualEndnote = 0;
+	readNotes(m_state->m_footnotes,input,"FTN ");
+	readNotes(m_state->m_endnotes,input,"EDN ");
+
 	m_listener->startDocument();
-	WPS8Parser::NameMultiMap &nameTable = mainParser().getNameEntryMap();
-	WPS8Parser::NameMultiMap::iterator pos;
-	/* What is the total length of the text? */
-	pos = nameTable.lower_bound("TEXT");
-	if (nameTable.end() == pos)
+	for (size_t i = 0; i < m_state->m_textZones.size(); i++)
 	{
-		WPS_DEBUG_MSG(("Works: error: no TEXT in header index table\n"));
+		WPSEntry const &zone = m_state->m_textZones[i];
+		if (!zone.valid() || zone.id()==2 || zone.id()==3)
+			continue;
+		readTextRange(input,(uint32_t)zone.begin(),(uint32_t)zone.end(),(uint16_t)zone.id());
 	}
-	else
-	{
-		m_offset_eot = (u_int32_t) pos->second.end();
-		WPS_DEBUG_MSG(("Works: debug: TEXT m_offset_eot = 0x%04X\n", m_offset_eot));
-	}
-
-	/* read character/para FODs (FOrmatting Descriptors) */
-	for (int wh = 0; wh < 2; wh++)
-	{
-		char const *name = wh==0 ? "FDPC" : "FDPP";
-		for (pos = nameTable.begin(); pos != nameTable.end(); ++pos)
-		{
-			if (0 != strcmp(name,pos->first.c_str()))
-				continue;
-
-			WPSEntry const &entry = pos->second;
-			input->seek(entry.begin(), WPX_SEEK_SET);
-			if (entry.length() != 512)
-			{
-				WPS_DEBUG_MSG(("Works: warning: %s offset=0x%lX, length=0x%lX\n",
-				               name,entry.begin(), entry.length()));
-			}
-			if (wh==0)
-				readFODPage(input, m_CHFODs, (uint16_t)entry.length());
-			else
-				readFODPage(input, m_PAFODs, (uint16_t)entry.length());
-		}
-	}
-
-	/* read streams table*/
-	readStreams(input);
-
-	/* read fonts table */
-	pos = nameTable.find("FONT");
-	if (nameTable.end() == pos)
-	{
-		WPS_DEBUG_MSG(("WPS8Text::parse: error: no FONT in header index table\n"));
-		throw libwps::ParseException();
-	}
-	readFontNames(pos->second);
-
-	readNotes(m_footnotes,input,"FTN ");
-	readNotes(m_endnotes,input,"EDN ");
-
-	m_actualFootnote = m_actualEndnote = 0;
-
-	if (m_offset_eot < 0x200)
-		m_offset_eot = 0x200;
-
-	/* process text file using previously-read character formatting */
-	uint32_t doc_start = 0, doc_end = (m_offset_eot - 0x200) >> 1; // character offsets
-	uint32_t doc_start2 = doc_start, doc_end2 = doc_end;
-	for (unsigned i=0; i<m_streams.size(); i++)
-	{
-		/* skip to extract full document text for debug purposes */
-		/*if (m_streams[i].m_type == Stream::Z_Body) {
-			readTextRange(input,m_listener,m_streams[i].start,m_streams[i].limit,
-				Stream::Z_Body);
-		} else*/ if (m_streams[i].m_type == Stream::Z_Footnotes ||
-		             m_streams[i].m_type == Stream::Z_Endnotes)
-		{
-			if ((uint32_t)m_streams[i].begin() < doc_end)
-				doc_end = (uint32_t) m_streams[i].begin();
-			if ((uint32_t)m_streams[i].end() > doc_start2)
-				doc_start2 = (uint32_t) m_streams[i].end();
-		}
-	}
-	if (doc_end > doc_start2) doc_start2 = doc_end;
-
-	readTextRange(input,doc_start,doc_end,Stream::Z_Body);
-	if (doc_end2 > doc_start2)
-		readTextRange(input,doc_start2,doc_end2,Stream::Z_Body);
-
 	m_listener->endDocument();
 }
-
-/**
- * @param newTextAttributeBits: all the new, current bits (will be compared against old, and old will be discarded).
- *
- */
-void WPS8Text::propertyChangeDelta(uint32_t newTextAttributeBits)
-{
-	if (newTextAttributeBits == m_oldTextAttributeBits)
-		return;
-#ifdef DEBUG
-	static uint32_t const listAttributes[6] = { WPS_BOLD_BIT, WPS_ITALICS_BIT, WPS_UNDERLINE_BIT, WPS_STRIKEOUT_BIT, WPS_SUBSCRIPT_BIT, WPS_SUPERSCRIPT_BIT };
-	uint32_t diffAttributes = (m_oldTextAttributeBits ^ newTextAttributeBits);
-	for (int i = 0; i < 6; i++)
-	{
-		if (diffAttributes & listAttributes[i])
-		{
-			WPS_DEBUG_MSG(("WPS8Text::propertyChangeDelta: attribute %i changed, now = %i\n", i, newTextAttributeBits & listAttributes[i]));
-		}
-	}
-#endif
-	m_listener->setFontAttributes(newTextAttributeBits);
-	m_oldTextAttributeBits = newTextAttributeBits;
-}
-
-
 
 /**
  * Process a character property change.  The Works format supplies
@@ -921,41 +1047,24 @@ void WPS8Text::propertyChange(WPS8Struct::FileData const &mainData, uint16_t &sp
 	/* set default properties */
 	uint32_t textAttributeBits = 0;
 	m_listener->setTextColor(0);
-	propertyChangeDelta(0);
+	m_listener->setFontAttributes(0);
 	m_listener->setFontSize(10);
 
 	libwps::DebugStream f;
 	if (mainData.m_value) f << "unk=" << mainData.m_value << ",";
 
-	/* move the map in state to be ok */
-	static const int expextedTypes[] =
-	{
-		0, 0x12, 0x2, 0xA, 0x3, 0xA, 0x4, 0xA, 0x5, 0xA,
-		0xc, 0x22, 0xf, 0x12,
-		0x10, 0xA, 0x12, 0x22, 0x13, 0xA, 0x14, 0xA, /*0x15, 0xA,*/ 0x16, 0xA, 0x17, 0xA,
-		/*0x18, 0x22,*/ 0x1e, 0x12,
-		0x22, 0x22, /*0x23, 0x22,*/ 0x24, 0x8A,
-		0x2e, 0x22,
-	};
-	static bool mapInit = false;
-	static std::map<int, int> expextedTypesMap; // map id->type
-	if (!mapInit)
-	{
-		int numData = sizeof(expextedTypes)/sizeof(int);
-		for (int i = 0; i+1 < numData; i+=2)
-			expextedTypesMap[expextedTypes[i]] = expextedTypes[i+1];
-		mapInit = true;
-	}
 	for (size_t c = 0; c < mainData.m_recursData.size(); c++)
 	{
 		WPS8Struct::FileData const &data = mainData.m_recursData[c];
 		if (data.isBad()) continue;
-		if (expextedTypesMap.find(data.id())==expextedTypesMap.end())
+		if (m_state->m_characterTypes.find(data.id())==m_state->m_characterTypes.end())
 		{
-			f << data << ",";
+			WPS_DEBUG_MSG(("WPS8Text::propertyChange: unexpected id %d\n", data.id()));
+			f << "##" << data << ",";
 			continue;
 		}
-		if (expextedTypesMap.find(data.id())->second != data.type())
+		// find also id=2 with type=2 : does this means no bold ?
+		if (m_state->m_characterTypes.find(data.id())->second != data.type())
 		{
 			WPS_DEBUG_MSG(("WPS8Text::propertyChange: unexpected type for %d\n", data.id()));
 			f << "###" << data << ",";
@@ -967,16 +1076,28 @@ void WPS8Text::propertyChange(WPS8Struct::FileData const &mainData, uint16_t &sp
 			specialCode = (uint16_t) data.m_value;
 			break;
 		case 0x02:
-			textAttributeBits |= WPS_BOLD_BIT;
+			if (data.isTrue())
+				textAttributeBits |= WPS_BOLD_BIT;
+			else
+				f << "#bold=false,";
 			break;
 		case 0x03:
-			textAttributeBits |= WPS_ITALICS_BIT;
+			if (data.isTrue())
+				textAttributeBits |= WPS_ITALICS_BIT;
+			else
+				f << "#it=false,";
 			break;
 		case 0x04:
-			textAttributeBits |= WPS_OUTLINE_BIT;
+			if (data.isTrue())
+				textAttributeBits |= WPS_OUTLINE_BIT;
+			else
+				f << "#outline=false,";
 			break;
 		case 0x05:
-			textAttributeBits |= WPS_SHADOW_BIT;
+			if (data.isTrue())
+				textAttributeBits |= WPS_SHADOW_BIT;
+			else
+				f << "#shadow=false,";
 			break;
 		case 0x0c:
 			m_listener->setFontSize(uint16_t(data.m_value/12700));
@@ -987,22 +1108,37 @@ void WPS8Text::propertyChange(WPS8Struct::FileData const &mainData, uint16_t &sp
 			else f << "###ff=" << std::hex << data.m_value << std::dec << ",";
 			break;
 		case 0x10:
-			textAttributeBits |= WPS_STRIKEOUT_BIT;
+			if (data.isTrue())
+				textAttributeBits |= WPS_STRIKEOUT_BIT;
+			else
+				f << "#strikeout=false,";
 			break;
 		case 0x12:
 			m_listener->setTextLanguage(int(data.m_value));
 			break;
 		case 0x13:
-			textAttributeBits |= WPS_SMALL_CAPS_BIT;
+			if (data.isTrue())
+				textAttributeBits |= WPS_SMALL_CAPS_BIT;
+			else
+				f << "#smallbit=false,";
 			break;
 		case 0x14:
-			textAttributeBits |= WPS_ALL_CAPS_BIT;
+			if (data.isTrue())
+				textAttributeBits |= WPS_ALL_CAPS_BIT;
+			else
+				f << "#allcaps=false,";
 			break;
 		case 0x16:
-			textAttributeBits |= WPS_EMBOSS_BIT;
+			if (data.isTrue())
+				textAttributeBits |= WPS_EMBOSS_BIT;
+			else
+				f << "#emboss=false,";
 			break;
 		case 0x17:
-			textAttributeBits |= WPS_ENGRAVE_BIT;
+			if (data.isTrue())
+				textAttributeBits |= WPS_ENGRAVE_BIT;
+			else
+				f << "#engrave=false,";
 			break;
 			// fixme: there are various styles of underline
 		case 0x1e:
@@ -1029,8 +1165,8 @@ void WPS8Text::propertyChange(WPS8Struct::FileData const &mainData, uint16_t &sp
 				break;
 			}
 			uint8_t fId = (uint8_t)data.m_recursData[0].m_value;
-			if (fId < m_fontNames.size())
-				m_listener->setTextFont(m_fontNames[fId].c_str());
+			if (fId < m_state->m_fontNames.size())
+				m_listener->setTextFont(m_state->m_fontNames[fId].c_str());
 			else
 			{
 				WPS_DEBUG_MSG(("WPS8Text::propertyChange: can not read find font %d\n", int(fId)));
@@ -1067,13 +1203,12 @@ void WPS8Text::propertyChange(WPS8Struct::FileData const &mainData, uint16_t &sp
 			break;
 		}
 		default:
-			WPS_DEBUG_MSG(("WPS8Text::propertyChange: unexpected %d\n", data.id()));
-			f << "###" << data << ",";
+			f << "#" << data << ",";
 			break;
 		}
 	}
 
-	propertyChangeDelta(textAttributeBits);
+	m_listener->setFontAttributes(textAttributeBits);
 }
 
 void WPS8Text::propertyChangePara(WPS8Struct::FileData const &mainData)
@@ -1091,24 +1226,6 @@ void WPS8Text::propertyChangePara(WPS8Struct::FileData const &mainData)
 	libwps::DebugStream f;
 	if (mainData.m_value) f << "unk=" << mainData.m_value << ",";
 
-	/* move the map in state to be ok */
-	static const int expextedTypes[] =
-	{
-		0x3, 0x1A, 0x4, 0x12,
-		0xc, 0x22, 0xd, 0x22, /* 0xe, 0x22, */
-		/* 0x12, 0x22, 0x13, 0x22, */ 0x14, 0x22,
-		0x32, 0x82,
-	};
-	static bool mapInit = false;
-	static std::map<int, int> expextedTypesMap; // map id->type
-	if (!mapInit)
-	{
-		int numData = sizeof(expextedTypes)/sizeof(int);
-		for (int i = 0; i+1 < numData; i+=2)
-			expextedTypesMap[expextedTypes[i]] = expextedTypes[i+1];
-		mapInit = true;
-	}
-
 	float leftIndent=0.0, textIndent=0.0;
 	int listLevel = 0;
 	WPSList::Level level;
@@ -1116,12 +1233,13 @@ void WPS8Text::propertyChangePara(WPS8Struct::FileData const &mainData)
 	{
 		WPS8Struct::FileData const &data = mainData.m_recursData[c];
 		if (data.isBad()) continue;
-		if (expextedTypesMap.find(data.id())==expextedTypesMap.end())
+		if (m_state->m_paragraphTypes.find(data.id())==m_state->m_paragraphTypes.end())
 		{
-			f << data << ",";
+			WPS_DEBUG_MSG(("WPS8Text::propertyChangePara: unexpected id %d\n", data.id()));
+			f << "###" << data << ",";
 			continue;
 		}
-		if (expextedTypesMap.find(data.id())->second != data.type())
+		if (m_state->m_paragraphTypes.find(data.id())->second != data.type())
 		{
 			WPS_DEBUG_MSG(("WPS8Text::propertyChangePara: unexpected type for %d\n", data.id()));
 			f << "###" << data << ",";
@@ -1299,8 +1417,7 @@ void WPS8Text::propertyChangePara(WPS8Struct::FileData const &mainData)
 		}
 		break;
 		default:
-			WPS_DEBUG_MSG(("WPS8Text::propertyChangePara: unexpected %d\n", data.id()));
-			f << "###" << data << ",";
+			f << "#" << data << ",";
 			break;
 		}
 	}
@@ -1318,6 +1435,1101 @@ void WPS8Text::propertyChangePara(WPS8Struct::FileData const &mainData)
 	m_listener->setParagraphJustification(align);
 	m_listener->setParagraphTextIndent(textIndent);
 	m_listener->setParagraphMargin(leftIndent, WPS_LEFT);
+}
+
+////////////////////////////////////////////////////////////
+// basic strings functions:
+////////////////////////////////////////////////////////////
+/* Read an UTF16 character in LE byte ordering, convert it. Courtesy of glib2 */
+long WPS8Text::readUTF16LE(WPXInputStreamPtr input, long endPos, uint16_t firstC)
+{
+	if (firstC >= 0xdc00 && firstC < 0xe000)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: character = %i (0x%X)\n", firstC, firstC));
+		return 0xfffd;
+	}
+	if (firstC >= 0xd800 && firstC < 0xdc00)
+	{
+		firstC = uint16_t(firstC - 0xd800);
+		if (input->tell() == endPos)
+		{
+			WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: find high surrogate without low\n"));
+			return 0xfffd;
+		}
+		uint16_t lowVal = libwps::readU16(input);
+		if (lowVal >= 0xdc00 && lowVal < 0xe000)
+		{
+			lowVal = uint16_t(lowVal - 0xdc00);
+			return firstC* 0x400 + lowVal + 0x10000;
+		}
+		else
+		{
+			WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: surrogate character = %i (0x%X)\n", firstC, firstC));
+			return 0xfffd;
+		}
+	}
+	if (firstC>=28 ) return firstC;
+	WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: character = %i (0x%X)\n", firstC, firstC));
+	return 0xfffd;
+}
+
+bool WPS8Text::readString(WPXInputStreamPtr input, long page_size,
+                          WPXString &res)
+{
+	res = "";
+	long page_offset = input->tell();
+	long endString = page_offset + page_size;
+
+	while (input->tell() < endString-1 && !input->atEOS())
+	{
+		uint16_t val = libwps::readU16(input);
+		if (!val) break;
+
+		long unicode = readUTF16LE(input, endString, val);
+		if (unicode != 0xfffd) WPSContentListener::appendUnicode(val, res);
+	}
+	return true;
+}
+
+////////////////////////////////////////////////////////////
+// plc: font, paragraph
+////////////////////////////////////////////////////////////
+bool WPS8Text::readFont(long endPos, int &id, std::string &mess)
+{
+	WPXInputStreamPtr input=getInput();
+	long actPos = input->tell();
+	long size = endPos - actPos;
+
+	/* other than blank, the shortest should be 2 bytes */
+	if (size && (size%2) == 1)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readFont: error: charProperty size is odd\n"));
+		return false;
+	}
+
+	WPS8Struct::FileData mainData;
+	std::string error;
+
+	bool readOk= size ? readBlockData(input, endPos, mainData, error) : true;
+	libwps::DebugStream f;
+	f << mainData;
+	if (error.length())
+		f << ",#err=(" << error << ")";
+
+	id = int(m_state->m_fontList.size());
+	m_state->m_fontList.push_back(mainData);
+	mess = f.str();
+	return readOk;
+}
+
+bool WPS8Text::readParagraph(long endPos, int &id, std::string &mess)
+{
+	WPXInputStreamPtr input=getInput();
+	long actPos = input->tell();
+	long size = endPos - actPos;
+
+	/* other than blank, the shortest should be 2 bytes */
+	if (size && (size%2) == 1)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readParagraph: error: charProperty size is odd\n"));
+		return false;
+	}
+
+	WPS8Struct::FileData mainData;
+	std::string error;
+
+	bool readOk= size ? readBlockData(input, endPos, mainData, error) : true;
+	libwps::DebugStream f;
+	f << mainData;
+	if (error.length())
+		f << ",#err=(" << error << ")";
+
+	id = int(m_state->m_paragraphList.size());
+	m_state->m_paragraphList.push_back(mainData);
+	mess = f.str();
+	return readOk;
+}
+
+////////////////////////////////////////////////////////////
+// plc: default, strs
+////////////////////////////////////////////////////////////
+bool WPS8Text::defDataParser
+(long , long , int , WPS8Struct::FileData const &data, std::string &mess)
+{
+	mess = "";
+	libwps::DebugStream f;
+	if (!data.isRead() && !data.readArrayBlock() && data.m_recursData.size() == 0)
+	{
+		// we read nothing -> we stop
+		f << ", " << data;
+		mess = f.str();
+		return true;
+	}
+
+	size_t numChild = data.m_recursData.size();
+	if (numChild == 0) return true;
+
+	f << "{";
+	for (size_t c = 0; c < numChild; c++) f << data.m_recursData[c] << ",";
+	f << "}";
+
+	mess = f.str();
+	return true;
+}
+
+////////////////////////////////////////////////////////////
+// Text zones/ STRS zone
+////////////////////////////////////////////////////////////
+bool WPS8Text::textZonesDataParser
+(long bot, long eot, int /*nId*/, WPS8Struct::FileData const &data, std::string &mess)
+{
+	mess = "";
+	if (bot < m_textPositions.begin() || eot > m_textPositions.end()) return false;
+
+	libwps::DebugStream f;
+	if (!data.isRead() && !data.readArrayBlock() && data.m_recursData.size() == 0)
+	{
+		f << ", " << data;
+		mess = f.str();
+		WPS_DEBUG_MSG(("WPS8Text::textZonesDataParser: unknown structure\n"));
+		return false;
+	}
+
+	size_t numChild = data.m_recursData.size();
+
+	bool idSet = false;
+	int id = -1;
+
+	for (size_t c = 0; c < numChild; c++)
+	{
+		WPS8Struct::FileData const &dt = data.m_recursData[c];
+		if (dt.isBad()) continue;
+		if (dt.id()!=0 || dt.type() != 0x22)
+		{
+			WPS_DEBUG_MSG(("WPS8Text::textZonesDataParser: unexpected id for %d[%d]\n", data.id(), data.type()));
+			f << "###" << data << ",";
+			continue;
+		}
+		f << "id=" << dt.m_value << ",";
+		id = (int) dt.m_value;
+		idSet = true;
+	}
+
+	if (!idSet)
+	{
+		size_t numZ = m_state->m_textZones.size();
+		if (numZ == 0) WPS_DEBUG_MSG(("WPS8Text::textZonesDataParser: error: readSTRS with no type\n"));
+		else
+		{
+			id = m_state->m_textZones[numZ-1].id();
+			f << "rId=" << id;
+		}
+	}
+
+	mess = f.str();
+
+	WPSEntry zone;
+	zone.setBegin(bot);
+	zone.setEnd(eot);
+	zone.setType("Text");
+	zone.setId(id);
+	m_state->m_textZones.push_back(zone);
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////
+// Bookmark/ BMKT zone
+//
+// Note: I only find in very few file -> to be checked
+////////////////////////////////////////////////////////////
+bool WPS8Text::bmktEndDataParser(long endPage, std::vector<long> const &textPtrs)
+{
+	WPXInputStreamPtr input=getInput();
+	typedef WPS8TextInternal::Bookmark Bookmark;
+
+	int numBmkt = int(textPtrs.size())-1;
+	if (numBmkt <= 0) return false;
+
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	ascii().addPos(pos);
+
+	f << "BMKT(id)=(";
+	std::vector<Bookmark> listBmk;
+
+	for (int i = 0; i < numBmkt; i++)
+	{
+		Bookmark bmk;
+
+		pos = input->tell();
+		if (input->tell() + 4 > endPage) return false;
+
+		int id = (int) libwps::read32(input);
+		f << id << ",";
+		if (id < 0 || (id > numBmkt && id > 100))
+		{
+			WPS_DEBUG_MSG(("WPS8Text::bmktEndDataParser: odd index =%d\n", id));
+			input->seek(pos, WPX_SEEK_SET);
+			return false;
+		}
+		bmk.m_id = id;
+		listBmk.push_back(bmk);
+	}
+	f << ")";
+
+	int sz1 = (int) libwps::readU32(input);
+	pos = input->tell();
+	if (sz1 < 4*numBmkt || pos+1+sz1 > endPage)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::bmktEndDataParser: pb with sz1 =%d\n", sz1));
+		input->seek(pos, WPX_SEEK_SET);
+		return false;
+	}
+	f << ", Size(StrZone) = " << sz1;
+	ascii().addNote(f.str().c_str());
+
+	// ------ Problematic part -------------
+	ascii().addPos(input->tell());
+	f.str("");
+	f << "BMKT(##unkn):";
+	f << libwps::read32(input) <<",";
+	f << "dim?=" << float(libwps::read32(input))/914400.f <<"," << std::hex;
+	while(input->tell() < endPage-sz1 && !input->atEOS())
+		f << libwps::read16(input) << ",";
+	f << std::dec;
+	ascii().addNote(f.str().c_str());
+	// File1= 0b000000 (N?) - 4c891700:00000000:001fcd00 when numBmkt=11
+	// File2= 01000000 (N?) - 988f1200:00000000:0045dd01 when numBmkt=1
+	// probably int, dim(*914400), int, short, short
+	// ------ end of problematic part -------------
+
+	input->seek(endPage-sz1, WPX_SEEK_SET);
+
+	pos = input->tell();
+	ascii().addPos(pos);
+	f.str("");
+	f << "BMKT(strPos)=(";
+
+	std::vector<long> strPos;
+	for (int i = 0; i < numBmkt; i++)
+	{
+		long sPos = pos+(long) libwps::read32(input);
+
+		if (sPos > endPage)
+		{
+			WPS_DEBUG_MSG(("WPS8Text::bmktEndDataParser: pb with %dth pos=%ld\n", i, sPos));
+			return false;
+		}
+		strPos.push_back(sPos);
+		f << std::hex << sPos << ",";
+	}
+	f << ")";
+
+	ascii().addNote(f.str().c_str());
+	ascii().addPos(input->tell());
+
+	for (size_t i = 0; i < size_t(numBmkt); i++)
+	{
+		pos = strPos[i];
+		f.str("");
+		f << "BMKT(" << std::dec << i << ")=";
+		if (pos == endPage) f << "_"; // can this happens ?
+		else
+		{
+			input->seek(pos, WPX_SEEK_SET);
+			WPXString val;
+			int sz = (int) libwps::readU16(input);
+			if (pos + 2+ 2*sz > endPage || !readString(input, 2*sz, val))
+			{
+				WPS_DEBUG_MSG(("WPS8Text::bmktEndDataParser: pb with %dth string size=%d\n", int(i), sz));
+				return false;
+			}
+			listBmk[i].m_text=val;
+			f << "\"" << val.cstr() << "\"";
+		}
+		ascii().addPos(strPos[i]);
+		ascii().addNote(f.str().c_str());
+	}
+	input->seek(endPage, WPX_SEEK_SET);
+
+	// ok, we store the bookmark and we create the plc and the data fod ...
+	std::vector<DataFOD> fods;
+	for (size_t t = 0; t < size_t(numBmkt); t++)
+	{
+		if (m_state->m_bookmarkMap.find(textPtrs[t]) != m_state->m_bookmarkMap.end())
+		{
+			WPS_DEBUG_MSG(("WPS8Text::bmktEndDataParser: warning: already a bkmt in position %lx\n", textPtrs[t]));
+			continue;
+		}
+		else m_state->m_bookmarkMap[textPtrs[t]] = listBmk[t];
+		int newId = int(m_state->m_plcList.size());
+
+		WPS8TextInternal::DataPLC plc;
+		plc.m_type = WPS8TextInternal::BMKT;
+		plc.m_name = "BOOKMARK";
+		f.str("");
+		f << listBmk[t];
+		plc.m_error = f.str();
+		m_state->m_plcList.push_back(plc);
+
+		DataFOD fod;
+		fod.m_type = DataFOD::ATTR_PLC;
+		fod.m_pos = textPtrs[t];
+		fod.m_id = newId;
+
+		fods.push_back(fod);
+	}
+
+	if (fods.size())
+		m_FODList = mergeSortedFODLists(m_FODList, fods);
+
+	return true;
+
+}
+
+////////////////////////////////////////////////////////////
+// Object/ Eobj code
+////////////////////////////////////////////////////////////
+bool WPS8Text::objectDataParser(long bot, long /*eot*/, int /*id*/,
+                                WPS8Struct::FileData const &data, std::string &mess)
+{
+	typedef WPS8TextInternal::Object Object;
+	if (m_state->m_objectMap.find(bot) != m_state->m_objectMap.end())
+	{
+		WPS_DEBUG_MSG(("WPS8PcMNText::objectDataParser: error: eobj already exists in this position\n"));
+		return true;
+	}
+
+	Object obj = m_state->m_object;
+	obj.m_error="";
+
+	mess = "";
+	size_t numChild = data.m_recursData.size();
+
+	long val[5] = { 0, 0, 0, 0, 0 };
+	bool setVal[5] = { false, false, false, false, false };
+	libwps::DebugStream f;
+	for (size_t c = 0; c < numChild; c++)
+	{
+		WPS8Struct::FileData const &dt = data.m_recursData[c];
+		if (dt.isBad()) continue;
+		if (m_state->m_objectTypes.find(dt.id())==m_state->m_objectTypes.end())
+		{
+			WPS_DEBUG_MSG(("WPS8Text::objectDataParser: unexpected id %d\n", dt.id()));
+			f << "###" << dt << ",";
+			continue;
+		}
+		if (m_state->m_objectTypes.find(dt.id())->second != dt.type())
+		{
+			WPS_DEBUG_MSG(("WPS8Text::objectDataParser: unexpected type for %d\n", dt.id()));
+			f << "###" << dt << ",";
+			continue;
+		}
+		val[dt.id()] = dt.m_value;
+		setVal[dt.id()] = true;
+	}
+	obj.m_error = f.str();
+
+	if (setVal[0])
+	{
+		if (val[0] == 2) obj.m_type = Object::Image;
+		else if (val[0] == 3) obj.m_type = Object::Table;
+		else
+		{
+			static bool first = true;
+			if (first)
+			{
+				first = false;
+				WPS_DEBUG_MSG(("WPS8PcMNText::objectDataParser: unknown type: %ld\n", val[0]));
+			}
+			obj.m_type = int(-1 - val[0]);
+		}
+	}
+	if (setVal[3]) obj.m_id = int(val[3]);
+
+	if (setVal[1]) obj.m_size.setX(float(val[1])/914400.f);
+	if (setVal[2]) obj.m_size.setY(float(val[2])/914400.f);
+
+	if (setVal[4]) obj.m_unknown = val[4];
+
+	m_state->m_objectMap[bot] = m_state->m_object = obj;
+
+	f.str("");
+	f << obj;
+	mess = f.str();
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////
+// Token/ Tokn zone
+////////////////////////////////////////////////////////////
+bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtrs)
+{
+	int numTokn = int(textPtrs.size())-1;
+	if (numTokn <= 0) return false;
+
+	WPXInputStreamPtr input = getInput();
+	libwps::DebugStream f;
+	WPS8TextInternal::Token tokn;
+	std::vector<WPS8TextInternal::Token> listToken;
+
+	long pos = input->tell();
+	for (size_t i = 0; i < size_t(numTokn); i++)
+	{
+		pos = input->tell();
+		if (input->tell() + 2 > endPage) return false;
+
+		int sz = (int) libwps::read16(input);
+		if (sz < 2 || pos+sz > endPage)
+		{
+			input->seek(pos, WPX_SEEK_SET);
+			return false;
+		}
+
+		WPS8Struct::FileData data;
+		std::string error;
+		if (!readBlockData(input, pos+sz, data, error) && data.m_recursData.size() == 0)
+		{
+			input->seek(pos, WPX_SEEK_SET);
+			return false;
+		}
+
+		size_t numChild = data.m_recursData.size();
+		tokn.m_error ="";
+		f.str("");
+		for (size_t c = 0; c < numChild; c++)
+		{
+			WPS8Struct::FileData const &dt = data.m_recursData[c];
+			if (dt.isBad()) continue;
+			if (dt.id()<0 || dt.id()>2 || dt.type()!=0x22)
+			{
+				WPS_DEBUG_MSG(("WPS8Text::tokenEndDataParser[A]: unexpected id %d[%d]\n", data.id(), data.type()));
+				f << "###" << dt << ",";
+				continue;
+			}
+			switch(dt.id())
+			{
+			case 0: // some unknown flags ? link=0x140, pageNumber=0, unknown(6)=0x400
+				tokn.m_unknown=int(dt.m_value);
+				break;
+			case 1: // looks like the text size
+				tokn.m_textLength=int(dt.m_value);
+				break;
+			case 2: // -2=link, -5=page number, -6=?
+				switch(dt.m_value)
+				{
+				case -2:
+					tokn.m_type = WPSContentListener::Link;
+					break;
+				case -5:
+					tokn.m_type = WPSContentListener::PageNumber;
+					break;
+					// CHECKME: case -6-> strings = SPC, text character = 0xb7
+					// an insecable character or space ?
+				default:
+					WPS_DEBUG_MSG(("WPS8Text::tokenEndDataParser: unknown type=%d\n", int(dt.m_value)));
+					f << "###type=" << dt.m_value << ",";
+				}
+				break;
+			default:
+				f << "###id=" << dt.id() << ",";
+				break;
+			}
+		}
+
+		if (!error.empty()) f << error;
+		if (!f.str().empty()) tokn.m_error = f.str();
+
+		listToken.push_back(tokn);
+
+		f.str("");
+		f << std::dec << "TOKN/PLC" << i << ": " << tokn;
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+	}
+
+	std::vector<int> idString;
+	idString.resize(size_t(numTokn), -1);
+
+	int numFollow = 0;
+	for (int i = 0; i < numTokn; i++)
+	{
+		pos = input->tell();
+		if (input->tell() + 2 > endPage) return false;
+
+		WPS8Struct::FileData data;
+		int sz = (int) libwps::read16(input);
+		if (sz < 2 || pos+sz > endPage)
+		{
+			input->seek(pos, WPX_SEEK_SET);
+			return false;
+		}
+
+		std::string error;
+		if (!readBlockData(input, pos+sz, data, error)  && data.m_recursData.size() == 0)
+		{
+			input->seek(pos, WPX_SEEK_SET);
+			return false;
+		}
+
+		f.str("");
+		f << "TOKN(PLC" << i << "-a): ";
+
+		bool idSet = false;
+		int id = -1;
+		size_t numChild = data.m_recursData.size();;
+		for (size_t c = 0; c < numChild; c++)
+		{
+			WPS8Struct::FileData const &dt = data.m_recursData[c];
+			if (dt.isBad()) continue;
+			if (dt.id() != 0 || dt.type()!=0x22)
+			{
+				WPS_DEBUG_MSG(("WPS8Text::tokenEndDataParser[B]: unexpected id %d[%d]\n", data.id(), data.type()));
+				f << "###" << dt << ",";
+				continue;
+			}
+
+			id = int(dt.m_value);
+			if (id >= 0)
+			{
+				idString[size_t(i)] = id;
+				f << "strings" << id << ","; // id of the following strs
+			}
+			else if (id == -1) f << "_,";   // no string
+			else f << "###id=" << id << ","; // exits ???
+			idSet = true;
+		}
+
+		if (idSet && id >= 0) numFollow++;
+		if (!error.empty()) f << error;
+
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+	}
+
+	std::vector<long> sPtrs;
+	if (numFollow != 0)
+	{
+		// read the strings header
+		pos = input->tell();
+		if (pos+20 > endPage) return false;
+		f.str("");
+		f << "TOKN(strings):";
+		long unkn = (long) libwps::read32(input);
+		if (unkn+20+pos != endPage)
+			f << "unkn=" << std::hex << unkn+20+pos << std::dec << ",";
+		int N = (int) libwps::read32(input);
+		if (N != numFollow) f << "###";
+		f << "N=" << N << ",";
+		// 8760a4 | b37464 | 6092ea37 | 6105db0e | ffffffff
+		f << std::hex << libwps::readU32(input) << std::dec << ",";
+		for (int i = 0; i <2; i++)
+		{
+			int val = (int) libwps::read32(input);
+			if (val) f << "###f" << i << "=" << val << ",";
+		}
+		f << "ptr=(";
+
+		if (pos+20+4*N > endPage)
+		{
+			input->seek(pos, WPX_SEEK_SET);
+			return false;
+		}
+
+		for (int i = 0; i < N; i++)
+		{
+			long val = (long) libwps::read32(input);
+			if (val < 4*N)
+			{
+				input->seek(pos, WPX_SEEK_SET);
+				return false;
+			}
+			val += pos+20;
+			if (val > endPage)
+			{
+				input->seek(pos, WPX_SEEK_SET);
+				return false;
+			}
+			sPtrs.push_back(val);
+			f << std::hex << val << ",";
+		}
+		f << ")" << std::dec;
+
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+	}
+
+	size_t numStrings = sPtrs.size();
+	for (size_t i = 0; i < numStrings; i++)
+	{
+		pos = sPtrs[i];
+		input->seek(pos, WPX_SEEK_SET);
+		int sz = (int) libwps::read16(input);
+		if (sz < 0 || pos+2*sz+2 > endPage) return false;
+		WPXString str;
+		readString(input, 2*sz, str);
+
+		bool find = false;
+		for (size_t t = 0; t < size_t(numTokn); t++)
+		{
+			if (idString[t] != int(i)) continue;
+			find = true;
+			listToken[t].m_text = str;
+		}
+		f.str("");
+		f << "TOKN/string" << i << ":" << str.cstr();
+		if (!find) f << ", ###not find";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+	}
+
+	// ok, we store the token and we create the plc and the data fod ...
+	std::vector<DataFOD> fods;
+	for (size_t t = 0; t < size_t(numTokn); t++)
+	{
+		if (m_state->m_tokenMap.find(textPtrs[t]) != m_state->m_tokenMap.end())
+		{
+			WPS_DEBUG_MSG(("WPS8Text::tokenEndDataParser: warning: already a tokn in position %lx\n", textPtrs[t]));
+			continue;
+		}
+		else m_state->m_tokenMap[textPtrs[t]] = listToken[t];
+		int newId = int(m_state->m_plcList.size());
+
+		WPS8TextInternal::DataPLC plc;
+		plc.m_type = WPS8TextInternal::TOKEN;
+		plc.m_name = "TOKEN";
+		f.str("");
+		f << listToken[t];
+		plc.m_error = f.str();
+		m_state->m_plcList.push_back(plc);
+
+		DataFOD fod;
+		fod.m_type = DataFOD::ATTR_PLC;
+		fod.m_pos = textPtrs[t];
+		fod.m_id = newId;
+
+		fods.push_back(fod);
+	}
+
+	if (fods.size())
+		m_FODList = mergeSortedFODLists(m_FODList, fods);
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////
+// code to find the fdpc and fdpp entries; normal then by hand
+////////////////////////////////////////////////////////////
+bool WPS8Text::findFDPStructures(int which, std::vector<WPSEntry> &zones)
+{
+	WPXInputStreamPtr input = getInput();
+	zones.resize(0);
+
+	char const *indexName = which ? "BTEC" : "BTEP";
+	char const *sIndexName = which ? "FDPC" : "FDPP";
+
+	WPS8Parser::NameMultiMap::iterator pos =
+	    mainParser().getNameEntryMap().lower_bound(indexName);
+
+	std::vector<WPSEntry const *> listIndexed;
+	while (pos != mainParser().getNameEntryMap().end())
+	{
+		WPSEntry const &entry = pos->second;
+		pos++;
+		if (!entry.hasName(indexName)) break;
+		if (!entry.hasType("PLC ")) continue;
+		listIndexed.push_back(&entry);
+	}
+
+	size_t nFind = listIndexed.size();
+	if (nFind==0) return false;
+
+	// can nFind be > 1 ?
+	bool ok = true;
+	for (size_t i = 0; i+1 < nFind; i++)
+	{
+		ok = true;
+		for (size_t j = 0; j+i+1 < nFind; j++)
+		{
+			if (listIndexed[j]->id() <= listIndexed[j+1]->id())
+				continue;
+			WPSEntry const *tmp = listIndexed[j];
+			listIndexed[j] = listIndexed[j+1];
+			listIndexed[j+1] = tmp;
+			ok = false;
+		}
+		if (ok) break;
+	}
+
+	for (size_t i = 0; i+1 < nFind; i++)
+		if (listIndexed[i]->id() == listIndexed[i+1]->id()) return false;
+
+	// create a map offset -> entry
+	std::map<long, WPSEntry const *> offsetMap;
+	std::map<long, WPSEntry const *>::iterator offsIt;
+	pos = mainParser().getNameEntryMap().lower_bound(sIndexName);
+	while (pos != mainParser().getNameEntryMap().end())
+	{
+		WPSEntry const &entry = pos->second;
+		pos++;
+		if (!entry.hasName(sIndexName)) break;
+		offsetMap.insert(std::map<long, WPSEntry const *>::value_type
+		                 (entry.begin(), &entry));
+	}
+
+	for (size_t i = 0; i < nFind; i++)
+	{
+		WPSEntry const &entry = *(listIndexed[i]);
+
+		std::vector<long> textPtrs;
+		std::vector<long> listValues;
+
+		if (!readPLC(entry, textPtrs, listValues)) return false;
+
+		size_t numV = listValues.size();
+		if (textPtrs.size() != numV+1) return false;
+
+		for (size_t j = 0; j < numV; j++)
+		{
+			long position = listValues[j];
+			if (position <= 0) return false;
+
+			offsIt = offsetMap.find(position);
+			if (offsIt == offsetMap.end() || !offsIt->second->hasName(sIndexName))
+				return false;
+
+			zones.push_back(*offsIt->second);
+		}
+	}
+
+	return true;
+}
+
+bool WPS8Text::findFDPStructuresByHand(int which, std::vector<WPSEntry> &zones)
+{
+	char const *indexName = which ? "FDPC" : "FDPP";
+	WPS_DEBUG_MSG(("WPS8Text::findFDPStructuresByHand: error: need to create %s list by hand \n", indexName));
+	zones.resize(0);
+
+	WPS8Parser::NameMultiMap::iterator pos =
+	    mainParser().getNameEntryMap().lower_bound(indexName);
+	while (pos != mainParser().getNameEntryMap().end())
+	{
+		WPSEntry const &entry = pos->second;
+		pos++;
+		if (!entry.hasName(indexName)) break;
+		if (!entry.hasType(indexName)) continue;
+
+		zones.push_back(entry);
+	}
+	return zones.size() != 0;
+}
+
+/////////////////////////////////////////////////////////////////////
+//                    VERY LOW LEVEL (PLC)                         //
+/////////////////////////////////////////////////////////////////////
+
+/** Internal and low level: the structures of a WPS4Text used to parse PLC*/
+namespace WPS8PLCInternal
+{
+/** Internal and low level: the PLC different types and their structures */
+struct PLC
+{
+	/** the PLC types */
+	typedef enum WPS8TextInternal::PLCType PLCType;
+	/** the way to define the text positions
+	 *
+	 * - P_ABS: absolute position,
+	 * - P_MREL: position are relative to the beginning of the main text offset,
+	 * - P_MINCR: position are the length of text consecutive zones in the main text offset,
+	 * - P_ZREL: position are relative to the beginning of a specific text offset,
+	 * - P_ZINCR: position are the length of text consecutive zones in a specific text offset
+	 */
+	typedef enum { P_ABS=0, P_MREL, P_ZREL, P_MINCR, P_ZINCR, P_UNKNOWN} Position;
+	/** the type of the content
+	 *
+	 * - T_CST: size is constant
+	 * - T_STRUCT: a structured type ( which unknown size)
+	 * - T_COMPLEX: a complex way to define content in many parts
+	 */
+	typedef enum { T_CST=0, T_STRUCT,  T_COMPLEX, T_UNKNOWN} Type;
+
+	//! constructor
+	PLC(PLCType w= WPS8TextInternal::Unknown, Position p=P_UNKNOWN, Type t=T_UNKNOWN) :
+		m_type(w), m_pos(p), m_contentType(t) {}
+
+	//! PLC type
+	PLCType m_type;
+	//! the way to define the text positions
+	Position m_pos;
+	//! the type of the content
+	Type m_contentType;
+};
+
+KnownPLC::KnownPLC() : m_knowns()
+{
+	createMapping();
+}
+
+KnownPLC::~KnownPLC()
+{
+}
+
+PLC KnownPLC::get(std::string const &name)
+{
+	std::map<std::string, PLC>::iterator pos = m_knowns.find(name);
+	if (pos == m_knowns.end()) return PLC();
+	return pos->second;
+}
+
+void KnownPLC::createMapping()
+{
+	m_knowns["BTEP"]=PLC(WPS8TextInternal::BTE,PLC::P_ABS, PLC::T_CST);
+	m_knowns["BTEC"]=PLC(WPS8TextInternal::BTE,PLC::P_ABS, PLC::T_CST);
+	m_knowns["TCD "]=PLC(WPS8TextInternal::TCD,PLC::P_ZREL, PLC::T_CST);
+	m_knowns["EOBJ"]=PLC(WPS8TextInternal::OBJECT,PLC::P_ZREL, PLC::T_STRUCT);  // or maybe  P_MREL
+	m_knowns["STRS"]=PLC(WPS8TextInternal::STRS, PLC::P_MINCR, PLC::T_STRUCT);
+	m_knowns["TOKN"]=PLC(WPS8TextInternal::TOKEN, PLC::P_ZREL, PLC::T_COMPLEX);
+	m_knowns["BMKT"]=PLC(WPS8TextInternal::BMKT, PLC::P_ZREL, PLC::T_COMPLEX); // or maybe P_MREL
+}
+}
+
+bool WPS8Text::readPLC
+(WPSEntry const &entry,
+ std::vector<long> &textPtrs, std::vector<long> &listValues,
+ WPS8Text::DataParser parser, WPS8Text::EndDataParser endParser)
+{
+	WPXInputStreamPtr input = getInput();
+	if (!entry.hasType("PLC "))
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC name=%s, type=%s\n",
+		               entry.name().c_str(), entry.type().c_str()));
+		return false;
+	}
+
+	long page_offset = entry.begin();
+	long length = entry.length();
+	long endPage = entry.end();
+	if (length < 16)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC length=0x%lx\n", length));
+		return false;
+	}
+
+	input->seek(page_offset, WPX_SEEK_SET);
+	int nPLC = (int) libwps::readU32(input);
+	int dataSz = (int) libwps::read32(input);
+	libwps::DebugStream f;
+	f << "PLC: N=" << nPLC << ", dSize=" << dataSz;
+	WPS8PLCInternal::PLC plcType = m_state->m_knownPLC.get(entry.name());
+
+	if (plcType.m_contentType == WPS8PLCInternal::PLC::T_UNKNOWN && 4*nPLC+16 + dataSz *nPLC == length)
+		plcType.m_contentType = WPS8PLCInternal::PLC::T_CST;
+	else if (plcType.m_contentType == WPS8PLCInternal::PLC::T_CST)
+	{
+		if (4*nPLC+16 + dataSz *nPLC != length)
+		{
+			WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: unknown data size\n"));
+			dataSz = 0;
+			f << ", ###data=Unkn";
+		}
+	}
+	else dataSz = 0;
+
+	if (4*nPLC+16 + dataSz*nPLC > length)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC length=0x%lx, N=%d\n", length, nPLC));
+		return false;
+	}
+	entry.setParsed();
+
+	int fl[4];
+	for (int i = 0; i < 4; i++)
+	{
+		fl[i] = (int)libwps::read8(input);
+		if (fl[i] == 0) continue;
+		f << ", f"<<i<<"=" << fl[i];
+	}
+
+	// find the zone
+	WPSEntry textZone = m_textPositions;
+	if (plcType.m_pos == WPS8PLCInternal::PLC::P_ZREL
+	        || plcType.m_pos == WPS8PLCInternal::PLC::P_ZINCR)
+	{
+		if (entry.id() >= 0 && entry.id() < int(m_state->m_textZones.size()))
+			textZone = m_state->m_textZones[size_t(entry.id())];
+		else
+		{
+			WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: can not find the zone\n"));
+			f << ", ###zone=" << entry.id();
+		}
+	}
+
+	// read text pointer
+	std::vector<WPS8Text::DataFOD> fods;
+	textPtrs.resize(0);
+	long lastPtr = textZone.begin();
+	f << ",pos = (";
+	for (int i = 0; i <= nPLC; i++)
+	{
+		long pos = (long) libwps::readU32(input);
+		switch (plcType.m_pos)
+		{
+		case WPS8PLCInternal::PLC::P_ABS:
+			if (pos == 0) pos = textZone.begin();
+			break;
+		case WPS8PLCInternal::PLC::P_ZREL:
+		case WPS8PLCInternal::PLC::P_MREL:
+			pos = 2*pos+textZone.begin();
+			break;
+		case WPS8PLCInternal::PLC::P_MINCR:
+		case WPS8PLCInternal::PLC::P_ZINCR:
+		{
+			long newPos = lastPtr + 2*pos;
+			pos = lastPtr;
+			lastPtr = newPos;
+			break;
+		}
+		case WPS8PLCInternal::PLC::P_UNKNOWN:
+		default:
+			break;
+		}
+		bool ok = pos >= textZone.begin() && pos <= textZone.end();
+		if (!ok)
+		{
+			WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: can not find pos\n"));
+			f << "###";
+		}
+		f << std::hex << pos << ",";
+
+		DataFOD fod;
+		fod.m_type = DataFOD::ATTR_PLC;
+		fod.m_pos = ok ? pos : 0;
+
+		textPtrs.push_back(fod.m_pos);
+		if (i != nPLC) fods.push_back(fod);
+	}
+	f << ")";
+
+
+	// read data
+	libwps::DebugStream f2;
+	bool ok = true;
+
+	listValues.resize(0);
+	long pos = input->tell();
+	for (size_t i = 0; i < size_t(nPLC); i++)
+	{
+		if (plcType.m_contentType == WPS8PLCInternal::PLC::T_COMPLEX) break;
+		WPS8TextInternal::DataPLC plc;
+		plc.m_type = plcType.m_type;
+		plc.m_name = entry.name();
+		bool printPLC = true;
+		switch(plcType.m_contentType)
+		{
+		case WPS8PLCInternal::PLC::T_CST :
+		{
+			if (dataSz == 0)
+			{
+				printPLC = false;
+				break;
+			}
+			if (dataSz > 4 || dataSz==3)
+			{
+				f2.str("");
+				for (int j = 0; j < dataSz; j++)
+					f2 << std::hex << int(libwps::readU8(input)) << ",";
+				plc.m_error = f2.str();
+			}
+			else
+			{
+				plc.m_value = dataSz==1 ? (long) libwps::readU8(input) :
+				              dataSz==2 ? (long) libwps::readU16(input) :
+				              (long) libwps::readU32(input);
+				listValues.push_back(plc.m_value);
+			}
+			break;
+		}
+		case WPS8PLCInternal::PLC::T_STRUCT :
+		{
+			long sz = (long) libwps::read16(input);
+			if (sz < 2 || sz+pos > endPage)
+			{
+				ok = false;
+				break;
+			}
+
+			WPS8Struct::FileData mainData;
+			std::string error;
+			readBlockData(input, sz+pos,mainData, error);
+
+			if (parser)
+			{
+				std::string mess;
+				if (!(this->*parser)(textPtrs[i], textPtrs[i+1], int(i), mainData, mess))
+				{
+					ok = false;
+					break;
+				}
+				plc.m_error = mess;
+			}
+			else
+			{
+				f2.str("");
+				f2 << mainData;
+				if (!error.empty()) f2 << ", ###" << error;
+				plc.m_error = f2.str();
+			}
+			break;
+		}
+		case WPS8PLCInternal::PLC::T_COMPLEX:
+		case WPS8PLCInternal::PLC::T_UNKNOWN:
+		default:
+			ok = false;
+			printPLC= false;
+			break;
+		}
+
+		fods[i].m_id = (int) m_state->m_plcList.size();
+		if (ok) fods[i].m_defPos = pos;
+		m_state->m_plcList.push_back(plc);
+
+		if (printPLC)
+		{
+			f2.str("");
+			f2 << plc.m_name << i << "(PLC"<<fods[i].m_id<<"):" << plc;
+			ascii().addPos(pos);
+			ascii().addNote(f2.str().c_str());
+		}
+
+		if (ok) pos = input->tell();
+		else plcType.m_contentType = WPS8PLCInternal::PLC::T_UNKNOWN;
+	}
+	if (fods.size())
+		m_FODList = mergeSortedFODLists(m_FODList, fods);
+
+	ascii().addPos(page_offset);
+	ascii().addNote(f.str().c_str());
+
+	if (pos == endPage) return ok;
+
+	if (ok && endParser)
+	{
+		input->seek(pos, WPX_SEEK_SET);
+		ok = (this->*endParser) (endPage, textPtrs);
+		pos = input->tell();
+		if (pos == endPage) return ok;
+	}
+
+	ascii().addPos(pos);
+
+	f.str("");
+	f << "###" << entry.name() << "/PLC";
+	ascii().addNote(f.str().c_str());
+	return ok;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

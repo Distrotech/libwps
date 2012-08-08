@@ -99,8 +99,8 @@ std::ostream &operator<< (std::ostream &o, FileData const &dt)
 
 		return o;
 	}
-
 	if (dt.hasStr()) o << "('" << dt.m_text << "')";
+	if (dt.isFalse()) o << "=false,";
 	if ((dt.m_type & 0x30) || dt.m_value)
 		o << "=" << dt.m_value << ":" << std::hex << dt.m_value << std::dec;
 	size_t numChild = dt.m_recursData.size();
@@ -188,7 +188,7 @@ bool readData(WPXInputStreamPtr input, long endPos,
 	//   maybe :
 	//           0x1/0x4 -> never seem
 	//           0x2 -> set for the main child ?
-	//           0x8 -> signed/unsigned ?
+	//           0x8 -> signed/unsigned ? set/unset for bool ?
 	switch(dt.m_type>>4)
 	{
 	case 0:

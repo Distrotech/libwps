@@ -71,7 +71,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	}
 
 	entry.setParsed();
-	uint32_t page_offset = uint32_t(entry.begin());
+	long page_offset = entry.begin();
 	long length = entry.length();
 	long endPage = entry.end();
 
@@ -81,12 +81,12 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 
 	if (length < headerSize)
 	{
-		WPS_DEBUG_MSG(("WPSTextParser::readFDP: warning: FDP offset=0x%X, length=0x%lx\n",
+		WPS_DEBUG_MSG(("WPSTextParser::readFDP: warning: FDP offset=0x%lx, length=0x%lx\n",
 		               page_offset, length));
 		return false;
 	}
 
-	libwps::DebugStream f;
+	libwps::DebugStream f, f2;
 	if (smallFDP)
 	{
 		endPage--;
@@ -170,15 +170,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 
 		if (depl)
 			(*fods_iter).m_defPos = depl + page_offset;
-
-		f << (*fods_iter).m_pos << ":";
-		if (depl) f << (*fods_iter).m_defPos << ", ";
-		else f << "_, ";
 	}
-	f << "), lstPos=" << lastReadPos << ", ";
-
-	ascii().addPos(page_offset);
-	ascii().addNote(f.str().c_str());
 	ascii().addPos(input->tell());
 
 	std::map<long,int> mapPtr;
@@ -186,12 +178,18 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); fods_iter++)
 	{
 		long pos = (*fods_iter).m_defPos;
-		if (pos == 0) continue;
+		f << (*fods_iter).m_pos << ":";
+		if (pos == 0)
+		{
+			f << "_, ";
+			continue;
+		}
 
 		std::map<long,int>::iterator it= mapPtr.find(pos);
 		if (it != mapPtr.end())
 		{
 			(*fods_iter).m_id = mapPtr[pos];
+			f << entry.type() << (*fods_iter).m_id << ", ";
 			continue;
 		}
 
@@ -210,27 +208,31 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 			return false;
 		}
 
-		ascii().addPos(endPos);
-		ascii().addPos(pos);
 		int id;
 		std::string mess;
 		if (parser &&(this->*parser) (endPos, id, mess) )
 		{
 			(*fods_iter).m_id = mapPtr[pos] = id;
 
-			f.str("");
-			f << entry.type()  << std::dec << id <<":" << mess;
-			ascii().addNote(f.str().c_str());
+			f2.str("");
+			f2 << entry.type()  << id <<":" << mess;
+			ascii().addPos(pos);
+			ascii().addNote(f2.str().c_str());
 			pos = input->tell();
 		}
-
+		f << entry.type() << (*fods_iter).m_id << ", ";
 		if (pos != endPos)
 		{
+			f2.str("");
+			f2 << entry.type() << "###";
 			ascii().addPos(pos);
-			f.str("");
-			f << entry.type() << "###";
+			ascii().addNote(f2.str().c_str());
 		}
 	}
+	f << "), lstPos=" << lastReadPos << ", ";
+
+	ascii().addPos(page_offset);
+	ascii().addNote(f.str().c_str());
 
 	/* go to end of page */
 	input->seek(endPage, WPX_SEEK_SET);

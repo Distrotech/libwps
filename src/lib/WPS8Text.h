@@ -27,13 +27,11 @@
 
 #include "libwps_internal.h"
 
-#include "WPS.h"
 #include "WPSDebug.h"
-#include "WPSEntry.h"
 
 #include "WPSTextParser.h"
 
-class WPS8Parser;
+class WPSEntry;
 class WPSPosition;
 
 typedef class WPSContentListener WPS8ContentListener;
@@ -46,8 +44,12 @@ struct FileData;
 
 namespace WPS8TextInternal
 {
+struct Note;
+struct State;
 class SubDocument;
 }
+
+class WPS8Parser;
 
 class WPS8Text : public WPSTextParser
 {
@@ -63,10 +65,11 @@ public:
 		m_listener = listen;
 	}
 
+	//! finds all entries which correspond to some pictures, parses them and stores data
+	bool readStructures(WPXInputStreamPtr input);
+
 	void parse(WPXDocumentInterface *documentInterface);
 protected:
-	struct Note;
-	struct Stream;
 	//! return the main parser
 	WPS8Parser &mainParser()
 	{
@@ -78,19 +81,89 @@ protected:
 		return reinterpret_cast<WPS8Parser const &> (m_mainParser);
 	}
 
+	//
+	// String+text functions
+	//
+	//! reads a string
+	bool readString(WPXInputStreamPtr input, long page_size,
+	                WPXString &res);
+	//! reads a utf16 character, \return 0xfffd if an error
+	long readUTF16LE(WPXInputStreamPtr input, long endPos, uint16_t firstC);
+
 	//! the font
 	//! reads the font names
 	bool readFontNames(WPSEntry const &entry);
+	//! reads a font properties
+	bool readFont(long endPos, int &id, std::string &mess);
+
+	//! the paragraph
+	bool readParagraph(long endPos, int &id, std::string &mess);
+
+	//----------------------------------------
+	// FDP parsing
+	//----------------------------------------
+
+	/** finds the FDPC/FDPP structure using the BTEC/BTEP entries
+		which == 0 means FDPP, 1 means FDPC */
+	bool findFDPStructures(int which, std::vector<WPSEntry> &result);
+	/** finds the FDPC/FDPP structure by searching after the text zone
+		which == 0 means FDPP, 1 means FDPC */
+	bool findFDPStructuresByHand(int which, std::vector<WPSEntry> &result);
+
+	//----------------------------------------
+	// PLC parsing, setting
+	//----------------------------------------
+
+	/** definition of the plc data parser (low level)
+	 *
+	 * \param endPos the end of the properties' definition,
+	 * \param bot, \param eot defined the text zone corresponding to these properties
+	 * \param id the number of this properties
+	 * \param mess a string which can be filled to indicate unparsed data */
+	typedef bool (WPS8Text::* DataParser)
+	(long bot, long eot, int id, WPS8Struct::FileData const &data,
+	 std::string &mess);
+	/** definition of the last part of plc data parser (low level)
+	 *
+	 * \param endPos the end of the properties' definition,
+	 * \param textPtrs the list of text positions */
+	typedef bool (WPS8Text::* EndDataParser)
+	(long endPos, std::vector<long> const &textPtrs);
+	/** reads a PLC (Pointer List Composant ?) in zone entry
+	 *
+	 * \param entry the file zone
+	 * \param textPtrs lists of offset in text zones where properties changes
+	 * \param listValues lists of properties values (filled only if values are simple types: int, ..)
+	 * \param parser the parser to use to read the values
+	 * \param endParser the parser to use to read remaining data */
+	bool readPLC(WPSEntry const &entry,
+	             std::vector<long> &textPtrs, std::vector<long> &listValues,
+	             DataParser parser = &WPS8Text::defDataParser,
+	             EndDataParser endParser = 0L);
+	//! default parser
+	bool defDataParser
+	(long , long , int , WPS8Struct::FileData const &data, std::string &mess);
+	//! the text zones parser: STRS
+	bool textZonesDataParser(long bot, long eot, int nId,
+	                         WPS8Struct::FileData const &data,
+	                         std::string &mess);
+	// object
+	//! reads a EOBJ properties: an object id and its size, ...
+	bool objectDataParser(long bot, long eot, int id,
+	                      WPS8Struct::FileData const &data, std::string &mess);
+	// field type
+	//! reads a field type : TOKN zone
+	bool tokenEndDataParser(long endPage, std::vector<long> const &textPtrs);
+	/** \brief reads a field type : BMKT zone
+		\warning the read data are NOT used*/
+	bool bmktEndDataParser(long endPage, std::vector<long> const &textPtrs);
 
 private:
-	void readStreams(WPXInputStreamPtr &input);
-	void readNotes(std::vector<Note> &dest, WPXInputStreamPtr &input, const char *key);
+	void readNotes(std::vector<WPS8TextInternal::Note> &dest, WPXInputStreamPtr &input, const char *key);
 	void appendUTF16LE(WPXInputStreamPtr &input);
 	void readTextRange(WPXInputStreamPtr &input, uint32_t startpos, uint32_t endpos, uint16_t stream);
-	bool readFODPage(WPXInputStreamPtr &input, std::vector<WPSFOD> &FODs, uint16_t page_size);
 	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
 	void parse(WPXInputStreamPtr &stream);
-	void propertyChangeDelta(uint32_t newTextAttributeBits);
 	void propertyChange(WPS8Struct::FileData const &rgchProp, uint16_t &specialCode, int &fieldType);
 	void propertyChangePara(WPS8Struct::FileData const &rgchProp);
 	// interface with subdocument
@@ -99,31 +172,9 @@ private:
 protected:
 	//! the listener
 	WPS8ContentListenerPtr m_listener;
-
-	uint32_t m_offset_eot; /* stream offset to end of text */
-	uint32_t m_oldTextAttributeBits;
-	std::vector<WPSFOD> m_CHFODs; /* CHaracter FOrmatting Descriptors */
-	std::vector<WPSFOD> m_PAFODs; /* PAragraph FOrmatting Descriptors */
-	std::vector<std::string> m_fontNames;
-	std::vector<Stream> m_streams;
-	std::vector<Note> m_footnotes;
-	int m_actualFootnote;
-	std::vector<Note> m_endnotes;
-	int m_actualEndnote;
-
+	//! the internal state
+	mutable shared_ptr<WPS8TextInternal::State> m_state;
 protected:
-	struct Note : public WPSEntry
-	{
-		Note() : WPSEntry(), m_textOffset(0) {}
-		uint32_t m_textOffset;
-	};
-
-	struct Stream : public WPSEntry
-	{
-		Stream() : WPSEntry(), m_type(Z_Dummy) {}
-
-		enum Type {Z_Dummy=0, Z_Body=1, Z_Footnotes=2, Z_Endnotes = 3}  m_type;
-	};
 };
 
 

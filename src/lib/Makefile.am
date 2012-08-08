@@ -43,7 +43,6 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	libwps.h		\
 	libwps_tools_win.h	\
 	libwps_internal.h	\
-	WPS.h			\
 	WPS4.h			\
 	WPS4Graph.h		\
 	WPS4Text.h		\

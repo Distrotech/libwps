@@ -88,7 +88,16 @@ struct FileData
 	{
 		return !hasStr() && (m_type & 0xb0)==0;
 	}
-
+	//! returns true if this is a bool and the val is true
+	bool isTrue() const
+	{
+		return m_type == 0xa;
+	}
+	//! returns true if this is a bool and the val is false
+	bool isFalse() const
+	{
+		return m_type == 0x2;
+	}
 	//! returns true if this is a list of block or an unstructured list
 	bool isArray() const
 	{
@@ -103,6 +112,7 @@ struct FileData
 	//! returns the data type (low level)
 	int type() const
 	{
+		if (m_type == 0xa) return 2;
 		return m_type;
 	}
 	//! returns the identificator

@@ -199,10 +199,6 @@ SOURCE=..\..\src\lib\libwps_tools_win.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPS.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\WPS4.h
 # End Source File
 # Begin Source File
