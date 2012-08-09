@@ -44,7 +44,6 @@ struct FileData;
 
 namespace WPS8TextInternal
 {
-struct Note;
 struct State;
 class SubDocument;
 }
@@ -67,6 +66,31 @@ public:
 
 	//! finds all entries which correspond to some pictures, parses them and stores data
 	bool readStructures(WPXInputStreamPtr input);
+
+	//! returns the number of different text zones
+	int getNumTextZones() const;
+
+	/** returns the type of a text zone
+	 *
+	 * 1: mainzone, 2: footnote, 3: endnote, 4: ???, 5: text in table/textbox
+	 * 6: header, 7: footer
+	 **/
+	int getTextZoneType(int strsId) const;
+
+	//! returns the header entry (if such entry exists, if not returns an invalid entry)
+	WPSEntry getHeaderEntry() const;
+
+	//! returns the footer entry (if such entry exists, if not returns an invalid entry)
+	WPSEntry getFooterEntry() const;
+
+	//! returns the main zone entry (if such entry exists, if not returns an invalid entry)
+	WPSEntry getTextEntry() const;
+
+	//! returns ith zone entry (if such entry exists, if not returns an invalid entry)
+	WPSEntry getEntry(int strsId) const;
+
+	//! reads a text section and sends it to a listener
+	void readText(WPSEntry const &entry);
 
 	void parse(WPXDocumentInterface *documentInterface);
 protected:
@@ -98,6 +122,20 @@ protected:
 
 	//! the paragraph
 	bool readParagraph(long endPos, int &id, std::string &mess);
+
+	/** \brief the footnote ( FTN or EDN )
+	 *
+	 * \note this function must be called after the creation of the text zones */
+	bool readNotes(WPSEntry const &entry);
+
+	/** \brief creates the notes association : text and notes positions
+	 *
+	 * \note must be called after all notes have been created */
+	void createNotesCorrespondance();
+
+	/** \brief reads a style sheet zone
+		\warning the read data are NOT used*/
+	bool readSTSH(WPSEntry const &entry);
 
 	//----------------------------------------
 	// FDP parsing
@@ -159,15 +197,10 @@ protected:
 	bool bmktEndDataParser(long endPage, std::vector<long> const &textPtrs);
 
 private:
-	void readNotes(std::vector<WPS8TextInternal::Note> &dest, WPXInputStreamPtr &input, const char *key);
-	void appendUTF16LE(WPXInputStreamPtr &input);
-	void readTextRange(WPXInputStreamPtr &input, uint32_t startpos, uint32_t endpos, uint16_t stream);
 	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
-	void parse(WPXInputStreamPtr &stream);
+	void parse();
 	void propertyChange(WPS8Struct::FileData const &rgchProp, uint16_t &specialCode, int &fieldType);
 	void propertyChangePara(WPS8Struct::FileData const &rgchProp);
-	// interface with subdocument
-	void sendNote(WPXInputStreamPtr &input, int noteId, bool is_endnote);
 
 protected:
 	//! the listener
