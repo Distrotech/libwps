@@ -103,7 +103,7 @@ protected:
 	void createNote(WPSEntry const &entry, WPXString const &label);
 	//! creates a textbox and then send the data
 	void createTextBox(WPSEntry const &entry, WPSPosition const &pos, WPXPropertyList &extras);
-	//! sends text corresponding to the entry to the listener (via WPS4MNText)
+	//! sends text corresponding to the entry to the listener (via WPS4Text)
 	void send(WPSEntry const &entry, libwps::SubDocumentType type);
 
 	// interface with graph parser

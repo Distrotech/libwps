@@ -64,6 +64,12 @@ public:
 		m_listener = listen;
 	}
 
+	//! returns the number of pages
+	int numPages() const;
+
+	//! sends the data which have not yet been sent to the listener
+	void flushExtra();
+
 	//! finds all entries which correspond to some pictures, parses them and stores data
 	bool readStructures(WPXInputStreamPtr input);
 
@@ -92,7 +98,6 @@ public:
 	//! reads a text section and sends it to a listener
 	void readText(WPSEntry const &entry);
 
-	void parse(WPXDocumentInterface *documentInterface);
 protected:
 	//! return the main parser
 	WPS8Parser &mainParser()
@@ -197,8 +202,6 @@ protected:
 	bool bmktEndDataParser(long endPage, std::vector<long> const &textPtrs);
 
 private:
-	void parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr &input);
-	void parse();
 	void propertyChange(WPS8Struct::FileData const &rgchProp, uint16_t &specialCode, int &fieldType);
 	void propertyChangePara(WPS8Struct::FileData const &rgchProp);
 

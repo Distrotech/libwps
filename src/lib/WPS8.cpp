@@ -46,6 +46,81 @@
 
 namespace WPS8ParserInternal
 {
+//! Internal: the subdocument of a WPS8Parser
+class SubDocument : public WPSSubDocument
+{
+public:
+	//! type of an entry
+	enum Type { Unknown, TEXT };
+	//! constructor for a text entry
+	SubDocument(WPXInputStreamPtr input, WPS8Parser &pars, WPSEntry const &entry) :
+		WPSSubDocument (input, &pars), m_entry(entry) {}
+	//! destructor
+	~SubDocument() {}
+
+	//! operator==
+	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const
+	{
+		if ( !doc || !WPSSubDocument::operator==(doc))
+			return false;
+		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
+		if (!sDoc) return false;
+		return m_entry == sDoc->m_entry;
+	}
+
+	//! the parser function
+	void parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType);
+	//! the entry
+	WPSEntry m_entry;
+};
+
+void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType)
+{
+	if (!listener.get())
+	{
+		WPS_DEBUG_MSG(("WPS8ParserInternal::SubDocument::parse: no listener\n"));
+		return;
+	}
+	if (!dynamic_cast<WPS8ContentListener *>(listener.get()))
+	{
+		WPS_DEBUG_MSG(("WPS8ParserInternal::SubDocument::parse: bad listener\n"));
+		return;
+	}
+
+	WPS8ContentListenerPtr &listen =  reinterpret_cast<WPS8ContentListenerPtr &>(listener);
+	if (!m_parser)
+	{
+		listen->insertCharacter(' ');
+		WPS_DEBUG_MSG(("WPS8ParserInternal::SubDocument::parse: bad parser\n"));
+		return;
+	}
+
+	if (m_entry.isParsed() && subDocumentType != libwps::DOC_HEADER_FOOTER)
+	{
+		listen->insertCharacter(' ');
+		WPS_DEBUG_MSG(("WPS8ParserInternal::SubDocument::parse: this zone is already parsed\n"));
+		return;
+	}
+	m_entry.setParsed(true);
+	if (m_entry.type() != "Text")
+	{
+		listen->insertCharacter(' ');
+		WPS_DEBUG_MSG(("WPS8ParserInternal::SubDocument::parse: send not Text entry is not implemented\n"));
+		return;
+	}
+
+	if (!m_entry.valid())
+	{
+		WPS_DEBUG_MSG(("SubDocument::parse: empty document found...\n"));
+		listen->insertCharacter(' ');
+		return;
+	}
+
+
+	WPS8Parser *mnParser = reinterpret_cast<WPS8Parser *>(m_parser);
+	mnParser->send(m_entry);
+}
+
 /** Internal: a frame, a zone which can contain text, picture, ... and have some borders */
 struct Frame
 {
@@ -254,22 +329,37 @@ void WPS8Parser::setListener(shared_ptr<WPS8ContentListener> listener)
 shared_ptr<WPS8ContentListener> WPS8Parser::createListener(WPXDocumentInterface *interface)
 {
 	std::vector<WPSPageSpan> pageList;
-	WPSPageSpan page1(m_state->m_pageSpan), ps(m_state->m_pageSpan);
+	WPSPageSpan ps(m_state->m_pageSpan);
 
 	int numPages = 1;
-#if 0
 	int textPages = m_textParser->numPages();
 	if (textPages > numPages) numPages = textPages;
-#endif
 	int tablePages = m_tableParser->numPages();
 	if (tablePages > numPages) numPages = tablePages;
 	int graphPages = m_graphParser->numPages();
 	if (graphPages>=numPages) numPages = graphPages;
 
+	WPSEntry entry = m_textParser->getHeaderEntry();
+	if (entry.valid())
+	{
+		WPSSubDocumentPtr subdoc(new WPS8ParserInternal::SubDocument
+		                         (getInput(), *this, entry));
+		ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::ALL, subdoc);
+	}
+
+	entry = m_textParser->getFooterEntry();
+	if (entry.valid())
+	{
+		WPSSubDocumentPtr subdoc(new WPS8ParserInternal::SubDocument
+		                         (getInput(), *this, entry));
+		ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::ALL, subdoc);
+	}
 #ifdef DEBUG
 	// create all the pages + an empty page, if we have some remaining data...
 	numPages++;
 #endif
+	numPages = 1; // WPS8Text does not insert page break
+
 	pageList.push_back(ps);
 	for (int i = 1; i < numPages; i++) pageList.push_back(ps);
 	m_state->m_numPages=numPages;
@@ -295,7 +385,13 @@ void WPS8Parser::newPage(int number)
 
 ////////////////////////////////////////////////////////////
 // interface with the graph/text parser
-
+void WPS8Parser::send(WPSEntry const &entry)
+{
+	WPXInputStreamPtr input = getInput();
+	long actPos = input->tell();
+	m_textParser->readText(entry);
+	input->seek(actPos, WPX_SEEK_SET);
+}
 
 ////////////////////////////////////////////////////////////
 // main function to parse the document
@@ -308,6 +404,8 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 		throw(libwps::ParseException());
 	}
 
+	// fixme: actually the pictures are not send to listener, so no need to parse OLEstructures
+#ifdef DEBUG
 	try
 	{
 		createOLEStructures();
@@ -316,21 +414,19 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parse: exception catched when parsing secondary OLEs\n"));
 	}
+#endif
 
 	ascii().setStream(input);
 	ascii().open("CONTENTS");
 	try
 	{
 		if (!createStructures()) throw(libwps::ParseException());
-		m_textParser->parse(documentInterface);
 	}
 	catch (...)
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parse: exception catched when parsing MN0\n"));
 		throw(libwps::ParseException());
 	}
-	return; // fixme
-
 	setListener(createListener(documentInterface));
 	if (!m_listener)
 	{
@@ -338,8 +434,7 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 		throw(libwps::ParseException());
 	}
 	m_listener->startDocument();
-#if 0
-	WPSEntry ent = m_textParser->getMainTextEntry();
+	WPSEntry ent = m_textParser->getTextEntry();
 	if (ent.valid())
 		m_textParser->readText(ent);
 	else
@@ -347,8 +442,8 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 		WPS_DEBUG_MSG(("WPS8Parser::parse: can not find main text entry\n"));
 		throw(libwps::ParseException());
 	}
-#endif
 
+	m_textParser->flushExtra();
 #ifdef DEBUG
 	m_graphParser->sendObjects(-1);
 	// fixme: m_tableParser->flushExtra();
@@ -1193,24 +1288,21 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				break;
 			case 0x18:
 			{
-#if 0
-				// FIXME
 				if (dt.m_value < 0 || dt.m_value >= m_textParser->getNumTextZones())
 				{
 					ok = false;
 					break;
 				}
-				int type = m_textParser->getTextZoneType(dt.m_value);
+				int type = m_textParser->getTextZoneType((int) dt.m_value);
 				if ((type == 6 && frame.m_type == Frame::Header) ||
 				        (type == 7 && frame.m_type == Frame::Footer) ||
 				        (type == 5))
-					frame.m_idStrs = dt.m_value;
+					frame.m_idStrs = (int) dt.m_value;
 				else
 				{
 					WPS_DEBUG_MSG(("WPS8Parser::readFRAM odd id for field 0x18\n"));
 					ok = false;
 				}
-#endif
 				break;
 			}
 			case 0x19: // CHECKME: bord or background color, only in textbox ?

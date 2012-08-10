@@ -275,14 +275,14 @@ void WPS8Graph::sendObjects(int page, int)
 		return;
 	}
 
+#ifdef DEBUG
+	bool firstSend = false;
+#endif
 	for (int st = 0; st < 2; st++)
 	{
 		std::map<int, Pict> &map = (st == 0) ? m_state->m_pictMap : m_state->m_oleMap;
 		std::map<int, Pict>::iterator pos = map.begin();
 
-#ifdef DEBUG
-		bool firstSend = false;
-#endif
 		while (pos != map.end())
 		{
 			Pict &pict = pos->second;

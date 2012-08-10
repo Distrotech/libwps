@@ -90,6 +90,9 @@ protected:
 	//! creates a subdocument to send a textbox which correspond to the strsid text zone
 	void sendTextBox(WPSPosition const &/*pos*/, int /*strsid*/) {}
 
+	//! sends text corresponding to the entry to the listener (via WPS8Text)
+	void send(WPSEntry const &entry);
+
 	// interface with graph parser
 
 	//

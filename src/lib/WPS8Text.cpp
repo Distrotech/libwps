@@ -506,10 +506,11 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 
 }
 
-/*
-WPS8Text public
-*/
+//////////////////////////////////////////////////////////////////////////////
+// MAIN CODE
+//////////////////////////////////////////////////////////////////////////////
 
+// constructor/destructor
 WPS8Text::WPS8Text(WPS8Parser &parser) : WPSTextParser(parser, parser.getInput()),
 	m_listener(), m_state()
 {
@@ -518,6 +519,18 @@ WPS8Text::WPS8Text(WPS8Parser &parser) : WPSTextParser(parser, parser.getInput()
 
 WPS8Text::~WPS8Text ()
 {
+}
+
+// number of page
+int WPS8Text::numPages() const
+{
+	int numPage = 1;
+	m_input->seek(m_textPositions.begin(), WPX_SEEK_SET);
+	while (!m_input->atEOS() && m_input->tell() < m_textPositions.end())
+	{
+		if (libwps::readU16(m_input.get()) == 0x0C) numPage++;
+	}
+	return numPage;
 }
 
 ////////////////////////////////////////////////////////////
@@ -581,36 +594,6 @@ int WPS8Text::getTextZoneType(int strsId) const
 }
 
 
-void WPS8Text::parse(WPXDocumentInterface *documentInterface)
-{
-
-	WPS_DEBUG_MSG(("WPS8Text::parse()\n"));
-	if (!m_input)
-	{
-		WPS_DEBUG_MSG(("WPS8Text::parse: does not find main ole\n"));
-		throw(libwps::ParseException());
-	}
-
-	try
-	{
-		/* parse pages */
-		std::vector<WPSPageSpan> pageList;
-		parsePages(pageList, m_input);
-
-		/* parse document */
-		m_listener.reset(new WPS8ContentListener(pageList, documentInterface));
-		parse();
-		m_listener.reset();
-	}
-	catch (...)
-	{
-		WPS_DEBUG_MSG(("WPS8Text::parse: exception catched when parsing CONTENTS\n"));
-		throw(libwps::ParseException());
-	}
-}
-
-
-
 /**
  * Read the range of the document text using previously-read
  * formatting information, up to but excluding entry.end().
@@ -619,7 +602,7 @@ void WPS8Text::parse(WPXDocumentInterface *documentInterface)
 void WPS8Text::readText(WPSEntry const &entry)
 {
 	WPXInputStreamPtr input = getInput();
-	entry.setParsed(true);
+	m_state->setParsed(entry,true);
 	int lastCId=-1, lastPId=-1;
 	std::vector<DataFOD>::iterator plcIt =	m_FODList.begin();
 	while (plcIt != m_FODList.end() && plcIt->m_pos < entry.begin())
@@ -739,8 +722,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 			switch (readVal)
 			{
 			case 0x9:
-				//Fixme: use m_listener->insertTab();
-				m_listener->insertCharacter('\t');
+				m_listener->insertTab();
 				break;
 
 			case 0x0A:
@@ -815,19 +797,35 @@ void WPS8Text::readText(WPSEntry const &entry)
 				// ! fallback to default
 
 			default:
-				if (readVal < 28 && readVal != 9)
+				if (readVal < 28)
 				{
 					// do not add unprintable control which can create invalid odt file
 					WPS_DEBUG_MSG(("WPS8Text::readText(find unprintable character: ignored)\n"));
 					break;
 				}
-				m_listener->insertUnicode(readUTF16LE(input, finalPos, readVal));
+				m_listener->insertUnicode((uint32_t)readUTF16LE(input, finalPos, readVal));
 				break;
 			}
 			specialCode = 0;
 		}
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
+	}
+}
+
+////////////////////////////////////////////////////////////
+// send unsent zone
+////////////////////////////////////////////////////////////
+void WPS8Text::flushExtra()
+{
+	if (!m_listener) return;
+	for (size_t i = 0; i < m_state->m_textZones.size(); i++)
+	{
+		WPSEntry const &zone = m_state->m_textZones[i];
+		if (!zone.valid() || zone.id() == 2 || zone.id() ==3
+		        || zone.isParsed())
+			continue;
+		readText(zone);
 	}
 }
 
@@ -985,35 +983,6 @@ bool WPS8Text::readStructures(WPXInputStreamPtr)
 	}
 #endif
 	return true;
-}
-
-/**
- * Read the page format from the file.  It seems that WPS8Text files
- * can only have one page format throughout the whole document.
- *
- */
-void WPS8Text::parsePages(std::vector<WPSPageSpan> &pageList, WPXInputStreamPtr & /* input */)
-{
-	//fixme: this method doesn't do much
-
-	/* record page format */
-	WPSPageSpan ps;
-	pageList.push_back(ps);
-}
-
-void WPS8Text::parse()
-{
-	WPS_DEBUG_MSG(("WPS8Text::parse()\n"));
-
-	m_listener->startDocument();
-	for (size_t i = 0; i < m_state->m_textZones.size(); i++)
-	{
-		WPSEntry const &zone = m_state->m_textZones[i];
-		if (!zone.valid() || zone.id()==2 || zone.id()==3)
-			continue;
-		readText(zone);
-	}
-	m_listener->endDocument();
 }
 
 /**
@@ -1896,6 +1865,8 @@ bool WPS8Text::textZonesDataParser
 			f << "###" << data << ",";
 			continue;
 		}
+		/* 1=Main, 2=Footnote, 3=Endnote, 5=Section/Table/Column/..,
+		   6=Header, 7=Footer */
 		f << "id=" << dt.m_value << ",";
 		id = (int) dt.m_value;
 		idSet = true;
