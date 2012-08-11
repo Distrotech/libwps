@@ -319,7 +319,6 @@ void WPS8Graph::sendObjects(int page, int)
 	// check the border
 	std::map<int, WPS8GraphInternal::Border>::iterator pos = m_state->m_borderMap.begin();
 
-	bool firstSend = false;
 	while (pos != m_state->m_borderMap.end())
 	{
 		int id = pos->first;

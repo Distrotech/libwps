@@ -722,7 +722,8 @@ void WPS8Text::readText(WPSEntry const &entry)
 			switch (readVal)
 			{
 			case 0x9:
-				m_listener->insertTab();
+				//Fixme: use m_listener->insertTab();
+				m_listener->insertCharacter('\t');
 				break;
 
 			case 0x0A:
