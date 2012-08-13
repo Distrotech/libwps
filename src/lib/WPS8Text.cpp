@@ -588,7 +588,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 {
 	WPXInputStreamPtr input = getInput();
 	m_state->setParsed(entry,true);
-	int lastCId=-1, lastPId=-1;
+	int lastCId=-1, lastPId=-1; /* -2: nothing, -1: send default, >= 0: readId */
 	std::vector<DataFOD>::iterator plcIt =	m_FODList.begin();
 	while (plcIt != m_FODList.end() && plcIt->m_pos < entry.begin())
 	{
@@ -599,7 +599,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 			lastPId = plc.m_id;
 		plcIt++;
 	}
-	m_listener->setFontSize(10); // checkme
+	int actualPage = 1;
 	uint16_t specialCode=0;
 	int fieldType = 0;
 	input->seek(entry.begin(), WPX_SEEK_SET);
@@ -629,25 +629,21 @@ void WPS8Text::readText(WPSEntry const &entry)
 			{
 			case DataFOD::ATTR_TEXT:
 			{
-				lastCId = -1;
+				lastCId = -2;
 				if (plc.m_id < 0)
-				{
 					f << "[C_]";
-					break;
-				}
-				f << "[C" << plc.m_id << "]";
+				else
+					f << "[C" << plc.m_id << "]";
 				m_styleParser->sendFont(plc.m_id, specialCode, fieldType);
 				break;
 			}
 			case DataFOD::ATTR_PARAG:
 			{
-				lastPId = -1;
+				lastPId = -2;
 				if (plc.m_id < 0)
-				{
 					f << "[P_]";
-					break;
-				}
-				f << "[P" << plc.m_id << "]";
+				else
+					f << "[P" << plc.m_id << "]";
 				m_styleParser->sendParagraph(plc.m_id);
 				break;
 			}
@@ -667,15 +663,15 @@ void WPS8Text::readText(WPSEntry const &entry)
 			}
 			plcIt++;
 		}
-		if (lastCId >= 0)
+		if (lastCId >= -1)
 		{
 			m_styleParser->sendFont(lastCId, specialCode, fieldType);
-			lastCId = -1;
+			lastCId = -2;
 		}
-		if (lastPId >= 0)
+		if (lastPId >= -1)
 		{
 			m_styleParser->sendParagraph(lastPId);
-			lastPId = -1;
+			lastPId = -2;
 		}
 		f << ":";
 		if ((finalPos-pos)%2)
@@ -703,10 +699,14 @@ void WPS8Text::readText(WPSEntry const &entry)
 				break;
 
 			case 0x0C:
-				//fixme: add a page to list of pages
-				//m_listener->insertBreak(WPS_PAGE_BREAK);
+				if (entry.id()==1)
+					mainParser().newPage(++actualPage);
+				else
+				{
+					WPS_DEBUG_MSG(("WPS8Text::readText: find page break in auxilliary zone\n"));
+					m_listener->insertEOL();
+				}
 				break;
-
 			case 0x0D:
 				m_listener->insertEOL();
 				break;
@@ -806,7 +806,7 @@ void WPS8Text::flushExtra()
 /**
  * create the main structures
  */
-bool WPS8Text::readStructures(WPXInputStreamPtr)
+bool WPS8Text::readStructures()
 {
 	WPS8Parser::NameMultiMap &nameTable = getNameEntryMap();
 	WPS8Parser::NameMultiMap::iterator pos;
@@ -840,30 +840,8 @@ bool WPS8Text::readStructures(WPXInputStreamPtr)
 		m_state->m_textZones.push_back(zone);
 	}
 
-	/* read fonts table */
-	pos = nameTable.find("FONT");
-	if (nameTable.end() == pos)
-	{
-		WPS_DEBUG_MSG(("WPS8Text::parse: error: no FONT in header index table\n"));
+	if (!m_styleParser->readStructures())
 		return false;
-	}
-	m_styleParser->readFontNames(pos->second);
-
-	// find the FDDP and FDPC positions
-	for (int st = 0; st < 2; st++)
-	{
-		std::vector<WPSEntry> zones;
-		if (!m_styleParser->findFDPStructures(st, zones))
-			m_styleParser->findFDPStructuresByHand(st, zones);
-
-		size_t numZones = zones.size();
-		std::vector<DataFOD> fdps;
-		FDPParser parser = st==0  ? (FDPParser) &WPS8Text::readParagraph
-		                   : (FDPParser) &WPS8Text::readFont;
-		for (size_t i = 0; i < numZones; i++)
-			readFDP(zones[i], fdps, parser);
-		m_FODList = mergeSortedFODLists(m_FODList, fdps);
-	}
 
 	// BMKT : text position of bookmark ?
 	pos = nameTable.lower_bound("BMKT");

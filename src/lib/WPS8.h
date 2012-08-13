@@ -120,13 +120,6 @@ protected:
 		and have some borders */
 	bool readFRAM(WPSEntry const &entry);
 
-	/** \brief parses a SGP zone
-	 *
-	 * an unknown zone which seems to have the contains some size
-	 * \note the four SGP, STRS, STSH, SYID zones seem to exist in all files
-	 */
-	bool readSGP(WPSEntry const &entry);
-
 	/** \brief parses a SYID zone
 	 *
 	 * an unknown zone which seems to have the same number of entries

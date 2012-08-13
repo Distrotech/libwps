@@ -69,8 +69,8 @@ public:
 	//! sends the data which have not yet been sent to the listener
 	void flushExtra();
 
-	//! finds all entries which correspond to some pictures, parses them and stores data
-	bool readStructures(WPXInputStreamPtr input);
+	//! finds all entries which correspond to the text data, parses them and stores data
+	bool readStructures();
 
 	//! returns the number of different text zones
 	int getNumTextZones() const;

@@ -164,7 +164,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	std::vector<DataFOD>::iterator fods_iter;
 	/* Read array of bfprop of FODs.  The bfprop is the offset where
 	   the FPROP is located. */
-	f << ", Tpos:defP=(" << std::hex;
+	f << ", Tpos:defP=(";
 	for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); fods_iter++)
 	{
 		unsigned depl = deplSize == 1 ? libwps::readU8(m_input) : libwps::readU16(m_input);
@@ -187,7 +187,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); fods_iter++)
 	{
 		long pos = (*fods_iter).m_defPos;
-		f << (*fods_iter).m_pos << ":";
+		f << std::hex << (*fods_iter).m_pos << std::dec << ":";
 		if (pos == 0)
 		{
 			f << "_, ";
@@ -238,7 +238,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 			ascii().addNote(f2.str().c_str());
 		}
 	}
-	f << "), lstPos=" << lastReadPos << ", ";
+	f << "), lstPos=" << std::hex << lastReadPos << std::dec << ", ";
 
 	ascii().addPos(page_offset);
 	ascii().addNote(f.str().c_str());

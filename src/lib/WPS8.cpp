@@ -358,7 +358,6 @@ shared_ptr<WPS8ContentListener> WPS8Parser::createListener(WPXDocumentInterface 
 	// create all the pages + an empty page, if we have some remaining data...
 	numPages++;
 #endif
-	numPages = 1; // WPS8Text does not insert page break
 
 	pageList.push_back(ps);
 	for (int i = 1; i < numPages; i++) pageList.push_back(ps);
@@ -463,7 +462,7 @@ bool WPS8Parser::createStructures()
 	parseHeaderIndex();
 
 	// initialize the text, table, ..
-	if (!m_textParser->readStructures(input))
+	if (!m_textParser->readStructures())
 		return false;
 	m_graphParser->readStructures(input);
 	m_tableParser->readStructures(input);
@@ -493,18 +492,6 @@ bool WPS8Parser::createStructures()
 		if (!entry.hasType("WNPR")) continue;
 
 		readWNPR(entry);
-	}
-
-	// read SGP zone (unknown)
-	pos = getNameEntryMap().lower_bound("SGP ");
-	while (getNameEntryMap().end() != pos)
-	{
-		WPSEntry const &entry = pos->second;
-		pos++;
-		if (!entry.hasName("SGP ")) break;
-		if (!entry.hasType("SGP ")) continue;
-
-		readSGP(entry);
 	}
 
 	// SYID
@@ -1454,60 +1441,6 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 	f << "###" << entry.name();
 	ascii().addNote(f.str().c_str());
 	return false;
-}
-
-// reads SGP zone: an unknown zone which seems to have the
-//  contains some size
-bool WPS8Parser::readSGP(WPSEntry const &entry)
-{
-	if (!entry.hasType(entry.name()))
-	{
-		WPS_DEBUG_MSG(("WPS8Parser::readSGP: warning: SGP name=%s, type=%s\n",
-		               entry.name().c_str(), entry.type().c_str()));
-		return false;
-	}
-	WPXInputStreamPtr input = getInput();
-
-	long page_offset = entry.begin();
-	long length = entry.length();
-	long endPage = entry.end();
-
-	if (length < 2)
-	{
-		WPS_DEBUG_MSG(("WPS8Parser::readSGP: warning: SGP length=0x%lx\n", length));
-		return false;
-	}
-
-	entry.setParsed();
-	input->seek(page_offset, WPX_SEEK_SET);
-
-	libwps::DebugStream f;
-	if (libwps::read16(input) != length)
-	{
-		WPS_DEBUG_MSG(("WPS8Parser::readSGP: invalid length=%ld\n", length));
-		return false;
-	}
-
-	WPS8Struct::FileData mainData;
-	std::string error;
-	bool readOk=readBlockData(input, endPage,mainData, error);
-	size_t numChild = mainData.m_recursData.size();
-	for (size_t c = 0; c < numChild; c++)
-	{
-		WPS8Struct::FileData const &dt = mainData.m_recursData[c];
-		if (dt.isBad()) continue;
-		if (dt.id() == 0)
-			f << "tabSep[default]=" <<  float(dt.m_value)/914400.f << "(inches),";
-		else
-			f << "###" << dt << ",";
-	}
-
-	if (!readOk) f << "###or [" << mainData << "]";
-
-	ascii().addPos(page_offset);
-	ascii().addNote(f.str().c_str());
-
-	return true;
 }
 
 // reads SYID zone: an unknown zone which seems to have the

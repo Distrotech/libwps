@@ -132,7 +132,8 @@ std::ostream &operator<<(std::ostream &o, Font const &ft)
 struct State
 {
 	//! constructor
-	State() : m_fontNames(), m_fontList(), m_paragraphList(), m_oldParagraphList(),
+	State() : m_fontNames(), m_defaultFont(Font::def()), m_fontList(),
+		m_defaultParagraph(), m_paragraphList(),
 		m_fontTypes(), m_paragraphTypes()
 	{
 		initTypeMaps();
@@ -144,13 +145,14 @@ struct State
 	//! the font names
 	std::vector<std::string> m_fontNames;
 
+	//! the default font
+	Font m_defaultFont;
 	//! a list of all font properties
 	std::vector<Font> m_fontList;
+	//! the default paragraph
+	WPSParagraph m_defaultParagraph;
 	//! a list of all paragraph properties
 	std::vector<WPSParagraph> m_paragraphList;
-
-	//! a list of paragraph properties
-	std::vector<WPS8Struct::FileData> m_oldParagraphList;
 
 	//! the character type
 	std::map<int,int> m_fontTypes;
@@ -198,6 +200,53 @@ WPS8TextStyle::WPS8TextStyle(WPS8Text &parser) :
 
 WPS8TextStyle::~WPS8TextStyle()
 {
+}
+
+////////////////////////////////////////////////////////////
+// called to create the data:
+////////////////////////////////////////////////////////////
+bool WPS8TextStyle::readStructures()
+{
+	WPS8Parser::NameMultiMap &nameTable = m_mainParser.getNameEntryMap();
+	WPS8Parser::NameMultiMap::iterator pos;
+
+	/* read fonts table */
+	pos = nameTable.find("FONT");
+	if (nameTable.end() == pos)
+	{
+		WPS_DEBUG_MSG(("WPS8TextStyle::parse: error: no FONT in header index table\n"));
+		return false;
+	}
+	readFontNames(pos->second);
+
+	// find the FDDP and FDPC positions
+	for (int st = 0; st < 2; st++)
+	{
+		std::vector<WPSEntry> zones;
+		if (!findFDPStructures(st, zones))
+			findFDPStructuresByHand(st, zones);
+
+		size_t numZones = zones.size();
+		std::vector<WPS8Text::DataFOD> fdps;
+		WPS8Text::FDPParser parser = st==0  ? (WPS8Text::FDPParser) &WPS8Text::readParagraph
+		                             : (WPS8Text::FDPParser) &WPS8Text::readFont;
+		for (size_t i = 0; i < numZones; i++)
+			m_mainParser.readFDP(zones[i], fdps, parser);
+		m_mainParser.m_FODList = m_mainParser.mergeSortedFODLists(m_mainParser.m_FODList, fdps);
+	}
+	// read SGP zone
+	pos = nameTable.lower_bound("SGP ");
+	while (nameTable.end() != pos)
+	{
+		WPSEntry const &entry = pos->second;
+		pos++;
+		if (!entry.hasName("SGP ")) break;
+		if (!entry.hasType("SGP ")) continue;
+
+		readSGP(entry);
+	}
+
+	return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -279,11 +328,65 @@ bool WPS8TextStyle::readFontNames(WPSEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
+// style general property
+////////////////////////////////////////////////////////////
+bool WPS8TextStyle::readSGP(WPSEntry const &entry)
+{
+	if (!entry.hasType(entry.name()))
+	{
+		WPS_DEBUG_MSG(("WPS8TextStyle::readSGP: warning: SGP name=%s, type=%s\n",
+		               entry.name().c_str(), entry.type().c_str()));
+		return false;
+	}
+
+	long page_offset = entry.begin();
+	long length = entry.length();
+	long endPage = entry.end();
+
+	if (length < 2)
+	{
+		WPS_DEBUG_MSG(("WPS8TextStyle::readSGP: warning: SGP length=0x%lx\n", length));
+		return false;
+	}
+
+	entry.setParsed();
+	m_input->seek(page_offset, WPX_SEEK_SET);
+
+	libwps::DebugStream f;
+	if (libwps::read16(m_input) != length)
+	{
+		WPS_DEBUG_MSG(("WPS8TextStyle::readSGP: invalid length=%ld\n", length));
+		return false;
+	}
+
+	WPS8Struct::FileData mainData;
+	std::string error;
+	bool readOk=readBlockData(m_input, endPage,mainData, error);
+	size_t numChild = mainData.m_recursData.size();
+	for (size_t c = 0; c < numChild; c++)
+	{
+		WPS8Struct::FileData const &dt = mainData.m_recursData[c];
+		if (dt.isBad()) continue;
+		if (dt.id() == 0)
+			f << "tabSep[default]=" <<  float(dt.m_value)/914400.f << "(inches),";
+		else
+			f << "###" << dt << ",";
+	}
+
+	if (!readOk) f << "###or [" << mainData << "]";
+
+	ascii().addPos(page_offset);
+	ascii().addNote(f.str().c_str());
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////
 // font
 ////////////////////////////////////////////////////////////
 bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 {
-	WPS8TextStyleInternal::Font font;
+	WPS8TextStyleInternal::Font font=WPS8TextStyleInternal::Font::def();
 
 	long actPos = m_input->tell();
 	long size = endPos - actPos;
@@ -500,13 +603,13 @@ void WPS8TextStyle::sendFont(int fId, uint16_t &specialCode, int &fieldType)
 {
 	specialCode = 0;
 	fieldType = 0;
-	if (fId < 0) return;
 	if (fId >= int(m_state->m_fontList.size()))
 	{
 		WPS_DEBUG_MSG(("WPS8TextStyle::sendFont: can not find font id %d\n", fId));
 		return;
 	}
-	WPS8TextStyleInternal::Font const &font = m_state->m_fontList[size_t(fId)];
+	WPS8TextStyleInternal::Font const &font =
+	    fId < 0 ? m_state->m_defaultFont : m_state->m_fontList[size_t(fId)];
 	specialCode = (uint16_t) font.special();
 	fieldType = font.fieldType();
 	if (m_listener)
@@ -543,13 +646,13 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		if (data.isBad()) continue;
 		if (m_state->m_paragraphTypes.find(data.id())==m_state->m_paragraphTypes.end())
 		{
-			WPS_DEBUG_MSG(("WPS8TextStyle::sendParagraphPara: unexpected id %d\n", data.id()));
+			WPS_DEBUG_MSG(("WPS8TextStyle::readParagraph: unexpected id %d\n", data.id()));
 			f << "###" << data << ",";
 			continue;
 		}
 		if (m_state->m_paragraphTypes.find(data.id())->second != data.type())
 		{
-			WPS_DEBUG_MSG(("WPS8TextStyle::sendParagraphPara: unexpected type for %d\n", data.id()));
+			WPS_DEBUG_MSG(("WPS8TextStyle::readParagraph: unexpected type for %d\n", data.id()));
 			f << "###" << data << ",";
 			continue;
 		}
@@ -998,14 +1101,14 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 
 void WPS8TextStyle::sendParagraph(int pId)
 {
-	if (pId < 0) return;
 	if (pId >= int(m_state->m_paragraphList.size()))
 	{
 		WPS_DEBUG_MSG(("WPS8TextStyle::sendParagraph: can not find paragraph id %d\n", pId));
 		return;
 	}
 	if (!m_listener) return;
-	WPSParagraph const &para= m_state->m_paragraphList[size_t(pId)];
+	WPSParagraph const &para=
+	    pId < 0 ? m_state->m_defaultParagraph : m_state->m_paragraphList[size_t(pId)];
 	para.send(m_listener);
 }
 

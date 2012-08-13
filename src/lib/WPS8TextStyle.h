@@ -59,6 +59,9 @@ public:
 		m_listener = listen;
 	}
 
+	//! finds all entries which correspond to the styles, parses them and stores data
+	bool readStructures();
+
 protected:
 	//! reads the font names
 	bool readFontNames(WPSEntry const &entry);
@@ -69,13 +72,15 @@ protected:
 
 	//! the paragraph
 	bool readParagraph(long endPos, int &id, std::string &mess);
-	bool readOldParagraph(long endPos, int &id, std::string &mess);
 
 	void sendParagraph(int pId);
 
 	/** \brief reads a style sheet zone
 		\warning the read data are NOT used*/
 	bool readSTSH(WPSEntry const &entry);
+
+	/** \brief parses a SGP zone: style general property ?*/
+	bool readSGP(WPSEntry const &entry);
 
 	//----------------------------------------
 	// FDP parsing
