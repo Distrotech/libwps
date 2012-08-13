@@ -59,6 +59,12 @@ protected:
 	//! constructor
 	WPSTextParser(WPSParser &parser, WPXInputStreamPtr &input);
 
+	//! returns the map type->entry
+	std::multimap<std::string, WPSEntry> &getNameEntryMap();
+
+	//! returns the map type->entry
+	std::multimap<std::string, WPSEntry> const &getNameEntryMap() const;
+
 protected:
 	//! structure which retrieves data information which correspond to a text position
 	struct DataFOD

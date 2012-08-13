@@ -127,6 +127,10 @@ SOURCE=..\..\src\lib\WPS8Text.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPS8TextStyle.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSCell.cpp
 # End Source File
 # Begin Source File
@@ -228,6 +232,10 @@ SOURCE=..\..\src\lib\WPS8Table.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPS8Text.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPS8TextStyle.h
 # End Source File
 # Begin Source File
 

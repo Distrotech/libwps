@@ -64,6 +64,7 @@ WPSContentParsingState::WPSContentParsingState() :
 
 	m_paragraphJustification(libwps::JustificationLeft),
 	m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
+	m_paragraphBackgroundColor(0xFFFFFF),
 	m_paragraphBorders(0), m_paragraphBordersStyle(libwps::BorderSingle),
 	m_paragraphBordersWidth(1), m_paragraphBordersColor(0),
 
@@ -437,6 +438,11 @@ void WPSContentListener::setTabs(const std::vector<WPSTabStop> &tabStops)
 {
 	m_ps->m_isTabPositionRelative = true;
 	m_ps->m_tabStops = tabStops;
+}
+
+void WPSContentListener::setParagraphBackgroundColor(uint32_t color)
+{
+	m_ps->m_paragraphBackgroundColor = color;
 }
 
 void WPSContentListener::setParagraphBorders(int which, libwps::BorderStyle style, int width, uint32_t color)
@@ -930,6 +936,13 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 			propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
 		}
 		propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
+		if (m_ps->m_paragraphBackgroundColor !=  0xFFFFFF)
+		{
+			std::stringstream stream;
+			stream << "#" << std::hex << std::setfill('0') << std::setw(6)
+			       << (m_ps->m_paragraphBackgroundColor&0xFFFFFF);
+			propList.insert("fo:background-color", stream.str().c_str());
+		}
 		if (m_ps->m_paragraphBorders)
 		{
 			std::stringstream stream;

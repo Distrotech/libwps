@@ -544,7 +544,7 @@ int WPS4Text::numPages() const
 WPSEntry WPS4Text::getHeaderEntry() const
 {
 	if (m_state->m_header.valid()) return m_state->m_header;
-	WPS4Parser::NameMultiMap const &nameMultiMap = mainParser().getNameEntryMap();
+	WPS4Parser::NameMultiMap const &nameMultiMap = getNameEntryMap();
 	WPS4Parser::NameMultiMap::const_iterator pos;
 	pos = nameMultiMap.find("SHdr");
 	if (pos == nameMultiMap.end()) return WPSEntry();
@@ -557,7 +557,7 @@ WPSEntry WPS4Text::getHeaderEntry() const
 WPSEntry WPS4Text::getFooterEntry() const
 {
 	if (m_state->m_footer.valid()) return m_state->m_footer;
-	WPS4Parser::NameMultiMap const &nameMultiMap = mainParser().getNameEntryMap();
+	WPS4Parser::NameMultiMap const &nameMultiMap = getNameEntryMap();
 	WPS4Parser::NameMultiMap::const_iterator pos;
 	pos = nameMultiMap.find("SFtr");
 	if (pos == nameMultiMap.end()) return WPSEntry();
@@ -966,7 +966,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 ////////////////////////////////////////////////////////////
 bool WPS4Text::readEntries()
 {
-	WPS4Parser::NameMultiMap &nameMultiMap = mainParser().getNameEntryMap();
+	WPS4Parser::NameMultiMap &nameMultiMap = getNameEntryMap();
 	WPS4Parser::NameMultiMap::iterator pos;
 
 	libwps::DebugStream f;
@@ -1086,7 +1086,7 @@ bool WPS4Text::readEntries()
 ////////////////////////////////////////////////////////////
 bool WPS4Text::readStructures()
 {
-	WPS4Parser::NameMultiMap &nameMultiMap = mainParser().getNameEntryMap();
+	WPS4Parser::NameMultiMap &nameMultiMap = getNameEntryMap();
 	WPS4Parser::NameMultiMap::iterator pos;
 
 	// first find the font name
@@ -1127,9 +1127,9 @@ bool WPS4Text::readStructures()
 	// update the footnote
 	WPSEntry ftnD, ftnP;
 	pos = nameMultiMap.find("FTNd");
-	if (pos !=  mainParser().getNameEntryMap().end()) ftnD = pos->second;
+	if (pos != getNameEntryMap().end()) ftnD = pos->second;
 	pos = nameMultiMap.find("FTNp");
-	if (pos !=  mainParser().getNameEntryMap().end()) ftnP = pos->second;
+	if (pos != getNameEntryMap().end()) ftnP = pos->second;
 	readFootNotes(ftnD, ftnP);
 
 	// bookmark
@@ -1209,7 +1209,7 @@ bool WPS4Text::findFDPStructures(int which)
 	char const *indexName = which ? "BTEC" : "BTEP";
 	char const *sIndexName = which ? "FDPC" : "FDPP";
 
-	WPS4Parser::NameMultiMap &nameMultiMap = mainParser().getNameEntryMap();
+	WPS4Parser::NameMultiMap &nameMultiMap =getNameEntryMap();
 	WPS4Parser::NameMultiMap::iterator pos = nameMultiMap.find(indexName);
 	if (pos == nameMultiMap.end()) return false;
 

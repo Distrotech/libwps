@@ -65,7 +65,7 @@ struct WPSParagraph
 
 	//! constructor
 	WPSParagraph() : m_tabs(), m_justify(libwps::JustificationLeft),
-		m_breakStatus(0), m_listLevelIndex(0), m_listLevel(),
+		m_breakStatus(0), m_listLevelIndex(0), m_listLevel(), m_backgroundColor(0xFFFFFF),
 		m_border(0), m_borderStyle(libwps::BorderSingle), m_borderWidth(1), m_borderColor(0), m_extra("")
 	{
 		for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
@@ -101,6 +101,9 @@ struct WPSParagraph
 	int m_listLevelIndex;
 	/** the actual level */
 	ListLevel m_listLevel;
+
+	//! the background color
+	uint32_t m_backgroundColor;
 
 	//! list of bits to indicated a border 1: LeftBorderBit, 2: RightBorderBit, ...
 	int m_border;

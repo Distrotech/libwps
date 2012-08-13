@@ -47,10 +47,10 @@ public:
 
 	virtual void parse(WPXDocumentInterface *documentInterface) = 0;
 
-protected:
 	//! a map to retrieve a file entry by name
 	typedef std::multimap<std::string, WPSEntry> NameMultiMap;
 
+protected:
 	WPXInputStreamPtr &getInput()
 	{
 		return m_input;

@@ -156,6 +156,8 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 			o << pp.m_tabs[i] << ",";
 		o << "),";
 	}
+	if (pp.m_backgroundColor != 0xFFFFFF)
+		o << "backgroundColor=" << std::hex << pp.m_backgroundColor << std::dec << ",";
 	if (pp.m_listLevelIndex >= 1)
 		o << pp.m_listLevel << ":" << pp.m_listLevelIndex <<",";
 
@@ -238,6 +240,7 @@ void WPSParagraph::send(shared_ptr<WPSContentListener> listener) const
 	else
 		listener->setCurrentListLevel(0);
 
+	listener->setParagraphBackgroundColor(m_backgroundColor);
 	listener->setParagraphBorders(m_border, m_borderStyle, m_borderWidth, m_borderColor);
 }
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

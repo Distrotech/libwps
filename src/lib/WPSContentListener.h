@@ -87,6 +87,7 @@ struct WPSContentParsingState
 	libwps::Justification m_paragraphJustification;
 	double m_paragraphLineSpacing;
 	WPXUnit m_paragraphLineSpacingUnit;
+	uint32_t m_paragraphBackgroundColor;
 	int m_paragraphBorders;
 	libwps::BorderStyle m_paragraphBordersStyle;
 	int m_paragraphBordersWidth;
@@ -226,6 +227,8 @@ public:
 	 * \param tabStops the tabulations
 	 */
 	void setTabs(const std::vector<WPSTabStop> &tabStops);
+	/** sets the paragraph background color */
+	void setParagraphBackgroundColor(uint32_t color=0xFFFFFF);
 	/** indicates that the paragraph has a basic borders (ie. a black line)
 	 * \param which = libwps::LeftBorderBit | ...
 	 * \param style = libwps::BorderSingle | libwps::BorderDouble

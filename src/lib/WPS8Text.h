@@ -49,20 +49,19 @@ class SubDocument;
 }
 
 class WPS8Parser;
+class WPS8TextStyle;
 
 class WPS8Text : public WPSTextParser
 {
 	friend class WPS8TextInternal::SubDocument;
 	friend class WPS8Parser;
+	friend class WPS8TextStyle;
 public:
 	WPS8Text(WPS8Parser &parser);
 	~WPS8Text();
 
 	//! sets the listener
-	void setListener(WPS8ContentListenerPtr &listen)
-	{
-		m_listener = listen;
-	}
+	void setListener(WPS8ContentListenerPtr &listen);
 
 	//! returns the number of pages
 	int numPages() const;
@@ -111,6 +110,15 @@ protected:
 	}
 
 	//
+	// interface with WPS8TextStyle
+	//
+	//! reads a font properties
+	bool readFont(long endPos, int &id, std::string &mess);
+
+	//! the paragraph
+	bool readParagraph(long endPos, int &id, std::string &mess);
+
+	//
 	// String+text functions
 	//
 	//! reads a string
@@ -118,15 +126,6 @@ protected:
 	                WPXString &res);
 	//! reads a utf16 character, \return 0xfffd if an error
 	long readUTF16LE(WPXInputStreamPtr input, long endPos, uint16_t firstC);
-
-	//! the font
-	//! reads the font names
-	bool readFontNames(WPSEntry const &entry);
-	//! reads a font properties
-	bool readFont(long endPos, int &id, std::string &mess);
-
-	//! the paragraph
-	bool readParagraph(long endPos, int &id, std::string &mess);
 
 	/** \brief the footnote ( FTN or EDN )
 	 *
@@ -137,21 +136,6 @@ protected:
 	 *
 	 * \note must be called after all notes have been created */
 	void createNotesCorrespondance();
-
-	/** \brief reads a style sheet zone
-		\warning the read data are NOT used*/
-	bool readSTSH(WPSEntry const &entry);
-
-	//----------------------------------------
-	// FDP parsing
-	//----------------------------------------
-
-	/** finds the FDPC/FDPP structure using the BTEC/BTEP entries
-		which == 0 means FDPP, 1 means FDPC */
-	bool findFDPStructures(int which, std::vector<WPSEntry> &result);
-	/** finds the FDPC/FDPP structure by searching after the text zone
-		which == 0 means FDPP, 1 means FDPC */
-	bool findFDPStructuresByHand(int which, std::vector<WPSEntry> &result);
 
 	//----------------------------------------
 	// PLC parsing, setting
@@ -201,13 +185,11 @@ protected:
 		\warning the read data are NOT used*/
 	bool bmktEndDataParser(long endPage, std::vector<long> const &textPtrs);
 
-private:
-	void propertyChange(WPS8Struct::FileData const &rgchProp, uint16_t &specialCode, int &fieldType);
-	void propertyChangePara(WPS8Struct::FileData const &rgchProp);
-
 protected:
 	//! the listener
 	WPS8ContentListenerPtr m_listener;
+	//! the graph parser
+	shared_ptr<WPS8TextStyle> m_styleParser;
 	//! the internal state
 	mutable shared_ptr<WPS8TextInternal::State> m_state;
 protected:

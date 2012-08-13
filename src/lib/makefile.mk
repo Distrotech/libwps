@@ -33,6 +33,7 @@ SLOFILES= \
 	$(SLO)$/WPS8Struct.obj		\
 	$(SLO)$/WPS8Table.obj		\
 	$(SLO)$/WPS8Text.obj		\
+	$(SLO)$/WPS8TextStyle.obj	\
 	$(SLO)$/WPSCell.obj		\
 	$(SLO)$/WPSContentListener.obj	\
 	$(SLO)$/WPSDebug.obj		\

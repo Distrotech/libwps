@@ -884,7 +884,10 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 		bool ok = true;
 		switch (dt.id())
 		{
-		case 0x8: // 1/_
+		case 0x8:
+			if (dt.m_value)
+				f2 << "numCols=" << dt.m_value+1 << ",";
+			break;
 		case 0x18: // 1/{_,66,96,112,186,228} 2/_
 		case 0x1b:   // -1/200,3/66,3/_
 			f2 << "f" << dt.id();
@@ -910,7 +913,9 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 			WPS_DEBUG_MSG(("WPS8Parser::readDocProperties: find a BDR entry, not implemented\n"));
 			f2 << "pageBorder(entries)='" << dt.m_text << "':" << dt.m_value << ",";
 			break;
-		case 0xa: // not frequent
+		case 0xa:
+			if (dt.isTrue()) f2 << "colSep(line),";
+			break;
 		case 0x19: // almost always set
 			if (dt.isFalse())
 				f2 <<  "f" << dt.id() << "=false,";
@@ -918,7 +923,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 				f2 <<  "f" << dt.id() << ",";
 			break;
 		case 0x1c:   // 0.1
-			f2 <<  "f" << dt.id() << "(inch)=" << float(dt.m_value)/914400.f << ",";
+			f2 <<  "colSep=" << float(dt.m_value)/914400.f << "(inch),";
 			break;
 		case 0x28:   // main language ?
 			f2 << "lang?=" << libwps_tools_win::Language::name(dt.m_value) << ",";
@@ -1492,7 +1497,7 @@ bool WPS8Parser::readSGP(WPSEntry const &entry)
 		WPS8Struct::FileData const &dt = mainData.m_recursData[c];
 		if (dt.isBad()) continue;
 		if (dt.id() == 0)
-			f << "unk(inches)=" <<  float(dt.m_value)/914400.f << ",";
+			f << "tabSep[default]=" <<  float(dt.m_value)/914400.f << "(inches),";
 		else
 			f << "###" << dt << ",";
 	}

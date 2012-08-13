@@ -55,6 +55,15 @@ int WPSTextParser::version() const
 	return m_version;
 }
 
+WPSParser::NameMultiMap &WPSTextParser::getNameEntryMap()
+{
+	return m_mainParser.getNameEntryMap();
+}
+
+WPSParser::NameMultiMap const &WPSTextParser::getNameEntryMap() const
+{
+	return m_mainParser.getNameEntryMap();
+}
 
 ////////////////////////////////////////////////////////////
 // read data
