@@ -127,7 +127,7 @@ struct Frame
 	//! constructor
 	Frame() : m_parsed(false), m_type(UNKNOWN), m_typeFlag(0), m_pos(),
 		m_idStrs(-1), m_idObject(-1), m_idTable(-1), m_idOle(-1), m_columns(1), m_idBorder(),
-		m_borderColor(0), m_error("")
+		m_backgroundColor(0xFFFFFF), m_error("")
 	{
 		m_pos.setRelativePosition(WPSPosition::Page);
 		m_pos.setPage(1);
@@ -161,7 +161,7 @@ struct Frame
 	//! the border: an entry to some complex border (if sets)
 	WPSEntry m_idBorder;
 	//! the border's color
-	uint32_t m_borderColor;
+	uint32_t m_backgroundColor;
 	//! a string used to store the parsing errors
 	std::string m_error;
 };
@@ -213,8 +213,8 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
 	if (ft.m_columns != 1) o << ft.m_columns << "columns,";
 	if (ft.m_idBorder.valid())
 		o << "border='" << ft.m_idBorder.name() << "':" << ft.m_idBorder.id() << ",";
-	if (ft.m_borderColor != 0)
-		o << "bordCol?=" << std::hex << ft.m_borderColor << std::dec << "),";
+	if (ft.m_backgroundColor != 0xFFFFFF)
+		o << "backColor=" << std::hex << ft.m_backgroundColor << std::dec << ",";
 
 	if (!ft.m_error.empty()) o << "errors=(" << ft.m_error << ")";
 	return o;
@@ -224,7 +224,9 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
 struct State
 {
 	State() : m_eof(-1), m_pageSpan(), m_localeLanguage(""), m_background(),
-		m_frameList(), m_docPropertyTypes(), m_frameTypes(), m_actPage(0), m_numPages(0)
+		m_frameList(), m_object2FrameMap(), m_table2FrameMap(),
+		m_docPropertyTypes(), m_frameTypes(),
+		m_numColumns(1), m_actPage(0), m_numPages(0)
 	{
 		initTypeMaps();
 	}
@@ -241,10 +243,16 @@ struct State
 
 	//! the frame's list
 	std::vector<Frame> m_frameList;
+	//! a map m_idObject -> frame
+	std::map<int, int> m_object2FrameMap;
+	//! a map m_idTable -> frame
+	std::map<int, int> m_table2FrameMap;
+
 	//! the document property type
 	std::map<int,int> m_docPropertyTypes;
 	//! the frame type
 	std::map<int,int> m_frameTypes;
+	int m_numColumns /** the number of columns */;
 	int m_actPage /** the actual page*/, m_numPages /* the number of pages */;
 };
 
@@ -267,7 +275,7 @@ void State::initTypeMaps()
 		8, 0x22, 9, 0x22, 0xa, 0x22,
 		0x10, 0x2a, 0x11, 0x82, 0x13, 0x12, 0x14, 0x12, 0x17, 0x2,
 		0x18, 0x22, 0x19, 0x22, 0x1a, 0x12, 0x1b, 0x22, 0x1d, 0x22, 0x1e, 0x22, 0x1f, 0x22,
-		0x20, 0x22,
+		0x20, 0x22, 0x26, 0x22,
 		0x2a, 0x22, 0x2c, 0x1a, 0x2d, 0x1a, 0x2e, 0x22, 0x2f, 0x2,
 		0x30, 0x22
 	};
@@ -302,6 +310,11 @@ float WPS8Parser::pageHeight() const
 float WPS8Parser::pageWidth() const
 {
 	return float(m_state->m_pageSpan.getFormWidth()-m_state->m_pageSpan.getMarginLeft()-m_state->m_pageSpan.getMarginRight());
+}
+
+int WPS8Parser::numColumns() const
+{
+	return m_state->m_numColumns;
 }
 
 bool WPS8Parser::checkInFile(long pos)
@@ -392,6 +405,61 @@ void WPS8Parser::send(WPSEntry const &entry)
 	input->seek(actPos, WPX_SEEK_SET);
 }
 
+void WPS8Parser::sendTextInCell(int strsId, int cellId)
+{
+	WPXInputStreamPtr input = getInput();
+	long actPos = input->tell();
+	m_textParser->readTextInCell(strsId,cellId);
+	input->seek(actPos, WPX_SEEK_SET);
+}
+
+bool WPS8Parser::sendTable(Vec2f const &size, int objectId)
+{
+	std::map<int, int>::iterator pos = m_state->m_object2FrameMap.find(objectId);
+	if (pos == m_state->m_object2FrameMap.end())
+	{
+		WPS_DEBUG_MSG(("WPS8Parser::sendTable can not find the table %d \n", objectId));
+		return false;
+	}
+
+	WPS8ParserInternal::Frame const &frame = m_state->m_frameList[(size_t)pos->second];
+	if (frame.m_idStrs < 0)
+	{
+		WPS_DEBUG_MSG(("WPS8Parser:sendTable can not find the text zone \n"));
+		return false;
+	}
+	if (frame.m_idTable < 0)
+	{
+		WPS_DEBUG_MSG(("WPS8Parser:sendTable can not find the table zone \n"));
+
+#if 0
+		// FIXME
+		WPSPosition position(Vec2f(), size);
+		position.m_anchorTo = WPSPosition::CharBaseLine; // CHECKME
+		position.m_wrapping = WPSPosition::WDynamic;
+		sendTextBox(position, frame.m_idStrs);
+		return true;
+#endif
+		return false;
+	}
+	frame.m_parsed = true;
+	return m_tableParser->sendTable(size, frame.m_idTable, frame.m_idStrs);
+}
+
+int WPS8Parser::getTableSTRSId(int tableId) const
+{
+	std::map<int, int>::iterator pos = m_state->m_table2FrameMap.find(tableId);
+	// probably ok: checkme
+	if (pos == m_state->m_table2FrameMap.end())
+		return -1;
+	WPS8ParserInternal::Frame const &frame = m_state->m_frameList[(size_t)pos->second];
+	if (frame.m_idStrs < 0)
+	{
+		WPS_DEBUG_MSG(("WPS8Parser:sendTable can not find the text zone \n"));
+	}
+	return frame.m_idStrs;
+}
+
 ////////////////////////////////////////////////////////////
 // main function to parse the document
 void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
@@ -442,11 +510,14 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 		throw(libwps::ParseException());
 	}
 
+#ifdef DEBUG
+	m_tableParser->flushExtra();
+#endif
 	m_textParser->flushExtra();
 #ifdef DEBUG
 	m_graphParser->sendObjects(-1);
-	// fixme: m_tableParser->flushExtra();
 #endif
+
 	m_listener->endDocument();
 	m_listener.reset();
 
@@ -530,6 +601,16 @@ bool WPS8Parser::createStructures()
 
 		readFRAM(entry);
 	}
+	// creates the correspondance between the eobj and the frame
+	size_t numFrames = m_state->m_frameList.size();
+	for (size_t i = 0; i < numFrames; i++)
+	{
+		WPS8ParserInternal::Frame const &frame = m_state->m_frameList[i];
+		if (frame.m_idObject < 0) continue;
+		m_state->m_object2FrameMap[frame.m_idObject] = (int) i;
+		m_state->m_table2FrameMap[frame.m_idTable] = (int) i;
+	}
+
 
 	m_graphParser->computePositions();
 
@@ -872,8 +953,12 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 		switch (dt.id())
 		{
 		case 0x8:
-			if (dt.m_value)
-				f2 << "numCols=" << dt.m_value+1 << ",";
+			if (!dt.m_value) break;
+			if (dt.m_value >= 1 && dt.m_value <= 13)
+				m_state->m_numColumns = int(1+dt.m_value);
+			else
+				f2 << "#";
+			f2 << "numCols=" << dt.m_value+1 << ",";
 			break;
 		case 0x18: // 1/{_,66,96,112,186,228} 2/_
 		case 0x1b:   // -1/200,3/66,3/_
@@ -1100,7 +1185,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 	ascii().addNote(f.str().c_str());
 
 
-	bool parsedAll = true, color= false;
+	bool parsedAll = true, color = false;
 	long lastPos;
 	for (int i = 0; i < numFram; i++)
 	{
@@ -1138,13 +1223,14 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			if (dt.isBad()) continue;
 			if (m_state->m_frameTypes.find(dt.id())==m_state->m_frameTypes.end())
 			{
-				f << "##" << dt << ",";
+				WPS_DEBUG_MSG(("WPS8Parser::readFRAM: unexpected id for %d\n", dt.id()));
+				f2 << "##" << dt << ",";
 				continue;
 			}
 			if (m_state->m_frameTypes.find(dt.id())->second != dt.type())
 			{
 				WPS_DEBUG_MSG(("WPS8Parser::readFRAM: unexpected type for %d=%d\n", dt.id(), dt.type()));
-				f << "###" << dt << ",";
+				f2 << "###" << dt << ",";
 				continue;
 			}
 			if (dt.id() >= 4 && dt.id() < 11)
@@ -1225,6 +1311,11 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				frame.m_typeFlag = (uint8_t) (dt.m_value>>8);
 				break;
 			}
+			case 0x2:
+				if (dt.m_value&1) f2 << "noText[right],";
+				if (dt.m_value&2) f2 << "noText[left],";
+				if (dt.m_value&0xFC) f2 << "#f2=" << std::hex << (dt.m_value&0xFC) << ",";
+				break;
 			case 0x3: // seem to exist iff type=12
 				if ((frame.m_type == Frame::Table) != dt.isTrue())
 					f2 <<  "isTable?["
@@ -1297,15 +1388,17 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				}
 				break;
 			}
-			case 0x19: // CHECKME: bord or background color, only in textbox ?
-				if (!color) f2 << "###id23=false,";
-				frame.m_borderColor = ((uint32_t) dt.m_value)&0xFFFFFF;
-				if (dt.m_value & 0xFF000000)
-					f2 << "###id25=" << (int) (uint8_t) ((dt.m_value>>25) & 0xFF) << ",";
+			case 0x19: // CHECKME: can we also have a front color and a pattern ?
+				if (!color)
+					f2 << "#f23=false,";
+				frame.m_backgroundColor = dt.getRGBColor();
 				break;
 			case 0x1b: // 41
 				if (frame.m_type!=Frame::Footer || dt.m_value != 0x41)
 					f2 << "##f" << dt.id() << "=" << (int16_t) dt.m_value << ",";
+				break;
+			case 0x26: // rotation in degree from center ( CCW)
+				f2 << "rot=" << float(dt.m_value)/10. << "deg,";
 				break;
 				//
 				// Table specific field ?
@@ -1350,7 +1443,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			{
 				// table 0x6-??,
 				// header/footer 0x16-??,
-				// textbox 0x10(or no set)
+				// textbox 0x10(means automatic resize)
 				// object : no set
 				f2 << "f" << dt.id();
 				if (dt.m_value)
@@ -1412,11 +1505,11 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			}
 			f << "],";
 		}
-		if (setVal[2]) f << "f10=" << dim[2] << ",";
+		if (setVal[2]) f << "border[w]=" << dim[2] << ",";
 
 		if (bset)
 		{
-			f << "bd?=[";
+			f << "borderMod[w]=["; // L, T, R, B
 			for (int j = 0; j < 4; j++)
 			{
 				if (!bsetVal[j])

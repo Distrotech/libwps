@@ -34,6 +34,7 @@
 #  define WPS_CELL_H
 
 #include <iostream>
+#include <vector>
 
 #include "libwps_internal.h"
 
@@ -53,7 +54,7 @@ public:
 	                         };
 	//! constructor
 	WPSCellFormat() :
-		m_hAlign(HALIGN_DEFAULT), m_bordersList(0) { }
+		m_hAlign(HALIGN_DEFAULT), m_bordersList(), m_backgroundColor(0xFFFFFF) { }
 
 	virtual ~WPSCellFormat() {}
 
@@ -72,17 +73,33 @@ public:
 	//! return true if the cell has some border
 	bool hasBorders() const
 	{
-		return m_bordersList != 0;
+		return m_bordersList.size() != 0;
 	}
-	//! return the cell border: libwps::LeftBorderBit | ...
-	int borders() const
+
+	//! return the cell border: libwps::LeftBit | ...
+	std::vector<WPSBorder> const &borders() const
 	{
 		return m_bordersList;
 	}
-	//! sets the cell border
-	void setBorders(int bList)
+
+	//! reset the border
+	void resetBorders()
 	{
-		m_bordersList = bList;
+		m_bordersList.resize(0);
+	}
+
+	//! sets the cell border: wh=WPSBorder::LeftBit|...
+	void setBorders(int wh, WPSBorder const &border);
+
+	//! returns the background color
+	uint32_t backgroundColor() const
+	{
+		return m_backgroundColor;
+	}
+	//! set the background color
+	void setBackgroundColor(uint32_t color)
+	{
+		m_backgroundColor = color;
 	}
 
 	//! a comparison  function
@@ -94,8 +111,10 @@ public:
 protected:
 	//! the cell alignement : by default nothing
 	HorizontalAlignment m_hAlign;
-	//! the cell border : libwps::LeftBorderBit | ...
-	int m_bordersList;
+	//! the cell border WPSBorder::Pos
+	std::vector<WPSBorder> m_bordersList;
+	//! the backgroung color
+	uint32_t m_backgroundColor;
 };
 
 class WPSTable;

@@ -329,8 +329,8 @@ struct State
 {
 	//! constructor
 	State() : m_textZones(), m_bookmarkMap(), m_notesList(), m_notesMap(),
-		m_object(), m_objectMap(), m_tokenMap(), m_objectTypes(),
-		m_plcList(), m_knownPLC()
+		m_object(), m_objectMap(), m_tokenMap(), m_tcdMap(),
+		m_objectTypes(), m_plcList(), m_knownPLC()
 	{
 		initTypeMaps();
 	}
@@ -360,6 +360,23 @@ struct State
 			return;
 		}
 	}
+	//! try to return a entry for a cell in table zones
+	WPSEntry getTCDZone(int strsId, int cellId) const
+	{
+		if (strsId < 0 || strsId >= int(m_textZones.size())
+		        || cellId < 0 || m_tcdMap.find(strsId) == m_tcdMap.end())
+			return WPSEntry();
+		std::vector<long> const &endPos = m_tcdMap.find(strsId)->second;
+		if (cellId >= int(endPos.size()))
+			return WPSEntry();
+
+		m_textZones[size_t(strsId)].setParsed(true);
+		WPSEntry res = m_textZones[size_t(strsId)];
+		if (cellId)
+			res.setBegin(endPos[size_t(cellId-1)]+2);
+		res.setEnd(endPos[size_t(cellId)]);
+		return res;
+	}
 
 	//! the list of different text zones
 	std::vector<WPSEntry> m_textZones;
@@ -380,6 +397,9 @@ struct State
 
 	//! a map text offset->token
 	std::map<long, Token> m_tokenMap;
+
+	//! a map strsId -> last positions of cells
+	std::map<int, std::vector<long> > m_tcdMap;
 
 	//! the object type
 	std::map<int,int> m_objectTypes;
@@ -578,6 +598,17 @@ int WPS8Text::getTextZoneType(int strsId) const
 	return m_state->m_textZones[size_t(strsId)].id();
 }
 
+void WPS8Text::readTextInCell(int strsId, int cellId)
+{
+	if (!m_listener) return;
+	WPSEntry entry = m_state->getTCDZone(strsId, cellId);
+	if (entry.length()==0)
+	{
+		m_listener->insertCharacter(' ');
+		return;
+	}
+	readText(entry);
+}
 
 /**
  * Read the range of the document text using previously-read
@@ -586,8 +617,24 @@ int WPS8Text::getTextZoneType(int strsId) const
  */
 void WPS8Text::readText(WPSEntry const &entry)
 {
+	if (!m_listener)
+	{
+		WPS_DEBUG_MSG(("WPS8Text::readText: called without listener!!!\n"));
+		return;
+	}
 	WPXInputStreamPtr input = getInput();
 	m_state->setParsed(entry,true);
+	bool mainZone = entry.id()==1;
+	int numColumns = 1;
+	if (mainZone && mainParser().numColumns() > 1)
+	{
+		numColumns = mainParser().numColumns();
+		if (m_listener->isSectionOpened())
+			m_listener->closeSection();
+		int w = int(72.0*mainParser().pageWidth()/numColumns);
+		std::vector<int> colSize(size_t(numColumns), w);
+		m_listener->openSection(colSize, WPX_POINT);
+	}
 	int lastCId=-1, lastPId=-1; /* -2: nothing, -1: send default, >= 0: readId */
 	std::vector<DataFOD>::iterator plcIt =	m_FODList.begin();
 	while (plcIt != m_FODList.end() && plcIt->m_pos < entry.begin())
@@ -600,8 +647,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 		plcIt++;
 	}
 	int actualPage = 1;
-	uint16_t specialCode=0;
-	int fieldType = 0;
+	WPS8TextStyle::FontData special;
 	input->seek(entry.begin(), WPX_SEEK_SET);
 	while (!input->atEOS())
 	{
@@ -634,7 +680,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 					f << "[C_]";
 				else
 					f << "[C" << plc.m_id << "]";
-				m_styleParser->sendFont(plc.m_id, specialCode, fieldType);
+				m_styleParser->sendFont(plc.m_id, special);
 				break;
 			}
 			case DataFOD::ATTR_PARAG:
@@ -665,7 +711,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 		}
 		if (lastCId >= -1)
 		{
-			m_styleParser->sendFont(lastCId, specialCode, fieldType);
+			m_styleParser->sendFont(lastCId, special);
 			lastCId = -2;
 		}
 		if (lastPId >= -1)
@@ -699,7 +745,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 				break;
 
 			case 0x0C:
-				if (entry.id()==1)
+				if (mainZone)
 					mainParser().newPage(++actualPage);
 				else
 				{
@@ -724,52 +770,73 @@ void WPS8Text::readText(WPSEntry const &entry)
 				break;
 
 			case 0x23:
-				if (specialCode)
+				//	TODO: fields, pictures, etc.
+				switch (special.m_type)
 				{
-					//	TODO: fields, pictures, etc.
-					switch (specialCode)
+				case WPS8TextStyle::FontData::T_None:
+					m_listener->insertCharacter('#');
+					break;
+				case WPS8TextStyle::FontData::T_Footnote:
+				case WPS8TextStyle::FontData::T_Endnote:
+				{
+					long fPos = input->tell()-2; // the note can be linked, so must retrieve the pos...
+					if (m_state->m_notesMap.find(fPos) == m_state->m_notesMap.end())
 					{
-					case 3:
-					case 4:
-					{
-						if (m_state->m_notesMap.find(pos) == m_state->m_notesMap.end())
-						{
-							WPS_DEBUG_MSG(("WPS8Text::readText can not find notes for position : %lx\n", pos));
-							break;
-						}
-						WPS8TextInternal::Notes const &note = *m_state->m_notesMap[pos];
-						if (!note.m_corr || note.m_note) break;
-						WPSEntry nEntry = note.getCorrespondanceEntry(pos);
-						shared_ptr<WPSSubDocument> doc(new WPS8TextInternal::SubDocument(input, *this, nEntry));
-						m_listener->insertNote(specialCode==3 ? WPSContentListener::FOOTNOTE : WPSContentListener::ENDNOTE, doc);
+						WPS_DEBUG_MSG(("WPS8Text::readText can not find notes for position : %lx\n", fPos));
 						break;
 					}
-					case 5:
-						switch (fieldType)
-						{
-						case -1:
-							m_listener->insertField(WPSContentListener::PageNumber);
-							break;
-						case -4:
-							m_listener->insertField(WPSContentListener::Date);
-							break;
-						case -5:
-							m_listener->insertField(WPSContentListener::Time);
-							break;
-						default:
-							break;
-						}
-						break;
-					default:
-						m_listener->insertUnicode(0x263B);
-					}
+					WPS8TextInternal::Notes const &note = *m_state->m_notesMap[fPos];
+					if (!note.m_corr || note.m_note) break;
+					WPSEntry nEntry = note.getCorrespondanceEntry(fPos);
+					shared_ptr<WPSSubDocument> doc(new WPS8TextInternal::SubDocument(input, *this, nEntry));
+					m_listener->insertNote(special.m_type==WPS8TextStyle::FontData::T_Footnote ? WPSContentListener::FOOTNOTE : WPSContentListener::ENDNOTE, doc);
 					break;
 				}
-				// ! fallback to default
+				case WPS8TextStyle::FontData::T_Field:
+					switch (special.m_fieldType)
+					{
+					case WPS8TextStyle::FontData::F_PageNumber:
+						m_listener->insertField(WPSContentListener::PageNumber);
+						break;
+					case WPS8TextStyle::FontData::F_Date:
+					case WPS8TextStyle::FontData::F_Time:
+					{
+						std::string format = special.format();
+						if (format.length())
+							m_listener->insertDateTimeField(format.c_str());
+						else
+						{
+							WPS_DEBUG_MSG(("WPS8Text::readText: unknown date/time format for position : %lX\n", pos));
+						}
+						break;
+					}
+					case WPS8TextStyle::FontData::F_None:
+					default:
+						m_listener->insertUnicode(0x263B);
+						break;
+					}
+					special = WPS8TextStyle::FontData();
+					break;
+				default:
+					m_listener->insertUnicode(0x263B);
+				}
+				break;
 
 			case 0xfffc:
-				// ! fallback to default
-
+			{
+				if (special.m_type != WPS8TextStyle::FontData::T_Object)
+					break;
+				long objPos = input->tell()-2;
+				if (m_state->m_objectMap.find(objPos) == m_state->m_objectMap.end())
+				{
+					WPS_DEBUG_MSG(("WPSText::readText can not find EOB for position : %lX\n", objPos));
+					break;
+				}
+				WPS8TextInternal::Object const &obj = m_state->m_objectMap.find(objPos)->second;
+				if (obj.m_type == WPS8TextInternal::Object::Table)
+					mainParser().sendTable(obj.m_size, obj.m_id);
+				break;
+			}
 			default:
 				if (readVal < 28)
 				{
@@ -780,7 +847,6 @@ void WPS8Text::readText(WPSEntry const &entry)
 				m_listener->insertUnicode((uint32_t)readUTF16LE(input, finalPos, readVal));
 				break;
 			}
-			specialCode = 0;
 		}
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
@@ -917,6 +983,21 @@ bool WPS8Text::readStructures()
 		             &WPS8Text::defDataParser, &WPS8Text::tokenEndDataParser)) continue;
 	}
 
+	// TCD : table separator
+	pos = nameTable.lower_bound("TCD ");
+	while (pos != nameTable.end())
+	{
+		WPSEntry const &entry = pos->second;
+		pos++;
+		if (!entry.hasName("TCD ")) break;
+		if (!entry.hasType("PLC ")) continue;
+
+		std::vector<long> textPtrs;
+		std::vector<long> listValues;
+		if (!readPLC(entry, textPtrs, listValues)) continue;
+		m_state->m_tcdMap[entry.id()] = textPtrs;
+	}
+
 #ifdef DEBUG
 	// read style sheet zone ? can be safety skipped in normal mode
 	pos = nameTable.lower_bound("STSH");
@@ -968,6 +1049,7 @@ long WPS8Text::readUTF16LE(WPXInputStreamPtr input, long endPos, uint16_t firstC
 			return 0xfffd;
 		}
 	}
+	/** CHECKME: for Symbol font, we must probably convert 0xF0xx and 0x00xx in a 0x03yy symbol :-~ */
 	if (firstC>=28 ) return firstC;
 	WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: character = %i (0x%X)\n", firstC, firstC));
 	return 0xfffd;
@@ -1080,35 +1162,46 @@ bool WPS8Text::readNotes(WPSEntry const &entry)
 		pos = input->tell();
 		f.str("");
 		f << entry.name() << i << ":";
-		val = (long) libwps::read16(input);
-		if (val != 1) // always 1 ?
-			f << val << ",";
+		int type = (int) libwps::read16(input);
+		switch(type)
+		{
+		case 0:
+			f << "alpha,";
+			break;
+		case 1:
+			f << "numeric,";
+			break;
+		default:
+			f << "#type=" << type << ",";
+			break;
+		}
 		f << "id=" << libwps::read16(input) << ",";
 		val = (long) libwps::read32(input);
-		if (val != -1) // always -1 ?
-			f << val << ",";
+		if (val != -1) f << "label" << val << ",";
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
 	}
 
 	// no sure what we can do of the end of the data ?
 	pos = input->tell();
-	if (pos+4*nNotes+10 != endPos) // ok with my files, it is general ?
+	if (pos+12 > endPos)
 	{
 		WPS_DEBUG_MSG(("WPS8Text::readNotes: unexpected end size\n"));
-		ascii().addPos(pos);
 		f.str("");
 		f << entry.name() << "[###End]";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
 		return true;
 	}
-
+	f.str("");
+	f << entry.name() << "[A]:";
+	for (int i = 0; i < 2; i++)   // 2 size ?
+	{
+		f << libwps::read32(input) << ",";
+	}
+	// fixme: how to read the end of data and find the labels ???
+	ascii().addDelimiter(input->tell(),'|');
 	ascii().addPos(pos);
-	f.str("");
-	f << entry.name() << "[A]";
-	ascii().addNote(f.str().c_str());
-	ascii().addPos(pos+10);
-	f.str("");
-	f << entry.name() << "[B]";
 	ascii().addNote(f.str().c_str());
 	ascii().addPos(endPos);
 	ascii().addNote("_");

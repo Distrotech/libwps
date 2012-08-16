@@ -43,6 +43,7 @@ typedef shared_ptr<WPS8ContentListener> WPS8ContentListenerPtr;
 
 namespace WPS8TableInternal
 {
+struct Cell;
 struct State;
 }
 
@@ -64,6 +65,7 @@ struct State;
  */
 class WPS8Table
 {
+	friend struct WPS8TableInternal::Cell;
 	friend class WPS8Parser;
 public:
 	//! constructor
@@ -84,11 +86,8 @@ public:
 	//! returns the number page where we find a picture. In practice, 0/1
 	int numPages() const;
 
-	/** sends the data which have not been send to the listener.
-	 *
-	 * \note actually, it does not nothing.
-	 */
-	void flushExtra(WPXInputStreamPtr input);
+	/** sends the data which have not been send to the listener. */
+	void flushExtra();
 
 protected:
 	//! finds all structures which correspond to a table
@@ -100,10 +99,11 @@ protected:
 	 * \param tableId the table identificator
 	 * \param strsid indicates the text entry (and its corresponding TCD )
 	 * which contains the cells' text.
-	 * \warning Actually, it only creates a textbox and sends all the cells' text
-	 * separated with '#'.
 	 */
 	bool sendTable(Vec2f const &siz, int tableId, int strsid);
+
+	// interface with main parser
+	void sendTextInCell(int strsId, int cellId);
 
 protected: // low level
 

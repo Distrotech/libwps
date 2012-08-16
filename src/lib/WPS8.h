@@ -81,17 +81,30 @@ protected:
 	/** tries to parse the different OLE zones ( except the main zone ) */
 	bool createOLEStructures();
 
-	// interface with text parser
-
 	//! returns the page height, ie. paper size less margin (in inches)
 	float pageHeight() const;
 	//! returns the page width, ie. paper size less margin (in inches)
 	float pageWidth() const;
+	//! returns the number of columns
+	int numColumns() const;
+
+	// interface with text parser
+
 	//! creates a subdocument to send a textbox which correspond to the strsid text zone
 	void sendTextBox(WPSPosition const &/*pos*/, int /*strsid*/) {}
 
 	//! sends text corresponding to the entry to the listener (via WPS8Text)
 	void send(WPSEntry const &entry);
+
+	//! send the text of a cell to a listener (via WPS8Text)
+	void sendTextInCell(int strsId, int cellId);
+
+	// interface with table parser
+
+	//! sends a table as a character with given size ( via its WPS8Table )
+	bool sendTable(Vec2f const &size, int objectId);
+	//! retrieve the strsId corresponding to a table ( mainly for debug)
+	int getTableSTRSId(int tableId) const;
 
 	// interface with graph parser
 

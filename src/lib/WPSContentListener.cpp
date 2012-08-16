@@ -65,8 +65,7 @@ WPSContentParsingState::WPSContentParsingState() :
 	m_paragraphJustification(libwps::JustificationLeft),
 	m_paragraphLineSpacing(1.0), m_paragraphLineSpacingUnit(WPX_PERCENT),
 	m_paragraphBackgroundColor(0xFFFFFF),
-	m_paragraphBorders(0), m_paragraphBordersStyle(libwps::BorderSingle),
-	m_paragraphBordersWidth(1), m_paragraphBordersColor(0),
+	m_paragraphBorders(0), m_paragraphBordersStyle(),
 
 	m_list(), m_currentListLevel(0),
 
@@ -445,12 +444,12 @@ void WPSContentListener::setParagraphBackgroundColor(uint32_t color)
 	m_ps->m_paragraphBackgroundColor = color;
 }
 
-void WPSContentListener::setParagraphBorders(int which, libwps::BorderStyle style, int width, uint32_t color)
+void WPSContentListener::setParagraphBorders(int which, WPSBorder style)
 {
 	m_ps->m_paragraphBorders = which;
 	m_ps->m_paragraphBordersStyle = style;
-	m_ps->m_paragraphBordersWidth = width >= 1 ? width : 1;
-	m_ps->m_paragraphBordersColor = color;
+	if (style.m_width <= 0)
+		m_ps->m_paragraphBordersStyle.m_width = 1;
 }
 
 ///////////////////
@@ -540,6 +539,11 @@ bool WPSContentListener::isSectionOpened() const
 	return m_ps->m_isSectionOpened;
 }
 
+int WPSContentListener::getSectionNumColumns() const
+{
+	return m_ps->m_numColumns;
+}
+
 bool WPSContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
 {
 	if (m_ps->m_isSectionOpened)
@@ -556,10 +560,7 @@ bool WPSContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
 
 	size_t numCols = colsWidth.size();
 	if (numCols <= 1)
-	{
 		m_ps->m_textColumns.resize(0);
-		m_ps->m_numColumns=1;
-	}
 	else
 	{
 		float factor = 1.0;
@@ -770,6 +771,8 @@ void WPSContentListener::_openSection()
 	if (!m_ps->m_isPageSpanOpened)
 		_openPageSpan();
 
+	m_ps->m_numColumns = int(m_ps->m_textColumns.size());
+
 	WPXPropertyList propList;
 	propList.insert("fo:margin-left", m_ps->m_sectionMarginLeft);
 	propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
@@ -808,6 +811,7 @@ void WPSContentListener::_closeSection()
 
 	m_documentInterface->closeSection();
 
+	m_ps->m_numColumns = 1;
 	m_ps->m_sectionAttributesChanged = false;
 	m_ps->m_isSectionOpened = false;
 }
@@ -943,41 +947,23 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 			       << (m_ps->m_paragraphBackgroundColor&0xFFFFFF);
 			propList.insert("fo:background-color", stream.str().c_str());
 		}
-		if (m_ps->m_paragraphBorders)
+		if (m_ps->m_paragraphBorders &&
+		        m_ps->m_paragraphBordersStyle.m_style != WPSBorder::None)
 		{
-			std::stringstream stream;
-			stream << m_ps->m_paragraphBordersWidth*0.03 << "cm";
-			switch (m_ps->m_paragraphBordersStyle)
-			{
-			case libwps::BorderSingle:
-			case libwps::BorderDot:
-			case libwps::BorderLargeDot:
-			case libwps::BorderDash:
-				stream << " solid";
-				break;
-			case libwps::BorderDouble:
-				stream << " double";
-				break;
-			default:
-				WPS_DEBUG_MSG(("WPSContentListener::_appendParagraphProperties: unexpected value\n"));
-				break;
-			}
-			stream << " #" << std::hex << std::setfill('0') << std::setw(6)
-			       << (m_ps->m_paragraphBordersColor&0xFFFFFF);
-			std::string style = stream.str();
+			std::string style = m_ps->m_paragraphBordersStyle.getPropertyValue();
 			int border = m_ps->m_paragraphBorders;
 			if (border == 0xF)
 			{
 				propList.insert("fo:border", style.c_str());
 				return;
 			}
-			if (border & libwps::LeftBorderBit)
+			if (border & WPSBorder::LeftBit)
 				propList.insert("fo:border-left", style.c_str());
-			if (border & libwps::RightBorderBit)
+			if (border & WPSBorder::RightBit)
 				propList.insert("fo:border-right", style.c_str());
-			if (border & libwps::TopBorderBit)
+			if (border & WPSBorder::TopBit)
 				propList.insert("fo:border-top", style.c_str());
-			if (border & libwps::BottomBorderBit)
+			if (border & WPSBorder::BottomBit)
 				propList.insert("fo:border-bottom", style.c_str());
 		}
 	}
@@ -1875,6 +1861,27 @@ void WPSContentListener::closeTableRow()
 	m_documentInterface->closeTableRow();
 }
 
+void WPSContentListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
+{
+	if (!m_ps->m_isTableRowOpened)
+	{
+		WPS_DEBUG_MSG(("WPSContentListener::addEmptyTableCell: called with m_isTableRowOpened=false\n"));
+		return;
+	}
+	if (m_ps->m_isTableCellOpened)
+	{
+		WPS_DEBUG_MSG(("WPSContentListener::addEmptyTableCell: called with m_isTableCellOpened=true\n"));
+		closeTableCell();
+	}
+	WPXPropertyList propList;
+	propList.insert("libwpd:column", pos[0]);
+	propList.insert("libwpd:row", pos[1]);
+	propList.insert("table:number-columns-spanned", span[0]);
+	propList.insert("table:number-rows-spanned", span[1]);
+	m_documentInterface->openTableCell(propList);
+	m_documentInterface->closeTableCell();
+}
+
 void WPSContentListener::openTableCell(WPSCell const &cell, WPXPropertyList const &extras)
 {
 	if (!m_ps->m_isTableRowOpened)
@@ -1894,7 +1901,38 @@ void WPSContentListener::openTableCell(WPSCell const &cell, WPXPropertyList cons
 
 	propList.insert("table:number-columns-spanned", cell.numSpannedCells()[0]);
 	propList.insert("table:number-rows-spanned", cell.numSpannedCells()[1]);
-	// FINISHME
+
+	std::vector<WPSBorder> const &borders = cell.borders();
+	for (size_t c = 0; c < borders.size(); c++)
+	{
+		std::string property = borders[c].getPropertyValue();
+		if (property.length() == 0) continue;
+		switch(c)
+		{
+		case WPSBorder::Left:
+			propList.insert("fo:border-left", property.c_str());
+			break;
+		case WPSBorder::Right:
+			propList.insert("fo:border-right", property.c_str());
+			break;
+		case WPSBorder::Top:
+			propList.insert("fo:border-top", property.c_str());
+			break;
+		case WPSBorder::Bottom:
+			propList.insert("fo:border-bottom", property.c_str());
+			break;
+		default:
+			WPS_DEBUG_MSG(("WPSContentListener::openTableCell: can not send %d border\n",int(c)));
+			break;
+		}
+	}
+	if (cell.backgroundColor() != 0xFFFFFF)
+	{
+		char color[20];
+		sprintf(color,"#%06x",cell.backgroundColor());
+		propList.insert("fo:background-color", color);
+	}
+
 	m_ps->m_isTableCellOpened = true;
 	m_documentInterface->openTableCell(propList);
 }

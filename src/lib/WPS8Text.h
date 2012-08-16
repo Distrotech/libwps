@@ -80,7 +80,7 @@ public:
 	 * 1: mainzone, 2: footnote, 3: endnote, 4: ???, 5: text in table/textbox
 	 * 6: header, 7: footer
 	 **/
-	int getTextZoneType(int strsId) const;
+	int getTextZoneType(int typeId) const;
 
 	//! returns the header entry (if such entry exists, if not returns an invalid entry)
 	WPSEntry getHeaderEntry() const;
@@ -96,6 +96,9 @@ public:
 
 	//! reads a text section and sends it to a listener
 	void readText(WPSEntry const &entry);
+
+	//! reads a cell section and sends it to a listener
+	void readTextInCell(int strsId, int cellId);
 
 protected:
 	//! return the main parser

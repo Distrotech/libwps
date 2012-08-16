@@ -57,6 +57,60 @@ std::string FileData::createErrorString(WPXInputStreamPtr input, long endPos)
 	return f.str();
 }
 
+WPSBorder::Style FileData::getBorderStyle(std::string &mess) const
+{
+	WPSBorder::Style style = WPSBorder::Single;
+	libwps::DebugStream f;
+	switch(m_value&0xFF)
+	{
+	case 0:
+		style  = WPSBorder::None;
+		break;
+	case 1: // normal
+		break;
+	case 2: // double normal
+		style  = WPSBorder::Double;
+		break;
+	case 3:
+		f << "ext=2,int=1,";
+		style  = WPSBorder::Double;
+		break;
+	case 4:
+		f << "ext=1,int=2,";
+		style  = WPSBorder::Double;
+		break;
+	case 5:
+		style  = WPSBorder::Dash;
+		break;
+	case 6:
+		style  = WPSBorder::LargeDot;
+		break;
+	case 7:
+		style  = WPSBorder::Dot;
+		break;
+	case 8:
+		f << "dash+rot-5,";
+		style  = WPSBorder::Dash;
+		break;
+	case 9:
+		f << "dash+rot5,";
+		style  = WPSBorder::Dash;
+		break;
+	case 0xa:
+		f << "triple,";
+		style  = WPSBorder::Double;
+		break;
+	default:
+		f << "#style=" << std::hex << (m_value&0xFF) << std::dec << ",";
+		break;
+	}
+
+	if (m_value & 0xFF00)
+		f << "style:hig=" << std::hex << (m_value>>8) << std::dec << ",";
+	mess = f.str();
+	return style;
+}
+
 // operator <<
 std::ostream &operator<< (std::ostream &o, FileData const &dt)
 {

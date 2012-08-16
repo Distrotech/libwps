@@ -44,7 +44,7 @@ namespace WPS8TextStyleInternal
 struct Font : public WPSFont
 {
 	//! constructor
-	Font() : WPSFont(), m_special(0), m_fieldType(0) { }
+	Font() : WPSFont(), m_special() { }
 	static Font def()
 	{
 		Font res;
@@ -56,75 +56,27 @@ struct Font : public WPSFont
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Font const &ft);
 
-	//! returns the object type \sa setSpecial
-	int special() const
+	//! return the auxilliary data
+	WPS8TextStyle::FontData &special()
 	{
 		return m_special;
 	}
-	/** sets the field type */
-	void setSpecial(int spec)
+	//! return the auxilliary data
+	WPS8TextStyle::FontData const &special() const
 	{
-		m_special = spec;
-	}
-
-	//! returns the object type \sa setFieldType
-	int fieldType() const
-	{
-		return m_fieldType;
-	}
-	/** sets the field type */
-	void setFieldType(int fType)
-	{
-		m_fieldType = fType;
+		return m_special;
 	}
 
 protected:
-	/** the object type */
-	int m_special;
-	/** the field type */
-	int m_fieldType;
+	/** the auxialliary data */
+	WPS8TextStyle::FontData m_special;
 };
 
 //! operator<< for a font
 std::ostream &operator<<(std::ostream &o, Font const &ft)
 {
 	o << reinterpret_cast<WPSFont const &>(ft);
-
-	switch(ft.special())
-	{
-	case 0:
-		break;
-	case 2:
-		o << "object:";
-		break;
-	case 3:
-		o << "footnote:";
-		break;
-	case 4:
-		o << "endnote:";
-		break;
-	case 5:
-		o << "pagenumber:";
-		break;
-	default:
-		o << "#spec:" << ft.special() << ":";
-	}
-	switch(ft.fieldType())
-	{
-	case 0:
-		break;
-	case -1:
-		o << "pageField:";
-		break;
-	case -4:
-		o << "dateField:";
-		break;
-	case -5:
-		o << "timeField:";
-		break;
-	default:
-		o << "#fieldType:" << ft.fieldType() << ":";
-	}
+	o << ft.m_special;
 	return o;
 }
 
@@ -433,7 +385,7 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 		switch(data.id())
 		{
 		case 0x0:
-			font.setSpecial(int(data.m_value));
+			font.special().m_type = int(data.m_value);
 			break;
 		case 0x02:
 			if (data.isTrue())
@@ -510,18 +462,77 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 			else f << "##f27=" << data.m_value << ",";
 			break;
 		case 0x1e:
-			textAttributeBits |= WPS_UNDERLINE_BIT;
-			if ((data.m_value & 0xFF) != 1) // ff
+		{
+			bool single = true;
+			switch((data.m_value & 0xFF))
+			{
+			case 1:
+				break; // normal
+			case 2:
+				f << "underl[word],";
+				break;
+			case 3:
+				single = false;
+				break; // double
+			case 4:
+				f << "underl[dot],";
+				break;
+			case 6:
+				f << "underl[w=2],";
+				break;
+			case 7:
+				f << "underl[dashed],";
+				break;
+			case 9:
+				f << "underl[style=.-],";
+				break;
+			case 10:
+				f << "underl[style=..-],";
+				break;
+			case 11:
+				f << "underl[curve],";
+				break;
+			case 16:
+				f << "underl[curve2],";
+				break;
+			case 17:
+				f << "underl[dot,w=2],";
+				break;
+			case 18:
+				f << "underl[dashed,w=2],";
+				break;
+			case 19:
+				f << "underl[style=.-,w=2],";
+				break;
+			case 20:
+				f << "underl[style=..-,w=2],";
+				break;
+			case 21:
+				f << "underl[dashed,l*=2],";
+				break; // length*=2
+			case 22:
+				f << "underl[dashed,w=2,l*=2],";
+				break;
+			case 23:
+				f << "underl[curve]";
+				single = false;
+				break; // and double
+			default:
 				f << "###underlFlag=" << (data.m_value & 0xFF) << ",";
+			}
 			if (data.m_value >> 8) // 3 8 b 19 43 53 7c 84 b7 be c8 c0
 				f << "###underlSize=" << (data.m_value >> 8) << ",";
+			if (single)
+				textAttributeBits |= WPS_UNDERLINE_BIT;
+			else
+				textAttributeBits |= WPS_DOUBLE_UNDERLINE_BIT;
 			break;
+		}
 		case 0x22:
-			font.setFieldType(int(data.m_value));
+			font.special().m_fieldType = int(data.m_value);
 			break;
 		case 0x23:
-			// find with fType=-2 and -4 and value 0x79 | 0x8F
-			f << "#formatField?=" << std::hex << data.m_value << std::dec << ",";
+			font.special().m_fieldFormat = int(data.m_value);
 			break;
 		case 0x24:
 		{
@@ -563,6 +574,7 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 				else
 					f << "###formats"<<formId<<"." << sId << "=" << data.m_recursData[i] << ",";
 			}
+			// CHECKME: list of font ids ....
 			f << "formats=[" << std::hex;
 			for (size_t i = 0; i < formats.size(); i++)
 			{
@@ -573,13 +585,8 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 			break;
 		}
 		case 0x2e:
-		{
-			uint32_t col = (uint32_t) (data.m_value&0xFFFFFF);
-			font.m_color = (((col>>16)&0xFF) |(col&0xFF00)|((col&0xFF)<<16));;
-			if (col & 0xFF000000)
-				f << "###fCol," << (col>>24) << ",";
+			font.m_color=data.getRGBColor();
 			break;
-		}
 		default:
 			f << "##" << data << ",";
 			break;
@@ -599,19 +606,17 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 	return true;
 }
 
-void WPS8TextStyle::sendFont(int fId, uint16_t &specialCode, int &fieldType)
+void WPS8TextStyle::sendFont(int fId, WPS8TextStyle::FontData &data)
 {
-	specialCode = 0;
-	fieldType = 0;
 	if (fId >= int(m_state->m_fontList.size()))
 	{
+		data = WPS8TextStyle::FontData();
 		WPS_DEBUG_MSG(("WPS8TextStyle::sendFont: can not find font id %d\n", fId));
 		return;
 	}
 	WPS8TextStyleInternal::Font const &font =
 	    fId < 0 ? m_state->m_defaultFont : m_state->m_fontList[size_t(fId)];
-	specialCode = (uint16_t) font.special();
-	fieldType = font.fieldType();
+	data = font.special();
 	if (m_listener)
 		m_listener->setFont(font);
 }
@@ -754,10 +759,10 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 				switch(suffixId)
 				{
 				case 0:
-					para.m_listLevel.m_suffix = ".";
+					para.m_listLevel.m_suffix = ")";
 					break;
 				case 2:
-					para.m_listLevel.m_suffix = ")";
+					para.m_listLevel.m_suffix = ".";
 					break;
 				case 3:
 					para.m_listLevel.m_suffix = "-";
@@ -826,68 +831,25 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 			break; // present if f42(2a) exist ?
 		case 0x1e: // not filled by word 2000 ?
 			// 1 -> Left, 2 -> right, 4-> top, 8->bottom
-			if (data.m_value & 1) para.m_border |= libwps::TopBorderBit;
-			if (data.m_value & 2) para.m_border |= libwps::BottomBorderBit;
-			if (data.m_value & 4) para.m_border |= libwps::LeftBorderBit;
-			if (data.m_value & 8) para.m_border |= libwps::RightBorderBit;
+			if (data.m_value & 1) para.m_border |= WPSBorder::TopBit;
+			if (data.m_value & 2) para.m_border |= WPSBorder::BottomBit;
+			if (data.m_value & 4) para.m_border |= WPSBorder::LeftBit;
+			if (data.m_value & 8) para.m_border |= WPSBorder::RightBit;
 			if (data.m_value & 0xFFF0)
 				f << "#border=" << std::hex << (data.m_value & 0xFFF0) << std::dec << ",";
 			break;
-		case 0x1f:   // checkme
+		case 0x1f:
+			para.m_borderStyle.m_color=data.getRGBColor();
+			break;
+		case 0x20:
 		{
-			uint32_t col = (uint32_t) (data.m_value&0xFFFFFF);
-			para.m_borderColor=((col>>16)&0xFF) |(col&0xFF00)|((col&0xFF)<<16);
-			uint32_t transp = (data.m_value>>24)&0xFF;
-			if (transp && transp != 0xFF)
-				f << "###bordCol," << std::hex << transp << std::dec << ",";
+			std::string styleMessage("");
+			para.m_borderStyle.m_style = data.getBorderStyle(styleMessage);
+			f << styleMessage;
 			break;
 		}
-		case 0x20:
-			switch(data.m_value&0xFF)
-			{
-			case 1: // normal
-				break;
-			case 2: // double normal
-				para.m_borderStyle  = libwps::BorderDouble;
-				break;
-			case 3:
-				f << "bord[ext=2,int=1],";
-				para.m_borderStyle  = libwps::BorderDouble;
-				break;
-			case 4:
-				f << "bord[ext=&,int=2],";
-				para.m_borderStyle  = libwps::BorderDouble;
-				break;
-			case 5:
-				para.m_borderStyle  = libwps::BorderDash;
-				break;
-			case 6:
-				para.m_borderStyle  = libwps::BorderLargeDot;
-				break;
-			case 7:
-				para.m_borderStyle  = libwps::BorderDot;
-				break;
-			case 8:
-				f << "bord[dash+rot-5],";
-				para.m_borderStyle  = libwps::BorderDash;
-				break;
-			case 9:
-				f << "bord[dash+rot5],";
-				para.m_borderStyle  = libwps::BorderDash;
-				break;
-			case 0xa:
-				f << "bord[triple],";
-				para.m_borderStyle  = libwps::BorderDouble;
-				break;
-			default:
-				f << "#bordStyle=" << std::hex << (data.m_value&0xFF) << std::dec << ",";
-				break;
-			}
-			if (data.m_value&0xFF & 0xFF00)
-				f << "bordStyle[hig]=" << std::hex << (data.m_value>>8) << std::dec << ",";
-			break;
 		case 0x21:
-			para.m_borderWidth = int(data.m_value)/12700;
+			para.m_borderStyle.m_width = int(data.m_value)/12700;
 			break;
 		case 0x22:
 			f << "#bordSzY=" << float(data.m_value)/12700.f << ",";
@@ -895,14 +857,9 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 
 		case 0x23: // color used to define background: col1*pat+col2*(1-pat)
 		case 0x24:
-		{
 			// color1/2 : default color1=black and color2=white
-			uint32_t col = (uint32_t) (data.m_value&0xFFFFFF);
-			int wh = data.id()-0x23;
-			paraColor[wh] = ((col>>16)&0xFF) |(col&0xFF00)|((col&0xFF)<<16);
-			f << "#backCol" << wh << "=" << std::hex << paraColor[wh] << std::dec << ",";
+			paraColor[data.id()-0x23]=data.getRGBColor();
 			break;
-		}
 		case 0x25:
 		{
 			float percent=0.5;
@@ -912,7 +869,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 				f << "backMotif=" << motif << ",";
 			int wh=int(data.m_value>>8);
 			if (wh && wh != 0x31)
-				f << "#backgMotif[high]=" << std::hex << wh << ",";
+				f << "#backMotif[high]=" << std::hex << wh << ",";
 			uint32_t fCol = 0;
 			int decal = 0;
 			for (int i = 0; i < 3; i++)
@@ -1359,6 +1316,96 @@ bool WPS8TextStyle::findFDPStructuresByHand(int which, std::vector<WPSEntry> &zo
 		zones.push_back(entry);
 	}
 	return zones.size() != 0;
+}
+
+////////////////////////////////////////////////////////////
+// FontData functions
+////////////////////////////////////////////////////////////
+std::ostream &operator<<(std::ostream &o, WPS8TextStyle::FontData const &fData)
+{
+	switch(fData.m_type)
+	{
+	case WPS8TextStyle::FontData::T_None:
+		break;
+	case WPS8TextStyle::FontData::T_Object:
+		o << "object,";
+		break;
+	case WPS8TextStyle::FontData::T_Footnote:
+		o << "footnote,";
+		break;
+	case WPS8TextStyle::FontData::T_Endnote:
+		o << "endnote,";
+		break;
+	case WPS8TextStyle::FontData::T_Field:
+		o << "field,";
+		break;
+	case WPS8TextStyle::FontData::T_Comment: // or maybe link
+		o << "comment,";
+		break;
+	default:
+		o << "#type=" << fData.m_type << ",";
+		break;
+	}
+	switch(fData.m_fieldType)
+	{
+	case WPS8TextStyle::FontData::F_None:
+		break;
+	case WPS8TextStyle::FontData::F_PageNumber:
+		o << "pNumber,";
+		break;
+	case WPS8TextStyle::FontData::F_Date:
+		o << "date,";
+		break;
+	case WPS8TextStyle::FontData::F_Time:
+		o << "time,";
+		break;
+	default:
+		o << "#fType=" << fData.m_fieldType << ",";
+		break;
+	}
+	if (fData.m_fieldFormat) o << "fFormat=" << std::hex << fData.m_fieldFormat << std::dec << ",";
+	return o;
+}
+
+std::string WPS8TextStyle::FontData::format() const
+{
+	switch(m_fieldFormat)
+	{
+	case 0x75: // 13/8/12
+		return "%m/%d/%y";
+	case 0x77: // 12 aout 12
+		return "%d %B %y";
+	case 0x78: // 2 aout 2012
+	case 0x79: // 02 aout 2012
+		return "%d %B %Y";
+	case 0x7b: // aout 12
+		return "%B %y";
+	case 0x7c: // aout 2012,
+		return "%B %Y";
+	case 0x84: // lundi 13 aout 2012)
+		return "%A %d %B %Y";
+	case 0x87: // 09:06 p.m
+		return "%I:%M %p";
+	case 0x89: // 21:06
+		return "%H:%M";
+	case 0x8e: // 13/08/2012
+	case 0x8f: // 13/8/2012
+		return "%m/%d/%Y";
+	case 0x90: // 13/8
+		return "%d/%m";
+	case 0x91: // 8/12
+		return "%m/%y";
+	case 0x102: // aout 2012
+		return "%B %Y";
+	case 0x125: //2012/8/13
+		return "%Y/%m/%d";
+	default:
+		break;
+	}
+	if (m_fieldType == F_Date) return "%m/%d/%y";
+	if (m_fieldType == F_Time) return "%I:%M:%S %p";
+	WPS_DEBUG_MSG(("WPS8TextStyle::FontData::format: called with no date/time field\n"));
+	return "";
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

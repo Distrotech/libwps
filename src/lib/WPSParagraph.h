@@ -66,7 +66,7 @@ struct WPSParagraph
 	//! constructor
 	WPSParagraph() : m_tabs(), m_justify(libwps::JustificationLeft),
 		m_breakStatus(0), m_listLevelIndex(0), m_listLevel(), m_backgroundColor(0xFFFFFF),
-		m_border(0), m_borderStyle(libwps::BorderSingle), m_borderWidth(1), m_borderColor(0), m_extra("")
+		m_border(0), m_borderStyle(), m_extra("")
 	{
 		for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
 		m_spacings[0] = 1.0; // interline normal
@@ -108,11 +108,7 @@ struct WPSParagraph
 	//! list of bits to indicated a border 1: LeftBorderBit, 2: RightBorderBit, ...
 	int m_border;
 	//! the border style
-	libwps::BorderStyle m_borderStyle;
-	//! the border width
-	int m_borderWidth;
-	//! the border color
-	uint32_t m_borderColor;
+	WPSBorder m_borderStyle;
 
 	//! a string to store some errors
 	std::string m_extra;

@@ -163,36 +163,12 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 
 	if (pp.m_border)
 	{
-		o << "bord";
-		switch (pp.m_borderStyle)
-		{
-		case libwps::BorderSingle:
-			break;
-		case libwps::BorderDot:
-			o << "(dot)";
-			break;
-		case libwps::BorderLargeDot:
-			o << "(large dot)";
-			break;
-		case libwps::BorderDash:
-			o << "(dash)";
-			break;
-		case libwps::BorderDouble:
-			o << "(double)";
-			break;
-		default:
-			WPS_DEBUG_MSG(("WPSParagraph::operator<<: find unknown style\n"));
-			o << "(#style=" << int(pp.m_borderStyle) << "),";
-			break;
-		}
+		o << "bord(" << pp.m_borderStyle << ")";
 		o << "=";
-		if (pp.m_border&libwps::TopBorderBit) o << "T";
-		if (pp.m_border&libwps::BottomBorderBit) o << "B";
-		if (pp.m_border&libwps::LeftBorderBit) o << "L";
-		if (pp.m_border&libwps::RightBorderBit) o << "R";
-		if (pp.m_borderWidth > 1) o << "(w=" << pp.m_borderWidth << ")";
-		if (pp.m_borderColor)
-			o << "(col=" << std::hex << pp.m_borderColor << std::dec << "),";
+		if (pp.m_border&WPSBorder::TopBit) o << "T";
+		if (pp.m_border&WPSBorder::BottomBit) o << "B";
+		if (pp.m_border&WPSBorder::LeftBit) o << "L";
+		if (pp.m_border&WPSBorder::RightBit) o << "R";
 		o << ",";
 	}
 
@@ -241,6 +217,6 @@ void WPSParagraph::send(shared_ptr<WPSContentListener> listener) const
 		listener->setCurrentListLevel(0);
 
 	listener->setParagraphBackgroundColor(m_backgroundColor);
-	listener->setParagraphBorders(m_border, m_borderStyle, m_borderWidth, m_borderColor);
+	listener->setParagraphBorders(m_border, m_borderStyle);
 }
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

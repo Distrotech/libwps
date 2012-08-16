@@ -36,12 +36,39 @@
 
 #include "WPSCell.h"
 
+void WPSCellFormat::setBorders(int wh, WPSBorder const &border)
+{
+	int const allBits = WPSBorder::LeftBit|WPSBorder::RightBit|WPSBorder::TopBit|WPSBorder::BottomBit;
+	if (wh & (~allBits))
+	{
+		WPS_DEBUG_MSG(("WPSCellFormat::setBorders: unknown borders\n"));
+		return;
+	}
+	if (m_bordersList.size() < 4)
+	{
+		WPSBorder emptyBorder;
+		emptyBorder.m_style = WPSBorder::None;
+		m_bordersList.resize(4, emptyBorder);
+	}
+	if (wh & WPSBorder::LeftBit) m_bordersList[WPSBorder::Left] = border;
+	if (wh & WPSBorder::RightBit) m_bordersList[WPSBorder::Right] = border;
+	if (wh & WPSBorder::TopBit) m_bordersList[WPSBorder::Top] = border;
+	if (wh & WPSBorder::BottomBit) m_bordersList[WPSBorder::Bottom] = border;
+}
+
 int WPSCellFormat::compare(WPSCellFormat const &cell) const
 {
 	int diff = int(m_hAlign) - int(cell.m_hAlign);
 	if (diff) return diff;
-	diff = m_bordersList - cell.m_bordersList;
+	diff = int(m_backgroundColor) - int(cell.m_backgroundColor);
 	if (diff) return diff;
+	diff = int(m_bordersList.size()) - int(cell.m_bordersList.size());
+	if (diff) return diff;
+	for (size_t c = 0; c < m_bordersList.size(); c++)
+	{
+		diff = m_bordersList[c].compare(cell.m_bordersList[c]);
+		if (diff) return diff;
+	}
 	return 0;
 }
 
@@ -65,15 +92,17 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 	default:
 		break; // default
 	}
-	int border = cell.m_bordersList;
-	if (border)
+	if (cell.m_backgroundColor != 0xFFFFFF)
+		o << ",backColor=" << std::hex << cell.m_backgroundColor << ",";
+	for (size_t i = 0; i < cell.m_bordersList.size(); i++)
 	{
-		o << ",bord=[";
-		if (border&libwps::LeftBorderBit) o << "Lef";
-		if (border&libwps::RightBorderBit) o << "Rig";
-		if (border&libwps::TopBorderBit) o << "Top";
-		if (border&libwps::BottomBorderBit) o << "Bot";
-		o << "]";
+		if (cell.m_bordersList[i].m_style == WPSBorder::None)
+			continue;
+		o << "bord";
+		char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
+		if (i < 4) o << wh[i];
+		else o << "[#wh=" << i << "]";
+		o << "=" << cell.m_bordersList[i] << ",";
 	}
 	return o;
 }

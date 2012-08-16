@@ -52,7 +52,7 @@ void WPSTable::add(WPSCellPtr &cell)
 	m_cellsList.push_back(cell);
 }
 
-WPSCellPtr WPSTable::get(int id)
+WPSCellPtr WPSTable::getCell(int id)
 {
 	if (id < 0 || id >= int(m_cellsList.size()))
 	{
@@ -96,7 +96,7 @@ bool WPSTable::buildStructures()
 				positions.push_back(pos);
 				maxPosiblePos = float(pos+2.0); // 2 pixel ok
 			}
-			if (it->m_which == 0 && it->getPos(1)-2.0 < maxPosiblePos)
+			if (it->m_which == 0 && it->getPos(dim)-2.0 < maxPosiblePos)
 				maxPosiblePos = float((it->getPos(dim)+pos)/2.);
 		}
 		listPositions[dim] = positions;
@@ -114,7 +114,7 @@ bool WPSTable::buildStructures()
 			size_t i = 0;
 			while (i+1 < numPos && pos[i+1] < pt[0])
 				i++;
-			if (i+1 < numPos && (pos[i]+pos[i+1])/2 < pt[0])
+			while (i+1 < numPos && (pos[i]+pos[i+1])/2 < pt[0])
 				i++;
 			if (i+1 > numPos)
 			{
@@ -132,6 +132,18 @@ bool WPSTable::buildStructures()
 			{
 				WPS_DEBUG_MSG(("WPSTable::buildStructures: impossible to find span number !!!\n"));
 				return false;
+			}
+			if (spanCell[dim] > 1 &&
+			        pos[size_t(cellPos[dim])]+2.0f > pos[size_t(cellPos[dim]+1)])
+			{
+				spanCell[dim]--;
+				cellPos[dim]++;
+			}
+			if (spanCell[dim] > 1 &&
+			        pos[size_t(cellPos[dim])]+2.0f > pos[size_t(cellPos[dim]+1)])
+			{
+				spanCell[dim]--;
+				cellPos[dim]++;
 			}
 		}
 		m_cellsList[c]->m_position = Vec2i(cellPos[0], cellPos[1]);
@@ -209,7 +221,11 @@ bool WPSTable::sendTable(WPSContentListenerPtr listener)
 		{
 			size_t tablePos = r*numCols+c;
 			int id = cellsId[tablePos];
-			if (id < 0) continue;
+			if (id == -1)
+				listener->addEmptyTableCell(Vec2i(int(c), int(r)));
+			if (id < 0)
+				continue;
+
 			m_cellsList[size_t(id)]->send(listener);
 		}
 		listener->closeTableRow();

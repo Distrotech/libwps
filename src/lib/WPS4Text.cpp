@@ -1756,37 +1756,37 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				break;
 			}
 			arg = libwps::readU8(m_input);
-			pp.m_borderStyle = libwps::BorderSingle;
-			pp.m_borderWidth = 1;
+			pp.m_borderStyle.m_style = WPSBorder::Single;
+			pp.m_borderStyle.m_width = 1;
 			int style = (arg&0xf);
 			switch(style)
 			{
 			case 0:
 				break;
 			case 1:
-				pp.m_borderWidth = 2;
+				pp.m_borderStyle.m_width = 2;
 				break;
 			case 2:
-				pp.m_borderStyle = libwps::BorderDouble;
+				pp.m_borderStyle.m_style = WPSBorder::Double;
 				break;
 			case 3:
-				pp.m_borderStyle = libwps::BorderDot;
+				pp.m_borderStyle.m_style = WPSBorder::Dot;
 				break;
 			case 4:
-				pp.m_borderStyle = libwps::BorderLargeDot;
+				pp.m_borderStyle.m_style = WPSBorder::LargeDot;
 				break;
 			case 5:
-				pp.m_borderStyle = libwps::BorderDash;
+				pp.m_borderStyle.m_style = WPSBorder::Dash;
 				break;
 			case 6:
 			case 7:
 			case 8:
-				pp.m_borderWidth = style-3;
+				pp.m_borderStyle.m_width = style-3;
 				break;
 			case 9:
 			case 10:
-				pp.m_borderWidth = style-7;
-				pp.m_borderStyle = libwps::BorderDouble;
+				pp.m_borderStyle.m_width = style-7;
+				pp.m_borderStyle.m_style = WPSBorder::Double;
 				break;
 			default:
 				f << "#borderStyle=" << style << ",";
@@ -1798,7 +1798,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			{
 				uint32_t color;
 				if (high && mainParser().getColor(high, color))
-					pp.m_borderColor = color;
+					pp.m_borderStyle.m_color = color;
 				else if (high)
 					f << "#borderColor=" << high << ",";
 			}
@@ -1839,16 +1839,16 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				switch(v)
 				{
 				case 0xa:
-					pp.m_border |= libwps::TopBorderBit;
+					pp.m_border |= WPSBorder::TopBit;
 					break;
 				case 0xb:
-					pp.m_border |= libwps::BottomBorderBit;
+					pp.m_border |= WPSBorder::BottomBit;
 					break;
 				case 0xc:
-					pp.m_border |= libwps::LeftBorderBit;
+					pp.m_border |= WPSBorder::LeftBit;
 					break;
 				case 0xd:
-					pp.m_border |= libwps::RightBorderBit;
+					pp.m_border |= WPSBorder::RightBit;
 					break;
 				default:
 					break;
@@ -1867,7 +1867,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			int colorId = libwps::readU8(m_input);
 			uint32_t color;
 			if (mainParser().getColor(colorId, color))
-				pp.m_borderColor = color;
+				pp.m_borderStyle.m_color = color;
 			else
 				f << "#colorId=" << colorId << ",";
 			break;

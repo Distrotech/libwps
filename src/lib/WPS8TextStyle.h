@@ -23,6 +23,8 @@
 #ifndef WPS8_TEXTSTYLE_H
 #define WPS8_TEXTSTYLE_H
 
+#include <ostream>
+#include <string>
 #include <vector>
 
 #include "libwps_internal.h"
@@ -50,6 +52,8 @@ class WPS8TextStyle
 {
 	friend class WPS8Text;
 public:
+	struct FontData;
+
 	WPS8TextStyle(WPS8Text &parser);
 	~WPS8TextStyle();
 
@@ -68,7 +72,7 @@ protected:
 	//! reads a font properties
 	bool readFont(long endPos, int &id, std::string &mess);
 
-	void sendFont(int fId, uint16_t &specialCode, int &fieldType);
+	void sendFont(int fId, FontData &data);
 
 	//! the paragraph
 	bool readParagraph(long endPos, int &id, std::string &mess);
@@ -117,6 +121,24 @@ protected:
 	mutable shared_ptr<WPS8TextStyleInternal::State> m_state;
 	//! the ascii file
 	libwps::DebugFile &m_asciiFile;
+public:
+	struct FontData
+	{
+		FontData() : m_type(T_None), m_fieldType(F_None), m_fieldFormat(0) {}
+		//! operator <<
+		friend std::ostream &operator<<(std::ostream &o, FontData const &fData);
+		//! returns a format to used with strftime
+		std::string format() const;
+
+		enum { T_None=0, T_Object=2, T_Footnote=3, T_Endnote=4, T_Field=5, T_Comment=6 };
+		/** the main type: footnote, ... */
+		int m_type;
+		enum { F_None=0, F_PageNumber=-1, F_Date=-4, F_Time=-5 };
+		/** the field type: pagenumber, data, time, ... */
+		int m_fieldType;
+		/** the field format */
+		int m_fieldFormat;
+	};
 protected:
 };
 

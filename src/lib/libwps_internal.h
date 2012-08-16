@@ -221,6 +221,43 @@ struct WPSColumnProperties
 	uint8_t m_alignment;
 };
 
+//! a border list
+struct WPSBorder
+{
+	enum Style { None, Single, Double, Dot, LargeDot, Dash };
+	enum Pos { Left = 0, Right = 1, Top = 2, Bottom = 3 };
+	enum { LeftBit = 0x01,  RightBit = 0x02, TopBit=0x4, BottomBit = 0x08 };
+
+	//! constructor
+	WPSBorder() : m_style(Single), m_width(1), m_color(0) { }
+	//! return the properties
+	std::string getPropertyValue() const;
+
+	//! operator==
+	bool operator==(WPSBorder const &orig) const
+	{
+		return m_style == orig.m_style && m_width == orig.m_width
+		       && m_color == orig.m_color;
+	}
+	//! operator!=
+	bool operator!=(WPSBorder const &orig) const
+	{
+		return !operator==(orig);
+	}
+	//! compare two cell
+	int compare(WPSBorder const &orig) const;
+
+	//! operator<<: prints data in form "XxY"
+	friend std::ostream &operator<< (std::ostream &o, WPSBorder const &border);
+	//! the border style
+	Style m_style;
+	//! the border width
+	int m_width;
+	//! the border color
+	uint32_t m_color;
+
+};
+
 namespace libwps
 {
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
@@ -230,10 +267,6 @@ enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
                      JustificationRight, JustificationFullAllLines
                    };
 enum { NoBreakBit = 0x1, NoBreakWithNextBit=0x2};
-enum { LeftBorderBit = 0x01,  RightBorderBit = 0x02, TopBorderBit=0x4,
-       BottomBorderBit = 0x08
-     };
-enum BorderStyle { BorderSingle, BorderDouble, BorderDot, BorderLargeDot, BorderDash };
 }
 
 // ATTRIBUTE bits

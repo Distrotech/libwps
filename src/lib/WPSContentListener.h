@@ -89,9 +89,7 @@ struct WPSContentParsingState
 	WPXUnit m_paragraphLineSpacingUnit;
 	uint32_t m_paragraphBackgroundColor;
 	int m_paragraphBorders;
-	libwps::BorderStyle m_paragraphBordersStyle;
-	int m_paragraphBordersWidth;
-	uint32_t m_paragraphBordersColor;
+	WPSBorder m_paragraphBordersStyle;
 
 	shared_ptr<WPSList> m_list;
 	uint8_t m_currentListLevel;
@@ -235,7 +233,7 @@ public:
 	 * \param width = 1,2,3,...
 	 * \param color: the border color
 	 */
-	void setParagraphBorders(int which, libwps::BorderStyle style=libwps::BorderSingle, int width=1, uint32_t color=0);
+	void setParagraphBorders(int which, WPSBorder style=WPSBorder());
 
 	// ------ list format -----------
 	/** function to set the actual list */
@@ -288,10 +286,14 @@ public:
 	void openTableCell(WPSCell const &cell, WPXPropertyList const &extras);
 	/** close a cell */
 	void closeTableCell();
+	/** add empty cell */
+	void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
 
 	// ------- section ---------------
 	//! returns true if a section is opened
 	bool isSectionOpened() const;
+	//! returns the actual number of columns ( or 1 if no section is opened )
+	int getSectionNumColumns() const;
 	//! open a section if possible
 	bool openSection(std::vector<int> colsWidth=std::vector<int>(), WPXUnit unit=WPX_INCH);
 	//! close a section

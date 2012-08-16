@@ -83,6 +83,15 @@ struct FileData
 	{
 		return !hasStr() && (m_type & 0x30) != 0;
 	}
+	//! returns a rgb color by converting the integer value field
+	uint32_t getRGBColor() const
+	{
+		uint32_t col = (uint32_t) (m_value&0xFFFFFF);
+		return (((col>>16)&0xFF) |(col&0xFF00)|((col&0xFF)<<16));
+	}
+	//! returns the border style using the integer value field
+	WPSBorder::Style getBorderStyle(std::string &mess) const;
+
 	//! returns true if it is a bool data
 	bool isBool() const
 	{

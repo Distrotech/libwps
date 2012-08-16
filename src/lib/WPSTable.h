@@ -64,7 +64,7 @@ public:
 		return int(m_cellsList.size());
 	}
 	//! returns the i^th cell
-	WPSCellPtr get(int id);
+	WPSCellPtr getCell(int id);
 
 	/** try to send the table
 
