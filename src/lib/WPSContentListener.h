@@ -229,9 +229,7 @@ public:
 	void setParagraphBackgroundColor(uint32_t color=0xFFFFFF);
 	/** indicates that the paragraph has a basic borders (ie. a black line)
 	 * \param which = libwps::LeftBorderBit | ...
-	 * \param style = libwps::BorderSingle | libwps::BorderDouble
-	 * \param width = 1,2,3,...
-	 * \param color: the border color
+	 * \param style indicates the style
 	 */
 	void setParagraphBorders(int which, WPSBorder style=WPSBorder());
 

@@ -111,7 +111,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 
 	if (!m_entry.valid())
 	{
-		WPS_DEBUG_MSG(("SubDocument::parse: empty document found...\n"));
+		WPS_DEBUG_MSG(("WPS8ParserInternal::SubDocument::parse: empty document found...\n"));
 		listen->insertCharacter(' ');
 		return;
 	}
@@ -345,6 +345,12 @@ shared_ptr<WPS8ContentListener> WPS8Parser::createListener(WPXDocumentInterface 
 	WPSPageSpan ps(m_state->m_pageSpan);
 
 	int numPages = 1;
+	for (size_t i = 0; i < m_state->m_frameList.size(); i++)
+	{
+		if (m_state->m_frameList[i].m_pos.page() > numPages)
+			numPages = m_state->m_frameList[i].m_pos.page();
+	}
+
 	int textPages = m_textParser->numPages();
 	if (textPages > numPages) numPages = textPages;
 	int tablePages = m_tableParser->numPages();
@@ -405,12 +411,39 @@ void WPS8Parser::send(WPSEntry const &entry)
 	input->seek(actPos, WPX_SEEK_SET);
 }
 
+void WPS8Parser::send(int strsId)
+{
+	send(m_textParser->getEntry(strsId));
+}
+
 void WPS8Parser::sendTextInCell(int strsId, int cellId)
 {
 	WPXInputStreamPtr input = getInput();
 	long actPos = input->tell();
 	m_textParser->readTextInCell(strsId,cellId);
 	input->seek(actPos, WPX_SEEK_SET);
+}
+
+void WPS8Parser::sendTextBox(WPSPosition const &pos, int strsid, WPXPropertyList frameExtras)
+{
+	if (!m_listener)
+	{
+		WPS_DEBUG_MSG(("WPS8Parser::sendTextBox can not find the listener\n"));
+		return;
+	}
+	WPSEntry entry = m_textParser->getEntry(strsid);
+	WPSSubDocumentPtr subdoc(new WPS8ParserInternal::SubDocument
+	                         (getInput(), *this, entry));
+	m_listener->insertTextBox(pos, subdoc, frameExtras);
+}
+
+bool WPS8Parser::sendObject(Vec2f const &size, int objectId, bool ole)
+{
+	WPSPosition posi(Vec2f(),size);
+	posi.setRelativePosition(WPSPosition::CharBaseLine);
+	posi.m_wrapping = WPSPosition::WDynamic;
+	m_graphParser->sendObject(posi,objectId,ole);
+	return true;
 }
 
 bool WPS8Parser::sendTable(Vec2f const &size, int objectId)
@@ -428,19 +461,16 @@ bool WPS8Parser::sendTable(Vec2f const &size, int objectId)
 		WPS_DEBUG_MSG(("WPS8Parser:sendTable can not find the text zone \n"));
 		return false;
 	}
+
 	if (frame.m_idTable < 0)
 	{
-		WPS_DEBUG_MSG(("WPS8Parser:sendTable can not find the table zone \n"));
-
-#if 0
-		// FIXME
 		WPSPosition position(Vec2f(), size);
 		position.m_anchorTo = WPSPosition::CharBaseLine; // CHECKME
 		position.m_wrapping = WPSPosition::WDynamic;
+
+		WPS_DEBUG_MSG(("WPS8Parser:sendTable can not find the table zone \n"));
 		sendTextBox(position, frame.m_idStrs);
 		return true;
-#endif
-		return false;
 	}
 	frame.m_parsed = true;
 	return m_tableParser->sendTable(size, frame.m_idTable, frame.m_idStrs);
@@ -455,7 +485,7 @@ int WPS8Parser::getTableSTRSId(int tableId) const
 	WPS8ParserInternal::Frame const &frame = m_state->m_frameList[(size_t)pos->second];
 	if (frame.m_idStrs < 0)
 	{
-		WPS_DEBUG_MSG(("WPS8Parser:sendTable can not find the text zone \n"));
+		WPS_DEBUG_MSG(("WPS8Parser:getTableSTRSId can not find the text zone \n"));
 	}
 	return frame.m_idStrs;
 }
@@ -471,8 +501,6 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 		throw(libwps::ParseException());
 	}
 
-	// fixme: actually the pictures are not send to listener, so no need to parse OLEstructures
-#ifdef DEBUG
 	try
 	{
 		createOLEStructures();
@@ -481,7 +509,6 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parse: exception catched when parsing secondary OLEs\n"));
 	}
-#endif
 
 	ascii().setStream(input);
 	ascii().open("CONTENTS");
@@ -501,6 +528,7 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 		throw(libwps::ParseException());
 	}
 	m_listener->startDocument();
+	sendPageFrames();
 	WPSEntry ent = m_textParser->getTextEntry();
 	if (ent.valid())
 		m_textParser->readText(ent);
@@ -663,6 +691,60 @@ bool WPS8Parser::createOLEStructures()
 	}
 #endif
 	return true;
+}
+
+////////////////////////////////////////////////////////////
+// send the frames which correspond to a page
+////////////////////////////////////////////////////////////
+void WPS8Parser::sendPageFrames()
+{
+	if (!m_listener) return;
+
+	typedef WPS8ParserInternal::Frame Frame;
+	WPXInputStreamPtr input = getInput();
+	long actPos = input->tell();
+
+	size_t numFrames = m_state->m_frameList.size();
+	for (size_t i = 0; i < numFrames; i++)
+	{
+		Frame const &frame = m_state->m_frameList[i];
+		if (frame.m_parsed) continue;
+		if (frame.m_pos.page() < 0 || frame.m_idObject != -1) continue;
+		if (frame.m_pos.size()[0] <= 0 || frame.m_pos.size()[1] <= 0) continue;
+
+		WPSPosition pos(frame.m_pos);
+		if (pos.origin().y() < 0 || pos.origin().x() < 0)
+		{
+			// FIXME: the
+			WPS_DEBUG_MSG(("WPS8Parser::insertPageFrames: origin is too small\n"));
+			Vec2f orig = pos.origin();
+			orig += Vec2f(float(m_state->m_pageSpan.getMarginLeft()),
+			              float(m_state->m_pageSpan.getMarginTop()));
+			pos.setOrigin(orig);
+		}
+		pos.m_anchorTo = WPSPosition::Page;
+		pos.m_wrapping = WPSPosition::WDynamic;
+		frame.m_parsed = true;
+		if (frame.m_type == Frame::Object)
+			m_graphParser->sendObject(pos, frame.m_idOle, true);
+		else if (frame.m_type == Frame::Text)
+		{
+			WPXPropertyList frameExtras;
+			if (frame.m_backgroundColor != 0xFFFFFF)
+			{
+				char color[20];
+				sprintf(color,"#%06x",frame.m_backgroundColor);
+				frameExtras.insert("fo:background-color", color);
+			}
+			sendTextBox(pos, frame.m_idStrs, frameExtras);
+		}
+		else if (frame.m_type != Frame::Header && frame.m_type != Frame::Footer)
+		{
+			WPS_DEBUG_MSG(("WPS8Parser::insertPageFrames: not implemented type%d\n", int(frame.m_type)));
+		}
+	}
+
+	input->seek(actPos,WPX_SEEK_SET);
 }
 
 ////////////////////////////////////////////////////////////

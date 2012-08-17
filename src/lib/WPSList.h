@@ -48,7 +48,7 @@ public:
 	{
 
 		/** basic constructor */
-		Level() : m_labelIndent(0.0), m_labelWidth(0.0), m_startValue(0), m_type(libwps::NONE),
+		Level() : m_labelIndent(0.0), m_labelWidth(0.0), m_startValue(-1), m_type(libwps::NONE),
 			m_prefix(""), m_suffix(""), m_bullet(""), m_sendToInterface(false) { }
 
 		/** returns true if the level type was not set */
@@ -78,11 +78,14 @@ public:
 		/** returns the start value (if set) or 1 */
 		int getStartValue() const
 		{
-			return m_startValue <= 0 ? 1 : m_startValue;
+			return m_startValue <= -1 ? 1 : m_startValue;
 		}
 
-		//! comparison function
+		//! full comparison function
 		int cmp(Level const &levl) const;
+
+		//! type comparison function
+		int cmpType(Level const &levl) const;
 
 		//! operator<<
 		friend std::ostream &operator<<(std::ostream &o, Level const &ft);

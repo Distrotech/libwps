@@ -98,9 +98,10 @@ protected:
 	 * \param siz the size of the table in the document
 	 * \param tableId the table identificator
 	 * \param strsid indicates the text entry (and its corresponding TCD )
+	 * \param inTextBox indicates if we have already created a textbox to insert the table
 	 * which contains the cells' text.
 	 */
-	bool sendTable(Vec2f const &siz, int tableId, int strsid);
+	bool sendTable(Vec2f const &siz, int tableId, int strsid, bool inTextBox=false);
 
 	// interface with main parser
 	void sendTextInCell(int strsId, int cellId);

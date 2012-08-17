@@ -244,7 +244,7 @@ void WPS8Table::flushExtra()
 ////////////////////////////////////////////////////////////
 // send a table id
 ////////////////////////////////////////////////////////////
-bool WPS8Table::sendTable(Vec2f const &siz, int tableId, int strsid)
+bool WPS8Table::sendTable(Vec2f const &siz, int tableId, int strsid, bool inTextBox)
 {
 	if (!m_listener)
 	{
@@ -258,17 +258,21 @@ bool WPS8Table::sendTable(Vec2f const &siz, int tableId, int strsid)
 	}
 	typedef WPS8TableInternal::Table Table;
 
-	WPSPosition tablePos(Vec2f(), siz);
-	tablePos.m_anchorTo = WPSPosition::CharBaseLine; // CHECKME
-	tablePos.m_wrapping = WPSPosition::WDynamic;
-
 	std::map<int, Table>::iterator pos = m_state->m_tableMap.find(tableId);
 	if (pos == m_state->m_tableMap.end())
 	{
 		WPS_DEBUG_MSG(("WPS8Table::sendTable: can not find table with id=%d\n", tableId));
-#if 0
-		m_mainParser.sendTextBox(tablePos, strsid);
-#endif
+		if (inTextBox)
+			m_mainParser.send(strsid);
+		else
+		{
+			// OK, we revert to a textbox inserted as a character
+			WPSPosition tablePos(Vec2f(), siz);
+			tablePos.m_anchorTo = WPSPosition::CharBaseLine;
+			tablePos.m_wrapping = WPSPosition::WDynamic;
+
+			m_mainParser.sendTextBox(tablePos, strsid);
+		}
 		return true;
 	}
 
@@ -563,6 +567,8 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 				{
 					float percent=0.5;
 					int motif = int(dt.m_value&0xFF);
+					if (motif == 0) // no motif
+						break;
 					if (motif >= 3 && motif <= 9) percent = float(motif)*0.1f; // gray motif
 					else
 						f2 << "backMotif=" << motif << ",";

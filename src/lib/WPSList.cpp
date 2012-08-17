@@ -69,9 +69,22 @@ void WPSList::Level::addTo(WPXPropertyList &propList, int startVal) const
 	m_sendToInterface = true;
 }
 
-int WPSList::Level::cmp(WPSList::Level const &levl) const
+int WPSList::Level::cmpType(WPSList::Level const &levl) const
 {
 	int diff = int(m_type)-int(levl.m_type);
+	if (diff) return diff;
+	diff = strcmp(m_prefix.cstr(),levl.m_prefix.cstr());
+	if (diff) return diff;
+	diff = strcmp(m_suffix.cstr(),levl.m_suffix.cstr());
+	if (diff) return diff;
+	diff = strcmp(m_bullet.cstr(),levl.m_bullet.cstr());
+	if (diff) return diff;
+	return 0;
+}
+
+int WPSList::Level::cmp(WPSList::Level const &levl) const
+{
+	int diff = cmpType(levl);
 	if (diff) return diff;
 	double fDiff = m_labelIndent-levl.m_labelIndent;
 	if (fDiff < 0) return -1;
@@ -79,10 +92,6 @@ int WPSList::Level::cmp(WPSList::Level const &levl) const
 	fDiff = m_labelWidth-levl.m_labelWidth;
 	if (fDiff < 0) return -1;
 	if (fDiff > 0) return 1;
-	diff = strcmp(m_prefix.cstr(),levl.m_prefix.cstr());
-	if (diff) return diff;
-	diff = strcmp(m_suffix.cstr(),levl.m_suffix.cstr());
-	if (diff) return diff;
 	diff = strcmp(m_bullet.cstr(),levl.m_bullet.cstr());
 	if (diff) return diff;
 	return 0;
@@ -115,7 +124,7 @@ std::ostream &operator<<(std::ostream &o, WPSList::Level const &ft)
 	default:
 		o << "####";
 	}
-	if (ft.m_type != libwps::BULLET && ft.m_startValue)
+	if (ft.m_type != libwps::BULLET && ft.m_startValue >= 0)
 		o << ",startVal= " << ft.m_startValue;
 	if (ft.m_prefix.len()) o << ", prefix='" << ft.m_prefix.cstr()<<"'";
 	if (ft.m_suffix.len()) o << ", suffix='" << ft.m_suffix.cstr()<<"'";
@@ -192,8 +201,8 @@ void WPSList::set(int levl, Level const &level)
 		m_nextIndices.resize(size_t(levl), 1);
 	}
 	int needReplace = m_levels[size_t(levl-1)].cmp(level) != 0 ||
-	                  (level.m_startValue && m_nextIndices[size_t(levl-1)] !=level.getStartValue());
-	if (level.m_startValue > 0 || level.m_type != m_levels[size_t(levl-1)].m_type)
+	                  (level.m_startValue>=0 && m_nextIndices[size_t(levl-1)] !=level.getStartValue());
+	if (level.m_startValue >= 0 || level.cmpType(m_levels[size_t(levl-1)]))
 	{
 		m_nextIndices[size_t(levl-1)]=level.getStartValue();
 	}

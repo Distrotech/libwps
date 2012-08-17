@@ -94,6 +94,8 @@ struct State
 	//! initializes the type map
 	void initTypeMaps();
 
+	//! convert Wingdings to unicode, returns 0 if problems
+	static uint32_t wingdingsToUnicode(int val);
 	//! the font names
 	std::vector<std::string> m_fontNames;
 
@@ -137,6 +139,44 @@ void State::initTypeMaps()
 	};
 	for (int i = 0; i+1 < int(sizeof(paragraphTypes)/sizeof(int)); i+=2)
 		m_paragraphTypes[paragraphTypes[i]] = paragraphTypes[i+1];
+}
+
+/* Unicode mapping for Wingdings font, from http://www.alanwood.net/ replacing by equivalent caracters when the caracter does not exist */
+uint32_t State::wingdingsToUnicode(int val)
+{
+	static uint32_t const map[224] =
+	{
+		0x0020, 0x270F, 0x2702, 0x2701, 0x1F453, 0x1F514, 0x1F4D6, 0x2710/*candle*/,
+		0x260E, 0x2706, 0x2709, 0x260E, 0x1F4EA, 0x1F4EB, 0x1F4EC, 0x1F4ED,
+		0x1F4C1, 0x1F4C2, 0x1F4C4, 0x1F4C4, 0x1F4C4, 0x25AF/*filecabinet*/, 0x231B, 0x2328,
+		0x1F42F, 0x2022, 0x1F4BB, 0x1F4BB/*hard disk*/, 0x1F4BE, 0x1F4BE, 0x2707, 0x270D,
+		0x270D, 0x270C, 0x1F44C, 0x1F44D, 0x1F44E, 0x261C, 0x261E, 0x261D,
+		0x261F, 0x270B, 0x263A, 0x1F610, 0x2639, 0x1F4A3, 0x2620, 0x2690,
+		0x1F6A9, 0x2708, 0x263C, 0x1F4A7, 0x2744, 0x271E, 0x271E, 0x271D,
+		0x2720, 0x2721, 0x262A, 0x262F, 0x0950, 0x2638, 0x2648, 0x2649,
+		0x264A, 0x264B, 0x254C, 0x264D, 0x264E, 0x264F, 0x2650, 0x2651,
+		0x2652, 0x2653, 0x0026, 0x0026, 0x25CF, 0x274D, 0x25A0, 0x25A1,
+		0x2751, 0x2751, 0x2752, 0x2727, 0x29EB, 0x25C6, 0x2756, 0x2B25,
+		0x2327, 0x2353, 0x2318, 0x2740, 0x273F, 0x275D, 0x275E, 0x25AF,
+		0x24EA, 0x2460, 0x2461, 0x2462, 0x2463, 0x2464, 0x2465, 0x2466,
+		0x2467, 0x2468, 0x2469, 0x24FF, 0x2776, 0x2777, 0x2778, 0x2779,
+		0x277A, 0x277B, 0x277C, 0x277D, 0x277E, 0x277F, 0x269B/* bud and vine leaf*/, 0x269B,
+		0x269B, 0x269B, 0x269B, 0x269B, 0x269B, 0x269B, 0x00B7, 0x2022,
+		0x25AA, 0x25CB, 0x2B55, 0x2B55, 0x25C9, 0x25CE, 0x25CB, 0x25AA,
+		0x25FB, 0x25B2, 0x2726, 0x2605, 0x2736, 0x2734, 0x2739, 0x2735,
+		0x229E, 0x2316, 0x27E1, 0x2311, 0x2370, 0x272A, 0x2730, 0x1F550,
+		0x1F551, 0x1F552, 0x1F553, 0x1F554, 0x1F555, 0x1F556, 0x1F557, 0x1F558,
+		0x1F559, 0x1F55A, 0x1F55B, 0x21B5, 0x21B3, 0x21B0, 0x21B1, 0x21BB,
+		0x21BA, 0x21BA, 0x21BB, 0x2722, 0x2722, 0x2743,/* normally leaf...*/ 0x2743, 0x2743,
+		0x2743, 0x2743, 0x2743, 0x2743, 0x2743, 0x232B, 0x2326, 0x27A2,
+		0x27A2, 0x27A2, 0x27A2, 0x27B2, 0x27B2, 0x27B2, 0x27B2, 0x2190,
+		0x2192, 0x2191, 0x2193, 0x2196, 0x2197, 0x2199, 0x2198, 0x2190,
+		0x2192, 0x2191, 0x2193, 0x2196, 0x2197, 0x2199, 0x2198, 0x21E6,
+		0x21E8, 0x21E7, 0x21E9, 0x2B04, 0x21F3, 0x2B00, 0x2B01, 0x2B03,
+		0x2B02, 0x25AD, 0x25AB, 0x2717, 0x2713, 0x2612, 0x2611, 0x2022 /* windows logo*/
+	};
+	if (val < 0x20 || val > 0xFF) return 0;
+	return map[val-0x20];
 }
 }
 
@@ -666,13 +706,19 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		{
 			/* case 0x2: what?=data.m_value/914400.; */
 		case 0x3:
-			if (data.m_value != 1) f << "###bullet=" << data.m_value << ",";
-			else
+			switch (data.m_value)
 			{
+			case 2: // not frequent: only found one time
+				f << "#type[bullet]=2,";
+			case 1: // the normal case
 				para.m_listLevelIndex = 1;
 				para.m_listLevel.m_type = libwps::BULLET;
 				para.m_listLevel.m_bullet.clear();
 				WPSContentListener::appendUnicode(0x2022, para.m_listLevel.m_bullet);
+				break;
+			default:
+				f << "###bullet=" << data.m_value << ",";
+				break;
 			}
 			break;
 		case 0x4:
@@ -776,43 +822,27 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 			else if (para.m_listLevel.m_type == libwps::BULLET)
 			{
 				para.m_listLevel.m_bullet.clear();
-				// I find here : 4a, 9f, a7, ac, b7, d8
-				uint32_t code = 0x27A1;
-				switch (data.m_value)
+				uint32_t code = m_state->wingdingsToUnicode(int(data.m_value));
+				if (!code)
 				{
-				case 0x4a:
+					WPS_DEBUG_MSG(("WPS8TextStyle::readParagraph: can not find bullet code\n"));
+					f << "#bullet[code]=" << std::hex << data.m_value << "," << std::dec;
 					code = 0x2022;
-					break;
-				case 0x9f:
-					code = 0x2605;
-					break;
-				case 0xa7:
-					code = 0x2713;
-					break;
-				case 0xac:
-					code = 0x2724;
-					break;
-				case 0xb7:
-					code = 0x2726;
-					break;
-				case 0xd8:
-					code = 0x2756;
-					break;
-				default:
-					f<<"#bullet/code=" << std::hex << data.m_value << "," << std::dec;
 				}
+				else if (code >= 0x10000)
+					code = 0x2022; // this unicode char may not print ok
 				WPSContentListener::appendUnicode(code, para.m_listLevel.m_bullet);
 			}
 			else
-				f << "#bullet/numb=" << std::hex << data.m_value << "," << std::dec;
+				f << "##bullet/numb=" << std::hex << data.m_value << "," << std::dec;
 			break;
 		}
 		case 0x15:
-			if (para.m_listLevel.isNumeric() && data.m_value > 0)
+			if (para.m_listLevel.isNumeric() && data.m_value >= 0)
 				para.m_listLevel.m_startValue = int(data.m_value);
 			else
-				// can also be present in the lines following a line's list : ok
-				// Note: If value 0x14=0x2d, it is frequent to find here 0x29 : what does this mean ?
+				// can also be present in the lines preceding/following a line's list : ok
+				// do we need to use this value as to compute the next starting value ?
 				f << "#bullet/startValue?=" << std::hex << data.m_value << std::dec << ",";
 			break;
 		case 0x17:
@@ -864,6 +894,9 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		{
 			float percent=0.5;
 			int motif = int(data.m_value&0xFF);
+			if (motif == 0) // checkme: no motif
+				break;
+
 			if (motif >= 3 && motif <= 9) percent = float(motif)*0.1f; // gray motif
 			else
 				f << "backMotif=" << motif << ",";

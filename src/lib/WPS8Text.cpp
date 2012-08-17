@@ -363,9 +363,17 @@ struct State
 	//! try to return a entry for a cell in table zones
 	WPSEntry getTCDZone(int strsId, int cellId) const
 	{
-		if (strsId < 0 || strsId >= int(m_textZones.size())
-		        || cellId < 0 || m_tcdMap.find(strsId) == m_tcdMap.end())
+		if (strsId < 0 || strsId >= int(m_textZones.size()) || cellId < 0)
 			return WPSEntry();
+		if (m_tcdMap.find(strsId) == m_tcdMap.end())
+		{
+			if (cellId != 0)
+				return WPSEntry();
+			// a table with 1 cell has no tcd,
+			m_textZones[size_t(strsId)].setParsed(true);
+			return m_textZones[size_t(strsId)];
+		}
+
 		std::vector<long> const &endPos = m_tcdMap.find(strsId)->second;
 		if (cellId >= int(endPos.size()))
 			return WPSEntry();
@@ -423,9 +431,13 @@ void State::initTypeMaps()
 class SubDocument : public WPSSubDocument
 {
 public:
-	//! constructor for a text entry
+	//! constructor for a note/endnote entry
 	SubDocument(WPXInputStreamPtr input, WPS8Text &pars, WPSEntry const &entry) :
-		WPSSubDocument(input, 0), m_textParser(&pars), m_entry(entry) {}
+		WPSSubDocument(input, 0), m_textParser(&pars), m_entry(entry), m_text("") {}
+	//! constructor for a comment entry
+	SubDocument(WPXInputStreamPtr input, WPXString const &text) :
+		WPSSubDocument(input, 0), m_textParser(0), m_entry(), m_text(text) {}
+
 	//! destructor
 	~SubDocument() {}
 
@@ -438,6 +450,7 @@ public:
 		if (!sDoc) return false;
 		if (m_entry != sDoc->m_entry) return false;
 		if (m_textParser != sDoc->m_textParser) return false;
+		if (m_text != sDoc->m_text) return false;
 		return true;
 	}
 
@@ -446,6 +459,7 @@ public:
 
 	WPS8Text *m_textParser;
 	WPSEntry m_entry;
+	WPXString m_text;
 private:
 	SubDocument(SubDocument const &orig);
 	SubDocument &operator=(SubDocument const &orig);
@@ -465,6 +479,11 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 	}
 	WPS8ContentListenerPtr &listen =  reinterpret_cast<WPS8ContentListenerPtr &>(listener);
 
+	if (type==libwps::DOC_COMMENT_ANNOTATION)
+	{
+		listen->insertUnicodeString(m_text);
+		return;
+	}
 	if (!m_textParser)
 	{
 		listen->insertCharacter(' ');
@@ -694,6 +713,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 				break;
 			}
 			case DataFOD::ATTR_PLC:
+			{
 				if (plc.m_id < 0) break;
 				if (plc.m_id >= int(m_state->m_plcList.size()))
 				{
@@ -701,8 +721,25 @@ void WPS8Text::readText(WPSEntry const &entry)
 					WPS_DEBUG_MSG(("WPS8Text::readText: can not find plc %d\n",plc.m_id));
 					break;
 				}
-				f << "[" << m_state->m_plcList[size_t(plc.m_id)] << "]";
+				WPS8TextInternal::DataPLC const &thePLC = m_state->m_plcList[size_t(plc.m_id)];
+				f << "[" << thePLC << "]";
+#ifdef DEBUG
+				// no sure, if we want to output this data
+				if (thePLC.m_type == WPS8TextInternal::BMKT)
+				{
+					if (m_state->m_bookmarkMap.find(pos) == m_state->m_bookmarkMap.end())
+					{
+						WPS_DEBUG_MSG(("WPS8Text::readText: can not find bookmark for pos %lX\n",pos));
+					}
+					else
+					{
+						shared_ptr<WPSSubDocument> doc(new WPS8TextInternal::SubDocument(input, m_state->m_bookmarkMap.find(pos)->second.m_text));
+						m_listener->insertComment(doc);
+					}
+				}
+#endif
 				break;
+			}
 			case DataFOD::ATTR_UNKN:
 			default:
 				break;
@@ -761,12 +798,12 @@ void WPS8Text::readText(WPSEntry const &entry)
 				m_listener->insertBreak(WPS_COLUMN_BREAK);
 				break;
 
-			case 0x1E:
-				//fixme: non-breaking hyphen
+			case 0x1E: // checkme: non-breaking hyphen
+				m_listener->insertUnicode(0x2011);
 				break;
 
-			case 0x1F:
-				//fixme: optional breaking hyphen
+			case 0x1F: // non-breaking space ? ( old: optional breaking hyphen)
+				m_listener->insertUnicode(0xA0);
 				break;
 
 			case 0x23:
@@ -833,8 +870,14 @@ void WPS8Text::readText(WPSEntry const &entry)
 					break;
 				}
 				WPS8TextInternal::Object const &obj = m_state->m_objectMap.find(objPos)->second;
-				if (obj.m_type == WPS8TextInternal::Object::Table)
+				if (obj.m_type == WPS8TextInternal::Object::Image)
+					mainParser().sendObject(obj.m_size, obj.m_id, true);
+				else if (obj.m_type == WPS8TextInternal::Object::Table)
 					mainParser().sendTable(obj.m_size, obj.m_id);
+				else
+				{
+					WPS_DEBUG_MSG(("WPSText::readText do not know how to send object in position : %lX\n", objPos));
+				}
 				break;
 			}
 			default:

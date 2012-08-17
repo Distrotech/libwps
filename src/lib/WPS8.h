@@ -25,8 +25,8 @@
 
 #include <vector>
 
-#include <libwpd-stream/WPXStream.h>
 #include "libwps_internal.h"
+#include <libwpd/WPXPropertyList.h>
 
 #include "WPSParser.h"
 
@@ -88,13 +88,18 @@ protected:
 	//! returns the number of columns
 	int numColumns() const;
 
+	//! send the frames which corresponds to a given page to the listener
+	void sendPageFrames();
 	// interface with text parser
 
 	//! creates a subdocument to send a textbox which correspond to the strsid text zone
-	void sendTextBox(WPSPosition const &/*pos*/, int /*strsid*/) {}
+	void sendTextBox(WPSPosition const &pos, int strsid,
+	                 WPXPropertyList frameExtras=WPXPropertyList());
 
 	//! sends text corresponding to the entry to the listener (via WPS8Text)
 	void send(WPSEntry const &entry);
+	//! sends text corresponding to the strsId to the listener (via WPS8Text)
+	void send(int strsId);
 
 	//! send the text of a cell to a listener (via WPS8Text)
 	void sendTextInCell(int strsId, int cellId);
@@ -107,6 +112,13 @@ protected:
 	int getTableSTRSId(int tableId) const;
 
 	// interface with graph parser
+
+	/** sends an object as a character with given size (via its WPS8Graph )
+	 *
+	 * \param size the size of the object in the document pages
+	 * \param objectId the object identificator
+	 * \param ole indicated if we look for objects coming from a ole zone or objects coming from a Pict zone */
+	bool sendObject(Vec2f const &size, int objectId, bool ole);
 
 	//
 	// low level
