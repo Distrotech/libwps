@@ -1845,7 +1845,10 @@ void WPSContentListener::openTableRow(float h, WPXUnit unit, bool headerRow)
 	WPXPropertyList propList;
 	propList.insert("libwpd:is-header-row", headerRow);
 
-	propList.insert("style:row-height", h, unit);
+	if (h > 0)
+		propList.insert("style:row-height", h, unit);
+	else if (h < 0)
+		propList.insert("style:min-row-height", -h, unit);
 	m_documentInterface->openTableRow(propList);
 	m_ps->m_isTableRowOpened = true;
 }

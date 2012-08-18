@@ -125,7 +125,7 @@ class WPSCell : public WPSCellFormat
 	friend class WPSTable;
 public:
 	//! constructor
-	WPSCell() : WPSCellFormat(), m_box(), m_position(0,0), m_numberCellSpanned(1,1) {}
+	WPSCell() : WPSCellFormat(), m_box(), m_verticalSet(true), m_position(0,0), m_numberCellSpanned(1,1) {}
 
 	//! set the bounding box (units in point)
 	void setBox(Box2f const &b)
@@ -136,6 +136,16 @@ public:
 	Box2f const &box() const
 	{
 		return m_box;
+	}
+	//! returns true if the vertical is fixed
+	bool isVerticalSet() const
+	{
+		return m_verticalSet;
+	}
+	//! fixes or not the vertical size
+	void setVerticalSet(bool verticalSet)
+	{
+		m_verticalSet = verticalSet;
 	}
 	//! position  accessor
 	Vec2i &position()
@@ -208,6 +218,7 @@ protected:
 			        - c2.m_cell->box().size()[m_coord];
 			if (diffF < 0) return true;
 			if (diffF > 0) return false;
+			if (c1.m_cell->m_verticalSet != c2.m_cell->m_verticalSet) return c1.m_cell->m_verticalSet;
 			return long(c1.m_cell) < long(c2.m_cell);
 		}
 
@@ -217,6 +228,8 @@ protected:
 
 	/** the cell bounding box (unit in point)*/
 	Box2f m_box;
+	/** true if y size is fixed */
+	bool m_verticalSet;
 	//! the cell row and column : 0,0 -> A1, 0,1 -> A2
 	Vec2i m_position;
 	//! the cell spanned : by default (1,1)

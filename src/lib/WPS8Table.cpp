@@ -620,12 +620,19 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 					f2 << "unknBord" << borderNames[(dt.id()-0x22)/3] << "=" << dt.m_value << ",";
 					break;
 				case 0x2c: // 1, 0, -1
-					if (dt.m_value < 0 || dt.m_value >= 256)
+					switch(dt.m_value)
 					{
-						done = false;
+					case 0:
+						break; // normal
+					case 0xFF: // also unset, diff with value = 1 ?
+						f2 << "#f" << dt.id() << "=" << std::hex << dt.m_value << std::dec << ",";
+					case 1:
+						cell->setVerticalSet(false);
+						break;
+					default:
+						f2 << "f" << dt.id() << "=" << std::hex << dt.m_value << std::dec << ",";
 						break;
 					}
-					f2 << "f" << dt.id() << "=" << (int) (int8_t)dt.m_value << ",";
 					break;
 					// always 0,excepted 0x15 and 0x18 which can be 0 or 1 ?
 				case 0xa:

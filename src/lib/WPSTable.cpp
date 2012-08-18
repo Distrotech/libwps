@@ -101,6 +101,8 @@ bool WPSTable::buildStructures()
 		}
 		listPositions[dim] = positions;
 	}
+	std::vector<int> numYSet(listPositions[1].size(), 0);
+	std::vector<int> numYUnset(listPositions[1].size(), 0);
 	for (size_t c = 0; c < nCells; c++)
 	{
 		int cellPos[2], spanCell[2];
@@ -148,6 +150,13 @@ bool WPSTable::buildStructures()
 		}
 		m_cellsList[c]->m_position = Vec2i(cellPos[0], cellPos[1]);
 		m_cellsList[c]->m_numberCellSpanned = Vec2i(spanCell[0], spanCell[1]);
+		for (int x = cellPos[0]; x < cellPos[0]+spanCell[0]; x++)
+		{
+			if (m_cellsList[c]->isVerticalSet())
+				numYSet[size_t(cellPos[1]+spanCell[1]-1)]++;
+			else
+				numYUnset[size_t(cellPos[1]+spanCell[1]-1)]++;
+		}
 	}
 	// finally update the row/col size
 	for (int dim = 0; dim < 2; dim++)
@@ -158,7 +167,14 @@ bool WPSTable::buildStructures()
 		std::vector<float> &res = (dim==0) ? m_colsSize : m_rowsSize;
 		res.resize(numPos-1);
 		for (size_t i = 0; i < numPos-1; i++)
-			res[i] = pos[i+1]-pos[i];
+		{
+			if (dim==0 || numYUnset[i]==0)
+				res[i] = pos[i+1]-pos[i];
+			else if (numYSet[i])
+				res[i] = -(pos[i+1]-pos[i]);
+			else
+				res[i] = 0;
+		}
 	}
 
 	return true;

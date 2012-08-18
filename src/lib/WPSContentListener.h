@@ -274,7 +274,7 @@ public:
 	void openTable(std::vector<float> const &colWidth, WPXUnit unit);
 	/** closes this table */
 	void closeTable();
-	/** open a row with given height*/
+	/** open a row with given height. If h<0, use min-row-heigth */
 	void openTableRow(float h, WPXUnit unit, bool headerRow=false);
 	/** closes this row */
 	void closeTableRow();
