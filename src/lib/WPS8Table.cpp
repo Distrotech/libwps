@@ -549,16 +549,9 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 				case 0x12: //  0x0 or 0x997aa0 or 0x3fffe238 ?
 					f2 << "f" << dt.id() << "=" << std::hex << dt.m_value << std::dec << ",";
 					break;
-				case 0x13:   //0xff, 0x7aff or 0xe2ff
-				{
-					f2 << "f" << dt.id() << "=" <<  (int) (int8_t) (dt.m_value & 0xFF);
-					int high =  (uint8_t) ((dt.m_value>>8) & 0xFF);
-					if (high) f2 << std::hex << "(" << high << ")" << std::dec;
-					if (dt.m_value & 0xFFFF0000)
-						f2 << "(###extras=" << (int) (dt.m_value>>16) << ")";
-					f2 << ",";
+				case 0x13:   //find -1|6 here
+					f2 << "f" << dt.id() << "=" <<  (int) (int8_t) (dt.m_value) << ",";
 					break;
-				}
 				case 0x1d: // first color
 				case 0x1e: // second color
 					cellColor[dt.id()-0x1d] = dt.getRGBColor();
@@ -566,15 +559,12 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 				case 0x1f:
 				{
 					float percent=0.5;
-					int motif = int(dt.m_value&0xFF);
-					if (motif == 0) // no motif
+					if (dt.m_value == 0) // no motif
 						break;
-					if (motif >= 3 && motif <= 9) percent = float(motif)*0.1f; // gray motif
+					if (dt.m_value >= 3 && dt.m_value <= 9)
+						percent = float(dt.m_value)*0.1f; // gray motif
 					else
-						f2 << "backMotif=" << motif << ",";
-					int wh=int(dt.m_value>>8);
-					if (wh && wh != 0xff)
-						f2 << "backgMotif[high]=" << std::hex << wh << ",";
+						f2 << "backMotif=" << dt.m_value << ",";
 					uint32_t fCol = 0;
 					int decal = 0;
 					for (int i = 0; i < 3; i++)

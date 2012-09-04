@@ -125,7 +125,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 struct Frame
 {
 	//! constructor
-	Frame() : m_parsed(false), m_type(UNKNOWN), m_typeFlag(0), m_pos(),
+	Frame() : m_parsed(false), m_type(UNKNOWN), m_pos(),
 		m_idStrs(-1), m_idObject(-1), m_idTable(-1), m_idOle(-1), m_columns(1), m_idBorder(),
 		m_backgroundColor(0xFFFFFF), m_error("")
 	{
@@ -148,8 +148,6 @@ struct Frame
 	mutable bool m_parsed;
 	//! the frame type
 	int m_type;
-	//! some unknown flags which are defined near the frame type
-	int m_typeFlag;
 	//! the frame position
 	WPSPosition m_pos;
 	int m_idStrs /** identifier corresponding to a text zone (STRS)*/,
@@ -195,7 +193,6 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
 	if (ft.m_idObject >= 0) o << "EOBJ" << ft.m_idObject << ",";
 	if (ft.m_idTable >= 0) o << "MCLD/Table" << ft.m_idTable << ",";
 	if (ft.m_idOle >= 0) o << "oleId=" << ft.m_idOle << ",";
-	if (ft.m_typeFlag) o << std::hex << "flags=" << ft.m_typeFlag << std::dec;
 	o << "),";
 
 	o << ft.m_pos << ",";
@@ -1042,21 +1039,22 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 				f2 << "#";
 			f2 << "numCols=" << dt.m_value+1 << ",";
 			break;
-		case 0x18: // 1/{_,66,96,112,186,228} 2/_
-		case 0x1b:   // -1/200,3/66,3/_
-			f2 << "f" << dt.id();
-			if (dt.m_value)
+		case 0x18:
+			switch(dt.m_value)
 			{
-				f2 << "=" << std::hex << dt.m_value << std::dec << "(";
-				int8_t low = int8_t(dt.m_value & 0xFF);
-				if (low) f2 << (int) low;
-				else f2 << "0";
-				f2 << ":";
-				if (dt.m_value & 0xFF00) f2 << (dt.m_value>>8);
-				else f2 << "0";
-				f2 << ")";
+			case 1:
+				break; // portrait
+			case 2:
+				page.setFormOrientation(WPSPageSpan::LANDSCAPE);
+				f2 << "landscape,";
+				break;
+			default:
+				f2 << "#pageOrientation=" << dt.m_value << ",";
+				break;
 			}
-			f2 << ",";
+			break;
+		case 0x1b:   // [-1,0,1,3,4]
+			f2 << "f" << dt.id() << "=" << (int) int8_t(dt.m_value) << ",";
 			break;
 		case 0x13:   // an entries index, always an IBGF ?
 			m_state->m_background.setName(dt.m_text);
@@ -1356,11 +1354,9 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				break;
 			}
 			case 1:
-			{
-				int low = int(dt.m_value & 0xFF);
-				switch(low)
+				switch(dt.m_value)
 				{
-					// associated with0x13=22:[0|96], 0x18,1b=0x41,0x2e, rarely with 0x1a
+					// associated with 0x13=22:[0|96], 0x18,1b=0x41,0x2e, rarely with 0x1a
 				case 6:
 					frame.m_type = Frame::Header;
 					break;
@@ -1386,13 +1382,10 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 					break;
 
 				default:
-					f2 << "###type=" << low;
+					f2 << "###type=" << dt.m_value;
 					break;
 				}
-
-				frame.m_typeFlag = (uint8_t) (dt.m_value>>8);
 				break;
-			}
 			case 0x2:
 				if (dt.m_value&1) f2 << "noText[right],";
 				if (dt.m_value&2) f2 << "noText[left],";
@@ -1499,7 +1492,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 					frame.m_columns = int(dt.m_value);
 				else ok = false;
 				break;
-			case 0x14: // in relation with 0x30 ?
+			case 0x14: // in relation with 0x30 ? find a small number between 1 and 18
 				if (frame.m_type==Frame::Table)
 					f2 << "grpId=" << (int16_t) dt.m_value << ",";
 				else ok = false;
@@ -1515,34 +1508,22 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 
 				// UNKNOWN
 			case 0x1a: // appear 2 time (in a header and in a footer) with value 16
-				f2 << "f" << dt.id() << "=" << (int16_t) dt.m_value << ",";
+				f2 << "f" << dt.id() << "=" << (int) (int8_t) dt.m_value << ",";
 				break;
 
 			case 0x2e: // in a table: objectId+1, in textbox: m_idTable ?, other = i ?
 				f2 << "id" << dt.id() << "=" << (int16_t) (dt.m_value-1) << ",";
 				break;
 			case 0x13:
-			{
 				// table 0x6-??,
 				// header/footer 0x16-??,
 				// textbox 0x10(means automatic resize)
 				// object : no set
 				f2 << "f" << dt.id();
 				if (dt.m_value)
-				{
-					f2 << "=" << std::hex << dt.m_value << std::dec << "(";
-					int low = int(dt.m_value & 0xFF);
-					if (low) f2 << low;
-					else f2 << "0";
-					f2 << ":";
-					int high = int(dt.m_value>>8);
-					if (dt.m_value & 0xFF00) f2 << high;
-					else f2 << "0";
-					f2 << ")";
-				}
+					f2 << "=" << std::hex << dt.m_value << std::dec;
 				f2 << ",";
 				break;
-			}
 			case 0x2f:
 				if (dt.isTrue())
 					f2 <<  "f" << dt.id() << ",";

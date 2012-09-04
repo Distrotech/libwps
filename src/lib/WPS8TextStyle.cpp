@@ -454,12 +454,10 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 		case 0x0c:
 			font.m_size = int(data.m_value/12700);
 			break;
-		case 0x0F:
-			if ((data.m_value&0xFF) == 1) textAttributeBits |= WPS_SUPERSCRIPT_BIT;
-			else if ((data.m_value&0xFF) == 2) textAttributeBits |= WPS_SUBSCRIPT_BIT;
-			else f << "###sub/supScript=" << std::hex << (data.m_value&0xFF) << std::dec;
-			if (data.m_value&0xFFFC)
-				f << "###sub/supScript=" << data.m_value <<",";
+		case 0x0f:
+			if (data.m_value == 1) textAttributeBits |= WPS_SUPERSCRIPT_BIT;
+			else if (data.m_value == 2) textAttributeBits |= WPS_SUBSCRIPT_BIT;
+			else f << "###sub/supScript=" << data.m_value << ",";
 			break;
 		case 0x10:
 			if (data.isTrue())
@@ -504,7 +502,7 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 		case 0x1e:
 		{
 			bool single = true;
-			switch((data.m_value & 0xFF))
+			switch(data.m_value)
 			{
 			case 1:
 				break; // normal
@@ -558,10 +556,8 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 				single = false;
 				break; // and double
 			default:
-				f << "###underlFlag=" << (data.m_value & 0xFF) << ",";
+				f << "###underlFlag=" << data.m_value << ",";
 			}
-			if (data.m_value >> 8) // 3 8 b 19 43 53 7c 84 b7 be c8 c0
-				f << "###underlSize=" << (data.m_value >> 8) << ",";
 			if (single)
 				textAttributeBits |= WPS_UNDERLINE_BIT;
 			else
@@ -722,7 +718,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 			}
 			break;
 		case 0x4:
-			switch((data.m_value & 0xff))
+			switch(data.m_value)
 			{
 			case 0:
 				para.m_justify = libwps::JustificationLeft;
@@ -737,12 +733,9 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 				para.m_justify = libwps::JustificationFull;
 				break;
 			default:
-				f << "#just=" << std::hex << (int) (data.m_value & 0xff) << std::dec << ",";
+				f << "#just=" << std::hex << data.m_value << std::dec << ",";
 				para.m_justify = libwps::JustificationLeft;
 			}
-			if (data.m_value & 0xff00)
-				f << "#just(high)=" <<  std::hex
-				  << (int) ((data.m_value>>8) & 0xff) << std::dec << ",";
 			break;
 		case 0x6:
 			para.m_listLevel.m_labelIndent = float(data.m_value)/914400.f;
@@ -865,8 +858,8 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 			if (data.m_value & 2) para.m_border |= WPSBorder::BottomBit;
 			if (data.m_value & 4) para.m_border |= WPSBorder::LeftBit;
 			if (data.m_value & 8) para.m_border |= WPSBorder::RightBit;
-			if (data.m_value & 0xFFF0)
-				f << "#border=" << std::hex << (data.m_value & 0xFFF0) << std::dec << ",";
+			if (data.m_value & 0xF0)
+				f << "#border=" << std::hex << (data.m_value & 0xF0) << std::dec << ",";
 			break;
 		case 0x1f:
 			para.m_borderStyle.m_color=data.getRGBColor();
@@ -893,16 +886,13 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		case 0x25:
 		{
 			float percent=0.5;
-			int motif = int(data.m_value&0xFF);
-			if (motif == 0) // checkme: no motif
+			if (data.m_value == 0) // checkme: no motif
 				break;
 
-			if (motif >= 3 && motif <= 9) percent = float(motif)*0.1f; // gray motif
+			if (data.m_value >= 3 && data.m_value <= 9)
+				percent = float(data.m_value)*0.1f; // gray motif
 			else
-				f << "backMotif=" << motif << ",";
-			int wh=int(data.m_value>>8);
-			if (wh && wh != 0x31)
-				f << "#backMotif[high]=" << std::hex << wh << ",";
+				f << "backMotif=" << data.m_value << ",";
 			uint32_t fCol = 0;
 			int decal = 0;
 			for (int i = 0; i < 3; i++)
@@ -915,12 +905,11 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 			para.m_backgroundColor = fCol;
 			break;
 		}
-		case 0x2a: // exists with f29(1d) in style sheet
-			f << "##f42=" << std::hex
-			  << (int) ((data.m_value&0xFF00)>>8)
-			  << ":" << (int) (data.m_value&0xFF) << "," << std::dec;
+		case 0x2a: // exists with f29(1d) in style sheet, find 0|1|3
+			f << "##f42=" << data.m_value << ",";
 			break;
-			// case 0x31(typ12) : c901 or d301 or 01
+			// case 0x31(typ12) : always 1 ?
+			// case 0x33(typ12) : always 2 ?
 		case 0x32:
 		{
 			if (!data.isRead() && !data.readArrayBlock() && data.m_recursData.size() == 0)

@@ -61,7 +61,7 @@ WPSBorder::Style FileData::getBorderStyle(std::string &mess) const
 {
 	WPSBorder::Style style = WPSBorder::Single;
 	libwps::DebugStream f;
-	switch(m_value&0xFF)
+	switch(m_value)
 	{
 	case 0:
 		style  = WPSBorder::None;
@@ -101,12 +101,10 @@ WPSBorder::Style FileData::getBorderStyle(std::string &mess) const
 		style  = WPSBorder::Double;
 		break;
 	default:
-		f << "#style=" << std::hex << (m_value&0xFF) << std::dec << ",";
+		f << "#style=" << std::hex << m_value << std::dec << ",";
 		break;
 	}
 
-	if (m_value & 0xFF00)
-		f << "style:hig=" << std::hex << (m_value>>8) << std::dec << ",";
 	mess = f.str();
 	return style;
 }
@@ -249,7 +247,13 @@ bool readData(WPXInputStreamPtr input, long endPos,
 		return true;
 	case 1:
 		if (actPos+4 > endPos) break;
-		dt.m_value = libwps::readU16(input);
+		if (dt.m_type == 0x12)
+		{
+			dt.m_value = libwps::readU8(input);
+			input->seek(1, WPX_SEEK_CUR);
+		}
+		else
+			dt.m_value = libwps::readU16(input);
 		return true;
 	case 2:
 	{
