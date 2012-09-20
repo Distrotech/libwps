@@ -27,6 +27,7 @@
  */
 #include <iomanip>
 #include <sstream>
+#include <stdio.h>
 
 #include <libwpd/WPXProperty.h>
 
