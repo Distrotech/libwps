@@ -12,4 +12,10 @@ EXTRA_DIST = \
 	libwps.vcproj \
 	wps2html.vcproj \
 	wps2raw.vcproj \
-	wps2text.vcproj
+	wps2text.vcproj \
+	\
+	libwps.vcxproj.sln \
+	libwps.vcxproj \
+	wps2html.vcxproj \
+	wps2raw.vcxproj \
+	wps2text.vcxproj
