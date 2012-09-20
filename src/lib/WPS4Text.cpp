@@ -42,7 +42,7 @@
 #include <map>
 #include <vector>
 
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"

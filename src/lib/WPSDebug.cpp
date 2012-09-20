@@ -30,8 +30,8 @@
 #include <iomanip>
 #include <sstream>
 
-#include <libwpd/WPXBinaryData.h>
-#include <libwpd-stream/WPXStream.h>
+#include <libwpd/libwpd.h>
+#include <libwpd-stream/libwpd-stream.h>
 
 
 #include "WPSDebug.h"

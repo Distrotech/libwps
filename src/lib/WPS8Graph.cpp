@@ -32,8 +32,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <libwpd/WPXBinaryData.h>
-#include <libwpd/WPXString.h>
+#include <libwpd/libwpd.h>
 
 #include "WPSContentListener.h"
 #include "WPSEntry.h"

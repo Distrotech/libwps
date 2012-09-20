@@ -73,7 +73,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/WPXBinaryData.h>
+#include <libwpd/libwpd.h>
 
 #include "WPSOLEStream.h"
 #include "WPSPosition.h"

@@ -25,9 +25,9 @@
 
 #include <vector>
 
-#include "libwps_internal.h"
-#include <libwpd/WPXPropertyList.h>
+#include <libwpd/libwpd.h>
 
+#include "libwps_internal.h"
 #include "WPSParser.h"
 
 class WPXString;

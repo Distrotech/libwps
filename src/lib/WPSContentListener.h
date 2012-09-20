@@ -31,7 +31,7 @@
 
 #include <vector>
 
-#include <libwpd/WPXPropertyList.h>
+#include <libwpd/libwpd.h>
 
 #include "libwps_internal.h"
 

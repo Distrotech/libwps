@@ -24,8 +24,8 @@
 /* "This product is not manufactured, approved, or supported by
  * Corel Corporation or Corel Corporation Limited."
  */
-#include <libwpd/WPXDocumentInterface.h>
-#include <libwpd/WPXProperty.h>
+
+#include <libwpd/libwpd.h>
 
 #include "libwps_internal.h"
 #include "WPSContentListener.h"

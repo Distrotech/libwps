@@ -25,7 +25,7 @@
 #include <string>
 #include <stdlib.h>
 
-#include <libwpd/WPXBinaryData.h>
+#include <libwpd/libwpd.h>
 
 #include "libwps_internal.h"
 
