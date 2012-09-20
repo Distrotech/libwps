@@ -47,7 +47,7 @@
 #include <string>
 #include <vector>
 
-#include "libwpd-stream/WPXStream.h"
+#include <libwpd-stream/libwpd-stream.h>
 
 #include "WPSOLEStream.h"
 namespace libwps_internal

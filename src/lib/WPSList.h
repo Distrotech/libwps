@@ -33,8 +33,8 @@
 #include <iostream>
 #include <vector>
 
-#include <libwpd/WPXString.h>
-#include <libwps_internal.h>
+#include <libwpd/libwpd.h>
+#include "libwps_internal.h"
 
 class WPXPropertyList;
 class WPXDocumentInterface;

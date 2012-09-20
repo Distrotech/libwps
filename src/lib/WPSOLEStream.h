@@ -34,7 +34,7 @@
 #include <fstream>
 #include <vector>
 
-#include <libwps_internal.h>
+#include "libwps_internal.h"
 
 class WPXInputStream;
 

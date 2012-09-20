@@ -1530,7 +1530,7 @@ bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 	{
 		int bkColor = libwps::readU8(m_input);
 		int ftColor = libwps::readU8(m_input);
-		bool setColor = (what & 0x80);
+		bool setColor = !!(what & 0x80);
 		what &= 0x7F;
 
 		if ((bkColor || ftColor) && !setColor)
