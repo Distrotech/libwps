@@ -208,9 +208,15 @@ void WPSParagraph::send(shared_ptr<WPSContentListener> listener) const
 
 	if (m_listLevelIndex >= 1)
 	{
-		if (!listener->getCurrentList())
-			listener->setCurrentList(shared_ptr<WPSList>(new WPSList));
-		listener->getCurrentList()->set(m_listLevelIndex, level);
+		shared_ptr<WPSList> theList = listener->getCurrentList();
+		if (!theList)
+		{
+			theList = shared_ptr<WPSList>(new WPSList);
+			theList->set(m_listLevelIndex, level);
+			listener->setCurrentList(theList);
+		}
+		else
+			theList->set(m_listLevelIndex, level);
 		listener->setCurrentListLevel(m_listLevelIndex);
 	}
 	else

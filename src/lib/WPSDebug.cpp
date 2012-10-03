@@ -105,6 +105,7 @@ void DebugFile::sort()
 	for (Vec2i::MapX::iterator it = sMap.begin();
 	        it != sMap.end(); i++, it++)
 		m_skipZones[i] = it->first;
+	if (i < numSkip) m_skipZones.resize(i);
 }
 
 void DebugFile::write()
