@@ -68,7 +68,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="Release\lib\libwps-0.1.lib"
+				OutputFile="Release\lib\libwps-0.2.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -141,7 +141,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="Debug\lib\libwps-0.1.lib"
+				OutputFile="Debug\lib\libwps-0.2.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
