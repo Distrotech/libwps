@@ -69,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libwps-0.1.lib libwpd-stream-0.9.lib libwpd-0.9.lib"
+				AdditionalDependencies="libwps-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib"
 				OutputFile="Debug\bin\wps2html.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -157,7 +157,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libwpd-stream-0.9.lib libwps-0.1.lib libwpd-0.9.lib"
+				AdditionalDependencies="libwpd-stream-0.9.lib libwps-0.2.lib libwpd-0.9.lib"
 				OutputFile="Release\bin\wps2html.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
