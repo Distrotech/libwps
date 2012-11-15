@@ -201,10 +201,14 @@ std::string WPSBorder::getPropertyValue() const
 	stream << m_width*0.03 << "cm";
 	switch (m_style)
 	{
-	case Single:
 	case Dot:
 	case LargeDot:
+		stream << " dotted";
+		break;
 	case Dash:
+		stream << " dashed";
+		break;
+	case Single:
 		stream << " solid";
 		break;
 	case Double:
