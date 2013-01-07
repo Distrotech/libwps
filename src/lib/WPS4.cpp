@@ -116,7 +116,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 		return;
 	}
 
-	WPS4Parser *mnParser = reinterpret_cast<WPS4Parser *>(m_parser);
+	WPS4Parser *mnParser = dynamic_cast<WPS4Parser *>(m_parser);
 	mnParser->send(m_entry, subDocumentType);
 }
 

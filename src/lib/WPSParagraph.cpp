@@ -145,7 +145,8 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 		o << "just=fullAllLines, ";
 		break;
 	default:
-		o << "just=" << pp.m_justify << ", ";
+		assert(false); // unhandled Justification enum value
+		o << "just=" << static_cast<unsigned>(pp.m_justify) << ", ";
 		break;
 	}
 

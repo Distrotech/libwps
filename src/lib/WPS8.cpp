@@ -87,7 +87,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 		return;
 	}
 
-	WPS8ContentListenerPtr &listen =  reinterpret_cast<WPS8ContentListenerPtr &>(listener);
+	WPS8ContentListenerPtr &listen =  static_cast<WPS8ContentListenerPtr &>(listener);
 	if (!m_parser)
 	{
 		listen->insertCharacter(' ');
@@ -117,7 +117,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 	}
 
 
-	WPS8Parser *mnParser = reinterpret_cast<WPS8Parser *>(m_parser);
+	WPS8Parser *mnParser = static_cast<WPS8Parser *>(m_parser);
 	mnParser->send(m_entry);
 }
 

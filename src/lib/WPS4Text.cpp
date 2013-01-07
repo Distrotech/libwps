@@ -223,7 +223,7 @@ struct Font : public WPSFont
 //! operator<< for font properties
 std::ostream &operator<<(std::ostream &o, Font const &ft)
 {
-	o << reinterpret_cast<WPSFont const &>(ft) << ",";
+	o << dynamic_cast<WPSFont const &>(ft) << ",";
 
 	if (ft.m_special)
 	{
@@ -770,7 +770,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				WPSEntry ent = m_state->m_dosLinkList[size_t(id)].m_pos;
 				ent.setType("TEXT");
 				ent.setId(WPS4TextInternal::Z_DLink);
-				WPSPosition pos_(Vec2f(),Vec2f(float(3.0),float(0.2)));
+				WPSPosition pos_(Vec2f(),Vec2f(3.0f,0.2f));
 				pos_.setRelativePosition(WPSPosition::Paragraph, WPSPosition::XCenter);
 				pos_.m_wrapping = WPSPosition::WNone;
 				WPXPropertyList extras;
