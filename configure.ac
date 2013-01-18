@@ -15,7 +15,7 @@ m4_define([libwps_version],[libwps_version_major.libwps_version_minor.libwps_ver
 # =============
 AC_INIT([libwps],[libwps_version])
 AC_CONFIG_MACRO_DIR([m4])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz dist-bzip2])
 AM_SILENT_RULES([yes])
 AC_LANG([C++])
