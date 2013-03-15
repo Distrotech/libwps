@@ -117,6 +117,12 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 	}
 
 	WPS4Parser *mnParser = dynamic_cast<WPS4Parser *>(m_parser);
+	if (!mnParser) 
+	{
+		WPS_DEBUG_MSG(("SubDocument::parse: bad parser...\n"));
+		listen->insertCharacter(' ');
+		return;
+	}
 	mnParser->send(m_entry, subDocumentType);
 }
 

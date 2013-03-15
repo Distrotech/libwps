@@ -117,7 +117,13 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 	}
 
 
-	WPS8Parser *mnParser = static_cast<WPS8Parser *>(m_parser);
+	WPS8Parser *mnParser = dynamic_cast<WPS8Parser *>(m_parser);
+	if (!mnParser)
+	{
+		WPS_DEBUG_MSG(("WPS8ParserInternal::SubDocument::parse: can not find a WPS8Parser...\n"));
+		listen->insertCharacter(' ');
+		return;
+	}
 	mnParser->send(m_entry);
 }
 

@@ -223,7 +223,7 @@ struct Font : public WPSFont
 //! operator<< for font properties
 std::ostream &operator<<(std::ostream &o, Font const &ft)
 {
-	o << dynamic_cast<WPSFont const &>(ft) << ",";
+	o << static_cast<WPSFont const &>(ft) << ",";
 
 	if (ft.m_special)
 	{
