@@ -12,7 +12,8 @@ EXTRA_DIST = \
 	libwps.spec.in \
 	libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.pc.in \
 	libwps-zip.in \
-	COPYING \
+	COPYING.LGPL \
+	COPYING.MPL \
 	CREDITS \
 	HACKING \
 	INSTALL \
