@@ -37,10 +37,12 @@ PKG_PROG_PKG_CONFIG([0.20])
 # ====================
 # Find additional apps
 # ====================
-PKG_CHECK_MODULES([LIBWPS],[
+PKG_CHECK_MODULES([WPD],[
     libwpd-0.9
     libwpd-stream-0.9
 ])
+AC_SUBST(WPD_CFLAGS)
+AC_SUBST(WPD_LIBS)
 
 # =================================
 # Libtool/Version Makefile settings

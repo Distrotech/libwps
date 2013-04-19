@@ -1,6 +1,6 @@
 bin_PROGRAMS = wps2text
 
-AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(LIBWPS_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
 
 wps2text_DEPENDENCIES = @WPS2TEXT_WIN32_RESOURCE@
 
@@ -8,14 +8,14 @@ if STATIC_TOOLS
 
 wps2text_LDADD = \
 	../../lib/@WPS_OBJDIR@/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.a \
-	$(LIBWPS_LIBS) @WPS2TEXT_WIN32_RESOURCE@
+	$(WPD_LIBS) @WPS2TEXT_WIN32_RESOURCE@
 wps2text_LDFLAGS = -all-static
 
 else	
 
 wps2text_LDADD = \
 	../../lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la \
-	$(LIBWPS_LIBS) @WPS2TEXT_WIN32_RESOURCE@
+	$(WPD_LIBS) @WPS2TEXT_WIN32_RESOURCE@
 
 endif
 

@@ -1,6 +1,6 @@
 bin_PROGRAMS = wps2html
 
-AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(LIBWPS_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
 
 wps2html_DEPENDENCIES = @WPS2HTML_WIN32_RESOURCE@
 
@@ -8,14 +8,14 @@ if STATIC_TOOLS
 
 wps2html_LDADD = \
 	../../lib/@WPS_OBJDIR@/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.a \
-	$(LIBWPS_LIBS) @WPS2HTML_WIN32_RESOURCE@
+	$(WPD_LIBS) @WPS2HTML_WIN32_RESOURCE@
 wps2html_LDFLAGS = -all-static
 
 else	
 
 wps2html_LDADD = \
 	../../lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la \
-	$(LIBWPS_LIBS) @WPS2HTML_WIN32_RESOURCE@
+	$(WPD_LIBS) @WPS2HTML_WIN32_RESOURCE@
 
 endif
 
