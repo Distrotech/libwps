@@ -403,7 +403,7 @@ void libwps::AllocTable::set( unsigned long index, unsigned long value )
 }
 
 // TODO: optimize this with better search
-static bool already_exist(const std::vector<unsigned long>& chain,
+static bool already_exist(const std::vector<unsigned long> &chain,
                           unsigned long item)
 {
 	for(unsigned i = 0; i < chain.size(); i++)
