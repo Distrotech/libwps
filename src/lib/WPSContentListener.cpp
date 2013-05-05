@@ -982,9 +982,12 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 			actPage+=unsigned(it->getPageSpan());
 			it++;
 		}
-		WPSPageSpan const &currentPage = *it;
-		if (currentPage.getPageNumber() >= 0)
-			propList.insert("style:page-number", currentPage.getPageNumber());
+		if (it != m_ds->m_pageList.end())
+		{
+		    WPSPageSpan const &currentPage = *it;
+		    if (currentPage.getPageNumber() >= 0)
+			    propList.insert("style:page-number", currentPage.getPageNumber());
+		}
 	}
 
 	_insertBreakIfNecessary(propList);
