@@ -105,7 +105,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	if (smallFDP) input->seek(page_offset, WPX_SEEK_SET);
 	else f << ", unk=" << libwps::read16(m_input);
 
-	if (headerSize+(4+deplSize)*cfod > length)
+	if (headerSize+(4+deplSize)*static_cast<long>(cfod) > length)
 	{
 		WPS_DEBUG_MSG(("WPSTextParser::readFDP: error: cfod = %i (0x%X)\n", cfod, cfod));
 		return false;
