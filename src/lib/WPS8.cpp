@@ -1009,7 +1009,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 	bool readOk = readBlockData(input, endPage,mainData, error);
 
 	size_t numChild = mainData.m_recursData.size();
-	double dim[8];
+	double dim[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 	bool setVal[8] = { false, false, false, false, false, false, false, false};
 	for (size_t c = 0; c < numChild; c++)
 	{
@@ -1292,10 +1292,10 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 		bool readOk = readBlockData(input, lastPos + sz, mainData, error);
 
 		size_t numChild = mainData.m_recursData.size();
-		double dim[3];
+		double dim[3] = {0, 0, 0};
 		bool setVal[3] = { false, false, false};
 
-		double bDim[4];
+		double bDim[4] = {0, 0, 0, 0};
 		bool bset = false, bsetVal[4] = { false, false, false, false};
 		libwps::DebugStream f2;
 
