@@ -25,7 +25,6 @@
 
 #include <time.h>
 
-#include <iomanip>
 #include <sstream>
 
 #include <libwpd/libwpd.h>
@@ -89,7 +88,11 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 		break; // default
 	}
 	if (cell.m_backgroundColor != 0xFFFFFF)
-		o << ",backColor=" << std::hex << cell.m_backgroundColor << ",";
+	{
+		std::ios::fmtflags oldflags = o.setf(std::ios::hex, std::ios::basefield);
+		o << ",backColor=" << cell.m_backgroundColor << ",";
+		o.setf(oldflags, std::ios::basefield);
+	}
 	for (size_t i = 0; i < cell.m_bordersList.size(); i++)
 	{
 		if (cell.m_bordersList[i].m_style == WPSBorder::None)
