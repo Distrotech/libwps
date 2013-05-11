@@ -770,16 +770,22 @@ void libwps::StorageIO::load()
 	// load directory tree
 	blocks.clear();
 	blocks = bbat->follow( header->dirent_start );
-	std::vector<unsigned char> buffer(blocks.size()*bbat->blockSize);
-	loadBigBlocks( blocks, &buffer[0], buffer.size() );
-	dirtree->load( &buffer[0], (unsigned int) buffer.size() );
-	unsigned sb_start = (unsigned) ::readU32( &buffer[0x74] );
+	if (blocks.size()*bbat->blockSize)
+	{
+		std::vector<unsigned char> buffer(blocks.size()*bbat->blockSize);
+		loadBigBlocks( blocks, &buffer[0], buffer.size() );
+		dirtree->load( &buffer[0], (unsigned int) buffer.size() );
+		if (buffer.size() >= 0x74 + 4)
+		{
+			unsigned sb_start = (unsigned) ::readU32( &buffer[0x74] );
 
-	// fetch block chain as data for small-files
-	sb_blocks = bbat->follow( sb_start ); // small files
+			// fetch block chain as data for small-files
+			sb_blocks = bbat->follow( sb_start ); // small files
 
-	// so far so good
-	result = libwps::Storage::Ok;
+			// so far so good
+			result = libwps::Storage::Ok;
+		}
+	}
 }
 
 libwps::StreamIO *libwps::StorageIO::streamIO( const std::string &name )
