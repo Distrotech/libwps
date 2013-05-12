@@ -2172,14 +2172,18 @@ bool WPS8Text::readPLC
 			break;
 		}
 
-		fods[i].m_id = (int) m_state->m_plcList.size();
-		if (ok) fods[i].m_defPos = pos;
+		const int plcID = (int) m_state->m_plcList.size();
+		if (i < fods.size())
+		{
+			fods[i].m_id = plcID;
+			if (ok) fods[i].m_defPos = pos;
+		}
 		m_state->m_plcList.push_back(plc);
 
 		if (printPLC)
 		{
 			f2.str("");
-			f2 << plc.m_name << i << "(PLC"<<fods[i].m_id<<"):" << plc;
+			f2 << plc.m_name << i << "(PLC"<<plcID<<"):" << plc;
 			ascii().addPos(pos);
 			ascii().addNote(f2.str().c_str());
 		}
