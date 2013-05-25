@@ -305,6 +305,8 @@ AM_CONDITIONAL([WITH_LIBWPS_DOCS], [test "x$build_docs" != "xno"])
 # =====================
 AC_CONFIG_FILES([
 Makefile
+inc/Makefile
+inc/libwps/Makefile
 src/Makefile
 src/conv/Makefile
 src/conv/html/Makefile
@@ -319,8 +321,7 @@ docs/Makefile
 docs/doxygen/Makefile
 build/Makefile
 build/win32/Makefile
-libwps-0.2.pc
-libwps.spec
+libwps-$WPS_MAJOR_VERSION.$WPS_MINOR_VERSION.pc:libwps.pc.in
 libwps-zip
 ])
 AC_OUTPUT

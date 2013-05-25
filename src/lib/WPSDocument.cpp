@@ -22,7 +22,7 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#include "WPSDocument.h"
+#include <libwps/libwps.h>
 #include "WPS4.h"
 #include "WPS8.h"
 #include "WPSHeader.h"

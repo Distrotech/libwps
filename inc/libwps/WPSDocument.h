@@ -24,7 +24,7 @@
 #ifndef WPSDOCUMENT_H
 #define WPSDOCUMENT_H
 
-#ifdef _WINDLL
+#ifdef DLL_EXPORT
 #ifdef BUILD_WPS
 #define WPSLIB _declspec(dllexport)
 #else

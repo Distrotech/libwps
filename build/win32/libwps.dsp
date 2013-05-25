@@ -191,7 +191,7 @@ SOURCE=..\..\src\lib\WPSTextParser.cpp
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\..\src\lib\libwps.h
+SOURCE=..\..\inc\libwps\libwps.h
 # End Source File
 # Begin Source File
 
@@ -251,7 +251,7 @@ SOURCE=..\..\src\lib\WPSDebug.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPSDocument.h
+SOURCE=..\..\inc\libwps\WPSDocument.h
 # End Source File
 # Begin Source File
 

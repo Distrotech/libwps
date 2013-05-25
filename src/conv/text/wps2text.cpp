@@ -21,9 +21,9 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "libwps.h"
-#include "TextDocumentGenerator.h"
 #include <libwpd-stream/libwpd-stream.h>
+#include <libwps/libwps.h>
+#include "TextDocumentGenerator.h"
 
 int main(int argc, char *argv[])
 {

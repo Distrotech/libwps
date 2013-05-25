@@ -20,9 +20,9 @@
  */
 
 #include <stdio.h>
-#include "HtmlDocumentGenerator.h"
-#include "WPSDocument.h"
 #include <libwpd-stream/libwpd-stream.h>
+#include <libwps/libwps.h>
+#include "HtmlDocumentGenerator.h"
 
 int main(int argc, char *argv[])
 {

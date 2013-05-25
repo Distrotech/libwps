@@ -1,6 +1,6 @@
 bin_PROGRAMS = wps2raw
 
-AM_CXXFLAGS = -I$(top_srcdir)/src/lib/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/inc $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
 
 wps2raw_DEPENDENCIES = @WPS2RAW_WIN32_RESOURCE@
 

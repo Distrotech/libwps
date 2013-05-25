@@ -6,66 +6,66 @@ endif
 
 lib_LTLIBRARIES = libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la $(target_libwps_stream)
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir = $(includedir)/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@/libwps
-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS = libwps.h WPSDocument.h
+libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS = \
+	$(top_srcdir)/inc/libwps/libwps.h \
+	$(top_srcdir)/inc/libwps/WPSDocument.h
 
-AM_CXXFLAGS =  -I$(top_srcdir)/src/lib -I$(top_builddir)/src/lib $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS =  -I$(top_srcdir)/inc $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
 
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LIBADD  = $(WPD_LIBS) @LIBWPS_WIN32_RESOURCE@
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_DEPENDENCIES = @LIBWPS_WIN32_RESOURCE@
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic -no-undefined
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
-	libwps_internal.cpp 	\
-	libwps_tools_win.cpp	\
-	WPS4.cpp		\
-	WPS4Graph.cpp		\
-	WPS4Text.cpp		\
-	WPS8.cpp		\
-	WPS8Graph.cpp		\
-	WPS8Struct.cpp		\
-	WPS8Table.cpp		\
-	WPS8Text.cpp		\
-	WPS8TextStyle.cpp	\
-	WPSCell.cpp		\
-	WPSContentListener.cpp	\
-	WPSDebug.cpp		\
-	WPSDocument.cpp		\
-	WPSHeader.cpp		\
-	WPSList.cpp		\
-	WPSOLEParser.cpp	\
-	WPSOLEStream.cpp	\
-	WPSPageSpan.cpp		\
-	WPSParagraph.cpp	\
-	WPSParser.cpp		\
-	WPSSubDocument.cpp	\
-	WPSTable.cpp		\
-	WPSTextParser.cpp	\
-	libwps.h		\
-	libwps_tools_win.h	\
-	libwps_internal.h	\
-	WPS4.h			\
-	WPS4Graph.h		\
-	WPS4Text.h		\
-	WPS8.h			\
-	WPS8Graph.h		\
-	WPS8Struct.h		\
-	WPS8Table.h		\
-	WPS8Text.h		\
-	WPS8TextStyle.h		\
-	WPSCell.h		\
-	WPSContentListener.h	\
-	WPSDebug.h		\
-	WPSDocument.h		\
-	WPSEntry.h		\
-	WPSHeader.h		\
-	WPSList.h		\
-	WPSOLEParser.h		\
-	WPSOLEStream.h		\
-	WPSPageSpan.h		\
-	WPSParagraph.h		\
-	WPSParser.h		\
-	WPSPosition.h		\
-	WPSSubDocument.h	\
-	WPSTable.h		\
+	libwps_internal.cpp \
+	libwps_tools_win.cpp \
+	WPS4.cpp \
+	WPS4Graph.cpp \
+	WPS4Text.cpp \
+	WPS8.cpp \
+	WPS8Graph.cpp \
+	WPS8Struct.cpp \
+	WPS8Table.cpp \
+	WPS8Text.cpp \
+	WPS8TextStyle.cpp \
+	WPSCell.cpp \
+	WPSContentListener.cpp \
+	WPSDebug.cpp \
+	WPSDocument.cpp \
+	WPSHeader.cpp \
+	WPSList.cpp \
+	WPSOLEParser.cpp \
+	WPSOLEStream.cpp \
+	WPSPageSpan.cpp \
+	WPSParagraph.cpp \
+	WPSParser.cpp \
+	WPSSubDocument.cpp \
+	WPSTable.cpp \
+	WPSTextParser.cpp \
+	libwps_tools_win.h \
+	libwps_internal.h \
+	WPS4.h \
+	WPS4Graph.h \
+	WPS4Text.h \
+	WPS8.h \
+	WPS8Graph.h \
+	WPS8Struct.h \
+	WPS8Table.h \
+	WPS8Text.h \
+	WPS8TextStyle.h \
+	WPSCell.h \
+	WPSContentListener.h \
+	WPSDebug.h \
+	WPSEntry.h \
+	WPSHeader.h \
+	WPSList.h \
+	WPSOLEParser.h \
+	WPSOLEStream.h \
+	WPSPageSpan.h \
+	WPSParagraph.h \
+	WPSParser.h \
+	WPSPosition.h \
+	WPSSubDocument.h \
+	WPSTable.h \
 	WPSTextParser.h
 
 if OS_WIN32
