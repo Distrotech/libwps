@@ -242,7 +242,6 @@ bool WPS8Graph::sendObject(WPSPosition const &posi, int id, bool ole)
 
 bool WPS8Graph::sendIBGF(WPSPosition const &posi, int ibgfId)
 {
-	typedef WPS8GraphInternal::Pict Pict;
 	std::map<int, WPSEntry>::iterator pos = m_state->m_ibgfMap.find(ibgfId);
 	if (pos == m_state->m_ibgfMap.end())
 	{
