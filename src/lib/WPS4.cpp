@@ -77,13 +77,13 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 		WPS_DEBUG_MSG(("WPS4ParserInternal::SubDocument::parse: no listener\n"));
 		return;
 	}
-	if (!dynamic_cast<WPS4ContentListener *>(listener.get()))
+	if (!dynamic_cast<WPSContentListener *>(listener.get()))
 	{
 		WPS_DEBUG_MSG(("WPS4ParserInternal::SubDocument::parse: bad listener\n"));
 		return;
 	}
 
-	WPS4ContentListenerPtr &listen =  reinterpret_cast<WPS4ContentListenerPtr &>(listener);
+	WPSContentListenerPtr &listen =  reinterpret_cast<WPSContentListenerPtr &>(listener);
 	if (!m_parser)
 	{
 		listen->insertCharacter(' ');
@@ -235,14 +235,14 @@ bool WPS4Parser::checkInFile(long pos)
 }
 
 // listener, new page
-void WPS4Parser::setListener(shared_ptr<WPS4ContentListener> listener)
+void WPS4Parser::setListener(shared_ptr<WPSContentListener> listener)
 {
 	m_listener = listener;
 	m_graphParser->setListener(m_listener);
 	m_textParser->setListener(m_listener);
 }
 
-shared_ptr<WPS4ContentListener> WPS4Parser::createListener(WPXDocumentInterface *interface)
+shared_ptr<WPSContentListener> WPS4Parser::createListener(WPXDocumentInterface *interface)
 {
 	std::vector<WPSPageSpan> pageList;
 	WPSPageSpan page1(m_state->m_pageSpan), ps(m_state->m_pageSpan);
@@ -276,8 +276,8 @@ shared_ptr<WPS4ContentListener> WPS4Parser::createListener(WPXDocumentInterface 
 	pageList.push_back(page1);
 	for (int i = 1; i < numPages; i++) pageList.push_back(ps);
 	m_state->m_numPages=numPages;
-	return shared_ptr<WPS4ContentListener>
-	       (new WPS4ContentListener(pageList, interface));
+	return shared_ptr<WPSContentListener>
+	       (new WPSContentListener(pageList, interface));
 }
 
 void WPS4Parser::newPage(int number)

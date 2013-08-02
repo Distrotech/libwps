@@ -588,7 +588,7 @@ void WPS4Text::flushExtra()
 	WPXString message = "--------- extra text zone -------- ";
 	m_listener->insertUnicodeString(message);
 #endif
-	for (size_t i = 0; i < numExtra; i++)
+	for (size_t i = 0; i < numExtra; ++i)
 		readText(m_state->m_otherZones[i]);
 }
 
@@ -610,10 +610,9 @@ bool WPS4Text::readText(WPSEntry const &zone)
 		m_listener->insertCharacter(' ');
 		return false;
 	}
-	int numCols = 1;
 	if (mainZone)
 	{
-		numCols = mainParser().numColumns();
+		int numCols = mainParser().numColumns();
 		if (numCols > 1)
 		{
 			if (m_listener->isSectionOpened())
@@ -628,8 +627,6 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				m_listener->openSection(width,WPX_POINT);
 			}
 		}
-		else
-			numCols = 1;
 	}
 	std::vector<DataFOD>::iterator FODs_iter = m_FODList.begin();
 
@@ -642,7 +639,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 		simpleString = true;
 	}
 
-	for ( ; FODs_iter!= m_FODList.end(); FODs_iter++)
+	for ( ; FODs_iter!= m_FODList.end(); ++FODs_iter)
 	{
 		DataFOD const &fod = *(FODs_iter);
 		if (fod.m_pos >= zone.begin()) break;
@@ -671,14 +668,13 @@ bool WPS4Text::readText(WPSEntry const &zone)
 	}
 	bool first = true;
 	int actPage = 1;
-	for ( ; simpleString || FODs_iter!= m_FODList.end(); FODs_iter++)
+	for ( ; simpleString || FODs_iter!= m_FODList.end(); ++FODs_iter)
 	{
 		long actPos;
 		long lastPos;
 
 		DataFOD fod;
 		DataFOD::Type type = DataFOD::ATTR_UNKN;
-		int fId = -1;
 		if (simpleString)
 		{
 			actPos = zone.begin();
@@ -698,8 +694,8 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			}
 			else
 				lastPos = zone.end();
-			FODs_iter--;
-			fId = fod.m_id;
+			--FODs_iter;
+			int fId = fod.m_id;
 			type = fod.m_type;
 			if (type == DataFOD::ATTR_TEXT)
 			{
@@ -972,11 +968,11 @@ bool WPS4Text::readEntries()
 	int textLimits[4];
 	// look like begin of text : end of header/end of footer/end text
 	// but sometimes the zones overlaps !!!
-	for (int i = 0; i < 4; i++) textLimits[i] = libwps::read32(m_input);
+	for (int i = 0; i < 4; ++i) textLimits[i] = libwps::read32(m_input);
 
 	bool first = true, ok = true;
 	long lastPos = textLimits[0] < 0x100 ? 0x100 : textLimits[0];
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; ++i)
 	{
 		long newPos = textLimits[i+1];
 		WPSEntry zone;
@@ -1071,7 +1067,7 @@ bool WPS4Text::readEntries()
 	static char const * (zName[]) =
 	{ "BTEC", "BTEP", "SHdr", "SFtr", "DLINK", "FTNp", "FTNd", "BKMK", "FONT" };
 
-	for (int i = 0; i < 9; i++)
+	for (int i = 0; i < 9; ++i)
 		mainParser().parseEntry(zName[i]);
 
 	return true;
@@ -1090,7 +1086,7 @@ bool WPS4Text::readStructures()
 	if (pos != nameMultiMap.end()) readFontNames(pos->second);
 
 	// now find the character and paragraph properties
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < 2; ++i)
 	{
 		// we begin by i = 1 to create firsts the fdpc structure
 		if (findFDPStructures(1-i)) continue;
@@ -1100,7 +1096,7 @@ bool WPS4Text::readStructures()
 	/* read character FODs (FOrmatting Descriptors) */
 	size_t numFDP = m_state->m_FDPCs.size();
 	std::vector<DataFOD> fdps;
-	for (size_t i = 0; i < numFDP; i++)
+	for (size_t i = 0; i < numFDP; ++i)
 		readFDP(m_state->m_FDPCs[i], fdps, (FDPParser)&WPS4Text::readFont);
 	m_FODList = mergeSortedFODLists(fdps, m_FODList);
 
@@ -1108,7 +1104,7 @@ bool WPS4Text::readStructures()
 	/* read paragraphs FODs (FOrmatting Descriptors) */
 	fdps.resize(0);
 	numFDP = m_state->m_FDPPs.size();
-	for (size_t i = 0; i < numFDP; i++)
+	for (size_t i = 0; i < numFDP; ++i)
 		readFDP(m_state->m_FDPPs[i], fdps, (FDPParser)&WPS4Text::readParagraph);
 	m_FODList = mergeSortedFODLists(fdps, m_FODList);
 
@@ -1220,7 +1216,7 @@ bool WPS4Text::findFDPStructures(int which)
 	WPSEntry zone;
 	zone.setType(sIndexName);
 
-	for (size_t i = 0; i < numV; i++)
+	for (size_t i = 0; i < numV; ++i)
 	{
 		long bPos = listValues[i];
 		if (bPos <= 0) return false;
@@ -1545,7 +1541,8 @@ bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 	}
 	if (m_input->tell() < endPos)
 		font.m_dlinkId = libwps::readU8(m_input);
-	if (fl[0])  f << "unkn0=" << std::hex << fl[0] << ",";
+	if (what)  f << "#what=" << std::hex << what << std::dec << ",";
+	if (fl[0])  f << "unkn0=" << std::hex << fl[0] << std::dec << ",";
 
 	if (m_input->tell() != endPos)
 	{
@@ -1584,19 +1581,19 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 	libwps::DebugStream f;
 	long numElt = length/44;
 	long val;
-	for (long n = 0; n < numElt; n++)
+	for (long n = 0; n < numElt; ++n)
 	{
 		WPS4TextInternal::DosLink link;
 		long pos = m_input->tell();
 		long endPos = pos+44;
 		f.str("");
-		for (int i = 0; i < 2; i++) // always 0, 0
+		for (int i = 0; i < 2; ++i) // always 0, 0
 		{
 			val = libwps::readU16(m_input);
 			if (val) f << "unkn" << i << "=" << std::hex << val << std::dec << ",";
 		}
 		link.m_width = float(libwps::readU16(m_input)/1440.);
-		for (int i = 2; i < 4; i++) // always f0, f0
+		for (int i = 2; i < 4; ++i) // always f0, f0
 		{
 			val = libwps::readU16(m_input);
 			if (val != 0xf0) f << "unkn" << i << "=" << std::hex << val << std::dec << ",";
@@ -1610,7 +1607,7 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 		case 0x81: // picture ?
 		{
 			long dim[2];
-			for (int i = 0; i < 2; i++) dim[i] = libwps::readU16(m_input);
+			for (int i = 0; i < 2; ++i) dim[i] = libwps::readU16(m_input);
 			link.m_size = Vec2f(float(dim[0])/1440.f, float(dim[1])/1440.f);
 			val = libwps::readU16(m_input); // always 0
 			if (val) f << "g0=" << val << ",";
@@ -1675,7 +1672,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 	}
 
 	libwps::DebugStream f;
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; ++i)
 	{
 		int v = libwps::readU8(m_input);
 		if (v != 0) f << "unkn"<<i<< "=" << v;
@@ -1954,9 +1951,9 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				break;
 			}
 			pp.m_tabs.resize(nItem);
-			for (size_t i = 0; i < nItem; i++)
+			for (size_t i = 0; i < nItem; ++i)
 				pp.m_tabs[i].m_position = libwps::read16(m_input)/1440.;
-			for (size_t i = 0; i < nItem; i++)
+			for (size_t i = 0; i < nItem; ++i)
 			{
 				enum WPSTabStop::Alignment align = WPSTabStop::LEFT;
 				int val = libwps::readU8(m_input);
@@ -2126,7 +2123,7 @@ bool WPS4Text::readFootNotes(WPSEntry const &ftnD, WPSEntry const &ftnP)
 	m_state->m_footnoteList.resize(0);
 
 	std::vector<int> corresp;
-	for (size_t i = 0; i < size_t(numFootNotes); i++)
+	for (size_t i = 0; i < size_t(numFootNotes); ++i)
 	{
 		WPS4TextInternal::Note fZone;
 		fZone.setBegin(footNoteDef[i]);
@@ -2163,7 +2160,7 @@ bool WPS4Text::readFootNotes(WPSEntry const &ftnD, WPSEntry const &ftnP)
 		}
 	}
 	// ok, we can create the map, ...
-	for (size_t i = 0; i < size_t(numFootNotes); i++)
+	for (size_t i = 0; i < size_t(numFootNotes); ++i)
 	{
 		size_t id = size_t(corresp[i]);
 		WPS4TextInternal::Note &z = m_state->m_footnoteList[id];
@@ -2207,7 +2204,7 @@ bool WPS4Text::footNotesDataParser (long /*bot*/, long /*eot*/, int id,
 		    (version() < 3) ? libwps_tools_win::Font::DOS_850 :
 		    libwps_tools_win::Font::WIN3_WEUROPE;
 
-		for (int i=0; i < numC; i++)
+		for (int i=0; i < numC; ++i)
 		{
 			unsigned char c = libwps::readU8(m_input);
 			if (c >= 0x20)
@@ -2249,7 +2246,7 @@ bool WPS4Text::bkmkDataParser(long bot, long /*eot*/, int /*id*/,
 		return false;
 	}
 
-	for (int i = 0; i < 16; i++)
+	for (int i = 0; i < 16; ++i)
 	{
 		char c = char(libwps::readU8(m_input));
 		if (c == '\0') break;
@@ -2288,13 +2285,13 @@ bool WPS4Text::objectDataParser (long bot, long /*eot*/, int id,
 	}
 
 	f << "type(?)=" <<libwps::read16(m_input) << ","; // 3->08 4->4f4d or 68->list?
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < 2; ++i)
 	{
 		int v =libwps::read16(m_input);
 		if (v) f << "unkn1:" << i << "=" << v << ",";
 	}
 	float dim[4];
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; ++i)
 		dim[i] =float(libwps::read16(m_input)/1440.);
 
 	// CHECKME: the next two sizes are often simillar,
@@ -2330,7 +2327,7 @@ bool WPS4Text::objectDataParser (long bot, long /*eot*/, int id,
 
 	m_input->seek(actPos, WPX_SEEK_SET);
 
-	for (int i = 0; i < 7; i++)
+	for (int i = 0; i < 7; ++i)
 	{
 		long val =libwps::read16(m_input);
 		if (val) f << "unkn2:" << i << "=" << val << ",";
@@ -2369,7 +2366,7 @@ bool WPS4Text::dttmDataParser (long bot, long /*eot*/, int /*id*/,
 
 	WPS4TextInternal::DateTime form;
 	int val;
-	for (int i = 0; i < 3; i++) // always 0, 0, 0 ?
+	for (int i = 0; i < 3; ++i) // always 0, 0, 0 ?
 	{
 		val =libwps::read16(m_input);
 		if (val) f << "f" << i << "=" << val << ",";
@@ -2378,7 +2375,7 @@ bool WPS4Text::dttmDataParser (long bot, long /*eot*/, int /*id*/,
 	val =libwps::read16(m_input); // alway 0 ?
 	if (val) f << "f3=" << val << ",";
 	// end unknown
-	for (int i = 0; i < 16; i++)
+	for (int i = 0; i < 16; ++i)
 	{
 		val =libwps::readU16(m_input);
 		if (val) f << "g" << i << "=" << std::hex << val << std::dec << ",";
@@ -2549,7 +2546,7 @@ bool WPS4Text::readPLC
 
 	if (!dataSize)
 	{
-		for (size_t i = 0; i < numElt; i++)
+		for (size_t i = 0; i < numElt; ++i)
 		{
 			listValues.push_back(-1);
 			fods[i].m_id = int(m_state->m_plcList.size());
@@ -2569,7 +2566,7 @@ bool WPS4Text::readPLC
 	if ((dataSize == 3 || dataSize > 4) && !pars)
 		pars = &WPS4Text::defDataParser;
 
-	for (size_t i = 0; i < numElt; i++)
+	for (size_t i = 0; i < numElt; ++i)
 	{
 		WPS4TextInternal::DataPLC plc;
 

@@ -358,7 +358,7 @@ bool WPSOLEParser::parse(shared_ptr<libwps::Storage> file)
 		{
 			WPSOLEParserInternal::OleDef const &dOle = pos->second;
 			if (pos->first != id) break;
-			pos++;
+			++pos;
 
 			WPXInputStreamPtr ole = file->getDocumentOLEStream(dOle.m_name);
 			if (!ole.get())

@@ -471,12 +471,12 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 		WPS_DEBUG_MSG(("SubDocument::parse: no listener\n"));
 		return;
 	}
-	if (!dynamic_cast<WPS8ContentListener *>(listener.get()))
+	if (!dynamic_cast<WPSContentListener *>(listener.get()))
 	{
 		WPS_DEBUG_MSG(("SubDocument::parse: bad listener\n"));
 		return;
 	}
-	WPS8ContentListenerPtr &listen =  reinterpret_cast<WPS8ContentListenerPtr &>(listener);
+	WPSContentListenerPtr &listen =  reinterpret_cast<WPSContentListenerPtr &>(listener);
 
 	if (type==libwps::DOC_COMMENT_ANNOTATION)
 	{
@@ -523,7 +523,7 @@ WPS8Text::~WPS8Text ()
 }
 
 //! sets the listener
-void WPS8Text::setListener(WPS8ContentListenerPtr &listen)
+void WPS8Text::setListener(WPSContentListenerPtr &listen)
 {
 	m_listener = listen;
 	m_styleParser->setListener(listen);

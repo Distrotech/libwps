@@ -31,7 +31,6 @@
 
 class WPXString;
 class WPSContentListener;
-typedef WPSContentListener WPS8ContentListener;
 class WPSEntry;
 class WPSPosition;
 class WPSPageSpan;
@@ -71,9 +70,9 @@ protected:
 	//! adds a new page
 	void newPage(int number);
 	//! set the listener
-	void setListener(shared_ptr<WPS8ContentListener> listener);
+	void setListener(shared_ptr<WPSContentListener> listener);
 	/** creates the main listener */
-	shared_ptr<WPS8ContentListener> createListener(WPXDocumentInterface *interface);
+	shared_ptr<WPSContentListener> createListener(WPXDocumentInterface *interface);
 
 	/** tries to parse the main zone, ... */
 	bool createStructures();
@@ -158,7 +157,7 @@ protected:
 	//! finds the structures of the Ole zone "SPELLING"
 	bool readSPELLING(WPXInputStreamPtr input, std::string const &oleName);
 
-	shared_ptr<WPS8ContentListener> m_listener; /* the listener (if set)*/
+	shared_ptr<WPSContentListener> m_listener; /* the listener (if set)*/
 	//! the graph parser
 	shared_ptr<WPS8Graph> m_graphParser;
 	//! the table parser

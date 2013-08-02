@@ -40,9 +40,6 @@ struct Paragraph;
 struct State;
 }
 
-typedef class WPSContentListener WPS4ContentListener;
-typedef shared_ptr<WPS4ContentListener> WPS4ContentListenerPtr;
-
 /** The class which parses text zones in a pc MS Works document v1-4
  *
  * This class must be associated with a WPS4Parser. It finds and reads:
@@ -74,7 +71,7 @@ public:
 	~WPS4Text();
 
 	//! sets the listener
-	void setListener(WPS4ContentListenerPtr &listen)
+	void setListener(WPSContentListenerPtr &listen)
 	{
 		m_listener = listen;
 	}
@@ -194,7 +191,7 @@ protected:
 
 protected:
 	//! the listener
-	WPS4ContentListenerPtr m_listener;
+	WPSContentListenerPtr m_listener;
 
 	//! the internal state
 	mutable shared_ptr<WPS4TextInternal::State> m_state;

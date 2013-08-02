@@ -126,7 +126,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 
 	/* Read array of fcLim of FODs.  The fcLim refers to the offset of the
 	   last character covered by the formatting. */
-	for (int i = 0; i <= cfod; i++)
+	for (int i = 0; i <= cfod; ++i)
 	{
 		DataFOD fod;
 		fod.m_type = type;
@@ -161,7 +161,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	/* Read array of bfprop of FODs.  The bfprop is the offset where
 	   the FPROP is located. */
 	f << ", Tpos:defP=(";
-	for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); fods_iter++)
+	for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); ++fods_iter)
 	{
 		unsigned depl = deplSize == 1 ? libwps::readU8(m_input) : libwps::readU16(m_input);
 		/* check size of bfprop  */
@@ -169,7 +169,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 		        long(page_offset+depl)  > endPage)
 		{
 			WPS_DEBUG_MSG(("WPSTextParser::readFDP: error: pos of bfprop is bad "
-			               "%i (0x%X)\n", depl, depl));
+			               "%u (0x%X)\n", depl, depl));
 			return false;
 		}
 
@@ -180,7 +180,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 
 	std::map<long,int> mapPtr;
 	bool smallSzInProp = smallFDP;
-	for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); fods_iter++)
+	for (fods_iter = fods.begin() + firstFod; fods_iter!= fods.end(); ++fods_iter)
 	{
 		long pos = (*fods_iter).m_defPos;
 		f << std::hex << (*fods_iter).m_pos << std::dec << ":";

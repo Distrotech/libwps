@@ -38,9 +38,6 @@ class WPSEntry;
 class WPS4Parser;
 class WPSPosition;
 
-typedef class WPSContentListener WPS4ContentListener;
-typedef shared_ptr<WPS4ContentListener> WPS4ContentListenerPtr;
-
 namespace WPS4GraphInternal
 {
 struct State;
@@ -70,7 +67,7 @@ public:
 	~WPS4Graph();
 
 	//! sets the listener
-	void setListener(WPS4ContentListenerPtr &listen)
+	void setListener(WPSContentListenerPtr &listen)
 	{
 		m_listener = listen;
 	}
@@ -124,7 +121,7 @@ private:
 	WPS4Graph &operator=(WPS4Graph const &orig);
 protected:
 	//! the listener
-	WPS4ContentListenerPtr m_listener;
+	WPSContentListenerPtr m_listener;
 
 	//! the main parser
 	WPS4Parser &m_mainParser;

@@ -34,9 +34,6 @@ class WPSEntry;
 class WPS8Parser;
 class WPSPosition;
 
-typedef class WPSContentListener WPS8ContentListener;
-typedef shared_ptr<WPS8ContentListener> WPS8ContentListenerPtr;
-
 namespace WPS8TableInternal
 {
 struct Cell;
@@ -71,7 +68,7 @@ public:
 	~WPS8Table();
 
 	//! sets the listener
-	void setListener(WPS8ContentListenerPtr &listen)
+	void setListener(WPSContentListenerPtr &listen)
 	{
 		m_listener = listen;
 	}
@@ -121,7 +118,7 @@ private:
 
 protected:
 	//! the listener
-	WPS8ContentListenerPtr m_listener;
+	WPSContentListenerPtr m_listener;
 
 	//! the main parser
 	WPS8Parser &m_mainParser;

@@ -31,7 +31,6 @@
 
 class WPXString;
 class WPSContentListener;
-typedef WPSContentListener WPS4ContentListener;
 class WPSEntry;
 class WPSPosition;
 class WPSPageSpan;
@@ -76,14 +75,14 @@ protected:
 	//! adds a new page
 	void newPage(int number);
 	//! set the listener
-	void setListener(shared_ptr<WPS4ContentListener> listener);
+	void setListener(shared_ptr<WPSContentListener> listener);
 
 	/** tries to parse the main zone, ... */
 	bool createStructures();
 	/** tries to parse the different OLE zones ( except the main zone ) */
 	bool createOLEStructures();
 	/** creates the main listener */
-	shared_ptr<WPS4ContentListener> createListener(WPXDocumentInterface *interface);
+	shared_ptr<WPSContentListener> createListener(WPXDocumentInterface *interface);
 
 	// interface with text parser
 
@@ -141,7 +140,7 @@ protected:
 	 */
 	bool readDocWindowsInfo(WPSEntry const &entry);
 
-	shared_ptr<WPS4ContentListener> m_listener; /* the listener (if set)*/
+	shared_ptr<WPSContentListener> m_listener; /* the listener (if set)*/
 	//! the graph parser
 	shared_ptr<WPS4Graph> m_graphParser;
 	//! the text parser

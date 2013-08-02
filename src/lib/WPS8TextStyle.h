@@ -32,9 +32,6 @@
 
 class WPSEntry;
 
-typedef class WPSContentListener WPS8ContentListener;
-typedef shared_ptr<WPS8ContentListener> WPS8ContentListenerPtr;
-
 namespace WPS8Struct
 {
 struct FileData;
@@ -57,7 +54,7 @@ public:
 	~WPS8TextStyle();
 
 	//! sets the listener
-	void setListener(WPS8ContentListenerPtr &listen)
+	void setListener(WPSContentListenerPtr &listen)
 	{
 		m_listener = listen;
 	}
@@ -115,7 +112,7 @@ protected:
 	//! the main input
 	WPXInputStreamPtr m_input;
 	//! the listener
-	WPS8ContentListenerPtr m_listener;
+	WPSContentListenerPtr m_listener;
 	//! the internal state
 	mutable shared_ptr<WPS8TextStyleInternal::State> m_state;
 	//! the ascii file

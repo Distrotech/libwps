@@ -112,7 +112,7 @@ public:
 	}
 
 	//! sets the type of the entry: BTEP,FDPP, BTEC, FDPC, PLC , TEXT, ...
-	void setType(std::string const tp)
+	void setType(std::string const &tp)
 	{
 		m_type=tp;
 	}
@@ -122,7 +122,7 @@ public:
 		return m_type;
 	}
 	//! returns true if the type entry == \a type
-	bool hasType(std::string const tp) const
+	bool hasType(std::string const &tp) const
 	{
 		return m_type == tp;
 	}

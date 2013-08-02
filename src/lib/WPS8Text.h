@@ -33,9 +33,6 @@
 class WPSEntry;
 class WPSPosition;
 
-typedef class WPSContentListener WPS8ContentListener;
-typedef shared_ptr<WPS8ContentListener> WPS8ContentListenerPtr;
-
 namespace WPS8Struct
 {
 struct FileData;
@@ -60,7 +57,7 @@ public:
 	~WPS8Text();
 
 	//! sets the listener
-	void setListener(WPS8ContentListenerPtr &listen);
+	void setListener(WPSContentListenerPtr &listen);
 
 	//! returns the number of pages
 	int numPages() const;
@@ -189,7 +186,7 @@ protected:
 
 protected:
 	//! the listener
-	WPS8ContentListenerPtr m_listener;
+	WPSContentListenerPtr m_listener;
 	//! the graph parser
 	shared_ptr<WPS8TextStyle> m_styleParser;
 	//! the internal state

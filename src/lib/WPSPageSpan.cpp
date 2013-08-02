@@ -35,7 +35,7 @@ namespace WPSPageSpanInternal
 class HeaderFooter
 {
 public:
-	HeaderFooter(const WPSPageSpan::HeaderFooterType headerFooterType, const WPSPageSpan::HeaderFooterOccurence occurence, WPSSubDocumentPtr &subDoc)  :
+	HeaderFooter(WPSPageSpan::HeaderFooterType const &headerFooterType, WPSPageSpan::HeaderFooterOccurence const &occurence, WPSSubDocumentPtr &subDoc)  :
 		m_type(headerFooterType), m_occurence(occurence), m_subDocument(subDoc)
 	{
 	}
