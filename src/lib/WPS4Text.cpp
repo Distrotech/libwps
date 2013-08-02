@@ -1402,9 +1402,9 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 			}
 		}
 		libwps_tools_win::Font::Type fType;
-		if (version() <= 2) fType = libwps_tools_win::Font::DOS_850; //checkme ?
+		if (version() < 2) fType = libwps_tools_win::Font::DOS_850; //checkme ?
+		else if (version()==2) fType = libwps_tools_win::Font::getDosWin2Type(s);
 		else fType = libwps_tools_win::Font::getWin3Type(s);
-		;
 		WPS4TextInternal::FontName font;
 		font.m_name = s;
 		font.m_type = fType;

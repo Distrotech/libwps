@@ -36,6 +36,12 @@ namespace libwps_tools_win
 //
 ////////////////////////////////////////////////////////////
 
+Font::Type Font::getDosWin2Type(std::string &name)
+{
+	Font::Type res=getWin3Type(name);
+	return res==WIN3_WEUROPE ? DOS_850 : res;
+}
+
 Font::Type Font::getWin3Type(std::string &fName)
 {
 	size_t len = fName.length();

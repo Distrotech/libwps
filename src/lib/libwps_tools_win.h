@@ -87,6 +87,12 @@ public:
 	 * \note \a name can be modified to suppress an extension
 	 */
 	static Type getWin3Type(std::string &name);
+	/*! \brief returns the type of the font using the fontName
+	 * \param name the font name.
+	 *
+	 * \note \a name can be modified to suppress an extension
+	 */
+	static Type getDosWin2Type(std::string &name);
 
 protected:
 	//
