@@ -91,7 +91,7 @@ public:
 
 	/** tries to parse basic OLE (excepted mainName)
 	    \return false if fileInput is not an Ole file */
-	bool parse(shared_ptr<libwps::Storage> fileInput);
+	bool parse(shared_ptr<libwpsOLE::Storage> fileInput);
 
 	//! returns the list of unknown ole
 	std::vector<std::string> const &getNotParse() const

@@ -264,7 +264,7 @@ void WPSOLEParser::setObject(int id, WPXBinaryData const &obj, WPSPosition const
 }
 
 // parsing
-bool WPSOLEParser::parse(shared_ptr<libwps::Storage> file)
+bool WPSOLEParser::parse(shared_ptr<libwpsOLE::Storage> file)
 {
 	if (!m_compObjIdName)
 		m_compObjIdName.reset(new WPSOLEParserInternal::CompObj);
@@ -275,9 +275,9 @@ bool WPSOLEParser::parse(shared_ptr<libwps::Storage> file)
 
 	if (!file.get()) return false;
 
-	if (!file->isOLEStream()) return false;
+	if (!file->isStructuredDocument()) return false;
 
-	std::vector<std::string> namesList = file->getOLENames();
+	std::vector<std::string> namesList = file->getSubStreamList();
 
 	//
 	// we begin by grouping the Ole by their potential main id
@@ -360,7 +360,7 @@ bool WPSOLEParser::parse(shared_ptr<libwps::Storage> file)
 			if (pos->first != id) break;
 			++pos;
 
-			WPXInputStreamPtr ole = file->getDocumentOLEStream(dOle.m_name);
+			WPXInputStreamPtr ole = file->getSubStream(dOle.m_name);
 			if (!ole.get())
 			{
 				WPS_DEBUG_MSG(("WPSOLEParser: error: can not find OLE part: \"%s\"\n", dOle.m_name.c_str()));

@@ -647,7 +647,7 @@ bool WPS8Parser::createOLEStructures()
 {
 	if (!getInput()) return false;
 
-	shared_ptr<libwps::Storage> storage = getHeader()->getOLEStorage();
+	shared_ptr<libwpsOLE::Storage> storage = getHeader()->getOLEStorage();
 	if (!storage) return true;
 	WPSOLEParser oleParser("CONTENTS");
 	if (!oleParser.parse(storage)) return false;
@@ -668,14 +668,14 @@ bool WPS8Parser::createOLEStructures()
 			continue;
 		if (name== "SPELLING")
 		{
-			WPXInputStreamPtr ole = storage->getDocumentOLEStream(name.c_str());
+			WPXInputStreamPtr ole = storage->getSubStream(name.c_str());
 			if (ole && readSPELLING(ole, name))
 				continue;
 		}
 		WPS_DEBUG_MSG(("WPS8Parser::createOLEStructures:: Find unparsed ole: %s\n", name.c_str()));
 
 #ifdef DEBUG_WITH_FILES
-		WPXInputStreamPtr ole = storage->getDocumentOLEStream(name.c_str());
+		WPXInputStreamPtr ole = storage->getSubStream(name.c_str());
 		if (!ole.get())
 		{
 			WPS_DEBUG_MSG(("WPS8Parser::createOLEStructures: error: can find OLE part: \"%s\"\n", name.c_str()));

@@ -27,7 +27,7 @@
 
 #include "WPSHeader.h"
 
-WPSHeader::WPSHeader(WPXInputStreamPtr &input, shared_ptr<libwps::Storage> &storage, uint8_t majorVersion) :
+WPSHeader::WPSHeader(WPXInputStreamPtr &input, shared_ptr<libwpsOLE::Storage> &storage, uint8_t majorVersion) :
 	m_input(input), m_oleStorage(storage),
 	m_majorVersion(majorVersion)
 {
@@ -50,8 +50,8 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
 
-	shared_ptr<libwps::Storage> oleStorage(new libwps::Storage(input));
-	if (oleStorage && !oleStorage->isOLEStream())
+	shared_ptr<libwpsOLE::Storage> oleStorage(new libwpsOLE::Storage(input));
+	if (oleStorage && !oleStorage->isStructuredDocument())
 		oleStorage.reset();
 	if (!oleStorage)
 	{
@@ -65,12 +65,12 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 		return 0;
 	}
 
-	WPXInputStreamPtr document_mn0(oleStorage->getDocumentOLEStream("MN0"));
+	WPXInputStreamPtr document_mn0(oleStorage->getSubStream("MN0"));
 	if (document_mn0)
 	{
 		// can be a mac or a pc document
 		// each must contains a MM Ole which begins by 0x444e: Mac or 0x4e44: PC
-		WPXInputStreamPtr document_mm(oleStorage->getDocumentOLEStream("MM"));
+		WPXInputStreamPtr document_mm(oleStorage->getSubStream("MM"));
 		if (document_mm && libwps::readU16(document_mm) == 0x4e44)
 		{
 			WPS_DEBUG_MSG(("Microsoft Works Mac v4 format detected\n"));
@@ -80,7 +80,7 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 		return new WPSHeader(document_mn0, oleStorage, 4);
 	}
 
-	WPXInputStreamPtr document_contents(oleStorage->getDocumentOLEStream("CONTENTS"));
+	WPXInputStreamPtr document_contents(oleStorage->getSubStream("CONTENTS"));
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */

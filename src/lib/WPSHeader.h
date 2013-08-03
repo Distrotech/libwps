@@ -26,7 +26,7 @@
 #include "libwps_internal.h"
 #include <libwpd-stream/libwpd-stream.h>
 
-namespace libwps
+namespace libwpsOLE
 {
 class Storage;
 }
@@ -34,7 +34,7 @@ class Storage;
 class WPSHeader
 {
 public:
-	WPSHeader(WPXInputStreamPtr &input, shared_ptr<libwps::Storage> &ole,
+	WPSHeader(WPXInputStreamPtr &input, shared_ptr<libwpsOLE::Storage> &ole,
 	          uint8_t majorVersion);
 	virtual ~WPSHeader();
 
@@ -45,7 +45,7 @@ public:
 		return m_input;
 	}
 
-	shared_ptr<libwps::Storage> &getOLEStorage()
+	shared_ptr<libwpsOLE::Storage> &getOLEStorage()
 	{
 		return m_oleStorage;
 	}
@@ -59,7 +59,7 @@ private:
 	WPSHeader(const WPSHeader &);
 	WPSHeader &operator=(const WPSHeader &);
 	WPXInputStreamPtr m_input;
-	shared_ptr<libwps::Storage> m_oleStorage;
+	shared_ptr<libwpsOLE::Storage> m_oleStorage;
 	uint8_t m_majorVersion;
 };
 
