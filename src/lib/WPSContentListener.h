@@ -36,14 +36,9 @@ class WPXDocumentInterface;
 class WPXString;
 class WPXPropertyListVector;
 
-class WPSCell;
 class WPSList;
 class WPSPageSpan;
-class WPSPosition;
-class WPSSubDocument;
 struct WPSTabStop;
-
-typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
 
 struct WPSDocumentParsingState
 {
@@ -347,8 +342,6 @@ private:
 	WPSContentListener(const WPSContentListener &);
 	WPSContentListener &operator=(const WPSContentListener &);
 };
-
-typedef shared_ptr<WPSContentListener> WPSContentListenerPtr;
 
 #endif
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

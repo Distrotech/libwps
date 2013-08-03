@@ -32,10 +32,6 @@
 
 class WPXDocumentInterface;
 
-class WPSEntry;
-class WPSHeader;
-typedef shared_ptr<WPSHeader> WPSHeaderPtr;
-
 class WPSTextParser;
 
 class WPSParser

@@ -229,8 +229,7 @@ bool WPS8TextStyle::readStructures()
 	pos = nameTable.lower_bound("SGP ");
 	while (nameTable.end() != pos)
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("SGP ")) break;
 		if (!entry.hasType("SGP ")) continue;
 
@@ -1192,7 +1191,6 @@ bool WPS8TextStyle::readSTSH(WPSEntry const &entry)
 			case 0:
 			{
 				WPS8Struct::FileData mainData;
-				std::string error;
 				int dataSz = (int) libwps::readU16(m_input);
 				if (dataSz+2 != 2*size)
 				{
@@ -1248,8 +1246,7 @@ bool WPS8TextStyle::findFDPStructures(int which, std::vector<WPSEntry> &zones)
 	std::vector<WPSEntry const *> listIndexed;
 	while (pos != m_mainParser.getNameEntryMap().end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName(indexName)) break;
 		if (!entry.hasType("PLC ")) continue;
 		listIndexed.push_back(&entry);
@@ -1259,10 +1256,9 @@ bool WPS8TextStyle::findFDPStructures(int which, std::vector<WPSEntry> &zones)
 	if (nFind==0) return false;
 
 	// can nFind be > 1 ?
-	bool ok = true;
 	for (size_t i = 0; i+1 < nFind; i++)
 	{
-		ok = true;
+		bool ok = true;
 		for (size_t j = 0; j+i+1 < nFind; j++)
 		{
 			if (listIndexed[j]->id() <= listIndexed[j+1]->id())
@@ -1284,8 +1280,7 @@ bool WPS8TextStyle::findFDPStructures(int which, std::vector<WPSEntry> &zones)
 	pos = m_mainParser.getNameEntryMap().lower_bound(sIndexName);
 	while (pos != m_mainParser.getNameEntryMap().end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName(sIndexName)) break;
 		offsetMap.insert(std::map<long, WPSEntry const *>::value_type
 		                 (entry.begin(), &entry));
@@ -1329,8 +1324,7 @@ bool WPS8TextStyle::findFDPStructuresByHand(int which, std::vector<WPSEntry> &zo
 	    m_mainParser.getNameEntryMap().lower_bound(indexName);
 	while (pos != m_mainParser.getNameEntryMap().end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName(indexName)) break;
 		if (!entry.hasType(indexName)) continue;
 

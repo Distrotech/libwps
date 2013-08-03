@@ -30,9 +30,7 @@
 #include "WPSParser.h"
 
 class WPXString;
-class WPSContentListener;
-class WPSEntry;
-class WPSPosition;
+
 class WPSPageSpan;
 
 namespace WPS4ParserInternal

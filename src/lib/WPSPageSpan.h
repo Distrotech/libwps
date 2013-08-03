@@ -30,9 +30,6 @@ class WPXPropertyList;
 class WPXDocumentProperty;
 class WPSContentListener;
 
-class WPSSubDocument;
-typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
-
 namespace WPSPageSpanInternal
 {
 class HeaderFooter;

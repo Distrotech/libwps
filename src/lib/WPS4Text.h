@@ -103,9 +103,6 @@ protected:
 	//! returns the main text entry (if such entry exists, if not returns an invalid entry)
 	WPSEntry getMainTextEntry() const;
 
-	//! returns the text position
-	WPSEntry getAllTextEntry() const;
-
 	//! reads a text section and sends it to a listener
 	bool readText(WPSEntry const &entry);
 

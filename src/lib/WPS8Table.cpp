@@ -227,8 +227,7 @@ void WPS8Table::flushExtra()
 	std::map<int, Table>::iterator pos = m_state->m_tableMap.begin();
 	while (pos != m_state->m_tableMap.end())
 	{
-		Table &table = pos->second;
-		pos++;
+		Table &table = pos++->second;
 		if (table.m_parsed) continue;
 		int strsid = m_mainParser.getTableSTRSId(table.m_id);
 		if (strsid < 0) continue;
@@ -300,8 +299,7 @@ bool WPS8Table::readStructures(WPXInputStreamPtr input)
 	pos = nameTable.lower_bound("MCLD");
 	while (pos != nameTable.end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("MCLD")) break;
 		if (!entry.hasType("MCLD")) continue;
 

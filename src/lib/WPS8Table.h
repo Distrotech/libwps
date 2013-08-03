@@ -30,9 +30,7 @@
 
 #include "WPSDebug.h"
 
-class WPSEntry;
 class WPS8Parser;
-class WPSPosition;
 
 namespace WPS8TableInternal
 {

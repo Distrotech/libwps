@@ -680,8 +680,7 @@ void WPSContentListener::_openPageSpan()
 	std::vector<WPSPageSpan>::iterator it = m_ds->m_pageList.begin();
 	while(actPage < m_ps->m_currentPage)
 	{
-		actPage+=(unsigned) it->getPageSpan();
-		it++;
+		actPage+=(unsigned) it++->getPageSpan();
 		if (it == m_ds->m_pageList.end())
 		{
 			WPS_DEBUG_MSG(("WPSContentListener::_openPageSpan: can not find current page\n"));
@@ -979,8 +978,7 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 			if (it == m_ds->m_pageList.end())
 				break;
 
-			actPage+=unsigned(it->getPageSpan());
-			it++;
+			actPage+=unsigned(it++->getPageSpan());
 		}
 		if (it != m_ds->m_pageList.end())
 		{
@@ -1476,8 +1474,6 @@ void WPSContentListener::_handleFrameParameters
 		propList.insert("libwpd:naturalHeight", pos.naturalSize().y(), pos.unit());
 	}
 
-	double newPosition;
-
 	if ( pos.m_wrapping ==  WPSPosition::WDynamic)
 		propList.insert( "style:wrap", "dynamic" );
 	else if ( pos.m_wrapping ==  WPSPosition::WRunThrough)
@@ -1553,6 +1549,8 @@ void WPSContentListener::_handleFrameParameters
 
 		propList.insert("style:vertical-rel", "page" );
 		propList.insert("style:horizontal-rel", "page" );
+
+		double newPosition;
 		switch ( pos.m_yPos)
 		{
 		case WPSPosition::YFull:

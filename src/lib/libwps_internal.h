@@ -71,7 +71,25 @@ struct WPS_shared_ptr_noop_deleter
 	void operator() (T *) {}
 };
 
+// basic classes and autoptr
+/** shared pointer to WPXInputStream */
 typedef shared_ptr<WPXInputStream> WPXInputStreamPtr;
+
+class WPSCell;
+class WPSContentListener;
+class WPSEntry;
+class WPSHeader;
+class WPSPosition;
+class WPSSubDocument;
+
+/** shared pointer to WPSCell */
+typedef shared_ptr<WPSCell> WPSCellPtr;
+/** shared pointer to WPSContentListener */
+typedef shared_ptr<WPSContentListener> WPSContentListenerPtr;
+/** shared pointer to WPSHeader */
+typedef shared_ptr<WPSHeader> WPSHeaderPtr;
+/** shared pointer to WPSSubDocument */
+typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
 
 /* ---------- debug  --------------- */
 #ifdef DEBUG

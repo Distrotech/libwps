@@ -31,12 +31,6 @@
 
 #include "libwps_internal.h"
 
-class WPSContentListener;
-typedef shared_ptr<WPSContentListener> WPSContentListenerPtr;
-
-class WPSCell;
-typedef shared_ptr<WPSCell> WPSCellPtr;
-
 /*
  * Structure to store and construct a table from an unstructured list
  * of cell

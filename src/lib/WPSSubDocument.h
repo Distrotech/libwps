@@ -80,8 +80,6 @@ private:
 	WPSSubDocument &operator=(const WPSSubDocument &);
 
 };
-
-typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
 #endif
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

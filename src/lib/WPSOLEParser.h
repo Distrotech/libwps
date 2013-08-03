@@ -70,7 +70,7 @@ namespace libwps
 {
 class Storage;
 }
-class WPSPosition;
+
 namespace WPSOLEParserInternal
 {
 class CompObj;
@@ -125,43 +125,43 @@ public:
 protected:
 
 	//!  the "Ole" small structure : unknown contain
-	bool readOle(WPXInputStreamPtr &ip, std::string const &oleName,
-	             libwps::DebugFile &ascii);
+	static bool readOle(WPXInputStreamPtr &ip, std::string const &oleName,
+	                    libwps::DebugFile &ascii);
 	//!  the "MM" small structure : seems to contain the file versions
-	bool readMM(WPXInputStreamPtr &input, std::string const &oleName,
-	            libwps::DebugFile &ascii);
+	static bool readMM(WPXInputStreamPtr &input, std::string const &oleName,
+	                   libwps::DebugFile &ascii);
 	//!  the "ObjInfo" small structure : seems to contain 3 ints=0,3,4
-	bool readObjInfo(WPXInputStreamPtr &input, std::string const &oleName,
-	                 libwps::DebugFile &ascii);
+	static bool readObjInfo(WPXInputStreamPtr &input, std::string const &oleName,
+	                        libwps::DebugFile &ascii);
 	//!  the "CompObj" contains : UserType,ClipName,ProgIdName
 	bool readCompObj(WPXInputStreamPtr &ip, std::string const &oleName,
 	                 libwps::DebugFile &ascii);
 
 	/** the OlePres001 seems to contain standart picture file and size */
-	bool isOlePres(WPXInputStreamPtr &ip, std::string const &oleName);
+	static bool isOlePres(WPXInputStreamPtr &ip, std::string const &oleName);
 	/** extracts the picture of OlePres001 if it is possible */
-	bool readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data, WPSPosition &pos,
-	                 libwps::DebugFile &ascii);
+	static bool readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data,
+	                        WPSPosition &pos, libwps::DebugFile &ascii);
 
 	//! theOle10Native : basic Windows© picture, with no size
-	bool isOle10Native(WPXInputStreamPtr &ip, std::string const &oleName);
+	static bool isOle10Native(WPXInputStreamPtr &ip, std::string const &oleName);
 	/** extracts the picture if it is possible */
-	bool readOle10Native(WPXInputStreamPtr &ip, WPXBinaryData &data,
-	                     libwps::DebugFile &ascii);
+	static bool readOle10Native(WPXInputStreamPtr &ip, WPXBinaryData &data,
+	                            libwps::DebugFile &ascii);
 
 	/** \brief the Contents : in general a picture : a PNG, an JPEG, a basic metafile,
 	 * I find also a Word art picture, which are not sucefully read
 	 */
-	bool readContents(WPXInputStreamPtr &input, std::string const &oleName,
-	                  WPXBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
+	static bool readContents(WPXInputStreamPtr &input, std::string const &oleName,
+	                         WPXBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
 
 	/** the CONTENTS : seems to store a header size, the header
 	 * and then a object in EMF (with the same header)...
 	 * \note I only find such lib in 2 files, so the parsing may be incomplete
 	 *  and many such Ole rejected
 	 */
-	bool readCONTENTS(WPXInputStreamPtr &input, std::string const &oleName,
-	                  WPXBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
+	static bool readCONTENTS(WPXInputStreamPtr &input, std::string const &oleName,
+	                         WPXBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
 
 
 	//! if filled, does not parse content with this name

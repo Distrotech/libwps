@@ -30,8 +30,6 @@
 
 #include "WPSDebug.h"
 
-class WPSEntry;
-
 namespace WPS8Struct
 {
 struct FileData;

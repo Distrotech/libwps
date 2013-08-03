@@ -34,9 +34,7 @@
 
 class WPXBinaryData;
 
-class WPSEntry;
 class WPS4Parser;
-class WPSPosition;
 
 namespace WPS4GraphInternal
 {

@@ -574,8 +574,7 @@ bool WPS8Parser::createStructures()
 	pos = getNameEntryMap().lower_bound("DOP ");
 	while (getNameEntryMap().end() != pos)
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("DOP ")) break;
 		if (!entry.hasType("DOP ")) continue;
 
@@ -587,8 +586,7 @@ bool WPS8Parser::createStructures()
 	pos = getNameEntryMap().lower_bound("PRNT");
 	while (getNameEntryMap().end() != pos)
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("PRNT")) break;
 		if (!entry.hasType("WNPR")) continue;
 
@@ -599,8 +597,7 @@ bool WPS8Parser::createStructures()
 	pos = getNameEntryMap().lower_bound("SYID");
 	while (getNameEntryMap().end() != pos)
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("SYID")) break;
 		if (!entry.hasType("SYID")) continue;
 
@@ -624,8 +621,7 @@ bool WPS8Parser::createStructures()
 	pos = getNameEntryMap().lower_bound("FRAM");
 	while (getNameEntryMap().end() != pos)
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("FRAM")) break;
 		if (!entry.hasType("FRAM")) continue;
 
@@ -1868,7 +1864,7 @@ bool WPS8Parser::readSPELLING(WPXInputStreamPtr input, std::string const &oleNam
 	f << "SPELLING:";
 	if (vers != 6) f << "version = " << vers << ", ";
 	f << "list=[";
-	for (std::map<uint32_t, int>::iterator it = listIds.begin(); it != listIds.end(); it++)
+	for (std::map<uint32_t, int>::iterator it = listIds.begin(); it != listIds.end(); ++it)
 	{
 		uint32_t val = it->first;
 		f << "SP" << std::dec << it->second << "(" << (val&0xFF) << ":"

@@ -119,7 +119,7 @@ void DebugFile::write()
 	{
 		if (!noteIter->m_text.empty())
 			std::cerr << "DebugFile::write: skipped: " << noteIter->m_text << std::endl;
-		noteIter++;
+		++noteIter;
 	}
 
 	long actualPos = 0;
@@ -149,7 +149,7 @@ void DebugFile::write()
 		{
 			if (!noteIter->m_text.empty())
 				m_file << "Skipped: " << noteIter->m_text << std::endl;
-			noteIter++;
+			++noteIter;
 		}
 		bool printNote = noteIter != m_notes.end() && noteIter->m_pos == actualPos;
 		if (printAdr || (printNote && noteIter->m_breaking))
@@ -158,14 +158,14 @@ void DebugFile::write()
 		{
 			if (noteIter->m_text.empty())
 			{
-				noteIter++;
+				++noteIter;
 				continue;
 			}
 			if (noteIter->m_breaking)
 				m_file << "[" << noteIter->m_text << "]";
 			else
 				m_file << noteIter->m_text;
-			noteIter++;
+			++noteIter;
 		}
 
 		long ch = libwps::readU8(m_input);

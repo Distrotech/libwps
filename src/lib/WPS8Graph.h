@@ -35,9 +35,7 @@
 
 class WPXBinaryData;
 
-class WPSEntry;
 class WPS8Parser;
-class WPSPosition;
 
 namespace WPS8GraphInternal
 {

@@ -168,8 +168,7 @@ bool WPS8Graph::readStructures(WPXInputStreamPtr input)
 	pos = nameTable.lower_bound("BDR ");
 	while (nameTable.end() != pos)
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("BDR ")) break;
 		if (!entry.hasType("WBDR")) continue;
 		readBDR(input, entry);
@@ -179,8 +178,7 @@ bool WPS8Graph::readStructures(WPXInputStreamPtr input)
 	pos = nameTable.lower_bound("IBGF");
 	while (pos != nameTable.end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("IBGF")) break;
 		if (!entry.hasType("IBGF")) continue;
 
@@ -190,8 +188,7 @@ bool WPS8Graph::readStructures(WPXInputStreamPtr input)
 	pos = nameTable.lower_bound("PICT");
 	while (pos != nameTable.end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("PICT")) break;
 
 		readPICT(input, entry);
@@ -279,8 +276,7 @@ void WPS8Graph::sendObjects(int page, int)
 
 		while (pos != map.end())
 		{
-			Pict &pict = pos->second;
-			pos++;
+			Pict &pict = pos++->second;
 			if (pict.m_parsed) continue;
 
 #ifdef DEBUG
@@ -316,8 +312,7 @@ void WPS8Graph::sendObjects(int page, int)
 	while (pos != m_state->m_borderMap.end())
 	{
 		int id = pos->first;
-		bool parsed = pos->second.m_parsed;
-		pos++;
+		bool parsed = pos++->second.m_parsed;
 		if (parsed) continue;
 		if (!firstSend)
 		{
@@ -626,7 +621,6 @@ bool WPS8Graph::readBDR(WPXInputStreamPtr input, WPSEntry const &entry)
 		input->seek(debP, WPX_SEEK_SET);
 		f.str("");
 		f << "BDR(" << bd << "):";
-		std::string fName = f.str();
 
 		if (debP+12 > endP || libwps::readU32(input) != 0x4154454d)   // META
 		{

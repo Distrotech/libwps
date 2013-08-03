@@ -92,11 +92,6 @@ struct FontName
 	}
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, FontName const &ft);
-	//! checks if the font name is set
-	bool isSet() const
-	{
-		return !m_name.empty();
-	}
 	/** returns the default dos name corresponding to \a id th font */
 	static std::string getDosName(int id);
 
@@ -199,12 +194,6 @@ struct Font : public WPSFont
 	bool hasColor() const
 	{
 		return (m_color != 0 || m_backColor != 0xFFFFFF);
-	}
-	/** resets to undef the font and the background color */
-	void resetColor()
-	{
-		m_color = 0;
-		m_backColor = 0xFFFFFF;
 	}
 	//! the font encoding type
 	libwps_tools_win::Font::Type m_type;
@@ -568,11 +557,6 @@ WPSEntry WPS4Text::getMainTextEntry() const
 	return m_state->m_main;
 }
 
-WPSEntry WPS4Text::getAllTextEntry() const
-{
-	return m_textPositions;
-}
-
 ////////////////////////////////////////////////////////////
 // send the data
 ////////////////////////////////////////////////////////////
@@ -673,8 +657,10 @@ bool WPS4Text::readText(WPSEntry const &zone)
 		long actPos;
 		long lastPos;
 
-		DataFOD fod;
-		DataFOD::Type type = DataFOD::ATTR_UNKN;
+
+		libwps::DebugStream f;
+		f << "Text";
+
 		if (simpleString)
 		{
 			actPos = zone.begin();
@@ -682,7 +668,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 		}
 		else
 		{
-			fod = *(FODs_iter);
+			DataFOD fod = *(FODs_iter);
 			actPos = first ? zone.begin() : fod.m_pos;
 			if (long(actPos) >= zone.end()) break;
 			first = false;
@@ -696,23 +682,31 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				lastPos = zone.end();
 			--FODs_iter;
 			int fId = fod.m_id;
-			type = fod.m_type;
-			if (type == DataFOD::ATTR_TEXT)
+			switch(fod.m_type)
 			{
+			case DataFOD::ATTR_TEXT:
 				if (fId >= 0)
 					actFont = m_state->m_fontList[size_t(fId)];
 				else
 					actFont = WPS4TextInternal::Font::getDefault(version());
 				setProperty(actFont);
-			}
-			else if (type == DataFOD::ATTR_PARAG)
-			{
+#if DEBUG_FP
+				f << "[";
+				if (fId >= 0) f << "C" << fId << ":" << actFont << "]";
+				else f << "_]";
+#endif
+				break;
+			case DataFOD::ATTR_PARAG:
 				if (fId >= 0)
 					setProperty(m_state->m_paragraphList[size_t(fId)]);
 				else setProperty(WPS4TextInternal::Paragraph());
-			}
-			else if (type == DataFOD::ATTR_PLC)
-			{
+#if DEBUG_PP
+				f << "[";
+				if (fId >= 0) f << "P" << fId << ":" << m_state->m_paragraphList[size_t(fId)] << "]";
+				else f << "_]";
+#endif
+				break;
+			case DataFOD::ATTR_PLC:
 				if (fId >= 0 && m_state->m_plcList[size_t(fId)].m_type == WPS4TextInternal::BKMK)
 				{
 					WPSEntry bkmk;
@@ -726,6 +720,19 @@ bool WPS4Text::readText(WPSEntry const &zone)
 					bkmk.setId(WPS4TextInternal::Z_Bookmark);
 					mainParser().createDocument(bkmk, libwps::DOC_COMMENT_ANNOTATION);
 				}
+#if DEBUG_PLC_POS
+				f << "[PLC";
+				if (fId>= 0) f << m_state->m_plcList[size_t(fId)] << "]";
+				else f << "_]";
+#endif
+				break;
+			case DataFOD::ATTR_UNKN:
+			default:
+				WPS_DEBUG_MSG(("WPS4Text::readText: find unknown plc\n"));
+#if DEBUG_PLC_POS
+				f << "[DataFOD(###Unknown)]";
+#endif
+				break;
 			}
 		}
 		m_input->seek(actPos, WPX_SEEK_SET);
@@ -910,38 +917,6 @@ bool WPS4Text::readText(WPSEntry const &zone)
 
 		if (simpleString) break;
 
-		libwps::DebugStream f;
-		f << "Text";
-		switch (type)
-		{
-		case DataFOD::ATTR_TEXT:
-#if DEBUG_FP
-			f << "[";
-			if (fId >= 0) f << "C" << fId << ":" << m_state->m_fontList[size_t(fId)] << "]";
-			else f << "_]";
-#endif
-			break;
-		case DataFOD::ATTR_PARAG:
-#if DEBUG_PP
-			f << "[";
-			if (fId >= 0) f << "P" << fId << ":" << m_state->m_paragraphList[size_t(fId)] << "]";
-			else f << "_]";
-#endif
-			break;
-		case DataFOD::ATTR_PLC:
-#if DEBUG_PLC_POS
-			f << "[PLC";
-			if (fId>= 0) f << m_state->m_plcList[size_t(fId)] << "]";
-			else f << "_]";
-#endif
-			break;
-		case DataFOD::ATTR_UNKN:
-		default:
-#if DEBUG_PLC_POS
-			f << "[DataFOD(###Unknown)]";
-#endif
-			break;
-		}
 		f << "='"<<chaine<<"'";
 		ascii().addPos(actPos);
 		ascii().addNote(f.str().c_str());

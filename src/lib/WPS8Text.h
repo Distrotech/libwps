@@ -30,9 +30,6 @@
 
 #include "WPSTextParser.h"
 
-class WPSEntry;
-class WPSPosition;
-
 namespace WPS8Struct
 {
 struct FileData;

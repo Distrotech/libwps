@@ -63,7 +63,5 @@ private:
 	uint8_t m_majorVersion;
 };
 
-typedef shared_ptr<WPSHeader> WPSHeaderPtr;
-
 #endif /* WPSHEADER_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

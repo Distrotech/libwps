@@ -35,8 +35,6 @@
 #include "libwps_internal.h"
 
 class WPXPropertyList;
-class WPSContentListener;
-typedef shared_ptr<WPSContentListener> WPSContentListenerPtr;
 
 /** a structure used to defined the cell format */
 class WPSCellFormat
@@ -231,8 +229,6 @@ protected:
 	//! the cell spanned : by default (1,1)
 	Vec2i m_numberCellSpanned;
 };
-
-typedef shared_ptr<WPSCell> WPSCellPtr;
 
 #endif
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

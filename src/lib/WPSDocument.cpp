@@ -53,8 +53,6 @@ the input stream can be parsed
 */
 WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *ip)
 {
-	WPSConfidence confidence = WPS_CONFIDENCE_NONE;
-
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
 	WPSHeaderPtr header;
 	shared_ptr<WPXInputStream > input(ip, WPS_shared_ptr_noop_deleter<WPXInputStream>());
@@ -65,6 +63,7 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *ip)
 		if (!header)
 			return WPS_CONFIDENCE_NONE;
 
+		WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 		switch (header->getMajorVersion())
 		{
 		case 8:

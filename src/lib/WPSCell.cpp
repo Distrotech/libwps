@@ -98,8 +98,11 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 		if (cell.m_bordersList[i].m_style == WPSBorder::None)
 			continue;
 		o << "bord";
-		char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
-		if (i < 4) o << wh[i];
+		if (i < 6)
+		{
+			char const *wh[] = { "L", "R", "T", "B", "MiddleH", "MiddleV" };
+			o << wh[i];
+		}
 		else o << "[#wh=" << i << "]";
 		o << "=" << cell.m_bordersList[i] << ",";
 	}

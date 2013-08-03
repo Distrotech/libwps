@@ -643,10 +643,9 @@ void WPS8Text::readText(WPSEntry const &entry)
 	WPXInputStreamPtr input = getInput();
 	m_state->setParsed(entry,true);
 	bool mainZone = entry.id()==1;
-	int numColumns = 1;
 	if (mainZone && mainParser().numColumns() > 1)
 	{
-		numColumns = mainParser().numColumns();
+		int numColumns = mainParser().numColumns();
 		if (m_listener->isSectionOpened())
 			m_listener->closeSection();
 		int w = int(72.0*mainParser().pageWidth()/numColumns);
@@ -657,12 +656,11 @@ void WPS8Text::readText(WPSEntry const &entry)
 	std::vector<DataFOD>::iterator plcIt =	m_FODList.begin();
 	while (plcIt != m_FODList.end() && plcIt->m_pos < entry.begin())
 	{
-		DataFOD const &plc = *plcIt;
+		DataFOD const &plc = *(plcIt++);
 		if (plc.m_type==DataFOD::ATTR_TEXT)
 			lastCId = plc.m_id;
 		else if (plc.m_type==DataFOD::ATTR_PARAG)
 			lastPId = plc.m_id;
-		plcIt++;
 	}
 	int actualPage = 1;
 	WPS8TextStyle::FontData special;
@@ -743,7 +741,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 			default:
 				break;
 			}
-			plcIt++;
+			++plcIt;
 		}
 		if (lastCId >= -1)
 		{
@@ -955,8 +953,7 @@ bool WPS8Text::readStructures()
 	pos = nameTable.lower_bound("BMKT");
 	while (pos != nameTable.end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("BMKT")) break;
 		if (!entry.hasType("PLC ")) continue;
 
@@ -974,8 +971,7 @@ bool WPS8Text::readStructures()
 	pos = nameTable.lower_bound("FTN ");
 	while (pos != nameTable.end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("FTN ")) break;
 		if (!entry.hasType("FTN ")) continue;
 
@@ -984,8 +980,7 @@ bool WPS8Text::readStructures()
 	pos = nameTable.lower_bound("EDN ");
 	while (pos != nameTable.end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("EDN ")) break;
 		if (!entry.hasType("EDN ")) continue;
 
@@ -997,8 +992,7 @@ bool WPS8Text::readStructures()
 	pos = nameTable.lower_bound("EOBJ");
 	while (pos != nameTable.end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("EOBJ")) break;
 		if (!entry.hasType("PLC ")) continue;
 
@@ -1013,8 +1007,7 @@ bool WPS8Text::readStructures()
 	pos = nameTable.lower_bound("TOKN");
 	while (pos != nameTable.end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("TOKN")) break;
 		if (!entry.hasType("PLC ")) continue;
 
@@ -1029,8 +1022,7 @@ bool WPS8Text::readStructures()
 	pos = nameTable.lower_bound("TCD ");
 	while (pos != nameTable.end())
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("TCD ")) break;
 		if (!entry.hasType("PLC ")) continue;
 
@@ -1045,8 +1037,7 @@ bool WPS8Text::readStructures()
 	pos = nameTable.lower_bound("STSH");
 	while (nameTable.end() != pos)
 	{
-		WPSEntry const &entry = pos->second;
-		pos++;
+		WPSEntry const &entry = pos++->second;
 		if (!entry.hasName("STSH")) break;
 		if (!entry.hasType("STSH")) continue;
 
@@ -1198,7 +1189,6 @@ bool WPS8Text::readNotes(WPSEntry const &entry)
 	ascii().addNote(f2.str().c_str());
 
 	long pos;
-	long val;
 	for (int i = 0; i < nNotes; i++)
 	{
 		pos = input->tell();
@@ -1218,7 +1208,7 @@ bool WPS8Text::readNotes(WPSEntry const &entry)
 			break;
 		}
 		f << "id=" << libwps::read16(input) << ",";
-		val = (long) libwps::read32(input);
+		long val = (long) libwps::read32(input);
 		if (val != -1) f << "label" << val << ",";
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
@@ -1280,12 +1270,8 @@ void WPS8Text::createNotesCorrespondance()
 	while (nIt != nMap.end())
 	{
 		Notes &notes = const_cast<Notes &>(*nIt->first);
-		if (nIt->second != 0)
-		{
-			nIt++;
+		if (nIt++->second != 0)
 			continue;
-		}
-		nIt++;
 
 		WPSEntry entry = getEntry(notes.m_zoneCorr);
 		if (entry.id() != 2 && entry.id() != 3)
