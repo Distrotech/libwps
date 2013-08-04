@@ -31,6 +31,7 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSContentListener.cpp \
 	WPSDebug.cpp \
 	WPSDocument.cpp \
+	WPSFont.cpp \
 	WPSHeader.cpp \
 	WPSList.cpp \
 	WPSOLEParser.cpp \
@@ -56,6 +57,7 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSContentListener.h \
 	WPSDebug.h \
 	WPSEntry.h \
+	WPSFont.h \
 	WPSHeader.h \
 	WPSList.h \
 	WPSOLEParser.h \

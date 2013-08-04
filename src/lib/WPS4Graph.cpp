@@ -31,6 +31,7 @@
 #include "libwps_internal.h"
 #include "WPSContentListener.h"
 #include "WPSEntry.h"
+#include "WPSFont.h"
 #include "WPSPosition.h"
 
 #include "WPS4.h"

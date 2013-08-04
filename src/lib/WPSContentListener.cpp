@@ -34,6 +34,7 @@
 #include "WPSContentListener.h"
 
 #include "WPSCell.h"
+#include "WPSFont.h"
 #include "WPSList.h"
 #include "WPSPageSpan.h"
 #include "WPSParagraph.h"
@@ -120,7 +121,6 @@ WPSContentParsingState::WPSContentParsingState() :
 
 	m_alignmentCharacter('.'),
 	m_tabStops(),
-	m_isTabPositionRelative(false),
 
 	m_inSubDocument(false),
 	m_isNote(false),
@@ -433,7 +433,6 @@ void WPSContentListener::setParagraphMargin(double margin, int pos)
 
 void WPSContentListener::setTabs(const std::vector<WPSTabStop> &tabStops)
 {
-	m_ps->m_isTabPositionRelative = true;
 	m_ps->m_tabStops = tabStops;
 }
 
@@ -993,10 +992,8 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 
 void WPSContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 {
-	double decalX = m_ps->m_isTabPositionRelative ? -m_ps->m_leftMarginByTabs :
-	                -m_ps->m_paragraphMarginLeft-m_ps->m_sectionMarginLeft-m_ps->m_pageMarginLeft;
 	for (size_t i=0; i< m_ps->m_tabStops.size(); i++)
-		m_ps->m_tabStops[i].addTo(tabStops, decalX);
+		m_ps->m_tabStops[i].addTo(tabStops, -m_ps->m_leftMarginByTabs);
 }
 
 ///////////////////

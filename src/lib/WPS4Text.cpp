@@ -44,6 +44,7 @@
 #include "libwps_tools_win.h"
 
 #include "WPSContentListener.h"
+#include "WPSFont.h"
 #include "WPSPosition.h"
 #include "WPSParagraph.h"
 

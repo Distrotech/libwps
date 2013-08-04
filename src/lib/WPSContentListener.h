@@ -148,7 +148,6 @@ struct WPSContentParsingState
 
 	uint16_t m_alignmentCharacter;
 	std::vector<WPSTabStop> m_tabStops;
-	bool m_isTabPositionRelative;
 
 	bool m_inSubDocument;
 

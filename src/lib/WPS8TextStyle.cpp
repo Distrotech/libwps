@@ -28,6 +28,7 @@
 
 #include "WPSEntry.h"
 #include "WPSContentListener.h"
+#include "WPSFont.h"
 #include "WPSList.h"
 #include "WPSParagraph.h"
 

@@ -147,6 +147,10 @@ SOURCE=..\..\src\lib\WPSDocument.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSFont.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSHeader.cpp
 # End Source File
 # Begin Source File
@@ -256,6 +260,10 @@ SOURCE=..\..\inc\libwps\WPSDocument.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSEntry.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSFont.h
 # End Source File
 # Begin Source File
 

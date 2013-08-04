@@ -32,6 +32,7 @@
 
 #include "WPSContentListener.h"
 #include "WPSEntry.h"
+#include "WPSFont.h"
 #include "WPSPosition.h"
 
 #include "WPS8.h"

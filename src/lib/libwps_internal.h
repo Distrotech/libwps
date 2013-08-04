@@ -78,6 +78,7 @@ typedef shared_ptr<WPXInputStream> WPXInputStreamPtr;
 class WPSCell;
 class WPSContentListener;
 class WPSEntry;
+class WPSFont;
 class WPSHeader;
 class WPSPosition;
 class WPSSubDocument;
@@ -176,49 +177,6 @@ bool readDataToEnd(WPXInputStreamPtr &input, WPXBinaryData &data);
 // Various helper structures for the parser..
 /* ---------- small enum/class ------------- */
 class WPXPropertyListVector;
-struct WPSFont
-{
-	//! constructor
-	WPSFont() : m_name(""), m_size(0), m_attributes(0), m_color(0), m_languageId(-1), m_extra("") {}
-	static WPSFont getDefault()
-	{
-		WPSFont res;
-		res.m_name = "Courier";
-		res.m_size = 12;
-		return res;
-	}
-
-	virtual ~WPSFont() {}
-	//! operator<<
-	friend std::ostream &operator<<(std::ostream &o, WPSFont const &ft);
-
-	//! accessor
-	bool isSet() const
-	{
-		return !m_name.empty();
-	}
-
-	//! compares to font
-	bool operator==(WPSFont const &ft) const;
-	bool operator!=(WPSFont const &ft) const
-	{
-		return !operator==(ft);
-	}
-
-	//! font name
-	std::string m_name;
-	//! font size
-	int m_size;
-	//! the font attributes defined as a set of bits
-	uint32_t m_attributes;
-	//! the font color
-	uint32_t m_color;
-	//! the language (simplified locale name id) if known
-	int m_languageId;
-
-	//! public field use to add a message when the font is printed
-	std::string m_extra;
-};
 
 struct WPSColumnDefinition
 {

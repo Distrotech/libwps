@@ -188,4 +188,4 @@ protected:
 };
 
 #endif
-// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
