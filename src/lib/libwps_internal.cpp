@@ -88,15 +88,8 @@ bool readData(WPXInputStreamPtr &input, unsigned long size, WPXBinaryData &data)
 
 	const unsigned char *readData;
 	unsigned long sizeRead;
-	while (size > 2048 && (readData=input->read(2048, sizeRead)) != 0 && sizeRead)
-	{
-		data.append(readData, sizeRead);
-		size -= sizeRead;
-	}
-	if (size > 2048) return false;
-
-	readData=input->read(size, sizeRead);
-	if (size != sizeRead) return false;
+	if ((readData=input->read(size, sizeRead)) == 0 || sizeRead!=size)
+		return false;
 	data.append(readData, sizeRead);
 
 	return true;
@@ -105,13 +98,12 @@ bool readData(WPXInputStreamPtr &input, unsigned long size, WPXBinaryData &data)
 bool readDataToEnd(WPXInputStreamPtr &input, WPXBinaryData &data)
 {
 	data.clear();
-
-	const unsigned char *readData;
-	unsigned long sizeRead;
-	while ((readData=input->read(2048, sizeRead)) != 0 && sizeRead)
-		data.append(readData, sizeRead);
-
-	return input->atEOS();
+	long pos=input->tell();
+	input->seek(0,WPX_SEEK_END);
+	long sz=input->tell()-pos;
+	if (sz < 0) return false;
+	input->seek(pos,WPX_SEEK_SET);
+	return readData(input, (unsigned long) sz, data) && input->atEOS();
 }
 
 std::string numberingTypeToString(NumberingType type)
