@@ -19,10 +19,16 @@ wps2html_LDADD = \
 
 endif
 
-wps2html_SOURCES = \
+wps2html_SOURCES = 			\
 	HtmlDocumentGenerator.cpp	\
-	HtmlDocumentGenerator.h	\
-	wps2html.cpp
+	HtmlDocumentGenerator.h		\
+	TableStyle.cpp			\
+	TableStyle.h			\
+	TextRunStyle.cpp		\
+	TextRunStyle.h			\
+	wps2html.cpp			\
+	wps2html_internal.cpp		\
+	wps2html_internal.h
 
 if OS_WIN32
 

@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Version: MPL 2.0 / LGPLv2.1+
  *
@@ -19,17 +20,24 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#ifndef HTMLLISTENERIMPL_H
-#define HTMLLISTENERIMPL_H
+#ifndef HTML_DOCUMENT_GENERATOR_H
+#define HTML_DOCUMENT_GENERATOR_H
 
 #include <ostream>
 #include <sstream>
 #include <libwpd/libwpd.h>
 
+#include "wps2html_internal.h"
+
+namespace HtmlDocumentGeneratorInternal
+{
+struct State;
+}
+
 class HtmlDocumentGenerator : public WPXDocumentInterface
 {
 public:
-	HtmlDocumentGenerator();
+	HtmlDocumentGenerator(char const *fName=0);
 	virtual ~HtmlDocumentGenerator();
 
 	virtual void setDocumentMetaData(const WPXPropertyList &propList);
@@ -38,8 +46,8 @@ public:
 	virtual void endDocument();
 
 	virtual void definePageStyle(const WPXPropertyList &) {}
-	virtual void openPageSpan(const WPXPropertyList & /* propList */) {}
-	virtual void closePageSpan() {}
+	virtual void openPageSpan(const WPXPropertyList &propList);
+	virtual void closePageSpan();
 	virtual void openHeader(const WPXPropertyList &propList);
 	virtual void closeHeader();
 	virtual void openFooter(const WPXPropertyList &propList);
@@ -63,8 +71,8 @@ public:
 	virtual void insertLineBreak();
 	virtual void insertField(const WPXString &/*type*/, const WPXPropertyList &/*propList*/) {}
 
-	virtual void defineOrderedListLevel(const WPXPropertyList & /* propList */) {}
-	virtual void defineUnorderedListLevel(const WPXPropertyList & /* propList */) {}
+	virtual void defineOrderedListLevel(const WPXPropertyList &propList);
+	virtual void defineUnorderedListLevel(const WPXPropertyList &propList);
 	virtual void openOrderedListLevel(const WPXPropertyList &propList);
 	virtual void openUnorderedListLevel(const WPXPropertyList &propList);
 	virtual void closeOrderedListLevel();
@@ -96,14 +104,13 @@ public:
 	virtual void insertEquation(const WPXPropertyList & /* propList */, const WPXString & /* data */) {}
 
 private:
-	bool m_ignore;
-	std::ostream *m_pOutputStream;
-	std::ostringstream m_footNotesStream, m_endNotesStream, m_commentsStream, m_textBoxesStream, m_dummyStream;
-	unsigned m_footNotesCount, m_endNotesCount, m_commentsCount, m_textBoxesCount;
-	unsigned m_commentNumber, m_textBoxNumber;
+	shared_ptr<HtmlDocumentGeneratorInternal::State> m_state;
+
+	shared_ptr<std::ostream> m_output;
 	// Unimplemented to prevent compiler from creating crasher ones
 	HtmlDocumentGenerator(const HtmlDocumentGenerator &);
 	HtmlDocumentGenerator &operator=(const HtmlDocumentGenerator &);
 };
 
 #endif /* HTMLLISTENERIMPL_H */
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
