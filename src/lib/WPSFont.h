@@ -52,6 +52,9 @@ public:
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, WPSFont const &ft);
 
+	//! add to the propList
+	void addTo(WPXPropertyList &propList) const;
+
 	//! accessor
 	bool isSet() const
 	{
@@ -69,7 +72,7 @@ public:
 	//! font name
 	std::string m_name;
 	//! font size
-	int m_size;
+	double m_size;
 	//! the font attributes defined as a set of bits
 	uint32_t m_attributes;
 	//! the font color

@@ -26,6 +26,7 @@
 #include <libwpd/libwpd.h>
 
 #include "libwps_internal.h"
+#include "libwps_tools_win.h"
 
 #include "WPSFont.h"
 
@@ -62,12 +63,86 @@ std::ostream &operator<<(std::ostream &o, WPSFont const &ft)
 
 bool WPSFont::operator==(WPSFont const &ft) const
 {
-	if (m_size != ft.m_size || m_attributes != ft.m_attributes
-	        || m_color != ft.m_color || m_languageId != ft.m_languageId)
+	if (m_size < ft.m_size || m_size > ft.m_size ||
+	        m_attributes != ft.m_attributes || m_color != ft.m_color ||
+	        m_languageId != ft.m_languageId)
 		return false;
 	if (m_name.compare(ft.m_name) || m_extra.compare(ft.m_extra))
 		return false;
 	return true;
+}
+
+void WPSFont::addTo(WPXPropertyList &propList) const
+{
+	double fontSizeChange = 1.0;
+	switch (m_attributes& 0x0000001f)
+	{
+	case 0x01:  // Extra large
+		fontSizeChange = 2.0;
+		break;
+	case 0x02: // Very large
+		fontSizeChange = 1.5;
+		break;
+	case 0x04: // Large
+		fontSizeChange = 1.2;
+		break;
+	case 0x08: // Small print
+		fontSizeChange = 0.8;
+		break;
+	case 0x10: // Fine print
+		fontSizeChange = 0.6;
+		break;
+	default: // Normal
+		fontSizeChange = 1.0;
+		break;
+	}
+
+	if (m_attributes & WPS_SUPERSCRIPT_BIT)
+		propList.insert("style:text-position", "super 58%");
+	else if (m_attributes & WPS_SUBSCRIPT_BIT)
+		propList.insert("style:text-position", "sub 58%");
+	if (m_attributes & WPS_ITALICS_BIT)
+		propList.insert("fo:font-style", "italic");
+	if (m_attributes & WPS_BOLD_BIT)
+		propList.insert("fo:font-weight", "bold");
+	if (m_attributes & WPS_STRIKEOUT_BIT)
+		propList.insert("style:text-line-through-type", "single");
+	if (m_attributes & WPS_DOUBLE_UNDERLINE_BIT)
+		propList.insert("style:text-underline-type", "double");
+	else if (m_attributes & WPS_UNDERLINE_BIT)
+		propList.insert("style:text-underline-type", "single");
+	if (m_attributes & WPS_OVERLINE_BIT)
+		propList.insert("style:text-overline-type", "single");
+	if (m_attributes & WPS_OUTLINE_BIT)
+		propList.insert("style:text-outline", "true");
+	if (m_attributes & WPS_SMALL_CAPS_BIT)
+		propList.insert("fo:font-variant", "small-caps");
+	if (m_attributes & WPS_BLINK_BIT)
+		propList.insert("style:text-blinking", "true");
+	if (m_attributes & WPS_SHADOW_BIT)
+		propList.insert("fo:text-shadow", "1pt 1pt");
+	if (m_attributes & WPS_HIDDEN_BIT)
+		propList.insert("text:display", "none");
+	if (m_attributes & WPS_ALL_CAPS_BIT)
+		propList.insert("fo:text-transform", "uppercase");
+	if (m_attributes & WPS_EMBOSS_BIT)
+		propList.insert("style:font-relief", "embossed");
+	else if (m_attributes & WPS_ENGRAVE_BIT)
+		propList.insert("style:font-relief", "engraved");
+
+	if (!m_name.empty())
+		propList.insert("style:font-name", m_name.c_str());
+	if (m_size>0)
+		propList.insert("fo:font-size", fontSizeChange*m_size, WPX_POINT);
+
+	WPXString color;
+	color.sprintf("#%06x", m_color);
+	propList.insert("fo:color", color);
+
+	if (m_languageId < 0)
+		libwps_tools_win::Language::addLocaleName(0x409, propList);
+	if (m_languageId > 0)
+		libwps_tools_win::Language::addLocaleName(m_languageId, propList);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

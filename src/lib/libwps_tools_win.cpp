@@ -1,4 +1,4 @@
-/* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Version: MPL 2.0 / LGPLv2.1+
  *
@@ -590,5 +590,28 @@ std::string Language::localeName(long id)
 	}
 }
 
+void Language::addLocaleName(long id, WPXPropertyList &propList)
+{
+	if (id<0) return;
+	std::string lang = libwps_tools_win::Language::localeName(id);
+	if (lang.length())
+	{
+		std::string language(lang);
+		std::string country("none");
+		if (lang.length() > 3 && lang[2]=='_')
+		{
+			country=lang.substr(3);
+			language=lang.substr(0,2);
+		}
+		propList.insert("fo:language", language.c_str());
+		propList.insert("fo:country", country.c_str());
+	}
+	else
+	{
+		propList.insert("fo:language", "none");
+		propList.insert("fo:country", "none");
+	}
 }
-// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
+
+}
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

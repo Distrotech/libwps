@@ -41,6 +41,29 @@
 #include "WPSPosition.h"
 #include "WPSSubDocument.h"
 
+////////////////////////////////////////////////////////////
+//! the document state
+struct WPSDocumentParsingState
+{
+	//! constructor
+	WPSDocumentParsingState(std::vector<WPSPageSpan> const &pageList);
+	//! destructor
+	~WPSDocumentParsingState();
+
+	std::vector<WPSPageSpan> m_pageList;
+	WPXPropertyList m_metaData;
+
+	int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
+	int m_newListId; // a new free id
+
+	bool m_isDocumentStarted, m_isHeaderFooterStarted;
+	std::vector<WPSSubDocumentPtr> m_subDocuments; /** list of document actually open */
+
+private:
+	WPSDocumentParsingState(const WPSDocumentParsingState &);
+	WPSDocumentParsingState &operator=(const WPSDocumentParsingState &);
+};
+
 WPSDocumentParsingState::WPSDocumentParsingState(std::vector<WPSPageSpan> const &pageList) :
 	m_pageList(pageList),
 	m_metaData(),
@@ -53,12 +76,104 @@ WPSDocumentParsingState::~WPSDocumentParsingState()
 {
 }
 
+////////////////////////////////////////////////////////////
+//! the content state
+struct WPSContentParsingState
+{
+	WPSContentParsingState();
+	~WPSContentParsingState();
+
+	WPXString m_textBuffer;
+	int m_numDeferredTabs;
+
+	WPSFont m_font;
+
+	bool m_isParagraphColumnBreak;
+	bool m_isParagraphPageBreak;
+	libwps::Justification m_paragraphJustification;
+	double m_paragraphLineSpacing;
+	WPXUnit m_paragraphLineSpacingUnit;
+	uint32_t m_paragraphBackgroundColor;
+	int m_paragraphBorders;
+	WPSBorder m_paragraphBordersStyle;
+
+	shared_ptr<WPSList> m_list;
+	uint8_t m_currentListLevel;
+
+	bool m_isPageSpanOpened;
+	bool m_isSectionOpened;
+	bool m_isFrameOpened;
+	bool m_isPageSpanBreakDeferred;
+	bool m_isHeaderFooterWithoutParagraph;
+
+	bool m_isSpanOpened;
+	bool m_isParagraphOpened;
+	bool m_isListElementOpened;
+
+	bool m_firstParagraphInPageSpan;
+
+	std::vector<unsigned int> m_numRowsToSkip;
+	bool m_isTableOpened;
+	bool m_isTableRowOpened;
+	bool m_isTableColumnOpened;
+	bool m_isTableCellOpened;
+
+	unsigned m_currentPage;
+	int m_numPagesRemainingInSpan;
+	int m_currentPageNumber;
+
+	bool m_sectionAttributesChanged;
+	int m_numColumns;
+	std::vector < WPSColumnDefinition > m_textColumns;
+	bool m_isTextColumnWithoutParagraph;
+
+	double m_pageFormLength;
+	double m_pageFormWidth;
+	bool m_pageFormOrientationIsPortrait;
+
+	double m_pageMarginLeft;
+	double m_pageMarginRight;
+	double m_pageMarginTop;
+	double m_pageMarginBottom;
+
+	double m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted
+	double m_sectionMarginRight; // as section margin change
+	double m_sectionMarginTop;
+	double m_sectionMarginBottom;
+	double m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
+	double m_paragraphMarginRight; // properties
+	double m_paragraphMarginTop;
+	WPXUnit m_paragraphMarginTopUnit;
+	double m_paragraphMarginBottom;
+	WPXUnit m_paragraphMarginBottomUnit;
+	double m_leftMarginByParagraphMarginChange;  // part of the margin due to the PARAGRAPH
+	double m_rightMarginByParagraphMarginChange; // margin change (in WP6)
+
+	double m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
+	double m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
+	double m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
+
+	double m_listReferencePosition; // position from the left page margin of the list number/bullet
+	double m_listBeginPosition; // position from the left page margin of the beginning of the list
+	std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
+
+	uint16_t m_alignmentCharacter;
+	std::vector<WPSTabStop> m_tabStops;
+
+	bool m_inSubDocument;
+
+	bool m_isNote;
+	libwps::SubDocumentType m_subDocumentType;
+
+private:
+	WPSContentParsingState(const WPSContentParsingState &);
+	WPSContentParsingState &operator=(const WPSContentParsingState &);
+};
+
 WPSContentParsingState::WPSContentParsingState() :
 	m_textBuffer(""), m_numDeferredTabs(0),
 
-	m_textAttributeBits(0),	m_fontSize(12.0), m_fontName("Times New Roman"),
-	m_fontColor(0),	m_textLanguage(-1),
-
+	m_font(),
 	m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
 
 	m_paragraphJustification(libwps::JustificationLeft),
@@ -106,12 +221,8 @@ WPSContentParsingState::WPSContentParsingState() :
 	m_paragraphMarginTop(0.0), m_paragraphMarginTopUnit(WPX_INCH),
 	m_paragraphMarginBottom(0.0), m_paragraphMarginBottomUnit(WPX_INCH),
 
-	m_leftMarginByPageMarginChange(0.0),
-	m_rightMarginByPageMarginChange(0.0),
 	m_leftMarginByParagraphMarginChange(0.0),
 	m_rightMarginByParagraphMarginChange(0.0),
-	m_leftMarginByTabs(0.0),
-	m_rightMarginByTabs(0.0),
 
 	m_paragraphTextIndent(0.0),
 	m_textIndentByParagraphIndentChange(0.0),
@@ -126,6 +237,8 @@ WPSContentParsingState::WPSContentParsingState() :
 	m_isNote(false),
 	m_subDocumentType(libwps::DOC_NONE)
 {
+	m_font.m_size=12.0;
+	m_font.m_name="Times New Roman";
 }
 
 WPSContentParsingState::~WPSContentParsingState()
@@ -239,8 +352,8 @@ void WPSContentListener::insertEOL(bool soft)
 
 	// sub/superscript must not survive a new line
 	static const uint32_t s_subsuperBits = WPS_SUBSCRIPT_BIT | WPS_SUPERSCRIPT_BIT;
-	if (m_ps->m_textAttributeBits & s_subsuperBits)
-		m_ps->m_textAttributeBits &= ~s_subsuperBits;
+	if (m_ps->m_font.m_attributes & s_subsuperBits)
+		m_ps->m_font.m_attributes &= ~s_subsuperBits;
 }
 
 void WPSContentListener::insertTab()
@@ -323,55 +436,21 @@ void WPSContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
 ///////////////////
 void WPSContentListener::setFont(const WPSFont &font)
 {
-	setFontAttributes(font.m_attributes);
-	if (font.m_size > 0)
-		setFontSize((uint16_t) font.m_size);
-	if (!font.m_name.empty())
-		setTextFont(font.m_name.c_str());
-	setTextColor(font.m_color);
-	if (font.m_languageId > 0)
-		setTextLanguage(font.m_languageId);
-}
-
-void WPSContentListener::setFontAttributes(const uint32_t attribute)
-{
-	if (attribute == m_ps->m_textAttributeBits) return;
+	WPSFont newFont(font);
+	if (font.m_size<=0)
+		newFont.m_size=m_ps->m_font.m_size;
+	if (font.m_name.empty())
+		newFont.m_name=m_ps->m_font.m_name;
+	if (font.m_languageId <= 0)
+		newFont.m_languageId=m_ps->m_font.m_languageId;
+	if (m_ps->m_font==newFont) return;
 	_closeSpan();
-
-	m_ps->m_textAttributeBits = attribute;
+	m_ps->m_font=newFont;
 }
 
-void WPSContentListener::setTextFont(const WPXString &fontName)
+WPSFont const &WPSContentListener::getFont() const
 {
-	if (fontName == m_ps->m_fontName) return;
-	_closeSpan();
-	// FIXME verify that fontName does not contain bad characters,
-	//       if so, pass a unicode string
-	m_ps->m_fontName = fontName;
-}
-
-void WPSContentListener::setFontSize(const uint16_t fontSize)
-{
-	float fSize = fontSize;
-	if (m_ps->m_fontSize<fSize || m_ps->m_fontSize>fSize)
-	{
-		_closeSpan();
-		m_ps->m_fontSize=fSize;
-	}
-}
-
-void WPSContentListener::setTextColor(const uint32_t rgb)
-{
-	if (m_ps->m_fontColor==rgb) return;
-	_closeSpan();
-	m_ps->m_fontColor = rgb;
-}
-
-void WPSContentListener::setTextLanguage(int lcid)
-{
-	if (m_ps->m_textLanguage==lcid) return;
-	_closeSpan();
-	m_ps->m_textLanguage=lcid;
+	return m_ps->m_font;
 }
 
 ///////////////////
@@ -730,24 +809,14 @@ void WPSContentListener::_closePageSpan()
 	m_ps->m_isPageSpanOpened = m_ps->m_isPageSpanBreakDeferred = false;
 }
 
-void WPSContentListener::_updatePageSpanDependent(bool set)
+void WPSContentListener::_updatePageSpanDependent(bool /*set*/)
 {
-	double deltaRight = set ? -m_ps->m_pageMarginRight : m_ps->m_pageMarginRight;
-	double deltaLeft = set ? -m_ps->m_pageMarginLeft : m_ps->m_pageMarginLeft;
-	if (m_ps->m_sectionMarginLeft < 0 || m_ps->m_sectionMarginLeft > 0)
-		m_ps->m_sectionMarginLeft += deltaLeft;
-	if (m_ps->m_sectionMarginRight < 0 || m_ps->m_sectionMarginRight > 0)
-		m_ps->m_sectionMarginRight += deltaRight;
-	m_ps->m_listReferencePosition += deltaLeft;
-	m_ps->m_listBeginPosition += deltaLeft;
 }
 
 void WPSContentListener::_recomputeParagraphPositions()
 {
-	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByPageMarginChange
-	                              + m_ps->m_leftMarginByParagraphMarginChange + m_ps->m_leftMarginByTabs;
-	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByPageMarginChange
-	                               + m_ps->m_rightMarginByParagraphMarginChange + m_ps->m_rightMarginByTabs;
+	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByParagraphMarginChange;
+	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByParagraphMarginChange;
 	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
 	m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
 	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
@@ -884,8 +953,6 @@ void WPSContentListener::_resetParagraphState(const bool isListElement)
 		m_ps->m_isListElementOpened = false;
 		m_ps->m_isParagraphOpened = true;
 	}
-	m_ps->m_leftMarginByTabs = 0.0;
-	m_ps->m_rightMarginByTabs = 0.0;
 	m_ps->m_textIndentByTabs = 0.0;
 	m_ps->m_isTextColumnWithoutParagraph = false;
 	m_ps->m_isHeaderFooterWithoutParagraph = false;
@@ -993,7 +1060,7 @@ void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, c
 void WPSContentListener::_getTabStops(WPXPropertyListVector &tabStops)
 {
 	for (size_t i=0; i< m_ps->m_tabStops.size(); i++)
-		m_ps->m_tabStops[i].addTo(tabStops, -m_ps->m_leftMarginByTabs);
+		m_ps->m_tabStops[i].addTo(tabStops, 0);
 }
 
 ///////////////////
@@ -1138,77 +1205,8 @@ void WPSContentListener::_openSpan()
 			_openListElement();
 	}
 
-	uint32_t attributeBits = m_ps->m_textAttributeBits;
-	double fontSizeChange = 1.0;
-	switch (attributeBits& 0x0000001f)
-	{
-	case 0x01:  // Extra large
-		fontSizeChange = 2.0;
-		break;
-	case 0x02: // Very large
-		fontSizeChange = 1.5f;
-		break;
-	case 0x04: // Large
-		fontSizeChange = 1.2f;
-		break;
-	case 0x08: // Small print
-		fontSizeChange = 0.8f;
-		break;
-	case 0x10: // Fine print
-		fontSizeChange = 0.6f;
-		break;
-	default: // Normal
-		fontSizeChange = 1.0;
-		break;
-	}
-
 	WPXPropertyList propList;
-	if (attributeBits & WPS_SUPERSCRIPT_BIT)
-		propList.insert("style:text-position", "super 58%");
-	else if (attributeBits & WPS_SUBSCRIPT_BIT)
-		propList.insert("style:text-position", "sub 58%");
-	if (attributeBits & WPS_ITALICS_BIT)
-		propList.insert("fo:font-style", "italic");
-	if (attributeBits & WPS_BOLD_BIT)
-		propList.insert("fo:font-weight", "bold");
-	if (attributeBits & WPS_STRIKEOUT_BIT)
-		propList.insert("style:text-line-through-type", "single");
-	if (attributeBits & WPS_DOUBLE_UNDERLINE_BIT)
-		propList.insert("style:text-underline-type", "double");
-	else if (attributeBits & WPS_UNDERLINE_BIT)
-		propList.insert("style:text-underline-type", "single");
-	if (attributeBits & WPS_OVERLINE_BIT)
-		propList.insert("style:text-overline-type", "single");
-	if (attributeBits & WPS_OUTLINE_BIT)
-		propList.insert("style:text-outline", "true");
-	if (attributeBits & WPS_SMALL_CAPS_BIT)
-		propList.insert("fo:font-variant", "small-caps");
-	if (attributeBits & WPS_BLINK_BIT)
-		propList.insert("style:text-blinking", "true");
-	if (attributeBits & WPS_SHADOW_BIT)
-		propList.insert("fo:text-shadow", "1pt 1pt");
-	if (attributeBits & WPS_HIDDEN_BIT)
-		propList.insert("text:display", "none");
-	if (attributeBits & WPS_ALL_CAPS_BIT)
-		propList.insert("fo:text-transform", "uppercase");
-	if (attributeBits & WPS_EMBOSS_BIT)
-		propList.insert("style:font-relief", "embossed");
-	else if (attributeBits & WPS_ENGRAVE_BIT)
-		propList.insert("style:font-relief", "engraved");
-
-	if (m_ps->m_fontName.len())
-		propList.insert("style:font-name", m_ps->m_fontName.cstr());
-
-	propList.insert("fo:font-size", fontSizeChange*m_ps->m_fontSize, WPX_POINT);
-
-	WPXString color;
-	color.sprintf("#%06x",m_ps->m_fontColor);
-	propList.insert("fo:color", color);
-
-	if (m_ps->m_textLanguage < 0)
-		_addLanguage(0x409, propList);
-	if (m_ps->m_textLanguage > 0)
-		_addLanguage(m_ps->m_textLanguage, propList);
+	m_ps->m_font.addTo(propList);
 
 	m_documentInterface->openSpan(propList);
 
@@ -1233,14 +1231,22 @@ void WPSContentListener::_flushDeferredTabs()
 	if (m_ps->m_numDeferredTabs == 0) return;
 
 	// CHECKME: the tab are not underline even if the underline bit is set
-	uint32_t oldTextAttributes = m_ps->m_textAttributeBits;
+	uint32_t oldTextAttributes = m_ps->m_font.m_attributes;
 	uint32_t newAttributes = oldTextAttributes & uint32_t(~WPS_UNDERLINE_BIT) &
 	                         uint32_t(~WPS_OVERLINE_BIT);
-	if (oldTextAttributes != newAttributes) setFontAttributes(newAttributes);
+	if (oldTextAttributes != newAttributes)
+	{
+		_closeSpan();
+		m_ps->m_font.m_attributes=newAttributes;
+	}
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	for (; m_ps->m_numDeferredTabs > 0; m_ps->m_numDeferredTabs--)
 		m_documentInterface->insertTab();
-	if (oldTextAttributes != newAttributes) setFontAttributes(oldTextAttributes);
+	if (oldTextAttributes != newAttributes)
+	{
+		_closeSpan();
+		m_ps->m_font.m_attributes=oldTextAttributes;
+	}
 }
 
 void WPSContentListener::_flushText()
@@ -1955,28 +1961,6 @@ void WPSContentListener::closeTableCell()
 ///////////////////
 // others
 ///////////////////
-void WPSContentListener::_addLanguage(int lcid, WPXPropertyList &propList)
-{
-	if (lcid < 0) return;
-	std::string lang = libwps_tools_win::Language::localeName(lcid);
-	if (lang.length())
-	{
-		std::string language(lang);
-		std::string country("none");
-		if (lang.length() > 3 && lang[2]=='_')
-		{
-			country=lang.substr(3);
-			language=lang.substr(0,2);
-		}
-		propList.insert("fo:language", language.c_str());
-		propList.insert("fo:country", country.c_str());
-	}
-	else
-	{
-		propList.insert("fo:language", "none");
-		propList.insert("fo:country", "none");
-	}
-}
 
 // ---------- state stack ------------------
 shared_ptr<WPSContentParsingState> WPSContentListener::_pushParsingState()

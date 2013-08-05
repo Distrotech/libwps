@@ -40,124 +40,8 @@ class WPSList;
 class WPSPageSpan;
 struct WPSTabStop;
 
-struct WPSDocumentParsingState
-{
-	WPSDocumentParsingState(std::vector<WPSPageSpan> const &pageList);
-	~WPSDocumentParsingState();
-
-	std::vector<WPSPageSpan> m_pageList;
-	WPXPropertyList m_metaData;
-
-	int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
-	int m_newListId; // a new free id
-
-	bool m_isDocumentStarted, m_isHeaderFooterStarted;
-	std::vector<WPSSubDocumentPtr> m_subDocuments; /** list of document actually open */
-
-private:
-	WPSDocumentParsingState(const WPSDocumentParsingState &);
-	WPSDocumentParsingState &operator=(const WPSDocumentParsingState &);
-};
-
-struct WPSContentParsingState
-{
-	WPSContentParsingState();
-	~WPSContentParsingState();
-
-	WPXString m_textBuffer;
-	int m_numDeferredTabs;
-
-	uint32_t m_textAttributeBits;
-	double m_fontSize;
-	WPXString m_fontName;
-	uint32_t m_fontColor;
-	int m_textLanguage;
-
-	bool m_isParagraphColumnBreak;
-	bool m_isParagraphPageBreak;
-	libwps::Justification m_paragraphJustification;
-	double m_paragraphLineSpacing;
-	WPXUnit m_paragraphLineSpacingUnit;
-	uint32_t m_paragraphBackgroundColor;
-	int m_paragraphBorders;
-	WPSBorder m_paragraphBordersStyle;
-
-	shared_ptr<WPSList> m_list;
-	uint8_t m_currentListLevel;
-
-	bool m_isPageSpanOpened;
-	bool m_isSectionOpened;
-	bool m_isFrameOpened;
-	bool m_isPageSpanBreakDeferred;
-	bool m_isHeaderFooterWithoutParagraph;
-
-	bool m_isSpanOpened;
-	bool m_isParagraphOpened;
-	bool m_isListElementOpened;
-
-	bool m_firstParagraphInPageSpan;
-
-	std::vector<unsigned int> m_numRowsToSkip;
-	bool m_isTableOpened;
-	bool m_isTableRowOpened;
-	bool m_isTableColumnOpened;
-	bool m_isTableCellOpened;
-
-	unsigned m_currentPage;
-	int m_numPagesRemainingInSpan;
-	int m_currentPageNumber;
-
-	bool m_sectionAttributesChanged;
-	int m_numColumns;
-	std::vector < WPSColumnDefinition > m_textColumns;
-	bool m_isTextColumnWithoutParagraph;
-
-	double m_pageFormLength;
-	double m_pageFormWidth;
-	bool m_pageFormOrientationIsPortrait;
-
-	double m_pageMarginLeft;
-	double m_pageMarginRight;
-	double m_pageMarginTop;
-	double m_pageMarginBottom;
-
-	double m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted
-	double m_sectionMarginRight; // as section margin change
-	double m_sectionMarginTop;
-	double m_sectionMarginBottom;
-	double m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
-	double m_paragraphMarginRight; // properties
-	double m_paragraphMarginTop;
-	WPXUnit m_paragraphMarginTopUnit;
-	double m_paragraphMarginBottom;
-	WPXUnit m_paragraphMarginBottomUnit;
-	double m_leftMarginByPageMarginChange;  // part of the margin due to the PAGE margin change
-	double m_rightMarginByPageMarginChange; // inside a page that already has content.
-	double m_leftMarginByParagraphMarginChange;  // part of the margin due to the PARAGRAPH
-	double m_rightMarginByParagraphMarginChange; // margin change (in WP6)
-	double m_leftMarginByTabs;  // part of the margin due to the LEFT or LEFT/RIGHT Indent; the
-	double m_rightMarginByTabs; // only part of the margin that is reset at the end of a paragraph
-
-	double m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
-	double m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
-	double m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
-
-	double m_listReferencePosition; // position from the left page margin of the list number/bullet
-	double m_listBeginPosition; // position from the left page margin of the beginning of the list
-	std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
-
-	uint16_t m_alignmentCharacter;
-	std::vector<WPSTabStop> m_tabStops;
-
-	bool m_inSubDocument;
-
-	bool m_isNote;
-	libwps::SubDocumentType m_subDocumentType;
-
-private:
-	WPSContentParsingState(const WPSContentParsingState &);
-	WPSContentParsingState &operator=(const WPSContentParsingState &);
-};
+struct WPSContentParsingState;
+struct WPSDocumentParsingState;
 
 class WPSContentListener
 {
@@ -190,12 +74,10 @@ public:
 	void insertBreak(const uint8_t breakType);
 
 	// ------ text format -----------
-	void setTextFont(const WPXString &fontName);
-	void setFontSize(const uint16_t fontSize);
-	void setFontAttributes(const uint32_t fontAttributes);
-	void setTextLanguage(int lcid);
-	void setTextColor(const uint32_t rgb);
+	//! set the actual font
 	void setFont(const WPSFont &font);
+	//! returns the actual font
+	WPSFont const &getFont() const;
 
 	// ------ paragraph format -----------
 	//! returns true if a paragraph or a list is opened
@@ -321,8 +203,6 @@ protected:
 	void _flushDeferredTabs();
 
 	void _insertBreakIfNecessary(WPXPropertyList &propList);
-
-	static void _addLanguage(int lcid, WPXPropertyList &propList);
 
 	/** creates a new parsing state (copy of the actual state)
 	 *
