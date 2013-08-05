@@ -1087,7 +1087,7 @@ void WPS8TextStyle::sendParagraph(int pId)
 	if (!m_listener) return;
 	WPSParagraph const &para=
 	    pId < 0 ? m_state->m_defaultParagraph : m_state->m_paragraphList[size_t(pId)];
-	para.send(m_listener);
+	m_listener->setParagraph(para);
 }
 
 ////////////////////////////////////////////////////////////

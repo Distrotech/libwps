@@ -33,6 +33,7 @@
 #include "WPSContentListener.h"
 #include "WPSEntry.h"
 #include "WPSFont.h"
+#include "WPSParagraph.h"
 #include "WPSPosition.h"
 
 #include "WPS8.h"
@@ -286,7 +287,7 @@ void WPS8Graph::sendObjects(int page, int)
 				firstSend = true;
 				WPS_DEBUG_MSG(("WPS8Graph::sendObjects: find some extra pictures\n"));
 				m_listener->setFont(WPSFont::getDefault());
-				m_listener->setParagraphJustification(libwps::JustificationLeft);
+				m_listener->setParagraph(WPSParagraph());
 				m_listener->insertEOL();
 				WPXString message = "--------- The original document has some extra pictures: -------- ";
 				m_listener->insertUnicodeString(message);
@@ -319,7 +320,7 @@ void WPS8Graph::sendObjects(int page, int)
 		{
 			firstSend = true;
 			m_listener->setFont(WPSFont::getDefault());
-			m_listener->setParagraphJustification(libwps::JustificationLeft);
+			m_listener->setParagraph(WPSParagraph());
 			m_listener->insertEOL();
 			WPXString message;
 			message = "--------- The original document used some complex border: -------- ";
@@ -342,7 +343,7 @@ void WPS8Graph::sendBorder(int borderId)
 	border.m_parsed = true;
 
 	m_listener->setFont(WPSFont::getDefault());
-	m_listener->setParagraphJustification(libwps::JustificationLeft);
+	m_listener->setParagraph(WPSParagraph());
 	WPXString message("-------");
 	message.append(border.m_name.c_str());
 	message.append("---------");

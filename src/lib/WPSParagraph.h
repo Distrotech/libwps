@@ -35,7 +35,6 @@
 
 #include "WPSList.h"
 
-class WPSContentListener;
 class WPXPropertyListVector;
 
 struct WPSTabStop
@@ -71,8 +70,6 @@ struct WPSParagraph
 	virtual ~WPSParagraph() {}
 	//! add to the propList
 	void addTo(WPXPropertyList &propList, WPXPropertyListVector &tabStops, bool inTable) const;
-	//! send data to the listener
-	void send(shared_ptr<WPSContentListener> listener) const;
 	//! operator <<
 	friend std::ostream &operator<<(std::ostream &o, WPSParagraph const &ft);
 

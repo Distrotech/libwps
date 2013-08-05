@@ -32,6 +32,7 @@
 #include "WPSContentListener.h"
 #include "WPSEntry.h"
 #include "WPSFont.h"
+#include "WPSParagraph.h"
 #include "WPSPosition.h"
 
 #include "WPS4.h"
@@ -164,7 +165,7 @@ void WPS4Graph::sendObjects(int page)
 			firstSend = true;
 			WPS_DEBUG_MSG(("WPS4Graph::sendObjects: find some extra pictures\n"));
 			m_listener->setFont(WPSFont::getDefault());
-			m_listener->setParagraphJustification(libwps::JustificationLeft);
+			m_listener->setParagraph(WPSParagraph());
 			m_listener->insertEOL();
 			WPXString message = "--------- The original document has some extra pictures: -------- ";
 			m_listener->insertUnicodeString(message);

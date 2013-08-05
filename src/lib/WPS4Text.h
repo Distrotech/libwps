@@ -155,17 +155,9 @@ protected:
 
 	//! reads a font properties
 	bool readFont(long endPos, int &id, std::string &mess);
-	/** sends a font to the listener
-	 *
-	 * \param font the font's properties */
-	void setProperty(WPS4TextInternal::Font const &font);
 
 	//! reads a paragraph properties
 	bool readParagraph(long endPos, int &id, std::string &mess);
-	/** sends a paragraph properties to the listener
-	 *
-	 * \param para the paragraph's properties */
-	void setProperty(WPS4TextInternal::Paragraph const &para);
 
 	/** reads the ZZDLink ( a list of filename ) */
 	bool readDosLink(WPSEntry const &entry);

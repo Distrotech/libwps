@@ -83,9 +83,6 @@ public:
 	// ------ paragraph format -----------
 	//! returns true if a paragraph or a list is opened
 	bool isParagraphOpened() const;
-	/** Define the paragraph justification. You can set force=true to
-		force a break if there is a justification change */
-	void setParagraphJustification(libwps::Justification justification);
 	//! sets the actual paragraph
 	void setParagraph(const WPSParagraph &para);
 	//! returns the actual paragraph
@@ -96,9 +93,6 @@ public:
 	void setCurrentList(shared_ptr<WPSList> list);
 	/** returns the current list */
 	shared_ptr<WPSList> getCurrentList() const;
-	/** function to set the level of the current list
-	 * \warning minimal implementation...*/
-	void setCurrentListLevel(int level);
 
 	// ------- fields ----------------
 	/** Defines some basic type for field */

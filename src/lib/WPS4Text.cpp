@@ -563,11 +563,16 @@ WPSEntry WPS4Text::getMainTextEntry() const
 ////////////////////////////////////////////////////////////
 void WPS4Text::flushExtra()
 {
+	if (!m_listener)
+	{
+		WPS_DEBUG_MSG(("WPS4Text::flushExtra can not find the listener\n"));
+		return;
+	}
 	size_t numExtra = m_state->m_otherZones.size();
-	if (numExtra == 0 || m_listener.get() == 0L) return;
+	if (numExtra == 0) return;
 
-	setProperty(WPS4TextInternal::Font::getDefault(version()));
-	setProperty(WPS4TextInternal::Paragraph());
+	m_listener->setFont(WPS4TextInternal::Font::getDefault(version()));
+	m_listener->setParagraph(WPS4TextInternal::Paragraph());
 	m_listener->insertEOL();
 #ifdef DEBUG
 	WPXString message = "--------- extra text zone -------- ";
@@ -639,12 +644,12 @@ bool WPS4Text::readText(WPSEntry const &zone)
 		actFont = m_state->m_fontList[size_t(prevFId)];
 	else
 		actFont = WPS4TextInternal::Font::getDefault(version());
-	setProperty(actFont);
+	m_listener->setFont(actFont);
 
 	if (prevPId != -1)
-		setProperty(m_state->m_paragraphList[size_t(prevPId)]);
+		m_listener->setParagraph(m_state->m_paragraphList[size_t(prevPId)]);
 	else
-		setProperty(WPS4TextInternal::Paragraph());
+		m_listener->setParagraph(WPS4TextInternal::Paragraph());
 
 	if (dlink)
 	{
@@ -690,7 +695,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 					actFont = m_state->m_fontList[size_t(fId)];
 				else
 					actFont = WPS4TextInternal::Font::getDefault(version());
-				setProperty(actFont);
+				m_listener->setFont(actFont);
 #if DEBUG_FP
 				f << "[";
 				if (fId >= 0) f << "C" << fId << ":" << actFont << "]";
@@ -699,8 +704,9 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				break;
 			case DataFOD::ATTR_PARAG:
 				if (fId >= 0)
-					setProperty(m_state->m_paragraphList[size_t(fId)]);
-				else setProperty(WPS4TextInternal::Paragraph());
+					m_listener->setParagraph(m_state->m_paragraphList[size_t(fId)]);
+				else
+					m_listener->setParagraph(WPS4TextInternal::Paragraph());
 #if DEBUG_PP
 				f << "[";
 				if (fId >= 0) f << "P" << fId << ":" << m_state->m_paragraphList[size_t(fId)] << "]";
@@ -1395,12 +1401,6 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 ////////////////////////////////////////////////////////////
 // the font:
 ////////////////////////////////////////////////////////////
-void WPS4Text::setProperty(WPS4TextInternal::Font const &ft)
-{
-	if (m_listener.get() == 0L) return;
-	m_listener->setFont(ft);
-}
-
 bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 {
 	WPS4TextInternal::Font font(version());
@@ -1629,12 +1629,6 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 ////////////////////////////////////////////////////////////
 // the paragraph properties:
 ////////////////////////////////////////////////////////////
-void WPS4Text::setProperty(WPS4TextInternal::Paragraph const &pp)
-{
-	if (m_listener.get() == 0L) return;
-	pp.send(m_listener);
-}
-
 bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 {
 	long actPos = m_input->tell();

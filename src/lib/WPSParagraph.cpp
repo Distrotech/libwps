@@ -175,37 +175,6 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 	return o;
 }
 
-void WPSParagraph::send(shared_ptr<WPSContentListener> listener) const
-{
-	if (!listener)
-		return;
-
-	WPSList::Level level;
-	if (m_listLevelIndex >= 1)
-	{
-		level = m_listLevel;
-		level.m_labelWidth = (m_margins[1]-level.m_labelIndent);
-		if (level.m_labelWidth<0.1)
-			level.m_labelWidth = 0.1;
-		level.m_labelIndent = 0;
-	}
-
-	if (m_listLevelIndex >= 1)
-	{
-		shared_ptr<WPSList> theList = listener->getCurrentList();
-		if (!theList)
-		{
-			theList = shared_ptr<WPSList>(new WPSList);
-			theList->set(m_listLevelIndex, level);
-			listener->setCurrentList(theList);
-		}
-		else
-			theList->set(m_listLevelIndex, level);
-	}
-
-	listener->setParagraph(*this);
-}
-
 void WPSParagraph::addTo(WPXPropertyList &propList, WPXPropertyListVector &tabStops,
                          bool inTable) const
 {

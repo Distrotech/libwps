@@ -411,22 +411,31 @@ WPSParagraph const &WPSContentListener::getParagraph() const
 
 void WPSContentListener::setParagraph(const WPSParagraph &para)
 {
-	m_ps->m_paragraph=para;
-}
+	// check if we need to update the list
+	if (para.m_listLevelIndex >= 1)
+	{
+		WPSList::Level level = para.m_listLevel;
+		level.m_labelWidth = (para.m_margins[1]-level.m_labelIndent);
+		if (level.m_labelWidth<0.1)
+			level.m_labelWidth = 0.1;
+		level.m_labelIndent = 0;
 
-void WPSContentListener::setParagraphJustification(libwps::Justification justification)
-{
-	m_ps->m_paragraph.m_justify = justification;
+		shared_ptr<WPSList> theList = getCurrentList();
+		if (!theList)
+		{
+			theList = shared_ptr<WPSList>(new WPSList);
+			theList->set(para.m_listLevelIndex, level);
+			setCurrentList(theList);
+		}
+		else
+			theList->set(para.m_listLevelIndex, level);
+	}
+	m_ps->m_paragraph=para;
 }
 
 ///////////////////
 // List: Minimal implementation
 ///////////////////
-void WPSContentListener::setCurrentListLevel(int level)
-{
-	m_ps->m_paragraph.m_listLevelIndex = (uint8_t)level;
-}
-
 void WPSContentListener::setCurrentList(shared_ptr<WPSList> list)
 {
 	m_ps->m_list=list;
