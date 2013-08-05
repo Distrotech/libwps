@@ -176,7 +176,6 @@ protected:
 	void _openPageSpan();
 	void _closePageSpan();
 	void _updatePageSpanDependent(bool set);
-	void _recomputeParagraphPositions();
 
 	void _startSubDocument();
 	void _endSubDocument();

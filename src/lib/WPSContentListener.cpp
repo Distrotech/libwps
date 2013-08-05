@@ -136,25 +136,15 @@ struct WPSContentParsingState
 	double m_pageMarginTop;
 	double m_pageMarginBottom;
 
-	double m_sectionMarginLeft;  // In multicolumn sections, the above two will be rather interpreted
-	double m_sectionMarginRight; // as section margin change
-	double m_sectionMarginTop;
-	double m_sectionMarginBottom;
 	double m_paragraphMarginLeft;  // resulting paragraph margin that is one of the paragraph
 	double m_paragraphMarginRight; // properties
 	double m_paragraphMarginTop;
 	WPXUnit m_paragraphMarginTopUnit;
 	double m_paragraphMarginBottom;
 	WPXUnit m_paragraphMarginBottomUnit;
-	double m_leftMarginByParagraphMarginChange;  // part of the margin due to the PARAGRAPH
-	double m_rightMarginByParagraphMarginChange; // margin change (in WP6)
 
 	double m_paragraphTextIndent; // resulting first line indent that is one of the paragraph properties
-	double m_textIndentByParagraphIndentChange; // part of the indent due to the PARAGRAPH indent (WP6???)
-	double m_textIndentByTabs; // part of the indent due to the "Back Tab" or "Left Tab"
 
-	double m_listReferencePosition; // position from the left page margin of the list number/bullet
-	double m_listBeginPosition; // position from the left page margin of the beginning of the list
 	std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
 
 	uint16_t m_alignmentCharacter;
@@ -211,24 +201,13 @@ WPSContentParsingState::WPSContentParsingState() :
 	m_pageMarginTop(1.0),
 	m_pageMarginBottom(1.0),
 
-	m_sectionMarginLeft(0.0),
-	m_sectionMarginRight(0.0),
-	m_sectionMarginTop(0.0),
-	m_sectionMarginBottom(0.0),
-
 	m_paragraphMarginLeft(0.0),
 	m_paragraphMarginRight(0.0),
 	m_paragraphMarginTop(0.0), m_paragraphMarginTopUnit(WPX_INCH),
 	m_paragraphMarginBottom(0.0), m_paragraphMarginBottomUnit(WPX_INCH),
 
-	m_leftMarginByParagraphMarginChange(0.0),
-	m_rightMarginByParagraphMarginChange(0.0),
-
 	m_paragraphTextIndent(0.0),
-	m_textIndentByParagraphIndentChange(0.0),
-	m_textIndentByTabs(0.0),
-
-	m_listReferencePosition(0.0), m_listBeginPosition(0.0), m_listOrderedLevels(),
+	m_listOrderedLevels(),
 
 	m_alignmentCharacter('.'),
 	m_tabStops(),
@@ -250,7 +229,6 @@ WPSContentListener::WPSContentListener(std::vector<WPSPageSpan> const &pageList,
 	m_documentInterface(documentInterface)
 {
 	_updatePageSpanDependent(true);
-	_recomputeParagraphPositions();
 }
 
 WPSContentListener::~WPSContentListener()
@@ -483,8 +461,7 @@ void WPSContentListener::setParagraphJustification(libwps::Justification justifi
 
 void WPSContentListener::setParagraphTextIndent(double margin)
 {
-	m_ps->m_textIndentByParagraphIndentChange = margin;
-	_recomputeParagraphPositions();
+	m_ps->m_paragraphTextIndent = margin;
 }
 
 void WPSContentListener::setParagraphMargin(double margin, int pos)
@@ -492,12 +469,10 @@ void WPSContentListener::setParagraphMargin(double margin, int pos)
 	switch(pos)
 	{
 	case WPS_LEFT:
-		m_ps->m_leftMarginByParagraphMarginChange = margin;
-		_recomputeParagraphPositions();
+		m_ps->m_paragraphMarginLeft = margin;
 		break;
 	case WPS_RIGHT:
-		m_ps->m_rightMarginByParagraphMarginChange = margin;
-		_recomputeParagraphPositions();
+		m_ps->m_paragraphMarginRight = margin;
 		break;
 	case WPS_TOP:
 		m_ps->m_paragraphMarginTop = margin;
@@ -534,13 +509,8 @@ void WPSContentListener::setParagraphBorders(int which, WPSBorder style)
 void WPSContentListener::setCurrentListLevel(int level)
 {
 	m_ps->m_currentListLevel = (uint8_t)level;
-	// to be compatible with WPSContentListerner
-	if (level)
-		m_ps->m_listBeginPosition =
-		    m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-	else
-		m_ps->m_listBeginPosition = 0;
 }
+
 void WPSContentListener::setCurrentList(shared_ptr<WPSList> list)
 {
 	m_ps->m_list=list;
@@ -786,7 +756,6 @@ void WPSContentListener::_openPageSpan()
 	m_ps->m_pageMarginTop = currentPage.getMarginTop();
 	m_ps->m_pageMarginBottom = currentPage.getMarginBottom();
 	_updatePageSpanDependent(true);
-	_recomputeParagraphPositions();
 
 	// we insert the header footer
 	currentPage.sendHeaderFooters(this, m_documentInterface);
@@ -813,15 +782,6 @@ void WPSContentListener::_updatePageSpanDependent(bool /*set*/)
 {
 }
 
-void WPSContentListener::_recomputeParagraphPositions()
-{
-	m_ps->m_paragraphMarginLeft = m_ps->m_leftMarginByParagraphMarginChange;
-	m_ps->m_paragraphMarginRight = m_ps->m_rightMarginByParagraphMarginChange;
-	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
-	m_ps->m_listBeginPosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-	m_ps->m_listReferencePosition = m_ps->m_paragraphMarginLeft + m_ps->m_paragraphTextIndent;
-}
-
 ///////////////////
 // section
 ///////////////////
@@ -839,14 +799,10 @@ void WPSContentListener::_openSection()
 	m_ps->m_numColumns = int(m_ps->m_textColumns.size());
 
 	WPXPropertyList propList;
-	propList.insert("fo:margin-left", m_ps->m_sectionMarginLeft);
-	propList.insert("fo:margin-right", m_ps->m_sectionMarginRight);
+	propList.insert("fo:margin-left", 0.);
+	propList.insert("fo:margin-right", 0.);
 	if (m_ps->m_numColumns > 1)
 		propList.insert("text:dont-balance-text-columns", false);
-	if (m_ps->m_sectionMarginTop < 0 || m_ps->m_sectionMarginTop > 0)
-		propList.insert("libwpd:margin-top", m_ps->m_sectionMarginTop);
-	if (m_ps->m_sectionMarginBottom < 0 || m_ps->m_sectionMarginBottom > 0)
-		propList.insert("libwpd:margin-bottom", m_ps->m_sectionMarginBottom);
 
 	WPXPropertyListVector columns;
 	for (size_t i = 0; i < m_ps->m_textColumns.size(); i++)
@@ -953,10 +909,8 @@ void WPSContentListener::_resetParagraphState(const bool isListElement)
 		m_ps->m_isListElementOpened = false;
 		m_ps->m_isParagraphOpened = true;
 	}
-	m_ps->m_textIndentByTabs = 0.0;
 	m_ps->m_isTextColumnWithoutParagraph = false;
 	m_ps->m_isHeaderFooterWithoutParagraph = false;
-	_recomputeParagraphPositions();
 }
 
 void WPSContentListener::_appendJustification(WPXPropertyList &propList, libwps::Justification justification)
@@ -985,23 +939,15 @@ void WPSContentListener::_appendJustification(WPXPropertyList &propList, libwps:
 	}
 }
 
-void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool isListElement)
+void WPSContentListener::_appendParagraphProperties(WPXPropertyList &propList, const bool /*isListElement*/)
 {
 	_appendJustification(propList, m_ps->m_paragraphJustification);
 
 	if (!m_ps->m_isTableOpened)
 	{
 		// these properties are not appropriate when a table is opened..
-		if (isListElement)
-		{
-			propList.insert("fo:margin-left", (m_ps->m_listBeginPosition - m_ps->m_paragraphTextIndent));
-			propList.insert("fo:text-indent", m_ps->m_paragraphTextIndent);
-		}
-		else
-		{
-			propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
-			propList.insert("fo:text-indent", m_ps->m_listReferencePosition - m_ps->m_paragraphMarginLeft);
-		}
+		propList.insert("fo:margin-left", m_ps->m_paragraphMarginLeft);
+		propList.insert("fo:text-indent", m_ps->m_paragraphTextIndent);
 		propList.insert("fo:margin-right", m_ps->m_paragraphMarginRight);
 		if (m_ps->m_paragraphBackgroundColor !=  0xFFFFFF)
 		{
@@ -1493,8 +1439,7 @@ void WPSContentListener::_handleFrameParameters
 		propList.insert("style:vertical-rel", "paragraph" );
 		propList.insert("style:horizontal-rel", "paragraph");
 		double w = m_ps->m_pageFormWidth - m_ps->m_pageMarginLeft
-		           - m_ps->m_pageMarginRight - m_ps->m_sectionMarginLeft
-		           - m_ps->m_sectionMarginRight - m_ps->m_paragraphMarginLeft
+		           - m_ps->m_pageMarginRight - m_ps->m_paragraphMarginLeft
 		           - m_ps->m_paragraphMarginRight;
 		w *= inchFactor;
 		switch ( pos.m_xPos)
