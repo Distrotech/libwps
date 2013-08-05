@@ -22,6 +22,8 @@
  *
  * For further information visit http://libwps.sourceforge.net
  */
+#include <iomanip>
+#include <sstream>
 
 #include <libwpd/libwpd.h>
 
@@ -32,7 +34,7 @@
 
 #include "WPSParagraph.h"
 
-void WPSTabStop::addTo(WPXPropertyListVector &propList, double decalX)
+void WPSTabStop::addTo(WPXPropertyListVector &propList, double decalX) const
 {
 	WPXPropertyList tab;
 
@@ -177,10 +179,7 @@ void WPSParagraph::send(shared_ptr<WPSContentListener> listener) const
 {
 	if (!listener)
 		return;
-	listener->setParagraphJustification(m_justify);
-	listener->setTabs(m_tabs);
 
-	double leftMargin = m_margins[1];
 	WPSList::Level level;
 	if (m_listLevelIndex >= 1)
 	{
@@ -188,20 +187,8 @@ void WPSParagraph::send(shared_ptr<WPSContentListener> listener) const
 		level.m_labelWidth = (m_margins[1]-level.m_labelIndent);
 		if (level.m_labelWidth<0.1)
 			level.m_labelWidth = 0.1;
-		leftMargin=level.m_labelIndent;
 		level.m_labelIndent = 0;
 	}
-	listener->setParagraphMargin(leftMargin, WPS_LEFT);
-	listener->setParagraphMargin(m_margins[2], WPS_RIGHT);
-	listener->setParagraphTextIndent(m_margins[0]);
-
-	double interline = m_spacings[0];
-	listener->setParagraphLineSpacing(interline>0.0 ? interline : 1.0);
-
-	// Note:
-	// as we can not use percent, this may give a good approximation
-	listener->setParagraphMargin((10.*m_spacings[1])/72.,WPS_TOP);
-	listener->setParagraphMargin((10.*m_spacings[2])/72.,WPS_BOTTOM);
 
 	if (m_listLevelIndex >= 1)
 	{
@@ -214,12 +201,76 @@ void WPSParagraph::send(shared_ptr<WPSContentListener> listener) const
 		}
 		else
 			theList->set(m_listLevelIndex, level);
-		listener->setCurrentListLevel(m_listLevelIndex);
 	}
-	else
-		listener->setCurrentListLevel(0);
 
-	listener->setParagraphBackgroundColor(m_backgroundColor);
-	listener->setParagraphBorders(m_border, m_borderStyle);
+	listener->setParagraph(*this);
+}
+
+void WPSParagraph::addTo(WPXPropertyList &propList, WPXPropertyListVector &tabStops,
+                         bool inTable) const
+{
+	switch (m_justify)
+	{
+	case libwps::JustificationLeft:
+		// doesn't require a paragraph prop - it is the default
+		propList.insert("fo:text-align", "left");
+		break;
+	case libwps::JustificationCenter:
+		propList.insert("fo:text-align", "center");
+		break;
+	case libwps::JustificationRight:
+		propList.insert("fo:text-align", "end");
+		break;
+	case libwps::JustificationFull:
+		propList.insert("fo:text-align", "justify");
+		break;
+	case libwps::JustificationFullAllLines:
+		propList.insert("fo:text-align", "justify");
+		propList.insert("fo:text-align-last", "justify");
+		break;
+	default:
+		break;
+	}
+	if (!inTable)
+	{
+		// these properties are not appropriate when a table is opened..
+		propList.insert("fo:margin-left", m_listLevelIndex >= 1 ? m_listLevel.m_labelIndent : m_margins[1]);
+		propList.insert("fo:text-indent", m_margins[0]);
+		propList.insert("fo:margin-right", m_margins[2]);
+		if (m_backgroundColor !=  0xFFFFFF)
+		{
+			std::stringstream stream;
+			stream << "#" << std::hex << std::setfill('0') << std::setw(6)
+			       << (m_backgroundColor&0xFFFFFF);
+			propList.insert("fo:background-color", stream.str().c_str());
+		}
+		if (m_border && m_borderStyle.m_style != WPSBorder::None)
+		{
+			std::string style = m_borderStyle.getPropertyValue();
+			int border = m_border;
+			if (border == 0xF)
+			{
+				propList.insert("fo:border", style.c_str());
+			}
+			else
+			{
+				if (border & WPSBorder::LeftBit)
+					propList.insert("fo:border-left", style.c_str());
+				if (border & WPSBorder::RightBit)
+					propList.insert("fo:border-right", style.c_str());
+				if (border & WPSBorder::TopBit)
+					propList.insert("fo:border-top", style.c_str());
+				if (border & WPSBorder::BottomBit)
+					propList.insert("fo:border-bottom", style.c_str());
+			}
+		}
+	}
+	// Note:
+	// as we can not use percent, this may give a good approximation
+	propList.insert("fo:margin-top", (10.*m_spacings[1])/72., WPX_INCH);
+	propList.insert("fo:margin-bottom", (10.*m_spacings[2])/72., WPX_INCH);
+	propList.insert("fo:line-height", m_spacings[0] <= 0 ? 1.0 : m_spacings[0], WPX_PERCENT);
+	for (size_t i=0; i< m_tabs.size(); i++)
+		m_tabs[i].addTo(tabStops, 0);
 }
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

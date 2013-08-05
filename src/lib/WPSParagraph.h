@@ -45,7 +45,7 @@ struct WPSTabStop
 		m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_leaderNumSpaces(leaderNumSpaces)
 	{
 	}
-	void addTo(WPXPropertyListVector &propList, double decalX=0.0);
+	void addTo(WPXPropertyListVector &propList, double decalX=0.0) const;
 	//! operator <<
 	friend std::ostream &operator<<(std::ostream &o, WPSTabStop const &ft);
 	double m_position;
@@ -67,7 +67,10 @@ struct WPSParagraph
 		for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
 		m_spacings[0] = 1.0; // interline normal
 	}
+	// destructor
 	virtual ~WPSParagraph() {}
+	//! add to the propList
+	void addTo(WPXPropertyList &propList, WPXPropertyListVector &tabStops, bool inTable) const;
 	//! send data to the listener
 	void send(shared_ptr<WPSContentListener> listener) const;
 	//! operator <<

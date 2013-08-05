@@ -38,6 +38,7 @@ class WPXPropertyListVector;
 
 class WPSList;
 class WPSPageSpan;
+class WPSParagraph;
 struct WPSTabStop;
 
 struct WPSContentParsingState;
@@ -82,28 +83,13 @@ public:
 	// ------ paragraph format -----------
 	//! returns true if a paragraph or a list is opened
 	bool isParagraphOpened() const;
-	void setParagraphLineSpacing(const double lineSpacing, WPXUnit unit=WPX_PERCENT);
 	/** Define the paragraph justification. You can set force=true to
 		force a break if there is a justification change */
-	void setParagraphJustification(libwps::Justification justification, bool force=false);
-	//! sets the first paragraph text indent. \warning unit are given in inches
-	void setParagraphTextIndent(double margin);
-	/** sets the paragraph margin.
-	 * \param margin is given in inches
-	 * \param pos in WPS_LEFT, WPS_RIGHT, WPS_TOP, WPS_BOTTOM
-	 */
-	void setParagraphMargin(double margin, int pos);
-	/** sets the tabulations.
-	 * \param tabStops the tabulations
-	 */
-	void setTabs(const std::vector<WPSTabStop> &tabStops);
-	/** sets the paragraph background color */
-	void setParagraphBackgroundColor(uint32_t color=0xFFFFFF);
-	/** indicates that the paragraph has a basic borders (ie. a black line)
-	 * \param which = libwps::LeftBorderBit | ...
-	 * \param style indicates the style
-	 */
-	void setParagraphBorders(int which, WPSBorder style=WPSBorder());
+	void setParagraphJustification(libwps::Justification justification);
+	//! sets the actual paragraph
+	void setParagraph(const WPSParagraph &para);
+	//! returns the actual paragraph
+	WPSParagraph const &getParagraph() const;
 
 	// ------ list format -----------
 	/** function to set the actual list */
@@ -186,9 +172,7 @@ protected:
 
 	void _openParagraph();
 	void _closeParagraph();
-	void _appendParagraphProperties(WPXPropertyList &propList, const bool isListElement=false);
-	void _getTabStops(WPXPropertyListVector &tabStops);
-	void _appendJustification(WPXPropertyList &propList, libwps::Justification justification);
+	void _appendParagraphProperties(WPXPropertyList &propList, WPXPropertyListVector &tabStops, const bool isListElement=false);
 	void _resetParagraphState(const bool isListElement=false);
 
 	void _openListElement();
