@@ -28,6 +28,9 @@
 
 #include <vector>
 
+#include "libwps_internal.h"
+#include "libwps_tools_win.h"
+
 #include "WPSEntry.h"
 #include "WPSDebug.h"
 #include "WPSTextParser.h"
@@ -93,6 +96,9 @@ protected:
 	{
 		return reinterpret_cast<WPS4Parser const &> (m_mainParser);
 	}
+
+	//! returns the default codepage to use for the document
+	libwps_tools_win::Font::Type getDefaultFontType() const;
 
 	//! returns the header entry (if such entry exists, if not returns an invalid entry)
 	WPSEntry getHeaderEntry() const;

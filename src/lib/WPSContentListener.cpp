@@ -219,7 +219,6 @@ void WPSContentListener::insertUnicode(uint32_t val)
 {
 	// undef character, we skip it
 	if (val == 0xfffd) return;
-
 	_flushDeferredTabs ();
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	appendUnicode(val, m_ps->m_textBuffer);
@@ -234,6 +233,11 @@ void WPSContentListener::insertUnicodeString(WPXString const &str)
 
 void WPSContentListener::appendUnicode(uint32_t val, WPXString &buffer)
 {
+	if (val < 0x20)
+	{
+		WPS_DEBUG_MSG(("WPSContentListener::appendUnicode: find an old char %x, skip it\n", val));
+		return;
+	}
 	uint8_t first;
 	int len;
 	if (val < 0x80)

@@ -106,37 +106,9 @@ std::ostream &operator<<(std::ostream &o, FontName const &ft)
 {
 	if (!ft.m_name.empty()) o << "name='" << ft.m_name << "'";
 	else o << "name='Unknown'";
-	switch(ft.m_type)
-	{
-	case libwps_tools_win::Font::WIN3_CYRILLIC:
-		o << ",type=Cyr";
-		break;
-	case libwps_tools_win::Font::WIN3_CEUROPE:
-		o << ",type=Ce";
-		break;
-	case libwps_tools_win::Font::WIN3_GREEK:
-		o << ",type=Greek";
-		break;
-	case libwps_tools_win::Font::WIN3_TURKISH:
-		o << ",type=Tur";
-		break;
-	case libwps_tools_win::Font::WIN3_BALTIC:
-		o << ",type=Baltic";
-		break;
-	case libwps_tools_win::Font::WIN3_ARABIC:
-		o << ",type=Arabic";
-		break;
-	case libwps_tools_win::Font::WIN3_HEBREW:
-		o << ",type=Hebrew";
-		break;
-	case libwps_tools_win::Font::WIN3_VIETNAMESE:
-		o << ",type=Vietnamese";
-		break;
-	case libwps_tools_win::Font::WIN3_WEUROPE:
-	case libwps_tools_win::Font::DOS_850:
-	default:
-		break;
-	}
+	if (ft.m_type!=libwps_tools_win::Font::WIN3_WEUROPE &&
+	        ft.m_type!=libwps_tools_win::Font::DOS_850)
+		o << ",type=" << libwps_tools_win::Font::getTypeName(ft.m_type) << ",";
 	return o;
 }
 
@@ -191,11 +163,6 @@ struct Font : public WPSFont
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Font const &ft);
 
-	//! returns true if the font (or background) color is set
-	bool hasColor() const
-	{
-		return (m_color != 0 || m_backColor != 0xFFFFFF);
-	}
 	//! the font encoding type
 	libwps_tools_win::Font::Type m_type;
 	//! background  color index
@@ -558,6 +525,13 @@ WPSEntry WPS4Text::getMainTextEntry() const
 	return m_state->m_main;
 }
 
+libwps_tools_win::Font::Type WPS4Text::getDefaultFontType() const
+{
+	if (version()<=2)
+		return libwps_tools_win::Font::DOS_850;
+	return libwps_tools_win::Font::WIN3_WEUROPE;
+}
+
 ////////////////////////////////////////////////////////////
 // send the data
 ////////////////////////////////////////////////////////////
@@ -910,12 +884,6 @@ bool WPS4Text::readText(WPSEntry const &zone)
 						m_listener->insertCharacter(0xA0);
 						break;
 					}
-				}
-				if (readVal < 0x20)
-				{
-					WPS_DEBUG_MSG(("WPS4Text:readText odd character %x\n", readVal));
-					chaine += '#';
-					break;
 				}
 				m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(readVal, actFont.m_type));
 				break;
@@ -1334,6 +1302,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 
 	long endPos = entry.end();
 	int nFonts = 0;
+	libwps_tools_win::Font::Type docType=getDefaultFontType();
 	while (m_input->tell() < endPos)
 	{
 		long actPos;
@@ -1379,10 +1348,10 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 				f << "##oddC=" << (unsigned int) val << ", ";
 			}
 		}
-		libwps_tools_win::Font::Type fType;
-		if (version() < 2) fType = libwps_tools_win::Font::DOS_850; //checkme ?
-		else if (version()==2) fType = libwps_tools_win::Font::getDosWin2Type(s);
-		else fType = libwps_tools_win::Font::getWin3Type(s);
+		libwps_tools_win::Font::Type fType=libwps_tools_win::Font::UNKNOWN;
+		fType=libwps_tools_win::Font::getFontType(s);
+		if (fType==libwps_tools_win::Font::UNKNOWN)
+			fType=docType;
 		WPS4TextInternal::FontName font;
 		font.m_name = s;
 		font.m_type = fType;
@@ -1448,7 +1417,7 @@ bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 		else if (version() <= 2)
 		{
 			font.m_name=WPS4TextInternal::FontName::getDosName(font_n);
-			font.m_type=libwps_tools_win::Font::DOS_850;
+			font.m_type=getDefaultFontType();
 		}
 		else
 		{
@@ -2170,16 +2139,12 @@ bool WPS4Text::footNotesDataParser (long /*bot*/, long /*eot*/, int id,
 	{
 		int numC = type/2;
 		WPXString label("");
-		libwps_tools_win::Font::Type actType =
-		    (version() < 3) ? libwps_tools_win::Font::DOS_850 :
-		    libwps_tools_win::Font::WIN3_WEUROPE;
-
+		libwps_tools_win::Font::Type actType = getDefaultFontType();
 		for (int i=0; i < numC; ++i)
 		{
 			unsigned char c = libwps::readU8(m_input);
-			if (c >= 0x20)
-				WPSContentListener::appendUnicode(uint32_t(libwps_tools_win::Font::unicode(c, actType)),label);
-			else
+			WPSContentListener::appendUnicode(uint32_t(libwps_tools_win::Font::unicode(c, actType)),label);
+			if (c < 0x20)
 				f << "#(" << std::hex << int(c) << std::dec << ")";
 		}
 		note.m_label = label;

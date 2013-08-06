@@ -26,6 +26,7 @@
 
 #include <libwpd-stream/WPXStream.h>
 #include "libwps_internal.h"
+#include "libwps_tools_win.h"
 
 #include "WPSParser.h"
 
@@ -90,6 +91,8 @@ protected:
 	float pageWidth() const;
 	//! returns the number of columns
 	int numColumns() const;
+	//! returns the document codepage ( if known )
+	libwps_tools_win::Font::Type getDocumentFontType() const;
 
 	/** creates a document for a comment entry and then send the data
 	 *

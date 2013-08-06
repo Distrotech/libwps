@@ -128,7 +128,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 //! the state of WPS4
 struct State
 {
-	State() : m_isDosFile(false), m_eof(-1),
+	State() : m_isDosFile(false), m_eof(-1), m_fontType(libwps_tools_win::Font::UNKNOWN),
 		m_pageSpan(), m_noFirstPageHeader(false), m_noFirstPageFooter(false),
 		m_numColumns(1), m_actPage(0), m_numPages(0)
 	{
@@ -137,6 +137,8 @@ struct State
 	bool m_isDosFile;
 	//! the last file position
 	long m_eof;
+	//! the document code page
+	libwps_tools_win::Font::Type m_fontType;
 	//! the actual document size
 	WPSPageSpan m_pageSpan;
 	bool m_noFirstPageHeader /* true if the first page has no header */;
@@ -174,6 +176,11 @@ float WPS4Parser::pageWidth() const
 int WPS4Parser::numColumns() const
 {
 	return m_state->m_numColumns;
+}
+
+libwps_tools_win::Font::Type WPS4Parser::getDocumentFontType() const
+{
+	return m_state->m_fontType;
 }
 
 bool WPS4Parser::getColor(int id, uint32_t &color) const
@@ -527,25 +534,25 @@ bool WPS4Parser::findZones()
 	f << "Entries(ZZHeader):";
 	int vers = libwps::read8(input);
 	long val = libwps::read8(input); // always 0xfe?
-	int subVers = libwps::readU16(input);
+	int apCreator = libwps::readU16(input);
 	int worksVersion = 0;
 	switch(vers)
 	{
 	case 1:
 		m_state->m_isDosFile = true;
-		switch(subVers)
+		switch(apCreator)
 		{
 		case 0xda1:
-			subVers = 2;
+			apCreator = 2;
 		case 0:
 		case 1:
 			worksVersion = 1;
-			f << "vers=dos" << 1+subVers << ",";
-			subVers = 0;
+			f << "vers=dos" << 1+apCreator << ",";
+			apCreator = 0;
 			break;
 		default:
-			//  checkme: can this be Win2 file?
-			worksVersion=2;
+			//  checkme
+			worksVersion= (apCreator<10000) ? 1 : 2;
 			f << "vers=dos3/win2,";
 			break;
 		}
@@ -566,7 +573,8 @@ bool WPS4Parser::findZones()
 	if (worksVersion)
 		setVersion(worksVersion);
 	if (val != -2) f << "##unk=" << val << ",";
-	if (subVers && subVers != 0x4755) f << "##subVers=" << std::hex << subVers << std::dec << ",";
+	if (apCreator && apCreator != 0x4755)
+		f << "##apCreator=" << std::hex << apCreator << std::dec << ",";
 
 	f << "unkn1=("; // in general : same number appear two time
 	for (int i = 0; i < 2; i++)
@@ -574,11 +582,23 @@ bool WPS4Parser::findZones()
 	f << "),dim?=(";
 	for (int i = 0; i < 2; i++)
 		f << libwps::readU16(input)/1440. << ",";
-	f << "), unkn2=(";
-	for (int i = 0; i < 2; i++)
-		f << std::hex << libwps::readU16(input) << std::dec << ",";
-	f << "), dim2=" << libwps::read16(input)/1440. << ",";
-
+	f << "),";
+	int oem=(int) libwps::readU16(input);
+	if ((oem>>4)&0x7ff)
+	{
+		libwps_tools_win::Font::Type type=libwps_tools_win::Font::getTypeForOEM((oem>>4)&0x7ff);
+		if (type != libwps_tools_win::Font::UNKNOWN)
+		{
+			m_state->m_fontType = type;
+			f << "codePage=" << libwps_tools_win::Font::getTypeName(type) << ",";
+		}
+		else
+			f << "#codePage=" << std::hex << ((oem>>4)&0x7ff) << std::dec << ",";
+	}
+	if (oem & 0x800f) f << "codePage[extra]=" << std::hex << (oem & 0x800f) << std::dec << ",";
+	val=libwps::read16(input);
+	if (val) f << "unkn2=" << val << ",";
+	f << "dim2=" << libwps::read16(input)/1440. << ",";
 	val = libwps::read32(input);
 	if (val) f << std::dec << "unkn3=" << val <<",";
 	ascii().addPos(0);

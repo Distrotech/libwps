@@ -44,82 +44,29 @@ class Font
 {
 public:
 	//! enum Type \brief the knowned DOS© and Windows3© fonts
-	enum Type { DOS_850,
+	enum Type { CP_424, CP_437, CP_737, CP_775,
+	            DOS_850, CP_852, CP_855, CP_856, CP_857,
+	            CP_860, CP_861, CP_862, CP_863, CP_864, CP_865,
+	            CP_866, CP_869, CP_874, CP_1006,
 	            WIN3_ARABIC, WIN3_BALTIC, WIN3_CEUROPE, WIN3_CYRILLIC,
 	            WIN3_GREEK, WIN3_HEBREW, WIN3_TURKISH,
-	            WIN3_VIETNAMESE, WIN3_WEUROPE
+	            WIN3_VIETNAMESE, WIN3_WEUROPE,
+	            UNKNOWN
 	          };
 
 	//! converts a character in unicode, knowing the character and the font type
-	static unsigned long unicode(unsigned char c, Type type)
-	{
-		switch(type)
-		{
-		case DOS_850:
-			return unicodeFromCP850(c);
-		case WIN3_ARABIC:
-			return unicodeFromCP1256(c);
-		case WIN3_BALTIC:
-			return unicodeFromCP1257(c);
-		case WIN3_CEUROPE:
-			return unicodeFromCP1250(c);
-		case WIN3_CYRILLIC:
-			return unicodeFromCP1251(c);
-		case WIN3_GREEK:
-			return unicodeFromCP1253(c);
-		case WIN3_HEBREW:
-			return unicodeFromCP1255(c);
-		case WIN3_TURKISH:
-			return unicodeFromCP1254(c);
-		case WIN3_VIETNAMESE:
-			return unicodeFromCP1258(c);
-		case WIN3_WEUROPE:
-			return unicodeFromCP1252(c);
-		default:
-			assert(0);
-			return c;
-		}
-	}
-
+	static unsigned long unicode(unsigned char c, Type type);
+	/*! returns the type corresponding to Windows OEM */
+	static Type getTypeForOEM(int oem);
 	/*! \brief returns the type of the font using the fontName
 	 * \param name the font name.
 	 *
 	 * \note \a name can be modified to suppress an extension
 	 */
-	static Type getWin3Type(std::string &name);
-	/*! \brief returns the type of the font using the fontName
-	 * \param name the font name.
-	 *
-	 * \note \a name can be modified to suppress an extension
-	 */
-	static Type getDosWin2Type(std::string &name);
-
+	static Type getFontType(std::string &name);
+	//! return the type name
+	static std::string getTypeName(Type type);
 protected:
-	//
-	// DOS FONTS
-	//
-
-	//! dos850 to unicode
-	static unsigned long unicodeFromCP850(unsigned char c);
-
-	//! Windows3© central europe to unicode
-	static unsigned long unicodeFromCP1250(unsigned char c);
-	//! Windows3© cyrillic to unicode
-	static unsigned long unicodeFromCP1251(unsigned char c);
-	//! Windows3© western europe (the default) to unicode
-	static unsigned long unicodeFromCP1252(unsigned char c);
-	//! Windows3© greek to unicode
-	static unsigned long unicodeFromCP1253(unsigned char c);
-	//! Windows3© turkish to unicode
-	static unsigned long unicodeFromCP1254(unsigned char c);
-	//! Windows3© hebrew to unicode
-	static unsigned long unicodeFromCP1255(unsigned char c);
-	//! Windows3© arabic to unicode
-	static unsigned long unicodeFromCP1256(unsigned char c);
-	//! Windows3© baltic to unicode
-	static unsigned long unicodeFromCP1257(unsigned char c);
-	//! Windows3© vietnamese to unicode
-	static unsigned long unicodeFromCP1258(unsigned char c);
 };
 
 // see http://msdn.microsoft.com/en-us/library/bb213877.aspx (Community Content)
