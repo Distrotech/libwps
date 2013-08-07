@@ -617,7 +617,10 @@ bool WPS4Text::readText(WPSEntry const &zone)
 	if (prevFId != -1)
 		actFont = m_state->m_fontList[size_t(prevFId)];
 	else
+	{
 		actFont = WPS4TextInternal::Font::getDefault(version());
+		actFont.m_type=getDefaultFontType();
+	}
 	m_listener->setFont(actFont);
 
 	if (prevPId != -1)
@@ -668,7 +671,10 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				if (fId >= 0)
 					actFont = m_state->m_fontList[size_t(fId)];
 				else
+				{
 					actFont = WPS4TextInternal::Font::getDefault(version());
+					actFont.m_type=getDefaultFontType();
+				}
 				m_listener->setFont(actFont);
 #if DEBUG_FP
 				f << "[";
@@ -990,7 +996,7 @@ bool WPS4Text::readEntries()
 	}
 
 	/* stream offset to end of file */
-	long eof = libwps::readU32(m_input);
+	long eof = (long) libwps::readU32(m_input);
 
 	if (m_textPositions.end() > eof)
 	{
@@ -1199,7 +1205,7 @@ bool WPS4Text::findFDPStructuresByHand(int which)
 			WPS_DEBUG_MSG(("WPS4Text::findFDPStructuresByHand: pnChar is 0, so file may be corrupt\n"));
 			throw libwps::ParseException();
 		}
-		debPos = 0x80 * pnChar;
+		debPos = 0x80 * (long) pnChar;
 	}
 	else
 	{
@@ -1239,7 +1245,7 @@ bool WPS4Text::findFDPStructuresByHand(int which)
 		if (nbElt != 1)
 			m_input->seek(4*nbElt-4, WPX_SEEK_CUR);
 
-		long newPos = libwps::readU32(m_input);
+		long newPos = (long) libwps::readU32(m_input);
 		if (newPos < lastPos || newPos > m_textPositions.end())
 		{
 			WPS_DEBUG_MSG(("WPS4Text: find incorrect linking while parsing the %s\n", indexName));
@@ -1280,7 +1286,7 @@ bool WPS4Text::defDataParser(long , long , int , long endPos, std::string &mess)
 			val = libwps::readU16(m_input);
 			break;
 		case 4:
-			val = libwps::readU32(m_input);
+			val = (long) libwps::readU32(m_input);
 			break;
 		default:
 			break;
@@ -2237,8 +2243,8 @@ bool WPS4Text::objectDataParser (long bot, long /*eot*/, int id,
 	WPS4TextInternal::Object obj;
 	obj.m_size = Vec2f(dim[2], dim[3]); // CHECKME: unit
 
-	long size = libwps::readU32(m_input);
-	long pos = libwps::readU32(m_input);
+	long size = (long) libwps::readU32(m_input);
+	long pos = (long) libwps::readU32(m_input);
 
 	actPos = m_input->tell();
 	if (pos >= 0 && size > 0 && pos+size <= long(mainParser().getSizeFile()))
@@ -2418,7 +2424,7 @@ bool WPS4Text::readPLC
 	f << "pos=(";
 	while (numElt*4+4 <= unsigned(size))
 	{
-		long newPos = libwps::readU32(m_input);
+		long newPos = (long) libwps::readU32(m_input);
 		if (plcType.m_pos == WPS4PLCInternal::PLC::P_UNKNOWN)
 		{
 			if (newPos < m_textPositions.begin())
@@ -2471,11 +2477,11 @@ bool WPS4Text::readPLC
 	}
 	f << ")";
 
-	if (numElt < 1) return false;
+	if (long(numElt) < 1) return false;
 
-	long dataSize = (size-4*numElt-4)/numElt;
+	long dataSize = (size-4*long(numElt)-4)/long(numElt);
 	if (dataSize > 100) return false;
-	if (unsigned(size)!= numElt*(4+dataSize)+4) return false;
+	if (size!= long(numElt)*(4+dataSize)+4) return false;
 
 	ascii().addNote(f.str().c_str());
 
@@ -2516,7 +2522,7 @@ bool WPS4Text::readPLC
 				plc.m_value = libwps::readU16(m_input);
 				break;
 			case 4:
-				plc.m_value = libwps::readU32(m_input);
+				plc.m_value = (long) libwps::readU32(m_input);
 				break;
 			default:
 				WPS_DEBUG_MSG(("WPS4Text:readPLC: unexpected PLC size\n"));

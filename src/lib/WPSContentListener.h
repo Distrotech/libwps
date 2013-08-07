@@ -38,7 +38,7 @@ class WPXPropertyListVector;
 
 class WPSList;
 class WPSPageSpan;
-class WPSParagraph;
+struct WPSParagraph;
 struct WPSTabStop;
 
 struct WPSContentParsingState;

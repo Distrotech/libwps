@@ -837,8 +837,8 @@ bool WPSOLEParser::readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data, WPSPo
 		f << val << ", ";
 	}
 	// dim in TWIP ?
-	long extendX = libwps::readU32(ip);
-	long extendY = libwps::readU32(ip);
+	long extendX = (long) libwps::readU32(ip);
+	long extendY = (long) libwps::readU32(ip);
 	if (extendX > 0 && extendY > 0)
 		pos.setNaturalSize(Vec2f(float(extendX)/20.f, float(extendY)/20.f));
 	long fSize = libwps::read32(ip);
@@ -947,7 +947,7 @@ bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
 	for (int i = 0; i < 3; i++)
 	{
 		/* 0,{10|21|75|101|116}x2 */
-		long val = libwps::readU32(input);
+		long val = (long) libwps::readU32(input);
 		if (val < 1000)
 			f << val << ",";
 		else
@@ -981,7 +981,7 @@ bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
 	}
 
 	long actPos = input->tell();
-	long size = libwps::readU32(input);
+	long size = (long) libwps::readU32(input);
 	if (size <= 0) ok = false;
 	if (ok)
 	{
@@ -1047,7 +1047,7 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 	input->seek(0, WPX_SEEK_SET);
 	f << "@@CONTENTS:";
 
-	long hSize = libwps::readU32(input);
+	long hSize = (long) libwps::readU32(input);
 	if (input->atEOS()) return false;
 	f << "hSize=" << std::hex << hSize << std::dec;
 
@@ -1061,9 +1061,9 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 
 	// minimal checking of the "copied" header
 	input->seek(4, WPX_SEEK_SET);
-	long type = libwps::readU32(input);
+	long type = (long) libwps::readU32(input);
 	if (type < 0 || type > 4) return false;
-	long newSize = libwps::readU32(input);
+	long newSize = (long) libwps::readU32(input);
 
 	f << ", type=" << type;
 	if (newSize < 8) return false;
@@ -1095,7 +1095,7 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 		int val = libwps::readU16(input);
 		if (val) f << ",id"<< i << "=" << val;
 	}
-	long dataLength = libwps::readU32(input);
+	long dataLength = (long) libwps::readU32(input);
 	f << ",length=" << dataLength+hSize;
 
 	ascii.addPos(0);
@@ -1110,7 +1110,7 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 		// or f0=a,f1=1,f2=2,f3=6c,f5=480,f6=360,f7=140,f8=f0
 		// or f0=61,f1=1,f2=2,f3=58,f5=280,f6=1e0,f7=a9,f8=7f
 		// f3=some header sub size ? f5/f6 and f7/f8 two other bdbox ?
-		long val = libwps::readU32(input);
+		long val = (long) libwps::readU32(input);
 		if (val) f << std::hex << ",f" << i << "=" << val;
 	}
 	for (int i = 0; 2*i+100 < hSize; i++)

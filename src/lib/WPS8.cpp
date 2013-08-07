@@ -957,7 +957,7 @@ bool WPS8Parser::parseHeaderIndex()
 
 		if (0xFFFFFFFF == next_index_table)	break;
 
-		if (input->seek(next_index_table, WPX_SEEK_SET) != 0) return readSome;
+		if (input->seek((long) next_index_table, WPX_SEEK_SET) != 0) return readSome;
 	}
 	while (n_entries > 0);
 
@@ -1698,7 +1698,7 @@ bool WPS8Parser::readWNPR(WPSEntry const &entry)
 	f << "printmargins?=(";
 	for (int i = 0; i < 4; i++)
 	{
-		long val = libwps::readU32(input);
+		long val = (long) libwps::readU32(input);
 		long sz = dim[2+(i%2)];
 		if (sz)
 			f << float(val)/float(sz) << ",";

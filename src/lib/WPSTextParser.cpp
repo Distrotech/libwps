@@ -130,7 +130,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	{
 		DataFOD fod;
 		fod.m_type = type;
-		fod.m_pos = libwps::readU32(m_input);
+		fod.m_pos = (long) libwps::readU32(m_input);
 		if (fod.m_pos == 0) fod.m_pos=m_textPositions.begin();
 
 		/* check that fcLim is not too large */
@@ -166,7 +166,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 		unsigned depl = deplSize == 1 ? libwps::readU8(m_input) : libwps::readU16(m_input);
 		/* check size of bfprop  */
 		if ((depl < unsigned(headerSize+(4+deplSize)*cfod) && depl > 0) ||
-		        long(page_offset+depl)  > endPage)
+		        page_offset+long(depl)  > endPage)
 		{
 			WPS_DEBUG_MSG(("WPSTextParser::readFDP: error: pos of bfprop is bad "
 			               "%u (0x%X)\n", depl, depl));
@@ -174,7 +174,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 		}
 
 		if (depl)
-			(*fods_iter).m_defPos = depl + page_offset;
+			(*fods_iter).m_defPos = long(depl) + page_offset;
 	}
 	ascii().addPos(input->tell());
 

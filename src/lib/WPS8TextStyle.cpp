@@ -261,7 +261,7 @@ bool WPS8TextStyle::readFontNames(WPSEntry const &entry)
 	long debPos = entry.begin();
 	m_input->seek(debPos, WPX_SEEK_SET);
 
-	long len = libwps::readU32(m_input); // len + 0x14 = size
+	long len = (long) libwps::readU32(m_input); // len + 0x14 = size
 	size_t n_fonts = (size_t) libwps::readU32(m_input);
 
 	if (long(4*n_fonts) > len)

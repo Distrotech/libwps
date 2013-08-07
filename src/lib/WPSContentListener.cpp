@@ -971,7 +971,7 @@ void WPSContentListener::_changeList()
 
 	if ((int)actualListLevel == m_ps->m_paragraph.m_listLevelIndex) return;
 
-	m_ps->m_listOrderedLevels.resize(m_ps->m_paragraph.m_listLevelIndex, false);
+	m_ps->m_listOrderedLevels.resize((size_t)m_ps->m_paragraph.m_listLevelIndex, false);
 	for (size_t i=actualListLevel+1; i<= (size_t)m_ps->m_paragraph.m_listLevelIndex; i++)
 	{
 		if (m_ps->m_list->isNumeric(int(i)))

@@ -278,10 +278,10 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 			f << "name='" << name << "',";
 			for (int i = 0; i < 2; i++)
 			{
-				val = libwps::readU32(input);
+				val = (long) libwps::readU32(input);
 				if (val) f << "f" << i << "=" << std::hex << val << ",";
 			}
-			long dSize = libwps::readU32(input);
+			long dSize = (long) libwps::readU32(input);
 			long actPos = input->tell();
 
 			bool  ok = dSize > 0 && dSize+actPos <= endPos;

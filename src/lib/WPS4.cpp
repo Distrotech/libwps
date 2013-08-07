@@ -488,7 +488,7 @@ bool WPS4Parser::parseEntry(std::string const &name)
 	WPXInputStreamPtr input = getInput();
 	long actPos = input->tell();
 	WPSEntry zone;
-	zone.setBegin(libwps::readU32(input));
+	zone.setBegin((long) libwps::readU32(input));
 	zone.setLength(libwps::readU16(input));
 	zone.setType(name);
 
@@ -684,7 +684,7 @@ bool WPS4Parser::findZones()
 	f.str("");
 	f << "ZZHeader-II:";
 	bool empty = true;
-	long begP = libwps::readU32(input);
+	long begP = (long) libwps::readU32(input);
 	if (begP)
 	{
 		if (begP <= 0 || !checkInFile(begP)) f << "###";
@@ -699,7 +699,7 @@ bool WPS4Parser::findZones()
 
 	int num = libwps::readU16(input);
 	int sz = libwps::readU16(input);
-	begP = libwps::readU32(input);
+	begP = (long) libwps::readU32(input);
 	if (begP)
 	{
 		if (begP <= 0 || !checkInFile(begP)) f << "###";
@@ -751,7 +751,7 @@ bool WPS4Parser::findZones()
 	int i = 0;
 	while (input->tell()+4 <= 0xd0)
 	{
-		val = libwps::readU32(input);
+		val = (long) libwps::readU32(input);
 		if (val)
 		{
 			f << "f" << std::dec << i << "=" << std::hex << val << ",";
@@ -975,7 +975,7 @@ bool WPS4Parser::readDocWindowsInfo(WPSEntry const &entry)
 	val = libwps::readU8(input);
 	if (val)
 		f << "pageBorderStyle=" << val << ",";
-	val = libwps::readU32(input);
+	val = (long) libwps::readU32(input);
 	if (val&2)
 		f << "pageBorderShaded,";
 	if (val&1)
