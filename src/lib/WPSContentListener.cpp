@@ -1552,6 +1552,7 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 		break;
 	case libwps::DOC_HEADER_FOOTER:
 		m_ds->m_isHeaderFooterStarted = false;
+		break;
 	case libwps::DOC_NONE:
 	case libwps::DOC_NOTE:
 	case libwps::DOC_TABLE:
