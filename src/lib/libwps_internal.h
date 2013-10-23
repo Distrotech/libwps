@@ -45,12 +45,18 @@ typedef unsigned short uint16_t;
 typedef signed int int32_t;
 typedef unsigned int uint32_t;
 #else /* !_MSC_VER && !__DJGPP__*/
-#include <inttypes.h>
+#  include <inttypes.h>
 #endif /* _MSC_VER || __DJGPP__*/
 
 /* ---------- memory  --------------- */
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
+#endif
+
+// define localtime_r on Windows, so that can use
+// thread-safe functions on other environments
+#ifdef _WIN32
+#  define localtime_r(tp,tmp) (localtime(tp)?(*(tmp)=*localtime(tp),(tmp)):0)
 #endif
 
 #if defined(SHAREDPTR_TR1)

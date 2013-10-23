@@ -496,14 +496,20 @@ void WPSContentListener::insertField(WPSContentListener::FieldType type)
 }
 
 void WPSContentListener::insertDateTimeField(char const *format)
-
 {
+	if (!format)
+	{
+		WPS_DEBUG_MSG(("WPSContentListener::insertDateTimeField: oops, can not find the format\n"));
+		return;
+	}
 	time_t now = time ( 0L );
-	struct tm timeinfo = *(localtime ( &now));
-	char buf[256];
-	strftime(buf, 256, format, &timeinfo);
-	WPXString tmp(buf);
-	insertUnicodeString(tmp);
+	struct tm timeinfo;
+	if (localtime_r(&now, &timeinfo))
+	{
+		char buf[256];
+		strftime(buf, 256, format, &timeinfo);
+		insertUnicodeString(WPXString(buf));
+	}
 }
 
 ///////////////////
