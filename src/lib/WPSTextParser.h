@@ -46,14 +46,14 @@ public:
 	int version() const;
 
 	//! returns the actual input
-	WPXInputStreamPtr &getInput()
+	RVNGInputStreamPtr &getInput()
 	{
 		return m_input;
 	}
 
 protected:
 	//! constructor
-	WPSTextParser(WPSParser &parser, WPXInputStreamPtr &input);
+	WPSTextParser(WPSParser &parser, RVNGInputStreamPtr &input);
 
 	//! returns the map type->entry
 	std::multimap<std::string, WPSEntry> &getNameEntryMap();
@@ -121,7 +121,7 @@ protected:
 	//! the file version
 	mutable int m_version;
 	//! the main input
-	WPXInputStreamPtr m_input;
+	RVNGInputStreamPtr m_input;
 	//! pointer to the main zone parser;
 	WPSParser &m_mainParser;
 	//! an entry which corresponds to the complete text zone

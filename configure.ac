@@ -6,8 +6,8 @@ AC_PREREQ([2.65])
 # Version informations
 # ====================
 m4_define([libwps_version_major],[0])
-m4_define([libwps_version_minor],[2])
-m4_define([libwps_version_micro],[9])
+m4_define([libwps_version_minor],[3])
+m4_define([libwps_version_micro],[0])
 m4_define([libwps_version],[libwps_version_major.libwps_version_minor.libwps_version_micro])
 
 # =============
@@ -38,12 +38,9 @@ PKG_PROG_PKG_CONFIG([0.20])
 # ====================
 # Find additional apps
 # ====================
-PKG_CHECK_MODULES([WPD],[
-    libwpd-0.9 >= 0.9.5
-    libwpd-stream-0.9 >= 0.9.5
-])
-AC_SUBST(WPD_CFLAGS)
-AC_SUBST(WPD_LIBS)
+PKG_CHECK_MODULES([REVENGE],[ librevenge-0.0 librevenge-stream-0.0 ])
+AC_SUBST(REVENGE_CFLAGS)
+AC_SUBST(REVENGE_LIBS)
 
 # =================================
 # Libtool/Version Makefile settings
@@ -56,7 +53,6 @@ AC_SUBST(WPS_VERSION, [libwps_version])
 LT_CURRENT=`expr 100 '*' libwps_version_major + libwps_version_minor`
 # For 1.0.0 comment the first line and uncomment the second
 LT_AGE=0
-# LT_AGE=libwpd_version_minor
 AC_SUBST(LT_CURRENT)
 AC_SUBST(LT_REVISION, [libwps_version_micro])
 AC_SUBST(LT_AGE)

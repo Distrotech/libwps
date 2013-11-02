@@ -34,12 +34,12 @@ class WPSSubDocument
 {
 public:
 	/// constructor
-	WPSSubDocument(WPXInputStreamPtr &input, WPSParser *parser, int id=0);
+	WPSSubDocument(RVNGInputStreamPtr &input, WPSParser *parser, int id=0);
 	/// destructor
 	virtual ~WPSSubDocument();
 
 	/// returns the input
-	WPXInputStreamPtr &getInput()
+	RVNGInputStreamPtr &getInput()
 	{
 		return m_input;
 	}
@@ -72,7 +72,7 @@ public:
 	virtual void parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType) = 0;
 
 protected:
-	WPXInputStreamPtr m_input;
+	RVNGInputStreamPtr m_input;
 	WPSParser *m_parser;
 	int m_id;
 private:

@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR),$(BOOST_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBREVENGE_INCLUDE_DIR),$(BOOST_INCLUDE_DIR)"
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -69,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="Release\lib\libwps-0.2.lib"
+				OutputFile="Release\lib\libwps-0.3.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -116,7 +116,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR),$(BOOST_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBREVENGE_INCLUDE_DIR),$(BOOST_INCLUDE_DIR)"
 				PreprocessorDefinitions="_DEBUG;DEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -143,7 +143,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="Debug\lib\libwps-0.2.lib"
+				OutputFile="Debug\lib\libwps-0.3.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool

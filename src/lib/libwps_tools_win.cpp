@@ -1100,7 +1100,7 @@ std::string Language::localeName(long id)
 	}
 }
 
-void Language::addLocaleName(long id, WPXPropertyList &propList)
+void Language::addLocaleName(long id, RVNGPropertyList &propList)
 {
 	if (id<0) return;
 	std::string lang = libwps_tools_win::Language::localeName(id);

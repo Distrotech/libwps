@@ -25,7 +25,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 
@@ -34,9 +34,9 @@
 
 #include "WPSParagraph.h"
 
-void WPSTabStop::addTo(WPXPropertyListVector &propList, double decalX) const
+void WPSTabStop::addTo(RVNGPropertyListVector &propList, double decalX) const
 {
-	WPXPropertyList tab;
+	RVNGPropertyList tab;
 
 	// type
 	switch (m_alignment)
@@ -60,7 +60,7 @@ void WPSTabStop::addTo(WPXPropertyListVector &propList, double decalX) const
 	// leader character
 	if (m_leaderCharacter != 0x0000)
 	{
-		WPXString sLeader;
+		RVNGString sLeader;
 		sLeader.sprintf("%c", m_leaderCharacter);
 		tab.insert("style:leader-text", sLeader);
 		tab.insert("style:leader-style", "solid");
@@ -175,7 +175,7 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 	return o;
 }
 
-void WPSParagraph::addTo(WPXPropertyList &propList, WPXPropertyListVector &tabStops,
+void WPSParagraph::addTo(RVNGPropertyList &propList, RVNGPropertyListVector &tabStops,
                          bool inTable) const
 {
 	switch (m_justify)
@@ -236,9 +236,9 @@ void WPSParagraph::addTo(WPXPropertyList &propList, WPXPropertyListVector &tabSt
 	}
 	// Note:
 	// as we can not use percent, this may give a good approximation
-	propList.insert("fo:margin-top", (10.*m_spacings[1])/72., WPX_INCH);
-	propList.insert("fo:margin-bottom", (10.*m_spacings[2])/72., WPX_INCH);
-	propList.insert("fo:line-height", m_spacings[0] <= 0 ? 1.0 : m_spacings[0], WPX_PERCENT);
+	propList.insert("fo:margin-top", (10.*m_spacings[1])/72., RVNG_INCH);
+	propList.insert("fo:margin-bottom", (10.*m_spacings[2])/72., RVNG_INCH);
+	propList.insert("fo:line-height", m_spacings[0] <= 0 ? 1.0 : m_spacings[0], RVNG_PERCENT);
 	for (size_t i=0; i< m_tabs.size(); i++)
 		m_tabs[i].addTo(tabStops, 0);
 }

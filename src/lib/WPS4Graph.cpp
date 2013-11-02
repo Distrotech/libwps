@@ -26,7 +26,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 #include "WPSContentListener.h"
@@ -52,7 +52,7 @@ struct State
 	int m_numPages;
 
 	//! the list of objects
-	std::vector<WPXBinaryData> m_objects;
+	std::vector<RVNGBinaryData> m_objects;
 	//! the list of positions
 	std::vector<WPSPosition> m_objectsPosition;
 	//! the list of object's ids
@@ -93,7 +93,7 @@ void WPS4Graph::computePositions() const
 }
 
 // update the positions and send data to the listener
-void WPS4Graph::storeObjects(std::vector<WPXBinaryData> const &objects,
+void WPS4Graph::storeObjects(std::vector<RVNGBinaryData> const &objects,
                              std::vector<int> const &ids,
                              std::vector<WPSPosition> const &positions)
 {
@@ -138,7 +138,7 @@ void WPS4Graph::sendObject(Vec2f const &sz, int id)
 	WPSPosition posi(Vec2f(),sz);
 	posi.setRelativePosition(WPSPosition::CharBaseLine);
 	posi.m_wrapping = WPSPosition::WDynamic;
-	float scale = float(1.0/m_state->m_objectsPosition[size_t(pos)].getInvUnitScale(WPX_INCH));
+	float scale = float(1.0/m_state->m_objectsPosition[size_t(pos)].getInvUnitScale(RVNG_INCH));
 	posi.setNaturalSize(scale*m_state->m_objectsPosition[size_t(pos)].naturalSize());
 	m_listener->insertPicture(posi, m_state->m_objects[size_t(pos)]);
 }
@@ -167,7 +167,7 @@ void WPS4Graph::sendObjects(int page)
 			m_listener->setFont(WPSFont::getDefault());
 			m_listener->setParagraph(WPSParagraph());
 			m_listener->insertEOL();
-			WPXString message = "--------- The original document has some extra pictures: -------- ";
+			RVNGString message = "--------- The original document has some extra pictures: -------- ";
 			m_listener->insertUnicodeString(message);
 			m_listener->insertEOL();
 		}
@@ -184,7 +184,7 @@ void WPS4Graph::sendObjects(int page)
 ////////////////////////////////////////////////////////////
 //  low level
 ////////////////////////////////////////////////////////////
-int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
+int WPS4Graph::readObject(RVNGInputStreamPtr input, WPSEntry const &entry)
 {
 	int resId = -1;
 	if (!entry.valid() || entry.length() <= 4)
@@ -193,14 +193,14 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 		return false;
 	}
 	long endPos = entry.end();
-	input->seek(entry.begin(), WPX_SEEK_SET);
+	input->seek(entry.begin(), RVNG_SEEK_SET);
 
 	long lastPos = entry.begin();
 
 	libwps::DebugStream f;
 	int numFind = 0;
 
-	WPXBinaryData pict;
+	RVNGBinaryData pict;
 	WPSPosition pictPos;
 	int actConfidence = -100;
 	int oleId = -1;
@@ -307,7 +307,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 		else
 			break;
 
-		WPXBinaryData data;
+		RVNGBinaryData data;
 		long actPos = input->tell();
 		bool ok = readData && libwps::readData(input,(unsigned long)(endDataPos+1-actPos), data);
 		if (confidence > actConfidence && data.size())
@@ -327,7 +327,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 		if (!ok)
 		{
 			if (endDataPos > 0 && endDataPos+1 <= endPos)
-				input->seek(endDataPos+1, WPX_SEEK_SET);
+				input->seek(endDataPos+1, RVNG_SEEK_SET);
 			else
 				break;
 		}
@@ -339,7 +339,7 @@ int WPS4Graph::readObject(WPXInputStreamPtr input, WPSEntry const &entry)
 		libwps::Debug::dumpFile(data, f2.str().c_str());
 #endif
 
-		input->seek(endDataPos+1, WPX_SEEK_SET);
+		input->seek(endDataPos+1, RVNG_SEEK_SET);
 	}
 
 	if (lastPos != endPos)

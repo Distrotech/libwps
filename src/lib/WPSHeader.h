@@ -24,7 +24,7 @@
 #define WPSHEADER_H
 
 #include "libwps_internal.h"
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 namespace libwpsOLE
 {
@@ -34,13 +34,13 @@ class Storage;
 class WPSHeader
 {
 public:
-	WPSHeader(WPXInputStreamPtr &input, shared_ptr<libwpsOLE::Storage> &ole,
+	WPSHeader(RVNGInputStreamPtr &input, shared_ptr<libwpsOLE::Storage> &ole,
 	          uint8_t majorVersion);
 	virtual ~WPSHeader();
 
-	static WPSHeader *constructHeader(WPXInputStreamPtr &input);
+	static WPSHeader *constructHeader(RVNGInputStreamPtr &input);
 
-	WPXInputStreamPtr &getInput()
+	RVNGInputStreamPtr &getInput()
 	{
 		return m_input;
 	}
@@ -58,7 +58,7 @@ public:
 private:
 	WPSHeader(const WPSHeader &);
 	WPSHeader &operator=(const WPSHeader &);
-	WPXInputStreamPtr m_input;
+	RVNGInputStreamPtr m_input;
 	shared_ptr<libwpsOLE::Storage> m_oleStorage;
 	uint8_t m_majorVersion;
 };

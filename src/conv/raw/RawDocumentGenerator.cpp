@@ -102,10 +102,10 @@ void RawDocumentGenerator::__idprintf(const char *format, ...)
 	va_end(args);
 }
 
-WPXString getPropString(const WPXPropertyList &propList)
+RVNGString getPropString(const RVNGPropertyList &propList)
 {
-	WPXString propString;
-	WPXPropertyList::Iter i(propList);
+	RVNGString propString;
+	RVNGPropertyList::Iter i(propList);
 	if (!i.last())
 	{
 		propString.append(i.key());
@@ -123,12 +123,12 @@ WPXString getPropString(const WPXPropertyList &propList)
 	return propString;
 }
 
-WPXString getPropString(const WPXPropertyListVector &itemList)
+RVNGString getPropString(const RVNGPropertyListVector &itemList)
 {
-	WPXString propString;
+	RVNGString propString;
 
 	propString.append("(");
-	WPXPropertyListVector::Iter i(itemList);
+	RVNGPropertyListVector::Iter i(itemList);
 
 	if (!i.last())
 	{
@@ -149,7 +149,7 @@ WPXString getPropString(const WPXPropertyListVector &itemList)
 	return propString;
 }
 
-void RawDocumentGenerator::setDocumentMetaData(const WPXPropertyList &propList)
+void RawDocumentGenerator::setDocumentMetaData(const RVNGPropertyList &propList)
 {
 	if (m_printCallgraphScore)
 		return;
@@ -167,12 +167,12 @@ void RawDocumentGenerator::endDocument()
 	_D(("endDocument()\n"), LC_START_DOCUMENT);
 }
 
-void RawDocumentGenerator::definePageStyle(const WPXPropertyList &propList)
+void RawDocumentGenerator::definePageStyle(const RVNGPropertyList &propList)
 {
 	__iprintf("definePageStyle(%s)\n", getPropString(propList).cstr());
 }
 
-void RawDocumentGenerator::openPageSpan(const WPXPropertyList &propList)
+void RawDocumentGenerator::openPageSpan(const RVNGPropertyList &propList)
 {
 	_U(("openPageSpan(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_PAGE_SPAN);
@@ -184,7 +184,7 @@ void RawDocumentGenerator::closePageSpan()
 	   LC_OPEN_PAGE_SPAN);
 }
 
-void RawDocumentGenerator::openHeader(const WPXPropertyList &propList)
+void RawDocumentGenerator::openHeader(const RVNGPropertyList &propList)
 {
 	_U(("openHeader(%s)\n",
 	    getPropString(propList).cstr()),
@@ -197,7 +197,7 @@ void RawDocumentGenerator::closeHeader()
 	   LC_OPEN_HEADER_FOOTER);
 }
 
-void RawDocumentGenerator::openFooter(const WPXPropertyList &propList)
+void RawDocumentGenerator::openFooter(const RVNGPropertyList &propList)
 {
 	_U(("openFooter(%s)\n",
 	    getPropString(propList).cstr()),
@@ -210,12 +210,12 @@ void RawDocumentGenerator::closeFooter()
 	   LC_OPEN_HEADER_FOOTER);
 }
 
-void RawDocumentGenerator::defineParagraphStyle(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
+void RawDocumentGenerator::defineParagraphStyle(const RVNGPropertyList &propList, const RVNGPropertyListVector &tabStops)
 {
 	__iprintf("defineParagraphStyle(%s, tab-stops: %s)\n", getPropString(propList).cstr(), getPropString(tabStops).cstr());
 }
 
-void RawDocumentGenerator::openParagraph(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
+void RawDocumentGenerator::openParagraph(const RVNGPropertyList &propList, const RVNGPropertyListVector &tabStops)
 {
 	_U(("openParagraph(%s, tab-stops: %s)\n", getPropString(propList).cstr(), getPropString(tabStops).cstr()),
 	   LC_OPEN_PARAGRAPH);
@@ -226,12 +226,12 @@ void RawDocumentGenerator::closeParagraph()
 	_D(("closeParagraph()\n"), LC_OPEN_PARAGRAPH);
 }
 
-void RawDocumentGenerator::defineCharacterStyle(const WPXPropertyList &propList)
+void RawDocumentGenerator::defineCharacterStyle(const RVNGPropertyList &propList)
 {
 	__iprintf("defineCharacterStyle(%s)\n", getPropString(propList).cstr());
 }
 
-void RawDocumentGenerator::openSpan(const WPXPropertyList &propList)
+void RawDocumentGenerator::openSpan(const RVNGPropertyList &propList)
 {
 	_U(("openSpan(%s)\n", getPropString(propList).cstr()), LC_OPEN_SPAN);
 }
@@ -241,12 +241,12 @@ void RawDocumentGenerator::closeSpan()
 	_D(("closeSpan()\n"), LC_OPEN_SPAN);
 }
 
-void RawDocumentGenerator::defineSectionStyle(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
+void RawDocumentGenerator::defineSectionStyle(const RVNGPropertyList &propList, const RVNGPropertyListVector &columns)
 {
 	__iprintf("defineSectionStyle(%s, columns: %s)\n", getPropString(propList).cstr(), getPropString(columns).cstr());
 }
 
-void RawDocumentGenerator::openSection(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
+void RawDocumentGenerator::openSection(const RVNGPropertyList &propList, const RVNGPropertyListVector &columns)
 {
 	_U(("openSection(%s, columns: %s)\n", getPropString(propList).cstr(), getPropString(columns).cstr()), LC_OPEN_SECTION);
 }
@@ -266,7 +266,7 @@ void RawDocumentGenerator::insertSpace()
 	__iprintf("insertSpace()\n");
 }
 
-void RawDocumentGenerator::insertText(const WPXString &text)
+void RawDocumentGenerator::insertText(const RVNGString &text)
 {
 	__iprintf("insertText(text: %s)\n", text.cstr());
 }
@@ -276,28 +276,28 @@ void RawDocumentGenerator::insertLineBreak()
 	__iprintf("insertLineBreak()\n");
 }
 
-void RawDocumentGenerator::insertField(const WPXString &type, const WPXPropertyList &propList)
+void RawDocumentGenerator::insertField(const RVNGString &type, const RVNGPropertyList &propList)
 {
 	__iprintf("insertField(type: %s, %s)\n", type.cstr(), getPropString(propList).cstr());
 }
 
-void RawDocumentGenerator::defineOrderedListLevel(const WPXPropertyList &propList)
+void RawDocumentGenerator::defineOrderedListLevel(const RVNGPropertyList &propList)
 {
 	__iprintf("defineOrderedListLevel(%s)\n", getPropString(propList).cstr());
 }
 
-void RawDocumentGenerator::defineUnorderedListLevel(const WPXPropertyList &propList)
+void RawDocumentGenerator::defineUnorderedListLevel(const RVNGPropertyList &propList)
 {
 	__iprintf("defineUnorderedListLevel(%s)\n", getPropString(propList).cstr());
 }
 
-void RawDocumentGenerator::openOrderedListLevel(const WPXPropertyList &propList)
+void RawDocumentGenerator::openOrderedListLevel(const RVNGPropertyList &propList)
 {
 	_U(("openOrderedListLevel(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_ORDERED_LIST_LEVEL);
 }
 
-void RawDocumentGenerator::openUnorderedListLevel(const WPXPropertyList &propList)
+void RawDocumentGenerator::openUnorderedListLevel(const RVNGPropertyList &propList)
 {
 	_U(("openUnorderedListLevel(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_UNORDERED_LIST_LEVEL);
@@ -314,7 +314,7 @@ void RawDocumentGenerator::closeUnorderedListLevel()
 	_D(("closeUnorderedListLevel()\n"), LC_OPEN_UNORDERED_LIST_LEVEL);
 }
 
-void RawDocumentGenerator::openListElement(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
+void RawDocumentGenerator::openListElement(const RVNGPropertyList &propList, const RVNGPropertyListVector &tabStops)
 {
 	_U(("openListElement(%s, tab-stops: %s)\n", getPropString(propList).cstr(), getPropString(tabStops).cstr()),
 	   LC_OPEN_LIST_ELEMENT);
@@ -325,7 +325,7 @@ void RawDocumentGenerator::closeListElement()
 	_D(("closeListElement()\n"), LC_OPEN_LIST_ELEMENT);
 }
 
-void RawDocumentGenerator::openFootnote(const WPXPropertyList &propList)
+void RawDocumentGenerator::openFootnote(const RVNGPropertyList &propList)
 {
 	_U(("openFootnote(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_FOOTNOTE);
@@ -336,7 +336,7 @@ void RawDocumentGenerator::closeFootnote()
 	_D(("closeFootnote()\n"), LC_OPEN_FOOTNOTE);
 }
 
-void RawDocumentGenerator::openEndnote(const WPXPropertyList &propList)
+void RawDocumentGenerator::openEndnote(const RVNGPropertyList &propList)
 {
 	_U(("openEndnote(number: %s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_ENDNOTE);
@@ -347,7 +347,7 @@ void RawDocumentGenerator::closeEndnote()
 	_D(("closeEndnote()\n"), LC_OPEN_ENDNOTE);
 }
 
-void RawDocumentGenerator::openComment(const WPXPropertyList &propList)
+void RawDocumentGenerator::openComment(const RVNGPropertyList &propList)
 {
 	_U(("openComment(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_COMMENT);
@@ -358,7 +358,7 @@ void RawDocumentGenerator::closeComment()
 	_D(("closeComment()\n"), LC_OPEN_COMMENT);
 }
 
-void RawDocumentGenerator::openTextBox(const WPXPropertyList &propList)
+void RawDocumentGenerator::openTextBox(const RVNGPropertyList &propList)
 {
 	_U(("openTextBox(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_TEXT_BOX);
@@ -369,12 +369,12 @@ void RawDocumentGenerator::closeTextBox()
 	_D(("closeTextBox()\n"), LC_OPEN_TEXT_BOX);
 }
 
-void RawDocumentGenerator::openTable(const WPXPropertyList &propList, const WPXPropertyListVector &columns)
+void RawDocumentGenerator::openTable(const RVNGPropertyList &propList, const RVNGPropertyListVector &columns)
 {
 	_U(("openTable(%s, columns: %s)\n", getPropString(propList).cstr(), getPropString(columns).cstr()), LC_OPEN_TABLE);
 }
 
-void RawDocumentGenerator::openTableRow(const WPXPropertyList &propList)
+void RawDocumentGenerator::openTableRow(const RVNGPropertyList &propList)
 {
 	_U(("openTableRow(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_TABLE_ROW);
@@ -385,7 +385,7 @@ void RawDocumentGenerator::closeTableRow()
 	_D(("closeTableRow()\n"), LC_OPEN_TABLE_ROW);
 }
 
-void RawDocumentGenerator::openTableCell(const WPXPropertyList &propList)
+void RawDocumentGenerator::openTableCell(const RVNGPropertyList &propList)
 {
 	_U(("openTableCell(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_TABLE_CELL);
@@ -396,7 +396,7 @@ void RawDocumentGenerator::closeTableCell()
 	_D(("closeTableCell()\n"), LC_OPEN_TABLE_CELL);
 }
 
-void RawDocumentGenerator::insertCoveredTableCell(const WPXPropertyList &propList)
+void RawDocumentGenerator::insertCoveredTableCell(const RVNGPropertyList &propList)
 {
 	__iprintf("insertCoveredTableCell(%s)\n", getPropString(propList).cstr());
 }
@@ -406,7 +406,7 @@ void RawDocumentGenerator::closeTable()
 	_D(("closeTable()\n"), LC_OPEN_TABLE);
 }
 
-void RawDocumentGenerator::openFrame(const WPXPropertyList &propList)
+void RawDocumentGenerator::openFrame(const RVNGPropertyList &propList)
 {
 	_U(("openFrame(%s)\n", getPropString(propList).cstr()),
 	   LC_OPEN_FRAME);
@@ -417,12 +417,12 @@ void RawDocumentGenerator::closeFrame()
 	_D(("closeFrame()\n"), LC_OPEN_FRAME);
 }
 
-void RawDocumentGenerator::insertBinaryObject(const WPXPropertyList &propList, const WPXBinaryData & /* data */)
+void RawDocumentGenerator::insertBinaryObject(const RVNGPropertyList &propList, const RVNGBinaryData & /* data */)
 {
 	__iprintf("insertBinaryObject(%s)\n", getPropString(propList).cstr());
 }
 
-void RawDocumentGenerator::insertEquation(const WPXPropertyList &propList, const WPXString &data)
+void RawDocumentGenerator::insertEquation(const RVNGPropertyList &propList, const RVNGString &data)
 {
 	__iprintf("insertEquation(%s, text: %s)\n", getPropString(propList).cstr(), data.cstr());
 }

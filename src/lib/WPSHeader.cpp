@@ -27,7 +27,7 @@
 
 #include "WPSHeader.h"
 
-WPSHeader::WPSHeader(WPXInputStreamPtr &input, shared_ptr<libwpsOLE::Storage> &storage, uint8_t majorVersion) :
+WPSHeader::WPSHeader(RVNGInputStreamPtr &input, shared_ptr<libwpsOLE::Storage> &storage, uint8_t majorVersion) :
 	m_input(input), m_oleStorage(storage),
 	m_majorVersion(majorVersion)
 {
@@ -46,7 +46,7 @@ WPSHeader::~WPSHeader()
  * Works 3 without OLE, so those two types use the same parser.
  *
  */
-WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
+WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
 
@@ -55,7 +55,7 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 		oleStorage.reset();
 	if (!oleStorage)
 	{
-		input->seek(0, WPX_SEEK_SET);
+		input->seek(0, RVNG_SEEK_SET);
 		if (libwps::readU8(input.get()) < 6
 		        && 0xFE == libwps::readU8(input.get()))
 		{
@@ -65,12 +65,12 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 		return 0;
 	}
 
-	WPXInputStreamPtr document_mn0(oleStorage->getSubStream("MN0"));
+	RVNGInputStreamPtr document_mn0(oleStorage->getSubStream("MN0"));
 	if (document_mn0)
 	{
 		// can be a mac or a pc document
 		// each must contains a MM Ole which begins by 0x444e: Mac or 0x4e44: PC
-		WPXInputStreamPtr document_mm(oleStorage->getSubStream("MM"));
+		RVNGInputStreamPtr document_mm(oleStorage->getSubStream("MM"));
 		if (document_mm && libwps::readU16(document_mm) == 0x4e44)
 		{
 			WPS_DEBUG_MSG(("Microsoft Works Mac v4 format detected\n"));
@@ -80,11 +80,11 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 		return new WPSHeader(document_mn0, oleStorage, 4);
 	}
 
-	WPXInputStreamPtr document_contents(oleStorage->getSubStream("CONTENTS"));
+	RVNGInputStreamPtr document_contents(oleStorage->getSubStream("CONTENTS"));
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */
-		document_contents->seek(0, WPX_SEEK_SET);
+		document_contents->seek(0, RVNG_SEEK_SET);
 
 		char fileMagic[8];
 		for (int i=0; i<7 && !document_contents->atEOS(); i++)

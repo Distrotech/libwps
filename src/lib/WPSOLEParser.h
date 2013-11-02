@@ -58,13 +58,13 @@
 #include <string>
 #include <vector>
 
-#include <libwpd-stream/WPXStream.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 #include "libwps_internal.h"
 
 #include "WPSDebug.h"
 
-class WPXBinaryData;
+class RVNGBinaryData;
 
 namespace libwps
 {
@@ -110,58 +110,58 @@ public:
 		return m_objectsPosition;
 	}
 	//! returns the list of data which have been read
-	std::vector<WPXBinaryData> const &getObjects() const
+	std::vector<RVNGBinaryData> const &getObjects() const
 	{
 		return m_objects;
 	}
 
 	//! returns the picture corresponding to an id
-	bool getObject(int id, WPXBinaryData &obj, WPSPosition &pos) const;
+	bool getObject(int id, RVNGBinaryData &obj, WPSPosition &pos) const;
 
 	/*! \brief sets an object
 	 * just in case, the external parsing find another representation
 	 */
-	void setObject(int id, WPXBinaryData const &obj, WPSPosition const &pos);
+	void setObject(int id, RVNGBinaryData const &obj, WPSPosition const &pos);
 protected:
 
 	//!  the "Ole" small structure : unknown contain
-	static bool readOle(WPXInputStreamPtr &ip, std::string const &oleName,
+	static bool readOle(RVNGInputStreamPtr &ip, std::string const &oleName,
 	                    libwps::DebugFile &ascii);
 	//!  the "MM" small structure : seems to contain the file versions
-	static bool readMM(WPXInputStreamPtr &input, std::string const &oleName,
+	static bool readMM(RVNGInputStreamPtr &input, std::string const &oleName,
 	                   libwps::DebugFile &ascii);
 	//!  the "ObjInfo" small structure : seems to contain 3 ints=0,3,4
-	static bool readObjInfo(WPXInputStreamPtr &input, std::string const &oleName,
+	static bool readObjInfo(RVNGInputStreamPtr &input, std::string const &oleName,
 	                        libwps::DebugFile &ascii);
 	//!  the "CompObj" contains : UserType,ClipName,ProgIdName
-	bool readCompObj(WPXInputStreamPtr &ip, std::string const &oleName,
+	bool readCompObj(RVNGInputStreamPtr &ip, std::string const &oleName,
 	                 libwps::DebugFile &ascii);
 
 	/** the OlePres001 seems to contain standart picture file and size */
-	static bool isOlePres(WPXInputStreamPtr &ip, std::string const &oleName);
+	static bool isOlePres(RVNGInputStreamPtr &ip, std::string const &oleName);
 	/** extracts the picture of OlePres001 if it is possible */
-	static bool readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data,
+	static bool readOlePres(RVNGInputStreamPtr &ip, RVNGBinaryData &data,
 	                        WPSPosition &pos, libwps::DebugFile &ascii);
 
 	//! theOle10Native : basic Windows© picture, with no size
-	static bool isOle10Native(WPXInputStreamPtr &ip, std::string const &oleName);
+	static bool isOle10Native(RVNGInputStreamPtr &ip, std::string const &oleName);
 	/** extracts the picture if it is possible */
-	static bool readOle10Native(WPXInputStreamPtr &ip, WPXBinaryData &data,
+	static bool readOle10Native(RVNGInputStreamPtr &ip, RVNGBinaryData &data,
 	                            libwps::DebugFile &ascii);
 
 	/** \brief the Contents : in general a picture : a PNG, an JPEG, a basic metafile,
 	 * I find also a Word art picture, which are not sucefully read
 	 */
-	static bool readContents(WPXInputStreamPtr &input, std::string const &oleName,
-	                         WPXBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
+	static bool readContents(RVNGInputStreamPtr &input, std::string const &oleName,
+	                         RVNGBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
 
 	/** the CONTENTS : seems to store a header size, the header
 	 * and then a object in EMF (with the same header)...
 	 * \note I only find such lib in 2 files, so the parsing may be incomplete
 	 *  and many such Ole rejected
 	 */
-	static bool readCONTENTS(WPXInputStreamPtr &input, std::string const &oleName,
-	                         WPXBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
+	static bool readCONTENTS(RVNGInputStreamPtr &input, std::string const &oleName,
+	                         RVNGBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
 
 
 	//! if filled, does not parse content with this name
@@ -170,7 +170,7 @@ protected:
 	std::vector<std::string> m_unknownOLEs;
 
 	//! list of pictures read
-	std::vector<WPXBinaryData> m_objects;
+	std::vector<RVNGBinaryData> m_objects;
 	//! list of picture size ( if known)
 	std::vector<WPSPosition> m_objectsPosition;
 	//! list of pictures id

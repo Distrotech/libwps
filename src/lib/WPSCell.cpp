@@ -27,7 +27,7 @@
 
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "WPSCell.h"
 

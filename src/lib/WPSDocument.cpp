@@ -35,7 +35,7 @@ This document contains both the libwps API specification and the normal libwps
 documentation.
 \section api_docs libwps API documentation
 The external libwps API is provided by the WPSDocument class. This class, combined
-with the libwpd's WPXDocumentInterface class, are the only two classes that will be
+with the librevenge's RVNGTextInterface class, are the only two classes that will be
 of interest for the application programmer using libwps.
 \section lib_docs libwps documentation
 If you are interrested in the structure of libwps itself, this whole document
@@ -51,11 +51,11 @@ Analyzes the content of an input stream to see if it can be parsed
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *ip)
+WPSConfidence WPSDocument::isFileFormatSupported(RVNGInputStream *ip)
 {
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
 	WPSHeaderPtr header;
-	shared_ptr<WPXInputStream > input(ip, WPS_shared_ptr_noop_deleter<WPXInputStream>());
+	shared_ptr<RVNGInputStream > input(ip, WPS_shared_ptr_noop_deleter<RVNGInputStream>());
 	try
 	{
 		header.reset(WPSHeader::constructHeader(input));
@@ -100,18 +100,18 @@ WPSConfidence WPSDocument::isFileFormatSupported(WPXInputStream *ip)
 
 /**
 Parses the input stream content. It will make callbacks to the functions provided by a
-WPXDocumentInterface class implementation when needed. This is often commonly called the
+RVNGTextInterface class implementation when needed. This is often commonly called the
 'main parsing routine'.
 \param ip The input stream
 \param documentInterface A WPSListener implementation
 */
-WPSResult WPSDocument::parse(WPXInputStream *ip, WPXDocumentInterface *documentInterface)
+WPSResult WPSDocument::parse(RVNGInputStream *ip, RVNGTextInterface *documentInterface)
 {
 	WPSResult error = WPS_OK;
 
 	WPSHeaderPtr header;
 	shared_ptr<WPSParser> parser;
-	shared_ptr<WPXInputStream > input(ip, WPS_shared_ptr_noop_deleter<WPXInputStream>());
+	shared_ptr<RVNGInputStream > input(ip, WPS_shared_ptr_noop_deleter<RVNGInputStream>());
 	try
 	{
 		header.reset(WPSHeader::constructHeader(input));

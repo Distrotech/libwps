@@ -3,10 +3,10 @@ INSTALLATION
 General
 =======
 
-Since libwps was based on libwpd code (for convenience), you need to install
-libwpd in order to build libwps. You can get libwpd from:
+Since libwps was based on librevenge code (for convenience), you need to install
+librevenge in order to build libwps. You can get librevenge from:
 
-- libwpd <http://libwpd.sourceforge.net/download.html>
+- librevenge <http://libwpd.sourceforge.net/download.html>
 
 
 Unix/Linux
@@ -35,21 +35,21 @@ a dll, please use the MingW build system (see below for details).
 Windows - MinGW
 ===============
 
-First of all, in order to use libwpd in your application, you do not need
+First of all, in order to use librevenge in your application, you do not need
 to build it yourself. If you have access to a binary distribution, you
 are encouraged to use it. If for whatever reason you still want to build
-libwpd using MinGW, read following instructions.
+librevenge using MinGW, read following instructions.
 
 
 * Build environment and dependencies
 
-In order to build libwpd, you have to have installed MinGW distribution from
+In order to build librevenge, you have to have installed MinGW distribution from
 http://www.mingw.org. Because the build system of libwps uses autotools, you
 must install also the MSys packages. It is advisable to install all recent
 packages into a path that does not contain spaces. Besides the MinGW
 distribution, you have to install the _runtime_ and _development_ packages of
-libwps dependency libwpd from libwpd.sourceforge.net/download.html. The packages
-you need are libwpd-{version}-MinGW.zip and libwpd-devel-{version}-MinGW.zip
+libwps dependency librevenge from libwpd.sourceforge.net/download.html. The packages
+you need are librevenge-{version}-MinGW.zip and librevenge-devel-{version}-MinGW.zip
 
 
 * Build procedure
@@ -85,7 +85,7 @@ create only shared libraries. Myself, I build using following options:
  
   make clean all
 
-5. And last but not least, compile and install libwpd by running:
+5. And last but not least, compile and install librevenge by running:
 
   make install [-i]
 

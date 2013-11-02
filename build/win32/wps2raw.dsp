@@ -52,8 +52,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 libwpd-stream-0.9.lib libwps-0.2.lib libwpd-0.9.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2raw.exe" /libpath:"Release\lib"
-# ADD LINK32 libwpd-stream-0.9.lib libwps-0.2.lib libwpd-0.9.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2raw.exe" /libpath:"Release\lib"
+# ADD BASE LINK32 librevenge-stream-0.0.lib libwps-0.3.lib librevenge-0.0.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2raw.exe" /libpath:"Release\lib"
+# ADD LINK32 librevenge-stream-0.0.lib libwps-0.3.lib librevenge-0.0.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2raw.exe" /libpath:"Release\lib"
 # SUBTRACT LINK32 /nodefaultlib
 
 !ELSEIF  "$(CFG)" == "wps2raw - Win32 Debug"
@@ -80,8 +80,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 libwps-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2raw.exe" /libpath:"Debug\lib"
-# ADD LINK32 libwps-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2raw.exe" /libpath:"Debug\lib"
+# ADD BASE LINK32 libwps-0.3.lib librevenge-stream-0.0.lib librevenge-0.0.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2raw.exe" /libpath:"Debug\lib"
+# ADD LINK32 libwps-0.3.lib librevenge-stream-0.0.lib librevenge-0.0.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2raw.exe" /libpath:"Debug\lib"
 # SUBTRACT LINK32 /nodefaultlib
 
 !ENDIF 

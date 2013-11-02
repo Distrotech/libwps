@@ -28,7 +28,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "WPSContentListener.h"
 #include "WPSEntry.h"
@@ -50,7 +50,7 @@ struct Pict
 	//! constructor
 	Pict() : m_data(), m_size(), m_parsed(false) {}
 	//! the content
-	WPXBinaryData m_data;
+	RVNGBinaryData m_data;
 	//! the size of the picture (if known)
 	Vec2f m_size;
 	//! flag to know if the data was send to the listener
@@ -138,7 +138,7 @@ void WPS8Graph::computePositions() const
 	m_state->m_numPages = (m_state->m_pictMap.size() || m_state->m_oleMap.size()) ? 1 : 0;
 }
 
-void WPS8Graph::storeObjects(std::vector<WPXBinaryData> const &objects,
+void WPS8Graph::storeObjects(std::vector<RVNGBinaryData> const &objects,
                              std::vector<int> const &ids,
                              std::vector<WPSPosition> const &positions)
 {
@@ -152,7 +152,7 @@ void WPS8Graph::storeObjects(std::vector<WPXBinaryData> const &objects,
 	{
 		WPS8GraphInternal::Pict ole;
 		ole.m_data = objects[i];
-		float scale = 1.0f/positions[i].getInvUnitScale(WPX_INCH);
+		float scale = 1.0f/positions[i].getInvUnitScale(RVNG_INCH);
 		ole.m_size = scale*positions[i].naturalSize();
 		m_state->m_oleMap[ids[i]] = ole;
 	}
@@ -161,7 +161,7 @@ void WPS8Graph::storeObjects(std::vector<WPXBinaryData> const &objects,
 ////////////////////////////////////////////////////////////
 // find all structures which correspond to the picture
 ////////////////////////////////////////////////////////////
-bool WPS8Graph::readStructures(WPXInputStreamPtr input)
+bool WPS8Graph::readStructures(RVNGInputStreamPtr input)
 {
 	WPS8Parser::NameMultiMap &nameTable = m_mainParser.getNameEntryMap();
 	WPS8Parser::NameMultiMap::iterator pos;
@@ -289,7 +289,7 @@ void WPS8Graph::sendObjects(int page, int)
 				m_listener->setFont(WPSFont::getDefault());
 				m_listener->setParagraph(WPSParagraph());
 				m_listener->insertEOL();
-				WPXString message = "--------- The original document has some extra pictures: -------- ";
+				RVNGString message = "--------- The original document has some extra pictures: -------- ";
 				m_listener->insertUnicodeString(message);
 				m_listener->insertEOL();
 			}
@@ -322,7 +322,7 @@ void WPS8Graph::sendObjects(int page, int)
 			m_listener->setFont(WPSFont::getDefault());
 			m_listener->setParagraph(WPSParagraph());
 			m_listener->insertEOL();
-			WPXString message;
+			RVNGString message;
 			message = "--------- The original document used some complex border: -------- ";
 			m_listener->insertUnicodeString(message);
 			m_listener->insertEOL();
@@ -344,7 +344,7 @@ void WPS8Graph::sendBorder(int borderId)
 
 	m_listener->setFont(WPSFont::getDefault());
 	m_listener->setParagraph(WPSParagraph());
-	WPXString message("-------");
+	RVNGString message("-------");
 	message.append(border.m_name.c_str());
 	message.append("---------");
 	m_listener->insertUnicodeString(message);
@@ -363,7 +363,7 @@ void WPS8Graph::sendBorder(int borderId)
 		m_listener->insertPicture(pos, border.m_pictList[id].m_data);
 		if (i == 3)
 		{
-			message = WPXString("-----");
+			message = RVNGString("-----");
 			m_listener->insertUnicodeString(message);
 		}
 	}
@@ -376,7 +376,7 @@ void WPS8Graph::sendBorder(int borderId)
 ////////////////////////////////////////////////////////////
 
 // Read a PICT/MEF4 entry :  read uncompressed picture of sx*sy of rgb
-bool WPS8Graph::readPICT(WPXInputStreamPtr input, WPSEntry const &entry)
+bool WPS8Graph::readPICT(RVNGInputStreamPtr input, WPSEntry const &entry)
 {
 	long page_offset = entry.begin();
 	long length = entry.end();
@@ -394,7 +394,7 @@ bool WPS8Graph::readPICT(WPXInputStreamPtr input, WPSEntry const &entry)
 		return false;
 	}
 
-	input->seek(page_offset, WPX_SEEK_SET);
+	input->seek(page_offset, RVNG_SEEK_SET);
 	std::string name;
 	for (int i = 0; i < 4; i++) name += (char) libwps::readU8(input);
 	if (strncmp("MEF4", name.c_str(), 4))
@@ -437,7 +437,7 @@ bool WPS8Graph::readPICT(WPXInputStreamPtr input, WPSEntry const &entry)
 
 	}
 	else
-		input->seek(page_offset+24, WPX_SEEK_SET);
+		input->seek(page_offset+24, RVNG_SEEK_SET);
 
 	if (input->tell() != endPos)
 	{
@@ -452,7 +452,7 @@ bool WPS8Graph::readPICT(WPXInputStreamPtr input, WPSEntry const &entry)
 
 // reads a IBGF zone
 // Warning: only seems very simple IBGF, complex may differ
-bool WPS8Graph::readIBGF(WPXInputStreamPtr input, WPSEntry const &entry)
+bool WPS8Graph::readIBGF(RVNGInputStreamPtr input, WPSEntry const &entry)
 {
 	libwps::DebugStream f;
 	if (!entry.hasType(entry.name()))
@@ -472,7 +472,7 @@ bool WPS8Graph::readIBGF(WPXInputStreamPtr input, WPSEntry const &entry)
 	}
 
 	entry.setParsed();
-	input->seek(page_offset, WPX_SEEK_SET);
+	input->seek(page_offset, RVNG_SEEK_SET);
 	std::string name;
 	for (int i = 0; i < 4; i++)
 	{
@@ -514,7 +514,7 @@ bool WPS8Graph::readIBGF(WPXInputStreamPtr input, WPSEntry const &entry)
 }
 
 // BDR/WBDR Code : read a BDR Code
-bool WPS8Graph::readBDR(WPXInputStreamPtr input, WPSEntry const &entry)
+bool WPS8Graph::readBDR(RVNGInputStreamPtr input, WPSEntry const &entry)
 {
 	typedef WPS8GraphInternal::Border Border;
 
@@ -537,7 +537,7 @@ bool WPS8Graph::readBDR(WPXInputStreamPtr input, WPSEntry const &entry)
 	}
 
 	entry.setParsed();
-	input->seek(page_offset, WPX_SEEK_SET);
+	input->seek(page_offset, RVNG_SEEK_SET);
 
 	Border border;
 	border.m_name = entry.extra();
@@ -620,7 +620,7 @@ bool WPS8Graph::readBDR(WPXInputStreamPtr input, WPSEntry const &entry)
 		long debP = listPtrs[bd];
 		long endP = listPtrs[bd+1];
 
-		input->seek(debP, WPX_SEEK_SET);
+		input->seek(debP, RVNG_SEEK_SET);
 		f.str("");
 		f << "BDR(" << bd << "):";
 
@@ -654,7 +654,7 @@ bool WPS8Graph::readBDR(WPXInputStreamPtr input, WPSEntry const &entry)
 #endif
 		}
 		else
-			input->seek(debPos+12, WPX_SEEK_SET);
+			input->seek(debPos+12, RVNG_SEEK_SET);
 		if (input->tell() != endP) f << "###";
 		ascii().addPos(debP);
 		ascii().addNote(f.str().c_str());
@@ -678,7 +678,7 @@ bool WPS8Graph::readBDR(WPXInputStreamPtr input, WPSEntry const &entry)
     see http://www.fileformat.info/format/wmf/egff.htm
     FIXME: we must also recognize the enhanced metafile format: EMF,
     if we want to read text which are created after 2007 */
-bool WPS8Graph::readMetaFile(WPXInputStreamPtr input, long endPos, WPXBinaryData &pict)
+bool WPS8Graph::readMetaFile(RVNGInputStreamPtr input, long endPos, RVNGBinaryData &pict)
 {
 	long actualPos = input->tell();
 	pict.clear();
@@ -694,7 +694,7 @@ bool WPS8Graph::readMetaFile(WPXInputStreamPtr input, long endPos, WPXBinaryData
 #ifdef DEBUG
 	int vers = (int) libwps::read16(input);
 #else
-	input->seek(2, WPX_SEEK_CUR);
+	input->seek(2, RVNG_SEEK_CUR);
 #endif
 
 	if (fType <= 0 || fType > 2 || hSize != 9)
@@ -713,7 +713,7 @@ bool WPS8Graph::readMetaFile(WPXInputStreamPtr input, long endPos, WPXBinaryData
 		return false;
 	}
 
-	input->seek(actualPos, WPX_SEEK_SET);
+	input->seek(actualPos, RVNG_SEEK_SET);
 	if (!libwps::readData(input, (unsigned long)(endP-actualPos), pict)) return false;
 
 	ascii().skipZone(actualPos, endP-1);

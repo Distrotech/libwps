@@ -34,11 +34,11 @@ TextDocumentGenerator::~TextDocumentGenerator()
 {
 }
 
-void TextDocumentGenerator::setDocumentMetaData(const WPXPropertyList &propList)
+void TextDocumentGenerator::setDocumentMetaData(const RVNGPropertyList &propList)
 {
 	if (!m_isInfo)
 		return;
-	WPXPropertyList::Iter propIter(propList);
+	RVNGPropertyList::Iter propIter(propList);
 	for (propIter.rewind(); propIter.next(); )
 	{
 		printf("%s %s\n", propIter.key(), propIter()->getStr().cstr());
@@ -59,7 +59,7 @@ void TextDocumentGenerator::insertTab()
 	printf("%c", UCS_TAB);
 }
 
-void TextDocumentGenerator::insertText(const WPXString &text)
+void TextDocumentGenerator::insertText(const RVNGString &text)
 {
 	if (m_isInfo)
 		return;

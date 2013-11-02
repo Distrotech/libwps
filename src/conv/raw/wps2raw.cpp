@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include <libwps/libwps.h>
 #include "RawDocumentGenerator.h"
 
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	else
 		file = argv[1];
 
-	WPXFileStream input(file);
+	RVNGFileStream input(file);
 
 	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input);
 	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)

@@ -50,7 +50,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Release\lib\libwps-0.2.lib"
+# ADD LIB32 /nologo /out:"Release\lib\libwps-0.3.lib"
 
 !ELSEIF  "$(CFG)" == "libwps - Win32 Debug"
 
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Debug\lib\libwps-0.2.lib"
+# ADD LIB32 /nologo /out:"Debug\lib\libwps-0.3.lib"
 
 !ENDIF 
 

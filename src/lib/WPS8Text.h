@@ -118,10 +118,10 @@ protected:
 	// String+text functions
 	//
 	//! reads a string
-	bool readString(WPXInputStreamPtr input, long page_size,
-	                WPXString &res);
+	bool readString(RVNGInputStreamPtr input, long page_size,
+	                RVNGString &res);
 	//! reads a utf16 character, \return 0xfffd if an error
-	long readUTF16LE(WPXInputStreamPtr input, long endPos, uint16_t firstC);
+	long readUTF16LE(RVNGInputStreamPtr input, long endPos, uint16_t firstC);
 
 	/** \brief the footnote ( FTN or EDN )
 	 *

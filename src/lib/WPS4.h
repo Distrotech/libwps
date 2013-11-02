@@ -24,13 +24,13 @@
 
 #include <vector>
 
-#include <libwpd-stream/WPXStream.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
 
 #include "WPSParser.h"
 
-class WPXString;
+class RVNGString;
 
 class WPSPageSpan;
 
@@ -55,11 +55,11 @@ class WPS4Parser : public WPSParser
 
 public:
 	//! constructor
-	WPS4Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
+	WPS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
 	//! destructor
 	~WPS4Parser();
 	//! called by WPSDocument to parse the file
-	void parse(WPXDocumentInterface *documentInterface);
+	void parse(RVNGTextInterface *documentInterface);
 protected:
 	//! color
 	bool getColor(int id, uint32_t &color) const;
@@ -81,7 +81,7 @@ protected:
 	/** tries to parse the different OLE zones ( except the main zone ) */
 	bool createOLEStructures();
 	/** creates the main listener */
-	shared_ptr<WPSContentListener> createListener(WPXDocumentInterface *interface);
+	shared_ptr<WPSContentListener> createListener(RVNGTextInterface *interface);
 
 	// interface with text parser
 
@@ -99,9 +99,9 @@ protected:
 	 * \note actually all bookmarks (comments) are empty */
 	void createDocument(WPSEntry const &entry, libwps::SubDocumentType type);
 	/** creates a document for a footnote entry with label and then send the data*/
-	void createNote(WPSEntry const &entry, WPXString const &label);
+	void createNote(WPSEntry const &entry, RVNGString const &label);
 	//! creates a textbox and then send the data
-	void createTextBox(WPSEntry const &entry, WPSPosition const &pos, WPXPropertyList &extras);
+	void createTextBox(WPSEntry const &entry, WPSPosition const &pos, RVNGPropertyList &extras);
 	//! sends text corresponding to the entry to the listener (via WPS4Text)
 	void send(WPSEntry const &entry, libwps::SubDocumentType type);
 
@@ -110,7 +110,7 @@ protected:
 	/** tries to read a picture ( via its WPS4Graph )
 	 *
 	 * \note returns the object id or -1 if find nothing */
-	int readObject(WPXInputStreamPtr input, WPSEntry const &entry);
+	int readObject(RVNGInputStreamPtr input, WPSEntry const &entry);
 
 	/** sends an object with given id ( via its WPS4Graph )
 	 *

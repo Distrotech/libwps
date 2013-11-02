@@ -21,7 +21,7 @@
  * For further information visit http://libwpd.sourceforge.net
  */
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 #include "WPSContentListener.h"
@@ -148,7 +148,7 @@ void WPSPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFoote
 }
 
 void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
-                                    WPXDocumentInterface *documentInterface)
+                                    RVNGTextInterface *documentInterface)
 {
 	if (!listener || !documentInterface)
 	{
@@ -162,7 +162,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 		WPSPageSpanInternal::HeaderFooterPtr &hf = m_headerFooterList[i];
 		if (!hf) continue;
 
-		WPXPropertyList propList;
+		RVNGPropertyList propList;
 		switch (hf->getOccurence())
 		{
 		case WPSPageSpan::ODD:
@@ -207,7 +207,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 
 	if (!pageNumberInserted)
 	{
-		WPXPropertyList propList;
+		RVNGPropertyList propList;
 		propList.insert("libwpd:occurence", "all");
 		if (m_pageNumberPosition >= TopLeft &&
 		        m_pageNumberPosition <= TopInsideLeftAndRight)
@@ -226,7 +226,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 	}
 }
 
-void WPSPageSpan::getPageProperty(WPXPropertyList &propList) const
+void WPSPageSpan::getPageProperty(RVNGPropertyList &propList) const
 {
 	propList.insert("libwpd:num-pages", getPageSpan());
 
@@ -302,9 +302,9 @@ bool WPSPageSpan::operator==(shared_ptr<WPSPageSpan> const &page2) const
 	return true;
 }
 
-void WPSPageSpan::_insertPageNumberParagraph(WPXDocumentInterface *documentInterface)
+void WPSPageSpan::_insertPageNumberParagraph(RVNGTextInterface *documentInterface)
 {
-	WPXPropertyList propList;
+	RVNGPropertyList propList;
 	switch (m_pageNumberPosition)
 	{
 	case TopLeft:
@@ -331,11 +331,11 @@ void WPSPageSpan::_insertPageNumberParagraph(WPXDocumentInterface *documentInter
 		break;
 	}
 
-	documentInterface->openParagraph(propList, WPXPropertyListVector());
+	documentInterface->openParagraph(propList, RVNGPropertyListVector());
 
 	propList.clear();
 	propList.insert("style:font-name", m_pageNumberingFontName.cstr());
-	propList.insert("fo:font-size", m_pageNumberingFontSize, WPX_POINT);
+	propList.insert("fo:font-size", m_pageNumberingFontSize, RVNG_POINT);
 	documentInterface->openSpan(propList);
 
 

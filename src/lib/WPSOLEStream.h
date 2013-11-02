@@ -36,7 +36,7 @@
 
 #include "libwps_internal.h"
 
-class WPXInputStream;
+class RVNGInputStream;
 
 namespace libwpsOLE
 {
@@ -57,7 +57,7 @@ public:
 	/**
 	 * Constructs a storage with data.
 	 **/
-	Storage( shared_ptr<WPXInputStream> is );
+	Storage( shared_ptr<RVNGInputStream> is );
 
 	/**
 	 * Destroys the storage.
@@ -85,15 +85,15 @@ public:
 	bool isDirectory(const std::string &name);
 
 	/**
-	 * Returns a WPXInputStream corresponding to a leaf/directory substream
+	 * Returns a RVNGInputStream corresponding to a leaf/directory substream
 	 **/
-	shared_ptr<WPXInputStream> getSubStream(const std::string &name);
+	shared_ptr<RVNGInputStream> getSubStream(const std::string &name);
 
 private:
 	/**
-	 * Returns a WPXInputStream corresponding to a directory substream
+	 * Returns a RVNGInputStream corresponding to a directory substream
 	 **/
-	shared_ptr<WPXInputStream> getSubStreamForDirectory(const std::string &name);
+	shared_ptr<RVNGInputStream> getSubStreamForDirectory(const std::string &name);
 
 	//! the main data storage
 	IStorage *m_io;
@@ -106,5 +106,5 @@ private:
 
 }  // namespace libwps
 
-#endif // WPXOLESTREAM_H
+#endif // RVNGOLESTREAM_H
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

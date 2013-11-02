@@ -29,11 +29,11 @@
 #include <iostream>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 #include "libwps_internal.h"
 
-class WPXPropertyList;
-class WPXDocumentInterface;
+class RVNGPropertyList;
+class RVNGTextInterface;
 
 /** a small structure used to store the informations about a list */
 class WPSList
@@ -58,7 +58,7 @@ public:
 			return m_type !=libwps::NONE && m_type != libwps::BULLET;
 		}
 		/** add the information of this level in the propList */
-		void addTo(WPXPropertyList &propList, int startVal) const;
+		void addTo(RVNGPropertyList &propList, int startVal) const;
 
 		/** returns true, if addTo has been called */
 		bool isSendToInterface() const
@@ -92,12 +92,12 @@ public:
 		int m_startValue;
 		/** the type of the level */
 		libwps::NumberingType m_type;
-		WPXString m_prefix /** string which preceedes the number if we have an ordered level*/,
+		RVNGString m_prefix /** string which preceedes the number if we have an ordered level*/,
 		          m_suffix/** string which follows the number if we have an ordered level*/,
 		          m_bullet /** the bullet if we have an bullet level */;
 
 	protected:
-		/** true if it is already send to WPXDocumentInterface */
+		/** true if it is already send to RVNGTextInterface */
 		mutable bool m_sendToInterface;
 	};
 
@@ -145,7 +145,7 @@ public:
 	bool mustSendLevel(int level) const;
 
 	/** send the list information to the document interface */
-	void sendTo(WPXDocumentInterface &docInterface, int level) const;
+	void sendTo(RVNGTextInterface &docInterface, int level) const;
 
 protected:
 	std::vector<Level> m_levels;

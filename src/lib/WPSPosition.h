@@ -28,7 +28,7 @@
 
 #include <ostream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 
@@ -50,7 +50,7 @@ public:
 
 public:
 	//! constructor
-	WPSPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), WPXUnit unt=WPX_INCH):
+	WPSPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), RVNGUnit unt=RVNG_INCH):
 		m_anchorTo(Char), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
 		m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_unit(unt), m_order(0) {}
 
@@ -62,17 +62,17 @@ public:
 		o << "Pos=" << pos.m_orig << "x" << dest;
 		switch(pos.m_unit)
 		{
-		case WPX_INCH:
+		case RVNG_INCH:
 			o << "(inch)";
 			break;
-		case WPX_POINT:
+		case RVNG_POINT:
 			o << "(pt)";
 			break;
-		case WPX_TWIP:
+		case RVNG_TWIP:
 			o << "(tw)";
 			break;
-		case WPX_PERCENT:
-		case WPX_GENERIC:
+		case RVNG_PERCENT:
+		case RVNG_GENERIC:
 		default:
 			break;
 		}
@@ -116,48 +116,48 @@ public:
 		return m_naturalSize;
 	}
 	//! returns the unit
-	WPXUnit unit() const
+	RVNGUnit unit() const
 	{
 		return m_unit;
 	}
 	//! returns a float which can be used to convert between to unit
-	static float getScaleFactor(WPXUnit orig, WPXUnit dest)
+	static float getScaleFactor(RVNGUnit orig, RVNGUnit dest)
 	{
 		float actSc = 1.0, newSc = 1.0;
 		switch(orig)
 		{
-		case WPX_TWIP:
+		case RVNG_TWIP:
 			break;
-		case WPX_POINT:
+		case RVNG_POINT:
 			actSc=20;
 			break;
-		case WPX_INCH:
+		case RVNG_INCH:
 			actSc = 1440;
 			break;
-		case WPX_PERCENT:
-		case WPX_GENERIC:
+		case RVNG_PERCENT:
+		case RVNG_GENERIC:
 		default:
 			WPS_DEBUG_MSG(("WPSPosition::getScaleFactor %d unit must not appear\n", int(orig)));
 		}
 		switch(dest)
 		{
-		case WPX_TWIP:
+		case RVNG_TWIP:
 			break;
-		case WPX_POINT:
+		case RVNG_POINT:
 			newSc=20;
 			break;
-		case WPX_INCH:
+		case RVNG_INCH:
 			newSc = 1440;
 			break;
-		case WPX_PERCENT:
-		case WPX_GENERIC:
+		case RVNG_PERCENT:
+		case RVNG_GENERIC:
 		default:
 			WPS_DEBUG_MSG(("WPSPosition::getScaleFactor %d unit must not appear\n", int(dest)));
 		}
 		return actSc/newSc;
 	}
 	//! returns a float which can be used to scale some data in object unit
-	float getInvUnitScale(WPXUnit unt) const
+	float getInvUnitScale(RVNGUnit unt) const
 	{
 		return getScaleFactor(unt, m_unit);
 	}
@@ -183,7 +183,7 @@ public:
 		m_naturalSize = natSize;
 	}
 	//! sets the dimension unit
-	void setUnit(WPXUnit unt)
+	void setUnit(RVNGUnit unt)
 	{
 		m_unit = unt;
 	}
@@ -250,7 +250,7 @@ protected:
 	int m_page;
 	Vec2f m_orig /** the origin position in a page */, m_size /* the size of the data*/, m_naturalSize /** the natural size of the data (if known) */;
 	//! the unit used in \a orig and in \a m_size. Default: in inches
-	WPXUnit m_unit;
+	RVNGUnit m_unit;
 	//! background/foward order
 	mutable int m_order;
 };

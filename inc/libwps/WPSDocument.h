@@ -34,12 +34,11 @@
 #define WPSLIB
 #endif
 
-#include <libwpd-stream/WPXStream.h>
-
 enum WPSConfidence { WPS_CONFIDENCE_NONE=0, WPS_CONFIDENCE_POOR, WPS_CONFIDENCE_LIKELY, WPS_CONFIDENCE_GOOD, WPS_CONFIDENCE_EXCELLENT };
 enum WPSResult { WPS_OK, WPS_FILE_ACCESS_ERROR, WPS_PARSE_ERROR, WPS_OLE_ERROR, WPS_UNKNOWN_ERROR };
 
-class WPXDocumentInterface;
+class RVNGInputStream;
+class RVNGTextInterface;
 
 /**
 This class provides all the functions an application would need to parse
@@ -49,8 +48,8 @@ Works documents.
 class WPSDocument
 {
 public:
-	static WPSLIB WPSConfidence isFileFormatSupported(WPXInputStream *input);
-	static WPSLIB WPSResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
+	static WPSLIB WPSConfidence isFileFormatSupported(RVNGInputStream *input);
+	static WPSLIB WPSResult parse(RVNGInputStream *input, RVNGTextInterface *documentInterface);
 };
 
 #endif /* WPSDOCUMENT_H */

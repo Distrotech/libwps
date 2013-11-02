@@ -34,15 +34,15 @@ bool FileData::readArrayBlock() const
 {
 	if (isRead()) return isArray();
 	long actPos = m_input->tell();
-	m_input->seek(m_beginOffset, WPX_SEEK_SET);
+	m_input->seek(m_beginOffset, RVNG_SEEK_SET);
 	std::string error;
 	bool ok = readBlockData(m_input, m_endOffset, const_cast<FileData &>(*this), error);
-	m_input->seek(actPos, WPX_SEEK_SET);
+	m_input->seek(actPos, RVNG_SEEK_SET);
 	return ok;
 }
 
 // create a message to store unparsed data
-std::string FileData::createErrorString(WPXInputStreamPtr input, long endPos)
+std::string FileData::createErrorString(RVNGInputStreamPtr input, long endPos)
 {
 	libwps::DebugStream f;
 	f << ",###unread=(" << std::hex;
@@ -120,7 +120,7 @@ std::ostream &operator<< (std::ostream &o, FileData const &dt)
 		int numElt = int(size/sz);
 
 		long actPos = DT.m_input->tell();
-		DT.m_input->seek(dt.m_beginOffset, WPX_SEEK_SET);
+		DT.m_input->seek(dt.m_beginOffset, RVNG_SEEK_SET);
 		o << "###FAILS[sz="<< sz << "]=(" << std::hex;
 		long val = (long) libwps::read16(DT.m_input);
 		if (val) o << "unkn=" << val <<",";
@@ -143,7 +143,7 @@ std::ostream &operator<< (std::ostream &o, FileData const &dt)
 		}
 		o << ")" << std::dec;
 
-		DT.m_input->seek(actPos, WPX_SEEK_SET);
+		DT.m_input->seek(actPos, RVNG_SEEK_SET);
 
 		return o;
 	}
@@ -165,7 +165,7 @@ std::ostream &operator<< (std::ostream &o, FileData const &dt)
 }
 
 // try to read a data : which can be an item, a list or unknown zone
-bool readBlockData(WPXInputStreamPtr input, long endPos, FileData &dt, std::string &error)
+bool readBlockData(RVNGInputStreamPtr input, long endPos, FileData &dt, std::string &error)
 {
 	std::string saveError = error;
 	long actPos = input->tell();
@@ -207,13 +207,13 @@ bool readBlockData(WPXInputStreamPtr input, long endPos, FileData &dt, std::stri
 	dt.m_input = input;
 
 	error = saveError;
-	input->seek(endPos, WPX_SEEK_SET);
+	input->seek(endPos, RVNG_SEEK_SET);
 
 	return false;
 }
 
 // try to read an item
-bool readData(WPXInputStreamPtr input, long endPos,
+bool readData(RVNGInputStreamPtr input, long endPos,
               FileData &dt, std::string &/*error*/)
 {
 	long actPos = input->tell();
@@ -246,7 +246,7 @@ bool readData(WPXInputStreamPtr input, long endPos,
 		if (dt.m_type == 0x12)
 		{
 			dt.m_value = libwps::readU8(input);
-			input->seek(1, WPX_SEEK_CUR);
+			input->seek(1, RVNG_SEEK_CUR);
 		}
 		else
 			dt.m_value = libwps::readU16(input);
@@ -277,7 +277,7 @@ bool readData(WPXInputStreamPtr input, long endPos,
 		dt.m_beginOffset = actPos+4;
 		dt.m_endOffset = newEndPos;
 		dt.m_input = input;
-		input->seek(newEndPos, WPX_SEEK_SET);
+		input->seek(newEndPos, RVNG_SEEK_SET);
 		return true;
 	}
 	default:

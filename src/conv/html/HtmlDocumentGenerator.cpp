@@ -410,7 +410,7 @@ HtmlDocumentGenerator::~HtmlDocumentGenerator()
 {
 }
 
-void HtmlDocumentGenerator::setDocumentMetaData(const WPXPropertyList &propList)
+void HtmlDocumentGenerator::setDocumentMetaData(const RVNGPropertyList &propList)
 {
 	m_state->push(HtmlDocumentGeneratorInternal::Z_MetaData);
 	std::ostream &meta=m_state->output();
@@ -451,7 +451,7 @@ void HtmlDocumentGenerator::endDocument()
 	*m_output << "</html>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openPageSpan(const WPXPropertyList & /* propList */)
+void HtmlDocumentGenerator::openPageSpan(const RVNGPropertyList & /* propList */)
 {
 	m_state->m_actualPage++;
 }
@@ -460,7 +460,7 @@ void HtmlDocumentGenerator::closePageSpan()
 {
 }
 
-void HtmlDocumentGenerator::openHeader(const WPXPropertyList & /* propList */)
+void HtmlDocumentGenerator::openHeader(const RVNGPropertyList & /* propList */)
 {
 	m_state->m_ignore = true;
 }
@@ -471,7 +471,7 @@ void HtmlDocumentGenerator::closeHeader()
 }
 
 
-void HtmlDocumentGenerator::openFooter(const WPXPropertyList & /* propList */)
+void HtmlDocumentGenerator::openFooter(const RVNGPropertyList & /* propList */)
 {
 	m_state->m_ignore = true;
 }
@@ -481,7 +481,7 @@ void HtmlDocumentGenerator::closeFooter()
 	m_state->m_ignore = false;
 }
 
-void HtmlDocumentGenerator::openParagraph(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
+void HtmlDocumentGenerator::openParagraph(const RVNGPropertyList &propList, const RVNGPropertyListVector &tabStops)
 {
 	if (m_state->m_ignore)
 		return;
@@ -497,7 +497,7 @@ void HtmlDocumentGenerator::closeParagraph()
 	m_state->output() << "</p>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openSpan(const WPXPropertyList &propList)
+void HtmlDocumentGenerator::openSpan(const RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
@@ -528,11 +528,11 @@ void HtmlDocumentGenerator::insertLineBreak()
 	m_state->output() << "<br>" << std::endl;
 }
 
-void HtmlDocumentGenerator::insertText(const WPXString &text)
+void HtmlDocumentGenerator::insertText(const RVNGString &text)
 {
 	if (m_state->m_ignore)
 		return;
-	WPXString tempUTF8(text, true);
+	RVNGString tempUTF8(text, true);
 	m_state->output() << tempUTF8.cstr();
 }
 
@@ -543,21 +543,21 @@ void HtmlDocumentGenerator::insertSpace()
 	m_state->output() << "&nbsp;";
 }
 
-void HtmlDocumentGenerator::defineOrderedListLevel(const WPXPropertyList &propList)
+void HtmlDocumentGenerator::defineOrderedListLevel(const RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
 	m_state->listManager().defineLevel(propList, true);
 }
 
-void HtmlDocumentGenerator::defineUnorderedListLevel(const WPXPropertyList &propList)
+void HtmlDocumentGenerator::defineUnorderedListLevel(const RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
 	m_state->listManager().defineLevel(propList, false);
 }
 
-void HtmlDocumentGenerator::openOrderedListLevel(const WPXPropertyList &propList)
+void HtmlDocumentGenerator::openOrderedListLevel(const RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
@@ -573,7 +573,7 @@ void HtmlDocumentGenerator::closeOrderedListLevel()
 	m_state->output() << "</ol>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openUnorderedListLevel(const WPXPropertyList &propList)
+void HtmlDocumentGenerator::openUnorderedListLevel(const RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
@@ -590,7 +590,7 @@ void HtmlDocumentGenerator::closeUnorderedListLevel()
 }
 
 
-void HtmlDocumentGenerator::openListElement(const WPXPropertyList &propList, const WPXPropertyListVector &tabStops)
+void HtmlDocumentGenerator::openListElement(const RVNGPropertyList &propList, const RVNGPropertyListVector &tabStops)
 {
 	if (m_state->m_ignore)
 		return;
@@ -604,7 +604,7 @@ void HtmlDocumentGenerator::closeListElement()
 	m_state->output() << "</li>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openFootnote(const WPXPropertyList &)
+void HtmlDocumentGenerator::openFootnote(const RVNGPropertyList &)
 {
 	if (m_state->m_ignore)
 		return;
@@ -620,7 +620,7 @@ void HtmlDocumentGenerator::closeFootnote()
 	m_state->pop();
 }
 
-void HtmlDocumentGenerator::openEndnote(const WPXPropertyList &)
+void HtmlDocumentGenerator::openEndnote(const RVNGPropertyList &)
 {
 	if (m_state->m_ignore)
 		return;
@@ -636,7 +636,7 @@ void HtmlDocumentGenerator::closeEndnote()
 	m_state->pop();
 }
 
-void HtmlDocumentGenerator::openComment(const WPXPropertyList & /*propList*/)
+void HtmlDocumentGenerator::openComment(const RVNGPropertyList & /*propList*/)
 {
 	if (m_state->m_ignore)
 		return;
@@ -652,7 +652,7 @@ void HtmlDocumentGenerator::closeComment()
 	m_state->pop();
 }
 
-void HtmlDocumentGenerator::openTextBox(const WPXPropertyList & /*propList*/)
+void HtmlDocumentGenerator::openTextBox(const RVNGPropertyList & /*propList*/)
 {
 	if (m_state->m_ignore)
 		return;
@@ -668,7 +668,7 @@ void HtmlDocumentGenerator::closeTextBox()
 	m_state->pop();
 }
 
-void HtmlDocumentGenerator::openTable(const WPXPropertyList & /* propList */, const WPXPropertyListVector &columns)
+void HtmlDocumentGenerator::openTable(const RVNGPropertyList & /* propList */, const RVNGPropertyListVector &columns)
 {
 	if (m_state->m_ignore)
 		return;
@@ -677,7 +677,7 @@ void HtmlDocumentGenerator::openTable(const WPXPropertyList & /* propList */, co
 	m_state->output() << "<tbody>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openTableRow(const WPXPropertyList &propList)
+void HtmlDocumentGenerator::openTableRow(const RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
@@ -691,7 +691,7 @@ void HtmlDocumentGenerator::closeTableRow()
 	m_state->output() << "</tr>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openTableCell(const WPXPropertyList &propList)
+void HtmlDocumentGenerator::openTableCell(const RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;

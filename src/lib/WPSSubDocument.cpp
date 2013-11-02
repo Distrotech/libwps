@@ -24,7 +24,7 @@
 
 #include "WPSSubDocument.h"
 
-WPSSubDocument::WPSSubDocument(WPXInputStreamPtr &input, WPSParser *p, int i)  : m_input(input), m_parser(p), m_id(i)
+WPSSubDocument::WPSSubDocument(RVNGInputStreamPtr &input, WPSParser *p, int i)  : m_input(input), m_parser(p), m_id(i)
 {
 }
 

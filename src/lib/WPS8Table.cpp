@@ -26,7 +26,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "WPSCell.h"
 #include "WPSContentListener.h"
@@ -63,7 +63,7 @@ struct Cell : public WPSCell
 	virtual bool send(WPSContentListenerPtr &listener)
 	{
 		if (!listener) return true;
-		WPXPropertyList propList;
+		RVNGPropertyList propList;
 		listener->openTableCell(*this, propList);
 		sendContent(listener);
 		listener->closeTableCell();
@@ -290,7 +290,7 @@ bool WPS8Table::sendTable(Vec2f const &siz, int tableId, int strsid, bool inText
 ////////////////////////////////////////////////////////////
 // find all structures which correspond to the table
 ////////////////////////////////////////////////////////////
-bool WPS8Table::readStructures(WPXInputStreamPtr input)
+bool WPS8Table::readStructures(RVNGInputStreamPtr input)
 {
 	m_state->m_tableMap.clear();
 
@@ -312,7 +312,7 @@ bool WPS8Table::readStructures(WPXInputStreamPtr input)
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
-bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
+bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 {
 	typedef WPS8TableInternal::Cell Cell;
 	typedef WPS8TableInternal::Table Table;
@@ -336,7 +336,7 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 	}
 
 	entry.setParsed();
-	input->seek(page_offset, WPX_SEEK_SET);
+	input->seek(page_offset, RVNG_SEEK_SET);
 
 	libwps::DebugStream f;
 	int mZone = (int) libwps::read32(input);
@@ -659,7 +659,7 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 				f << ", unk=(" << f2.str() << ")";
 
 			if (!error.empty()) f << ",###err=" << error;
-			input->seek(lastPosOk+sz, WPX_SEEK_SET);
+			input->seek(lastPosOk+sz, RVNG_SEEK_SET);
 
 			ascii().addPos(lastPosOk);
 			ascii().addNote(f.str().c_str());

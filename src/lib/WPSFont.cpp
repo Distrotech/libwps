@@ -23,7 +23,7 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
@@ -72,7 +72,7 @@ bool WPSFont::operator==(WPSFont const &ft) const
 	return true;
 }
 
-void WPSFont::addTo(WPXPropertyList &propList) const
+void WPSFont::addTo(RVNGPropertyList &propList) const
 {
 	double fontSizeChange = 1.0;
 	switch (m_attributes& 0x0000001f)
@@ -133,9 +133,9 @@ void WPSFont::addTo(WPXPropertyList &propList) const
 	if (!m_name.empty())
 		propList.insert("style:font-name", m_name.c_str());
 	if (m_size>0)
-		propList.insert("fo:font-size", fontSizeChange*m_size, WPX_POINT);
+		propList.insert("fo:font-size", fontSizeChange*m_size, RVNG_POINT);
 
-	WPXString color;
+	RVNGString color;
 	color.sprintf("#%06x", m_color);
 	propList.insert("fo:color", color);
 

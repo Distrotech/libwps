@@ -26,8 +26,8 @@
 #include <vector>
 #include "libwps_internal.h"
 
-class WPXPropertyList;
-class WPXDocumentProperty;
+class RVNGPropertyList;
+class RVNGDocumentProperty;
 class WPSContentListener;
 
 namespace WPSPageSpanInternal
@@ -96,7 +96,7 @@ public:
 	{
 		return m_pageNumberingFontSize;
 	}
-	WPXString getPageNumberingFontName() const
+	RVNGString getPageNumberingFontName() const
 	{
 		return m_pageNumberingFontName;
 	}
@@ -155,7 +155,7 @@ public:
 	{
 		m_pageNumberingFontSize = pageNumberingFontSize;
 	}
-	void setPageNumberingFontName(const WPXString &pageNumberingFontName)
+	void setPageNumberingFontName(const RVNGString &pageNumberingFontName)
 	{
 		m_pageNumberingFontName = pageNumberingFontName;
 	}
@@ -171,9 +171,9 @@ public:
 	}
 protected:
 	// interface with WPSContentListener
-	void getPageProperty(WPXPropertyList &pList) const;
+	void getPageProperty(RVNGPropertyList &pList) const;
 	void sendHeaderFooters(WPSContentListener *listener,
-	                       WPXDocumentInterface *documentInterface);
+	                       RVNGTextInterface *documentInterface);
 
 protected:
 
@@ -182,7 +182,7 @@ protected:
 	void _removeHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence);
 	bool _containsHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence);
 
-	void _insertPageNumberParagraph(WPXDocumentInterface *documentInterface);
+	void _insertPageNumberParagraph(RVNGTextInterface *documentInterface);
 private:
 	double m_formLength, m_formWidth;
 	FormOrientation m_formOrientation;
@@ -191,7 +191,7 @@ private:
 	PageNumberPosition m_pageNumberPosition;
 	int m_pageNumber;
 	libwps::NumberingType m_pageNumberingType;
-	WPXString m_pageNumberingFontName;
+	RVNGString m_pageNumberingFontName;
 	double m_pageNumberingFontSize;
 	std::vector<WPSPageSpanInternal::HeaderFooterPtr> m_headerFooterList;
 

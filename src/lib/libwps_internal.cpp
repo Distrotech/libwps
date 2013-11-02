@@ -25,13 +25,13 @@
 #include <string>
 #include <stdlib.h>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 
 namespace libwps
 {
-uint8_t readU8(WPXInputStream *input)
+uint8_t readU8(RVNGInputStream *input)
 {
 	unsigned long numBytesRead;
 	unsigned char const *p = input->read(sizeof(uint8_t), numBytesRead);
@@ -50,24 +50,24 @@ uint8_t readU8(WPXInputStream *input)
 	return *(uint8_t const *)(p);
 }
 
-int8_t read8(WPXInputStream *input)
+int8_t read8(RVNGInputStream *input)
 {
 	return (int8_t) readU8(input);
 }
 
-uint16_t readU16(WPXInputStream *input)
+uint16_t readU16(RVNGInputStream *input)
 {
 	uint8_t p0 = readU8(input);
 	uint8_t p1 = readU8(input);
 	return (uint16_t) (p0|(p1<<8));
 }
 
-int16_t read16(WPXInputStream *input)
+int16_t read16(RVNGInputStream *input)
 {
 	return (int16_t) readU16(input);
 }
 
-uint32_t readU32(WPXInputStream *input)
+uint32_t readU32(RVNGInputStream *input)
 {
 	uint8_t p0 = readU8(input);
 	uint8_t p1 = readU8(input);
@@ -76,12 +76,12 @@ uint32_t readU32(WPXInputStream *input)
 	return (uint32_t) ((p0<<0)|(p1<<8)|(p2<<16)|(p3<<24));
 }
 
-int32_t read32(WPXInputStream *input)
+int32_t read32(RVNGInputStream *input)
 {
 	return (int32_t) readU32(input);
 }
 
-bool readData(WPXInputStreamPtr &input, unsigned long size, WPXBinaryData &data)
+bool readData(RVNGInputStreamPtr &input, unsigned long size, RVNGBinaryData &data)
 {
 	data.clear();
 	if (size == 0) return true;
@@ -95,14 +95,14 @@ bool readData(WPXInputStreamPtr &input, unsigned long size, WPXBinaryData &data)
 	return true;
 }
 
-bool readDataToEnd(WPXInputStreamPtr &input, WPXBinaryData &data)
+bool readDataToEnd(RVNGInputStreamPtr &input, RVNGBinaryData &data)
 {
 	data.clear();
 	long pos=input->tell();
-	input->seek(0,WPX_SEEK_END);
+	input->seek(0,RVNG_SEEK_END);
 	long sz=input->tell()-pos;
 	if (sz < 0) return false;
-	input->seek(pos,WPX_SEEK_SET);
+	input->seek(pos,RVNG_SEEK_SET);
 	return readData(input, (unsigned long) sz, data) && input->atEOS();
 }
 

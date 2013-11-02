@@ -32,10 +32,10 @@
 #include <map>
 #include <string>
 
-#include <libwpd-stream/libwpd-stream.h>
-#include <libwpd/libwpd.h>
+#include <librevenge-stream/librevenge-stream.h>
+#include <librevenge/librevenge.h>
 
-class WPXBinaryData;
+class RVNGBinaryData;
 
 #if defined(_MSC_VER) || defined(__DJGPP__)
 typedef signed char int8_t;
@@ -70,7 +70,7 @@ using std::shared_ptr;
 using boost::shared_ptr;
 #endif
 
-/** an noop deleter used to transform a libwpd pointer in a false shared_ptr */
+/** a noop deleter used to transform a librevenge pointer in a false shared_ptr */
 template <class T>
 struct WPS_shared_ptr_noop_deleter
 {
@@ -78,8 +78,8 @@ struct WPS_shared_ptr_noop_deleter
 };
 
 // basic classes and autoptr
-/** shared pointer to WPXInputStream */
-typedef shared_ptr<WPXInputStream> WPXInputStreamPtr;
+/** shared pointer to RVNGInputStream */
+typedef shared_ptr<RVNGInputStream> RVNGInputStreamPtr;
 
 class WPSCell;
 class WPSContentListener;
@@ -133,42 +133,42 @@ class GenericException
 /* ---------- input ----------------- */
 namespace libwps
 {
-uint8_t readU8(WPXInputStream *input);
-uint16_t readU16(WPXInputStream *input);
-uint32_t readU32(WPXInputStream *input);
+uint8_t readU8(RVNGInputStream *input);
+uint16_t readU16(RVNGInputStream *input);
+uint32_t readU32(RVNGInputStream *input);
 
-int8_t read8(WPXInputStream *input);
-int16_t read16(WPXInputStream *input);
-int32_t read32(WPXInputStream *input);
+int8_t read8(RVNGInputStream *input);
+int16_t read16(RVNGInputStream *input);
+int32_t read32(RVNGInputStream *input);
 
-inline uint8_t readU8(WPXInputStreamPtr &input)
+inline uint8_t readU8(RVNGInputStreamPtr &input)
 {
 	return readU8(input.get());
 }
-inline uint16_t readU16(WPXInputStreamPtr &input)
+inline uint16_t readU16(RVNGInputStreamPtr &input)
 {
 	return readU16(input.get());
 }
-inline uint32_t readU32(WPXInputStreamPtr &input)
+inline uint32_t readU32(RVNGInputStreamPtr &input)
 {
 	return readU32(input.get());
 }
 
-inline int8_t read8(WPXInputStreamPtr &input)
+inline int8_t read8(RVNGInputStreamPtr &input)
 {
 	return read8(input.get());
 }
-inline int16_t read16(WPXInputStreamPtr &input)
+inline int16_t read16(RVNGInputStreamPtr &input)
 {
 	return read16(input.get());
 }
-inline int32_t read32(WPXInputStreamPtr &input)
+inline int32_t read32(RVNGInputStreamPtr &input)
 {
 	return read32(input.get());
 }
 
-bool readData(WPXInputStreamPtr &input, unsigned long sz, WPXBinaryData &data);
-bool readDataToEnd(WPXInputStreamPtr &input, WPXBinaryData &data);
+bool readData(RVNGInputStreamPtr &input, unsigned long sz, RVNGBinaryData &data);
+bool readDataToEnd(RVNGInputStreamPtr &input, RVNGBinaryData &data);
 }
 
 #define WPS_LE_GET_GUINT16(p)				  \
@@ -182,7 +182,7 @@ bool readDataToEnd(WPXInputStreamPtr &input, WPXBinaryData &data);
 
 // Various helper structures for the parser..
 /* ---------- small enum/class ------------- */
-class WPXPropertyListVector;
+class RVNGPropertyListVector;
 
 struct WPSColumnDefinition
 {

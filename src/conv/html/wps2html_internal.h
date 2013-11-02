@@ -44,7 +44,7 @@ using std::shared_ptr;
 using boost::shared_ptr;
 #endif
 
-/** an noop deleter used to transform a libwpd pointer in a false shared_ptr */
+/** a noop deleter used to transform a librevenge pointer in a false shared_ptr */
 template <class T>
 struct WPS_shared_ptr_noop_deleter
 {
@@ -57,10 +57,10 @@ struct WPS_shared_ptr_noop_deleter
 #define WPS_DEBUG_MSG(M)
 #endif
 
-class WPXProperty;
+class RVNGProperty;
 namespace wps2html
 {
-bool getPointValue(WPXProperty const &prop, double &res);
+bool getPointValue(RVNGProperty const &prop, double &res);
 }
 #endif /* WPS2HTML_INTERNAL_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

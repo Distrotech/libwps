@@ -69,7 +69,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "WPSOLEStream.h"
 #include "WPSPosition.h"
@@ -110,7 +110,7 @@ protected:
 
 		m_mapCls[0x00021290]="MSClipArtGalley2";
 		m_mapCls[0x000212F0]="MSWordArt"; // or MSWordArt.2
-		m_mapCls[0x00021302]="MSWorksWPDoc"; // addon
+		m_mapCls[0x00021302]="MSWorksREVENGEoc"; // addon
 
 		// MS Apps
 		m_mapCls[0x00030000]= "ExcelWorksheet";
@@ -236,7 +236,7 @@ WPSOLEParser::~WPSOLEParser()
 }
 
 // interface
-bool WPSOLEParser::getObject(int id, WPXBinaryData &obj, WPSPosition &pos)  const
+bool WPSOLEParser::getObject(int id, RVNGBinaryData &obj, WPSPosition &pos)  const
 {
 	for (size_t i = 0; i < m_objectsId.size(); i++)
 	{
@@ -249,7 +249,7 @@ bool WPSOLEParser::getObject(int id, WPXBinaryData &obj, WPSPosition &pos)  cons
 	return false;
 }
 
-void WPSOLEParser::setObject(int id, WPXBinaryData const &obj, WPSPosition const &pos)
+void WPSOLEParser::setObject(int id, RVNGBinaryData const &obj, WPSPosition const &pos)
 {
 	for (size_t i = 0; i < m_objectsId.size(); i++)
 	{
@@ -350,7 +350,7 @@ bool WPSOLEParser::parse(shared_ptr<libwpsOLE::Storage> file)
 
 		// try to find a representation for each id
 		// FIXME: maybe we must also find some for each subid
-		WPXBinaryData pict;
+		RVNGBinaryData pict;
 		int confidence = -1000;
 		WPSPosition actualPos, potentialSize;
 
@@ -360,7 +360,7 @@ bool WPSOLEParser::parse(shared_ptr<libwpsOLE::Storage> file)
 			if (pos->first != id) break;
 			++pos;
 
-			WPXInputStreamPtr ole = file->getSubStream(dOle.m_name);
+			RVNGInputStreamPtr ole = file->getSubStream(dOle.m_name);
 			if (!ole.get())
 			{
 				WPS_DEBUG_MSG(("WPSOLEParser: error: can not find OLE part: \"%s\"\n", dOle.m_name.c_str()));
@@ -370,7 +370,7 @@ bool WPSOLEParser::parse(shared_ptr<libwpsOLE::Storage> file)
 			libwps::DebugFile asciiFile(ole);
 			asciiFile.open(dOle.m_name);
 
-			WPXBinaryData data;
+			RVNGBinaryData data;
 			bool hasData = false;
 			int newConfidence = -2000;
 			bool ok = true;
@@ -471,16 +471,16 @@ bool WPSOLEParser::parse(shared_ptr<libwpsOLE::Storage> file)
 // small structure
 //
 ////////////////////////////////////////
-bool WPSOLEParser::readOle(WPXInputStreamPtr &ip, std::string const &oleName,
+bool WPSOLEParser::readOle(RVNGInputStreamPtr &ip, std::string const &oleName,
                            libwps::DebugFile &ascii)
 {
 	if (!ip.get()) return false;
 
 	if (strcmp("Ole",oleName.c_str()) != 0) return false;
 
-	if (ip->seek(20, WPX_SEEK_SET) != 0 || ip->tell() != 20) return false;
+	if (ip->seek(20, RVNG_SEEK_SET) != 0 || ip->tell() != 20) return false;
 
-	ip->seek(0, WPX_SEEK_SET);
+	ip->seek(0, RVNG_SEEK_SET);
 
 	int val[20];
 	for (int i= 0; i < 20; i++)
@@ -506,15 +506,15 @@ bool WPSOLEParser::readOle(WPXInputStreamPtr &ip, std::string const &oleName,
 	return true;
 }
 
-bool WPSOLEParser::readObjInfo(WPXInputStreamPtr &input, std::string const &oleName,
+bool WPSOLEParser::readObjInfo(RVNGInputStreamPtr &input, std::string const &oleName,
                                libwps::DebugFile &ascii)
 {
 	if (strcmp(oleName.c_str(),"ObjInfo") != 0) return false;
 
-	input->seek(14, WPX_SEEK_SET);
+	input->seek(14, RVNG_SEEK_SET);
 	if (input->tell() != 6 || !input->atEOS()) return false;
 
-	input->seek(0, WPX_SEEK_SET);
+	input->seek(0, RVNG_SEEK_SET);
 	libwps::DebugStream f;
 	f << "@@ObjInfo:";
 
@@ -527,15 +527,15 @@ bool WPSOLEParser::readObjInfo(WPXInputStreamPtr &input, std::string const &oleN
 	return true;
 }
 
-bool WPSOLEParser::readMM(WPXInputStreamPtr &input, std::string const &oleName,
+bool WPSOLEParser::readMM(RVNGInputStreamPtr &input, std::string const &oleName,
                           libwps::DebugFile &ascii)
 {
 	if (strcmp(oleName.c_str(),"MM") != 0) return false;
 
-	input->seek(14, WPX_SEEK_SET);
+	input->seek(14, RVNG_SEEK_SET);
 	if (input->tell() != 14 || !input->atEOS()) return false;
 
-	input->seek(0, WPX_SEEK_SET);
+	input->seek(0, RVNG_SEEK_SET);
 	int entete = libwps::readU16(input);
 	if (entete != 0x444e)
 	{
@@ -583,17 +583,17 @@ bool WPSOLEParser::readMM(WPXInputStreamPtr &input, std::string const &oleName,
 }
 
 
-bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName, libwps::DebugFile &ascii)
+bool WPSOLEParser::readCompObj(RVNGInputStreamPtr &ip, std::string const &oleName, libwps::DebugFile &ascii)
 {
 	if (strncmp(oleName.c_str(), "CompObj", 7) != 0) return false;
 
 	// check minimal size
 	const int minSize = 12 + 14+ 16 + 12; // size of header, clsid, footer, 3 string size
-	if (ip->seek(minSize,WPX_SEEK_SET) != 0 || ip->tell() != minSize) return false;
+	if (ip->seek(minSize,RVNG_SEEK_SET) != 0 || ip->tell() != minSize) return false;
 
 	libwps::DebugStream f;
 	f << "@@CompObj(Header): ";
-	ip->seek(0,WPX_SEEK_SET);
+	ip->seek(0,RVNG_SEEK_SET);
 
 	for (int i = 0; i < 6; i++)
 	{
@@ -628,7 +628,7 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 	{
 		/* I found:
 		  c1dbcd28e20ace11a29a00aa004a1a72     for MSWorks.Table
-		  c2dbcd28e20ace11a29a00aa004a1a72     for Microsoft Works/MSWorksWPDoc
+		  c2dbcd28e20ace11a29a00aa004a1a72     for Microsoft Works/MSWorksREVENGEoc
 		  a3bcb394c2bd1b10a18306357c795b37     for Microsoft Drawing 1.01/MSDraw.1.01
 		  b25aa40e0a9ed111a40700c04fb932ba     for Quill96 Story Group Class ( basic MSWorks doc?)
 		  796827ed8bc9d111a75f00c04fb9667b     for MSWorks4Sheet
@@ -644,9 +644,9 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 		long sz = libwps::read32(ip);
 		bool waitNumber = sz == -1;
 		if (waitNumber) sz = 4;
-		if (sz < 0 || ip->seek(actPos+4+sz,WPX_SEEK_SET) != 0 ||
+		if (sz < 0 || ip->seek(actPos+4+sz,RVNG_SEEK_SET) != 0 ||
 		        ip->tell() != actPos+4+sz) return false;
-		ip->seek(actPos+4,WPX_SEEK_SET);
+		ip->seek(actPos+4,RVNG_SEEK_SET);
 
 		std::string st;
 		if (waitNumber)
@@ -686,7 +686,7 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 
 	long actPos = ip->tell();
 	long nbElt = 4;
-	if (ip->seek(actPos+16,WPX_SEEK_SET) != 0 ||
+	if (ip->seek(actPos+16,RVNG_SEEK_SET) != 0 ||
 	        ip->tell() != actPos+16)
 	{
 		if ((ip->tell()-actPos)%4) return false;
@@ -695,7 +695,7 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 
 	f.str("");
 	f << "@@CompObj(Footer): " << std::hex;
-	ip->seek(actPos,WPX_SEEK_SET);
+	ip->seek(actPos,RVNG_SEEK_SET);
 	for (int i = 0; i < nbElt; i++)
 		f << libwps::readU32(ip) << ",";
 	ascii.addPos(actPos);
@@ -713,15 +713,15 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 //
 //////////////////////////////////////////////////
 
-bool WPSOLEParser::isOlePres(WPXInputStreamPtr &ip, std::string const &oleName)
+bool WPSOLEParser::isOlePres(RVNGInputStreamPtr &ip, std::string const &oleName)
 {
 	if (!ip.get()) return false;
 
 	if (strncmp("OlePres",oleName.c_str(),7) != 0) return false;
 
-	if (ip->seek(40, WPX_SEEK_SET) != 0 || ip->tell() != 40) return false;
+	if (ip->seek(40, RVNG_SEEK_SET) != 0 || ip->tell() != 40) return false;
 
-	ip->seek(0, WPX_SEEK_SET);
+	ip->seek(0, RVNG_SEEK_SET);
 	for (int i= 0; i < 2; i++)
 	{
 		long val = libwps::read32(ip);
@@ -731,11 +731,11 @@ bool WPSOLEParser::isOlePres(WPXInputStreamPtr &ip, std::string const &oleName)
 	long actPos = ip->tell();
 	int hSize = libwps::read32(ip);
 	if (hSize < 4) return false;
-	if (ip->seek(actPos+hSize+28, WPX_SEEK_SET) != 0
+	if (ip->seek(actPos+hSize+28, RVNG_SEEK_SET) != 0
 	        || ip->tell() != actPos+hSize+28)
 		return false;
 
-	ip->seek(actPos+hSize, WPX_SEEK_SET);
+	ip->seek(actPos+hSize, RVNG_SEEK_SET);
 	for (int i= 3; i < 7; i++)
 	{
 		long val = libwps::read32(ip);
@@ -745,30 +745,30 @@ bool WPSOLEParser::isOlePres(WPXInputStreamPtr &ip, std::string const &oleName)
 		}
 	}
 
-	ip->seek(8, WPX_SEEK_CUR);
+	ip->seek(8, RVNG_SEEK_CUR);
 	long size = libwps::read32(ip);
 
 	if (size <= 0) return ip->atEOS();
 
 	actPos = ip->tell();
-	if (ip->seek(actPos+size, WPX_SEEK_SET) != 0
+	if (ip->seek(actPos+size, RVNG_SEEK_SET) != 0
 	        || ip->tell() != actPos+size)
 		return false;
 
 	return true;
 }
 
-bool WPSOLEParser::readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data, WPSPosition &pos,
+bool WPSOLEParser::readOlePres(RVNGInputStreamPtr &ip, RVNGBinaryData &data, WPSPosition &pos,
                                libwps::DebugFile &ascii)
 {
 	data.clear();
 	if (!isOlePres(ip, "OlePres")) return false;
 
 	pos = WPSPosition();
-	pos.setUnit(WPX_POINT);
+	pos.setUnit(RVNG_POINT);
 	libwps::DebugStream f;
 	f << "@@OlePress(header): ";
-	ip->seek(0,WPX_SEEK_SET);
+	ip->seek(0,RVNG_SEEK_SET);
 	for (int i = 0; i < 2; i++)
 	{
 		long val = libwps::read32(ip);
@@ -822,11 +822,11 @@ bool WPSOLEParser::readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data, WPSPo
 		ascii.addPos(actPos);
 		ascii.addNote(f.str().c_str());
 	}
-	if (ip->seek(endHPos+28, WPX_SEEK_SET) != 0
+	if (ip->seek(endHPos+28, RVNG_SEEK_SET) != 0
 	        || ip->tell() != endHPos+28)
 		return false;
 
-	ip->seek(endHPos, WPX_SEEK_SET);
+	ip->seek(endHPos, RVNG_SEEK_SET);
 
 	actPos = ip->tell();
 	f.str("");
@@ -869,31 +869,31 @@ bool WPSOLEParser::readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data, WPSPo
 //
 //////////////////////////////////////////////////
 
-bool WPSOLEParser::isOle10Native(WPXInputStreamPtr &ip, std::string const &oleName)
+bool WPSOLEParser::isOle10Native(RVNGInputStreamPtr &ip, std::string const &oleName)
 {
 	if (strncmp("Ole10Native",oleName.c_str(),11) != 0) return false;
 
-	if (ip->seek(4, WPX_SEEK_SET) != 0 || ip->tell() != 4) return false;
+	if (ip->seek(4, RVNG_SEEK_SET) != 0 || ip->tell() != 4) return false;
 
-	ip->seek(0, WPX_SEEK_SET);
+	ip->seek(0, RVNG_SEEK_SET);
 	long size = libwps::read32(ip);
 
 	if (size <= 0) return false;
-	if (ip->seek(4+size, WPX_SEEK_SET) != 0 || ip->tell() != 4+size)
+	if (ip->seek(4+size, RVNG_SEEK_SET) != 0 || ip->tell() != 4+size)
 		return false;
 
 	return true;
 }
 
-bool WPSOLEParser::readOle10Native(WPXInputStreamPtr &ip,
-                                   WPXBinaryData &data,
+bool WPSOLEParser::readOle10Native(RVNGInputStreamPtr &ip,
+                                   RVNGBinaryData &data,
                                    libwps::DebugFile &ascii)
 {
 	if (!isOle10Native(ip, "Ole10Native")) return false;
 
 	libwps::DebugStream f;
 	f << "@@Ole10Native(Header): ";
-	ip->seek(0,WPX_SEEK_SET);
+	ip->seek(0,RVNG_SEEK_SET);
 	long fSize = libwps::read32(ip);
 	f << "fSize=" << fSize;
 
@@ -924,9 +924,9 @@ bool WPSOLEParser::readOle10Native(WPXInputStreamPtr &ip,
 //        or OO/filter/sources/msfilter/msdffimp.cxx ?
 //
 ////////////////////////////////////////////////////////////////
-bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
+bool WPSOLEParser::readContents(RVNGInputStreamPtr &input,
                                 std::string const &oleName,
-                                WPXBinaryData &pict, WPSPosition &pos,
+                                RVNGBinaryData &pict, WPSPosition &pos,
                                 libwps::DebugFile &ascii)
 {
 	pict.clear();
@@ -934,8 +934,8 @@ bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
 
 	libwps::DebugStream f;
 	pos = WPSPosition();
-	pos.setUnit(WPX_POINT);
-	input->seek(0, WPX_SEEK_SET);
+	pos.setUnit(RVNG_POINT);
+	input->seek(0, RVNG_SEEK_SET);
 	f << "@@Contents:";
 
 	bool ok = true;
@@ -985,7 +985,7 @@ bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
 	if (size <= 0) ok = false;
 	if (ok)
 	{
-		input->seek(actPos+size+4, WPX_SEEK_SET);
+		input->seek(actPos+size+4, RVNG_SEEK_SET);
 		if (input->tell() != actPos+size+4 || !input->atEOS())
 		{
 			ok = false;
@@ -1000,7 +1000,7 @@ bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
 	ascii.addPos(0);
 	ascii.addNote(f.str().c_str());
 
-	input->seek(actPos+4, WPX_SEEK_SET);
+	input->seek(actPos+4, RVNG_SEEK_SET);
 
 	if (ok)
 	{
@@ -1008,7 +1008,7 @@ bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
 			ascii.skipZone(actPos+4, actPos+size+4-1);
 		else
 		{
-			input->seek(actPos+4, WPX_SEEK_SET);
+			input->seek(actPos+4, RVNG_SEEK_SET);
 			ok = false;
 		}
 	}
@@ -1032,9 +1032,9 @@ bool WPSOLEParser::readContents(WPXInputStreamPtr &input,
 // we seem to contain the header of a EMF and then the EMF file
 //
 ////////////////////////////////////////////////////////////////
-bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
+bool WPSOLEParser::readCONTENTS(RVNGInputStreamPtr &input,
                                 std::string const &oleName,
-                                WPXBinaryData &pict, WPSPosition &pos,
+                                RVNGBinaryData &pict, WPSPosition &pos,
                                 libwps::DebugFile &ascii)
 {
 	pict.clear();
@@ -1043,15 +1043,15 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 	libwps::DebugStream f;
 
 	pos = WPSPosition();
-	pos.setUnit(WPX_POINT);
-	input->seek(0, WPX_SEEK_SET);
+	pos.setUnit(RVNG_POINT);
+	input->seek(0, RVNG_SEEK_SET);
 	f << "@@CONTENTS:";
 
 	long hSize = (long) libwps::readU32(input);
 	if (input->atEOS()) return false;
 	f << "hSize=" << std::hex << hSize << std::dec;
 
-	if (hSize <= 52 || input->seek(hSize+8,WPX_SEEK_SET) != 0
+	if (hSize <= 52 || input->seek(hSize+8,RVNG_SEEK_SET) != 0
 	        || input->tell() != hSize+8)
 	{
 		WPS_DEBUG_MSG(("WPSOLEParser: warning: CONTENTS headerSize=%ld\n",
@@ -1060,7 +1060,7 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 	}
 
 	// minimal checking of the "copied" header
-	input->seek(4, WPX_SEEK_SET);
+	input->seek(4, RVNG_SEEK_SET);
 	long type = (long) libwps::readU32(input);
 	if (type < 0 || type > 4) return false;
 	long newSize = (long) libwps::readU32(input);
@@ -1123,7 +1123,7 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 	}
 	ascii.addNote(f.str().c_str());
 
-	if (dataLength <= 0 || input->seek(hSize+4+dataLength,WPX_SEEK_SET) != 0
+	if (dataLength <= 0 || input->seek(hSize+4+dataLength,RVNG_SEEK_SET) != 0
 	        || input->tell() != hSize+4+dataLength || !input->atEOS())
 	{
 		WPS_DEBUG_MSG(("WPSOLEParser: warning: CONTENTS unexpected file length=%ld\n",
@@ -1131,7 +1131,7 @@ bool WPSOLEParser::readCONTENTS(WPXInputStreamPtr &input,
 		return false;
 	}
 
-	input->seek(4+hSize, WPX_SEEK_SET);
+	input->seek(4+hSize, RVNG_SEEK_SET);
 	if (!libwps::readDataToEnd(input, pict)) return false;
 
 	ascii.skipZone(hSize+4, input->tell()-1);

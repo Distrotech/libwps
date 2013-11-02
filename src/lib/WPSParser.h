@@ -30,7 +30,7 @@
 
 #include "WPSDebug.h"
 
-class WPXDocumentInterface;
+class RVNGTextInterface;
 
 class WPSTextParser;
 
@@ -38,16 +38,16 @@ class WPSParser
 {
 	friend class WPSTextParser;
 public:
-	WPSParser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
+	WPSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
 	virtual ~WPSParser();
 
-	virtual void parse(WPXDocumentInterface *documentInterface) = 0;
+	virtual void parse(RVNGTextInterface *documentInterface) = 0;
 
 	//! a map to retrieve a file entry by name
 	typedef std::multimap<std::string, WPSEntry> NameMultiMap;
 
 protected:
-	WPXInputStreamPtr &getInput()
+	RVNGInputStreamPtr &getInput()
 	{
 		return m_input;
 	}
@@ -82,7 +82,7 @@ private:
 	WPSParser &operator=(const WPSParser &);
 
 	// the main input
-	WPXInputStreamPtr m_input;
+	RVNGInputStreamPtr m_input;
 	// the header
 	WPSHeaderPtr m_header;
 	// the file version

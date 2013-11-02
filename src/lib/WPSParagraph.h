@@ -35,7 +35,7 @@
 
 #include "WPSList.h"
 
-class WPXPropertyListVector;
+class RVNGPropertyListVector;
 
 struct WPSTabStop
 {
@@ -44,7 +44,7 @@ struct WPSTabStop
 		m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_leaderNumSpaces(leaderNumSpaces)
 	{
 	}
-	void addTo(WPXPropertyListVector &propList, double decalX=0.0) const;
+	void addTo(RVNGPropertyListVector &propList, double decalX=0.0) const;
 	//! operator <<
 	friend std::ostream &operator<<(std::ostream &o, WPSTabStop const &ft);
 	double m_position;
@@ -69,7 +69,7 @@ struct WPSParagraph
 	// destructor
 	virtual ~WPSParagraph() {}
 	//! add to the propList
-	void addTo(WPXPropertyList &propList, WPXPropertyListVector &tabStops, bool inTable) const;
+	void addTo(RVNGPropertyList &propList, RVNGPropertyListVector &tabStops, bool inTable) const;
 	//! operator <<
 	friend std::ostream &operator<<(std::ostream &o, WPSParagraph const &ft);
 

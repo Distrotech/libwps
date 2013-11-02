@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBREVENGE_INCLUDE_DIR)"
 				PreprocessorDefinitions="_DEBUG;DEBUG;WIN32;_CONSOLE"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -70,11 +70,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libwps-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib"
+				AdditionalDependencies="libwps-0.3.lib librevenge-stream-0.0.lib librevenge-0.0.lib"
 				OutputFile="Debug\bin\wps2raw.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories="Debug\lib,$(LIBWPD_LIB_DIR)"
+				AdditionalLibraryDirectories="Debug\lib,$(LIBREVENGE_LIB_DIR)"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\Debug/wps2raw.pdb"
 				SubSystem="1"
@@ -135,7 +135,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="4"
-				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBREVENGE_INCLUDE_DIR)"
 				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE"
 				RuntimeLibrary="2"
 				TreatWChar_tAsBuiltInType="false"
@@ -159,11 +159,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libwpd-stream-0.9.lib libwps-0.2.lib libwpd-0.9.lib"
+				AdditionalDependencies="librevenge-stream-0.0.lib libwps-0.3.lib librevenge-0.0.lib"
 				OutputFile="Release\bin\wps2raw.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories="Release\lib,$(LIBWPD_LIB_DIR)"
+				AdditionalLibraryDirectories="Release\lib,$(LIBREVENGE_LIB_DIR)"
 				ProgramDatabaseFile=".\Release/wps2raw.pdb"
 				SubSystem="1"
 				RandomizedBaseAddress="1"

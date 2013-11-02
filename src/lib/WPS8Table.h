@@ -82,7 +82,7 @@ public:
 
 protected:
 	//! finds all structures which correspond to a table
-	bool readStructures(WPXInputStreamPtr input);
+	bool readStructures(RVNGInputStreamPtr input);
 
 	/** tries to send a table corresponding to strsid with actual size siz
 	 *
@@ -100,7 +100,7 @@ protected:
 protected: // low level
 
 	//! reads a MCLD zone: a zone which stores the tables structures
-	bool readMCLD(WPXInputStreamPtr input, WPSEntry const &entry);
+	bool readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry);
 
 	//! returns the file version
 	int version() const;

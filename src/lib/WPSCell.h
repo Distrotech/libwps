@@ -34,7 +34,7 @@
 
 #include "libwps_internal.h"
 
-class WPXPropertyList;
+class RVNGPropertyList;
 
 /** a structure used to defined the cell format */
 class WPSCellFormat

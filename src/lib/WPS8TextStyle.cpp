@@ -259,7 +259,7 @@ bool WPS8TextStyle::readFontNames(WPSEntry const &entry)
 	}
 
 	long debPos = entry.begin();
-	m_input->seek(debPos, WPX_SEEK_SET);
+	m_input->seek(debPos, RVNG_SEEK_SET);
 
 	long len = (long) libwps::readU32(m_input); // len + 0x14 = size
 	size_t n_fonts = (size_t) libwps::readU32(m_input);
@@ -341,7 +341,7 @@ bool WPS8TextStyle::readSGP(WPSEntry const &entry)
 	}
 
 	entry.setParsed();
-	m_input->seek(page_offset, WPX_SEEK_SET);
+	m_input->seek(page_offset, RVNG_SEEK_SET);
 
 	libwps::DebugStream f;
 	if (libwps::read16(m_input) != length)
@@ -1112,7 +1112,7 @@ bool WPS8TextStyle::readSTSH(WPSEntry const &entry)
 	}
 
 	entry.setParsed();
-	m_input->seek(page_offset, WPX_SEEK_SET);
+	m_input->seek(page_offset, RVNG_SEEK_SET);
 
 	libwps::DebugStream f;
 
@@ -1172,7 +1172,7 @@ bool WPS8TextStyle::readSTSH(WPSEntry const &entry)
 		}
 		f << "):";
 
-		m_input->seek(pos, WPX_SEEK_SET);
+		m_input->seek(pos, RVNG_SEEK_SET);
 		int size = (int) libwps::readU16(m_input);
 		bool correct = true;
 		if (2*size + 2 + type != length) correct = false;
@@ -1182,10 +1182,10 @@ bool WPS8TextStyle::readSTSH(WPSEntry const &entry)
 			{
 			case 4:
 			{
-				WPXString str;
+				RVNGString str;
 				if (size) m_mainParser.readString(m_input, 2*size, str);
 				f << "'" << str.cstr() << "'";
-				m_input->seek(pos+2+2*size, WPX_SEEK_SET);
+				m_input->seek(pos+2+2*size, RVNG_SEEK_SET);
 				f << ", unkn=" << libwps::read32(m_input);
 				break;
 			}

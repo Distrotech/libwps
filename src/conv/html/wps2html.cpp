@@ -20,7 +20,7 @@
  */
 
 #include <stdio.h>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include <libwps/libwps.h>
 #include "HtmlDocumentGenerator.h"
 
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	WPXFileStream input(argv[1]);
+	RVNGFileStream input(argv[1]);
 
 	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input);
 	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)

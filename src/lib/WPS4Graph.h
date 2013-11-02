@@ -32,7 +32,7 @@
 
 #include "WPSDebug.h"
 
-class WPXBinaryData;
+class RVNGBinaryData;
 
 class WPS4Parser;
 
@@ -86,7 +86,7 @@ protected:
 	int version() const;
 
 	//! store a list of object
-	void storeObjects(std::vector<WPXBinaryData> const &objects,
+	void storeObjects(std::vector<RVNGBinaryData> const &objects,
 	                  std::vector<int> const &ids,
 	                  std::vector<WPSPosition> const &positions);
 
@@ -95,7 +95,7 @@ protected:
 	 * \note the content of this zone is mainly unknown,
 	 * so this function may failed to retrieved valid data
 	 */
-	int readObject(WPXInputStreamPtr input, WPSEntry const &entry);
+	int readObject(RVNGInputStreamPtr input, WPSEntry const &entry);
 
 	//! sends an object with identificator \a id as a character with given size
 	void sendObject(Vec2f const &size, int id);

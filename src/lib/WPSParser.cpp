@@ -27,7 +27,7 @@
 
 #include "WPSParser.h"
 
-WPSParser::WPSParser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
+WPSParser::WPSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
 	m_input(input), m_header(header), m_version(0),
 	m_nameMultiMap(), m_asciiFile()
 {

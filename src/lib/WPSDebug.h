@@ -30,7 +30,7 @@
 
 #include "libwps_internal.h"
 
-class WPXBinaryData;
+class RVNGBinaryData;
 
 #  if defined(DEBUG_WITH_FILES)
 #include <fstream>
@@ -47,7 +47,7 @@ namespace Debug
 //! a debug function to store in a datafile in the current directory
 //! WARNING: this function erase the file fileName if it exists
 //! (if debug_with_files is not defined, does nothing)
-bool dumpFile(WPXBinaryData &data, char const *fileName);
+bool dumpFile(RVNGBinaryData &data, char const *fileName);
 
 //! returns a file name from an ole/... name
 std::string flattenFileName(std::string const &name);
@@ -62,11 +62,11 @@ class DebugFile
 {
 public:
 	//! constructor given the input file
-	DebugFile(WPXInputStreamPtr ip=WPXInputStreamPtr())
+	DebugFile(RVNGInputStreamPtr ip=RVNGInputStreamPtr())
 		: m_file(), m_on(false), m_input(ip), m_actOffset(-1), m_notes(), m_skipZones() { }
 
 	//! resets the input
-	void setStream(WPXInputStreamPtr ip)
+	void setStream(RVNGInputStreamPtr ip)
 	{
 		m_input = ip;
 	}
@@ -113,7 +113,7 @@ protected:
 	mutable bool m_on;
 
 	//! the input
-	WPXInputStreamPtr m_input;
+	RVNGInputStreamPtr m_input;
 
 	//! \brief a note and its position (used to sort all notes)
 	struct NotePos
@@ -168,7 +168,7 @@ namespace libwps
 {
 namespace Debug
 {
-inline bool dumpFile(WPXBinaryData &, char const *)
+inline bool dumpFile(RVNGBinaryData &, char const *)
 {
 	return true;
 }
@@ -198,9 +198,9 @@ public:
 class DebugFile
 {
 public:
-	DebugFile(WPXInputStreamPtr) {}
+	DebugFile(RVNGInputStreamPtr) {}
 	DebugFile() {}
-	static void setStream(WPXInputStreamPtr) {  }
+	static void setStream(RVNGInputStreamPtr) {  }
 	~DebugFile() { }
 
 	static bool open(std::string const &)
