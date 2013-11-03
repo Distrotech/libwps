@@ -140,7 +140,7 @@ void DebugFile::write()
 			m_file << "\nSkip : " << std::hex << std::setw(6) << actualSkipEndPos << "-"
 			       << actualPos-1 << "\n\n";
 			m_input->seek(actualPos, RVNG_SEEK_SET);
-			stop = m_input->atEOS();
+			stop = m_input->isEnd();
 			actSkip++;
 			actualSkipEndPos = (actSkip < numSkip) ? m_skipZones[size_t(actSkip)].x() : -1;
 		}
@@ -173,7 +173,7 @@ void DebugFile::write()
 		actualPos++;
 
 	}
-	while (!m_input->atEOS());
+	while (!m_input->isEnd());
 
 	m_file << "\n\n";
 

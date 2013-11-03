@@ -497,7 +497,7 @@ bool WPSOLEParser::readOle(RVNGInputStreamPtr &ip, std::string const &oleName,
 	ascii.addPos(0);
 	ascii.addNote(f.str().c_str());
 
-	if (!ip->atEOS())
+	if (!ip->isEnd())
 	{
 		ascii.addPos(20);
 		ascii.addNote("@@Ole:###");
@@ -512,7 +512,7 @@ bool WPSOLEParser::readObjInfo(RVNGInputStreamPtr &input, std::string const &ole
 	if (strcmp(oleName.c_str(),"ObjInfo") != 0) return false;
 
 	input->seek(14, RVNG_SEEK_SET);
-	if (input->tell() != 6 || !input->atEOS()) return false;
+	if (input->tell() != 6 || !input->isEnd()) return false;
 
 	input->seek(0, RVNG_SEEK_SET);
 	libwps::DebugStream f;
@@ -533,7 +533,7 @@ bool WPSOLEParser::readMM(RVNGInputStreamPtr &input, std::string const &oleName,
 	if (strcmp(oleName.c_str(),"MM") != 0) return false;
 
 	input->seek(14, RVNG_SEEK_SET);
-	if (input->tell() != 14 || !input->atEOS()) return false;
+	if (input->tell() != 14 || !input->isEnd()) return false;
 
 	input->seek(0, RVNG_SEEK_SET);
 	int entete = libwps::readU16(input);
@@ -682,7 +682,7 @@ bool WPSOLEParser::readCompObj(RVNGInputStreamPtr &ip, std::string const &oleNam
 		ascii.addNote(f.str().c_str());
 	}
 
-	if (ip->atEOS()) return true;
+	if (ip->isEnd()) return true;
 
 	long actPos = ip->tell();
 	long nbElt = 4;
@@ -748,7 +748,7 @@ bool WPSOLEParser::isOlePres(RVNGInputStreamPtr &ip, std::string const &oleName)
 	ip->seek(8, RVNG_SEEK_CUR);
 	long size = libwps::read32(ip);
 
-	if (size <= 0) return ip->atEOS();
+	if (size <= 0) return ip->isEnd();
 
 	actPos = ip->tell();
 	if (ip->seek(actPos+size, RVNG_SEEK_SET) != 0
@@ -847,12 +847,12 @@ bool WPSOLEParser::readOlePres(RVNGInputStreamPtr &ip, RVNGBinaryData &data, WPS
 	ascii.addPos(actPos);
 	ascii.addNote(f.str().c_str());
 
-	if (fSize == 0) return ip->atEOS();
+	if (fSize == 0) return ip->isEnd();
 
 	data.clear();
 	if (!libwps::readData(ip, (unsigned long)fSize, data)) return false;
 
-	if (!ip->atEOS())
+	if (!ip->isEnd())
 	{
 		ascii.addPos(ip->tell());
 		ascii.addNote("@@OlePress###");
@@ -903,7 +903,7 @@ bool WPSOLEParser::readOle10Native(RVNGInputStreamPtr &ip,
 	data.clear();
 	if (!libwps::readData(ip, (unsigned long) fSize, data)) return false;
 
-	if (!ip->atEOS())
+	if (!ip->isEnd())
 	{
 		ascii.addPos(ip->tell());
 		ascii.addNote("@@Ole10Native###");
@@ -960,7 +960,7 @@ bool WPSOLEParser::readContents(RVNGInputStreamPtr &input,
 	naturalSize[1] = libwps::read32(input);
 	f << std::dec << "bdbox1=(" << naturalSize[0] << "," << naturalSize[1]<<"),";
 	f << "unk=" << libwps::readU32(input) << ","; // 24 or 32
-	if (input->atEOS())
+	if (input->isEnd())
 	{
 		WPS_DEBUG_MSG(("WPSOLEParser: warning: Contents header length\n"));
 		return false;
@@ -986,7 +986,7 @@ bool WPSOLEParser::readContents(RVNGInputStreamPtr &input,
 	if (ok)
 	{
 		input->seek(actPos+size+4, RVNG_SEEK_SET);
-		if (input->tell() != actPos+size+4 || !input->atEOS())
+		if (input->tell() != actPos+size+4 || !input->isEnd())
 		{
 			ok = false;
 			WPS_DEBUG_MSG(("WPSOLEParser: warning: Contents unexpected file size=%ld\n",
@@ -1013,7 +1013,7 @@ bool WPSOLEParser::readContents(RVNGInputStreamPtr &input,
 		}
 	}
 
-	if (!input->atEOS())
+	if (!input->isEnd())
 	{
 		ascii.addPos(actPos);
 		ascii.addNote("@@Contents:###");
@@ -1048,7 +1048,7 @@ bool WPSOLEParser::readCONTENTS(RVNGInputStreamPtr &input,
 	f << "@@CONTENTS:";
 
 	long hSize = (long) libwps::readU32(input);
-	if (input->atEOS()) return false;
+	if (input->isEnd()) return false;
 	f << "hSize=" << std::hex << hSize << std::dec;
 
 	if (hSize <= 52 || input->seek(hSize+8,RVNG_SEEK_SET) != 0
@@ -1124,7 +1124,7 @@ bool WPSOLEParser::readCONTENTS(RVNGInputStreamPtr &input,
 	ascii.addNote(f.str().c_str());
 
 	if (dataLength <= 0 || input->seek(hSize+4+dataLength,RVNG_SEEK_SET) != 0
-	        || input->tell() != hSize+4+dataLength || !input->atEOS())
+	        || input->tell() != hSize+4+dataLength || !input->isEnd())
 	{
 		WPS_DEBUG_MSG(("WPSOLEParser: warning: CONTENTS unexpected file length=%ld\n",
 		               dataLength));

@@ -486,7 +486,7 @@ int WPS4Text::numPages() const
 {
 	int numPage = 1;
 	m_input->seek(m_textPositions.begin(), RVNG_SEEK_SET);
-	while (!m_input->atEOS() && m_input->tell() != m_textPositions.end())
+	while (!m_input->isEnd() && m_input->tell() != m_textPositions.end())
 	{
 		if (libwps::readU8(m_input.get()) == 0x0C) numPage++;
 	}
@@ -1334,7 +1334,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 		uint8_t nChar = libwps::readU8(m_input);
 		for (uint8_t i = nChar; i>0; i--)
 		{
-			if (m_input->atEOS())
+			if (m_input->isEnd())
 			{
 				WPS_DEBUG_MSG(("WPS4Text::readFontNames: can not read the font number %i (end of file)\n",
 				               font_number));
@@ -1570,7 +1570,7 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 		{
 			std::string name("");
 			link.m_pos.setBegin(m_input->tell());
-			while (!m_input->atEOS() && long(m_input->tell()) < endPos)
+			while (!m_input->isEnd() && long(m_input->tell()) < endPos)
 			{
 				char c = char(libwps::readU8(m_input));
 				if (!c)

@@ -71,19 +71,35 @@ public:
 		return offset;
 	}
 	int seek(long offset, RVNG_SEEK_TYPE seekType);
-	bool atEOS()
+	bool isEnd()
 	{
 		return ((long)offset >= (long)buffer.size());
 	}
 
-	bool isOLEStream()
+	bool isStructured()
 	{
 		return false;
 	}
-	RVNGInputStream *getDocumentOLEStream(const char *)
+
+	unsigned subStreamCount()
 	{
 		return 0;
-	};
+	}
+
+	const char *subStreamName(unsigned)
+	{
+		return 0;
+	}
+
+	RVNGInputStream *getSubStreamByName(const char *)
+	{
+		return 0;
+	}
+
+	RVNGInputStream *getSubStreamById(unsigned)
+	{
+		return 0;
+	}
 
 private:
 	std::vector<unsigned char> buffer;

@@ -913,7 +913,7 @@ bool WPS8Parser::parseHeaderIndex()
 	bool readSome = false;
 	do
 	{
-		if (input->atEOS()) return readSome;
+		if (input->isEnd()) return readSome;
 
 		pos = input->tell();
 		f.str("");
@@ -1817,7 +1817,7 @@ bool WPS8Parser::readSPELLING(RVNGInputStreamPtr input, std::string const &oleNa
 	// SPELLING
 	input->seek(0, RVNG_SEEK_SET);
 	int vers = (int) libwps::read32(input); // always 6 ?
-	if (vers < 0 || input->atEOS()) return false;
+	if (vers < 0 || input->isEnd()) return false;
 
 	std::string fName = libwps::Debug::flattenFileName(oleName);
 	libwps::DebugFile asciiFile(input);
@@ -1829,7 +1829,7 @@ bool WPS8Parser::readSPELLING(RVNGInputStreamPtr input, std::string const &oleNa
 
 	libwps::DebugStream f;
 	int num = 0;
-	while(!input->atEOS())
+	while(!input->isEnd())
 	{
 		long pos = input->tell();
 		int numVal = (int) libwps::read32(input);
@@ -1877,7 +1877,7 @@ bool WPS8Parser::readSPELLING(RVNGInputStreamPtr input, std::string const &oleNa
 	f << "]";
 	asciiFile.addPos(0);
 	asciiFile.addNote(f.str().c_str());
-	if (!input->atEOS())
+	if (!input->isEnd())
 	{
 		asciiFile.addPos(input->tell());
 		asciiFile.addNote("###SPELLING");

@@ -87,7 +87,7 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		document_contents->seek(0, RVNG_SEEK_SET);
 
 		char fileMagic[8];
-		for (int i=0; i<7 && !document_contents->atEOS(); i++)
+		for (int i=0; i<7 && !document_contents->isEnd(); i++)
 			fileMagic[i] = char(libwps::readU8(document_contents.get()));
 		fileMagic[7] = '\0';
 

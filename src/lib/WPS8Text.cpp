@@ -535,7 +535,7 @@ int WPS8Text::numPages() const
 {
 	int numPage = 1;
 	m_input->seek(m_textPositions.begin(), RVNG_SEEK_SET);
-	while (!m_input->atEOS() && m_input->tell() < m_textPositions.end())
+	while (!m_input->isEnd() && m_input->tell() < m_textPositions.end())
 	{
 		if (libwps::readU16(m_input.get()) == 0x0C) numPage++;
 	}
@@ -665,7 +665,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 	int actualPage = 1;
 	WPS8TextStyle::FontData special;
 	input->seek(entry.begin(), RVNG_SEEK_SET);
-	while (!input->atEOS())
+	while (!input->isEnd())
 	{
 		long pos = input->tell();
 		libwps::DebugStream f;
@@ -759,7 +759,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 			WPS_DEBUG_MSG(("WPS8Text::readText: ### len is odd\n"));
 			throw libwps::ParseException();
 		}
-		while (!input->atEOS())
+		while (!input->isEnd())
 		{
 			if (input->tell()+1 >= finalPos) break;
 
@@ -1095,7 +1095,7 @@ bool WPS8Text::readString(RVNGInputStreamPtr input, long page_size,
 	long page_offset = input->tell();
 	long endString = page_offset + page_size;
 
-	while (input->tell() < endString-1 && !input->atEOS())
+	while (input->tell() < endString-1 && !input->isEnd())
 	{
 		uint16_t val = libwps::readU16(input);
 		if (!val) break;
@@ -1469,7 +1469,7 @@ bool WPS8Text::bmktEndDataParser(long endPage, std::vector<long> const &textPtrs
 	f << "BMKT(##unkn):";
 	f << libwps::read32(input) <<",";
 	f << "dim?=" << float(libwps::read32(input))/914400.f <<"," << std::hex;
-	while(input->tell() < endPage-sz1 && !input->atEOS())
+	while(input->tell() < endPage-sz1 && !input->isEnd())
 		f << libwps::read16(input) << ",";
 	f << std::dec;
 	ascii().addNote(f.str().c_str());

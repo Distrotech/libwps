@@ -103,7 +103,7 @@ bool readDataToEnd(RVNGInputStreamPtr &input, RVNGBinaryData &data)
 	long sz=input->tell()-pos;
 	if (sz < 0) return false;
 	input->seek(pos,RVNG_SEEK_SET);
-	return readData(input, (unsigned long) sz, data) && input->atEOS();
+	return readData(input, (unsigned long) sz, data) && input->isEnd();
 }
 
 std::string numberingTypeToString(NumberingType type)
