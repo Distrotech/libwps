@@ -163,10 +163,6 @@ SOURCE=..\..\src\lib\WPSOLEParser.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPSOLEStream.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\WPSPageSpan.cpp
 # End Source File
 # Begin Source File
@@ -276,10 +272,6 @@ SOURCE=..\..\src\lib\WPSList.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSOLEParser.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\WPSOLEStream.h
 # End Source File
 # Begin Source File
 

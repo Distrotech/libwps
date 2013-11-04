@@ -26,16 +26,10 @@
 #include "libwps_internal.h"
 #include <librevenge-stream/librevenge-stream.h>
 
-namespace libwpsOLE
-{
-class Storage;
-}
-
 class WPSHeader
 {
 public:
-	WPSHeader(RVNGInputStreamPtr &input, shared_ptr<libwpsOLE::Storage> &ole,
-	          uint8_t majorVersion);
+	WPSHeader(RVNGInputStreamPtr &input, uint8_t majorVersion);
 	virtual ~WPSHeader();
 
 	static WPSHeader *constructHeader(RVNGInputStreamPtr &input);
@@ -43,11 +37,6 @@ public:
 	RVNGInputStreamPtr &getInput()
 	{
 		return m_input;
-	}
-
-	shared_ptr<libwpsOLE::Storage> &getOLEStorage()
-	{
-		return m_oleStorage;
 	}
 
 	uint8_t getMajorVersion() const
@@ -59,7 +48,6 @@ private:
 	WPSHeader(const WPSHeader &);
 	WPSHeader &operator=(const WPSHeader &);
 	RVNGInputStreamPtr m_input;
-	shared_ptr<libwpsOLE::Storage> m_oleStorage;
 	uint8_t m_majorVersion;
 };
 

@@ -73,6 +73,7 @@ public:
 			break;
 		case RVNG_PERCENT:
 		case RVNG_GENERIC:
+		case RVNG_UNIT_ERROR:
 		default:
 			break;
 		}
@@ -136,6 +137,7 @@ public:
 			break;
 		case RVNG_PERCENT:
 		case RVNG_GENERIC:
+		case RVNG_UNIT_ERROR:
 		default:
 			WPS_DEBUG_MSG(("WPSPosition::getScaleFactor %d unit must not appear\n", int(orig)));
 		}
@@ -151,6 +153,7 @@ public:
 			break;
 		case RVNG_PERCENT:
 		case RVNG_GENERIC:
+		case RVNG_UNIT_ERROR:
 		default:
 			WPS_DEBUG_MSG(("WPSPosition::getScaleFactor %d unit must not appear\n", int(dest)));
 		}

@@ -71,7 +71,6 @@
 
 #include <librevenge/librevenge.h>
 
-#include "WPSOLEStream.h"
 #include "WPSPosition.h"
 
 #include "WPSOLEParser.h"
@@ -264,7 +263,7 @@ void WPSOLEParser::setObject(int id, RVNGBinaryData const &obj, WPSPosition cons
 }
 
 // parsing
-bool WPSOLEParser::parse(shared_ptr<libwpsOLE::Storage> file)
+bool WPSOLEParser::parse(RVNGInputStreamPtr file)
 {
 	if (!m_compObjIdName)
 		m_compObjIdName.reset(new WPSOLEParserInternal::CompObj);
@@ -273,21 +272,20 @@ bool WPSOLEParser::parse(shared_ptr<libwpsOLE::Storage> file)
 	m_objects.resize(0);
 	m_objectsId.resize(0);
 
-	if (!file.get()) return false;
+	if (!file || !file->isStructured()) return false;
 
-	if (!file->isStructuredDocument()) return false;
-
-	std::vector<std::string> namesList = file->getSubStreamList();
-
+	unsigned numSubStreams = file->subStreamCount();
 	//
 	// we begin by grouping the Ole by their potential main id
 	//
 	std::multimap<int, WPSOLEParserInternal::OleDef> listsById;
 	std::vector<int> listIds;
-	for (size_t i = 0; i < namesList.size(); i++)
+	for (unsigned i = 0; i < numSubStreams; ++i)
 	{
-		std::string const &name = namesList[i];
-
+		char const *nm=file->subStreamName(i);
+		if (!nm) continue;
+		std::string name(nm);
+		if (name.empty() || name[name.length()-1]=='/') continue;
 		// separated the directory and the name
 		//    MatOST/MatadorObject1/Ole10Native
 		//      -> dir="MatOST/MatadorObject1", base="Ole10Native"
@@ -360,8 +358,8 @@ bool WPSOLEParser::parse(shared_ptr<libwpsOLE::Storage> file)
 			if (pos->first != id) break;
 			++pos;
 
-			RVNGInputStreamPtr ole = file->getSubStream(dOle.m_name);
-			if (!ole.get())
+			RVNGInputStreamPtr ole(file->getSubStreamByName(dOle.m_name.c_str()));
+			if (!ole)
 			{
 				WPS_DEBUG_MSG(("WPSOLEParser: error: can not find OLE part: \"%s\"\n", dOle.m_name.c_str()));
 				continue;

@@ -23,13 +23,11 @@
 #include <string.h>
 
 #include "libwps_internal.h"
-#include "WPSOLEStream.h"
 
 #include "WPSHeader.h"
 
-WPSHeader::WPSHeader(RVNGInputStreamPtr &input, shared_ptr<libwpsOLE::Storage> &storage, uint8_t majorVersion) :
-	m_input(input), m_oleStorage(storage),
-	m_majorVersion(majorVersion)
+WPSHeader::WPSHeader(RVNGInputStreamPtr &input, uint8_t majorVersion) :
+	m_input(input), m_majorVersion(majorVersion)
 {
 }
 
@@ -50,37 +48,34 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
 
-	shared_ptr<libwpsOLE::Storage> oleStorage(new libwpsOLE::Storage(input));
-	if (oleStorage && !oleStorage->isStructuredDocument())
-		oleStorage.reset();
-	if (!oleStorage)
+	if (!input->isStructured())
 	{
 		input->seek(0, RVNG_SEEK_SET);
 		if (libwps::readU8(input.get()) < 6
 		        && 0xFE == libwps::readU8(input.get()))
 		{
 			WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
-			return new WPSHeader(input, oleStorage, 2);
+			return new WPSHeader(input, 2);
 		}
 		return 0;
 	}
 
-	RVNGInputStreamPtr document_mn0(oleStorage->getSubStream("MN0"));
+	RVNGInputStreamPtr document_mn0(input->getSubStreamByName("MN0"));
 	if (document_mn0)
 	{
 		// can be a mac or a pc document
 		// each must contains a MM Ole which begins by 0x444e: Mac or 0x4e44: PC
-		RVNGInputStreamPtr document_mm(oleStorage->getSubStream("MM"));
+		RVNGInputStreamPtr document_mm(input->getSubStreamByName("MM"));
 		if (document_mm && libwps::readU16(document_mm) == 0x4e44)
 		{
 			WPS_DEBUG_MSG(("Microsoft Works Mac v4 format detected\n"));
 			return 0;
 		}
 		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));
-		return new WPSHeader(document_mn0, oleStorage, 4);
+		return new WPSHeader(document_mn0, 4);
 	}
 
-	RVNGInputStreamPtr document_contents(oleStorage->getSubStream("CONTENTS"));
+	RVNGInputStreamPtr document_contents(input->getSubStreamByName("CONTENTS"));
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */
@@ -95,13 +90,13 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
 		{
 			WPS_DEBUG_MSG(("Microsoft Works v8 (maybe 7) format detected\n"));
-			return new WPSHeader(document_contents, oleStorage, 8);
+			return new WPSHeader(document_contents, 8);
 		}
 
 		/* Works 2000 */
 		if (0 == strcmp(fileMagic, "CHNKINK"))
 		{
-			return new WPSHeader(document_contents, oleStorage, 5);
+			return new WPSHeader(document_contents, 5);
 		}
 	}
 

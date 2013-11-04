@@ -31,7 +31,6 @@
 #include "WPSEntry.h"
 #include "WPSHeader.h"
 #include "WPSOLEParser.h"
-#include "WPSOLEStream.h"
 #include "WPSPageSpan.h"
 #include "WPSSubDocument.h"
 
@@ -438,12 +437,12 @@ bool WPS4Parser::createStructures()
 
 bool WPS4Parser::createOLEStructures()
 {
-	if (!getInput()) return false;
+	RVNGInputStreamPtr input=getInput();
+	if (!input) return false;
 
-	shared_ptr<libwpsOLE::Storage> storage = getHeader()->getOLEStorage();
-	if (!storage) return true;
+	if (!input->isStructured()) return true;
 	WPSOLEParser oleParser("MN0");
-	if (!oleParser.parse(storage)) return false;
+	if (!oleParser.parse(input)) return false;
 
 	m_graphParser->storeObjects(oleParser.getObjects(),oleParser.getObjectsId(),
 	                            oleParser.getObjectsPosition());

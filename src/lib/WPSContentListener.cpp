@@ -555,6 +555,7 @@ bool WPSContentListener::openSection(std::vector<int> colsWidth, RVNGUnit unit)
 			break;
 		case RVNG_PERCENT:
 		case RVNG_GENERIC:
+		case RVNG_UNIT_ERROR:
 		default:
 			WPS_DEBUG_MSG(("WPSContentListener::openSection: unknown unit\n"));
 			return false;

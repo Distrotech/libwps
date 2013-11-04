@@ -31,7 +31,6 @@
 #include "WPSEntry.h"
 #include "WPSHeader.h"
 #include "WPSOLEParser.h"
-#include "WPSOLEStream.h"
 #include "WPSPageSpan.h"
 #include "WPSPosition.h"
 #include "WPSSubDocument.h"
@@ -645,12 +644,12 @@ bool WPS8Parser::createStructures()
 
 bool WPS8Parser::createOLEStructures()
 {
-	if (!getInput()) return false;
+	RVNGInputStreamPtr input=getInput();
+	if (!input) return false;
 
-	shared_ptr<libwpsOLE::Storage> storage = getHeader()->getOLEStorage();
-	if (!storage) return true;
+	if (!input->isStructured()) return true;
 	WPSOLEParser oleParser("CONTENTS");
-	if (!oleParser.parse(storage)) return false;
+	if (!oleParser.parse(input)) return false;
 
 	m_graphParser->storeObjects(oleParser.getObjects(),oleParser.getObjectsId(),
 	                            oleParser.getObjectsPosition());
@@ -809,7 +808,7 @@ bool WPS8Parser::parseHeaderIndexEntry()
 
 	std::string name2;
 	for (i =0; i < 4; i++)
-		name2.append(1, (int) libwps::readU8(input));
+		name2.append(1, (char) libwps::readU8(input));
 	f << "), " << name2;
 
 	WPSEntry hie;

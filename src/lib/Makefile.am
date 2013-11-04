@@ -35,7 +35,6 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSHeader.cpp \
 	WPSList.cpp \
 	WPSOLEParser.cpp \
-	WPSOLEStream.cpp \
 	WPSPageSpan.cpp \
 	WPSParagraph.cpp \
 	WPSParser.cpp \
@@ -61,7 +60,6 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSHeader.h \
 	WPSList.h \
 	WPSOLEParser.h \
-	WPSOLEStream.h \
 	WPSPageSpan.h \
 	WPSParagraph.h \
 	WPSParser.h \
