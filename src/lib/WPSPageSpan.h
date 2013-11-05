@@ -26,8 +26,7 @@
 #include <vector>
 #include "libwps_internal.h"
 
-class RVNGPropertyList;
-class RVNGDocumentProperty;
+class librevenge::RVNGPropertyList;
 class WPSContentListener;
 
 namespace WPSPageSpanInternal
@@ -96,7 +95,7 @@ public:
 	{
 		return m_pageNumberingFontSize;
 	}
-	RVNGString getPageNumberingFontName() const
+	librevenge::RVNGString getPageNumberingFontName() const
 	{
 		return m_pageNumberingFontName;
 	}
@@ -155,7 +154,7 @@ public:
 	{
 		m_pageNumberingFontSize = pageNumberingFontSize;
 	}
-	void setPageNumberingFontName(const RVNGString &pageNumberingFontName)
+	void setPageNumberingFontName(const librevenge::RVNGString &pageNumberingFontName)
 	{
 		m_pageNumberingFontName = pageNumberingFontName;
 	}
@@ -171,9 +170,9 @@ public:
 	}
 protected:
 	// interface with WPSContentListener
-	void getPageProperty(RVNGPropertyList &pList) const;
+	void getPageProperty(librevenge::RVNGPropertyList &pList) const;
 	void sendHeaderFooters(WPSContentListener *listener,
-	                       RVNGTextInterface *documentInterface);
+	                       librevenge::RVNGTextInterface *documentInterface);
 
 protected:
 
@@ -182,7 +181,7 @@ protected:
 	void _removeHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence);
 	bool _containsHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence);
 
-	void _insertPageNumberParagraph(RVNGTextInterface *documentInterface);
+	void _insertPageNumberParagraph(librevenge::RVNGTextInterface *documentInterface);
 private:
 	double m_formLength, m_formWidth;
 	FormOrientation m_formOrientation;
@@ -191,7 +190,7 @@ private:
 	PageNumberPosition m_pageNumberPosition;
 	int m_pageNumber;
 	libwps::NumberingType m_pageNumberingType;
-	RVNGString m_pageNumberingFontName;
+	librevenge::RVNGString m_pageNumberingFontName;
 	double m_pageNumberingFontSize;
 	std::vector<WPSPageSpanInternal::HeaderFooterPtr> m_headerFooterList;
 

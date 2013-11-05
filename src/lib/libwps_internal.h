@@ -35,7 +35,7 @@
 #include <librevenge-stream/librevenge-stream.h>
 #include <librevenge/librevenge.h>
 
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 #if defined(_MSC_VER) || defined(__DJGPP__)
 typedef signed char int8_t;
@@ -78,8 +78,8 @@ struct WPS_shared_ptr_noop_deleter
 };
 
 // basic classes and autoptr
-/** shared pointer to RVNGInputStream */
-typedef shared_ptr<RVNGInputStream> RVNGInputStreamPtr;
+/** shared pointer to librevenge::RVNGInputStream */
+typedef shared_ptr<librevenge::RVNGInputStream> RVNGInputStreamPtr;
 
 class WPSCell;
 class WPSContentListener;
@@ -133,13 +133,13 @@ class GenericException
 /* ---------- input ----------------- */
 namespace libwps
 {
-uint8_t readU8(RVNGInputStream *input);
-uint16_t readU16(RVNGInputStream *input);
-uint32_t readU32(RVNGInputStream *input);
+uint8_t readU8(librevenge::RVNGInputStream *input);
+uint16_t readU16(librevenge::RVNGInputStream *input);
+uint32_t readU32(librevenge::RVNGInputStream *input);
 
-int8_t read8(RVNGInputStream *input);
-int16_t read16(RVNGInputStream *input);
-int32_t read32(RVNGInputStream *input);
+int8_t read8(librevenge::RVNGInputStream *input);
+int16_t read16(librevenge::RVNGInputStream *input);
+int32_t read32(librevenge::RVNGInputStream *input);
 
 inline uint8_t readU8(RVNGInputStreamPtr &input)
 {
@@ -167,8 +167,8 @@ inline int32_t read32(RVNGInputStreamPtr &input)
 	return read32(input.get());
 }
 
-bool readData(RVNGInputStreamPtr &input, unsigned long sz, RVNGBinaryData &data);
-bool readDataToEnd(RVNGInputStreamPtr &input, RVNGBinaryData &data);
+bool readData(RVNGInputStreamPtr &input, unsigned long sz, librevenge::RVNGBinaryData &data);
+bool readDataToEnd(RVNGInputStreamPtr &input, librevenge::RVNGBinaryData &data);
 }
 
 #define WPS_LE_GET_GUINT16(p)				  \
@@ -182,7 +182,7 @@ bool readDataToEnd(RVNGInputStreamPtr &input, RVNGBinaryData &data);
 
 // Various helper structures for the parser..
 /* ---------- small enum/class ------------- */
-class RVNGPropertyListVector;
+class librevenge::RVNGPropertyListVector;
 
 struct WPSColumnDefinition
 {

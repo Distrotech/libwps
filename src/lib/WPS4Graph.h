@@ -32,7 +32,7 @@
 
 #include "WPSDebug.h"
 
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 class WPS4Parser;
 
@@ -86,7 +86,7 @@ protected:
 	int version() const;
 
 	//! store a list of object
-	void storeObjects(std::vector<RVNGBinaryData> const &objects,
+	void storeObjects(std::vector<librevenge::RVNGBinaryData> const &objects,
 	                  std::vector<int> const &ids,
 	                  std::vector<WPSPosition> const &positions);
 

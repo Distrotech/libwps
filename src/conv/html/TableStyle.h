@@ -31,8 +31,8 @@
 #include <map>
 #include <vector>
 
-class RVNGPropertyList;
-class RVNGPropertyListVector;
+class librevenge::RVNGPropertyList;
+class librevenge::RVNGPropertyListVector;
 
 /** Small class to manage the tables style */
 class TableStyleManager
@@ -47,20 +47,20 @@ public:
 	{
 	}
 	//! open a table
-	void openTable(RVNGPropertyListVector const &colList);
+	void openTable(librevenge::RVNGPropertyListVector const &colList);
 	//! close a table
 	void closeTable();
 	//! returns the class name corresponding to a propertylist
-	std::string getCellClass(RVNGPropertyList const &pList);
+	std::string getCellClass(librevenge::RVNGPropertyList const &pList);
 	//! returns the class name corresponding to a propertylist
-	std::string getRowClass(RVNGPropertyList const &pList);
+	std::string getRowClass(librevenge::RVNGPropertyList const &pList);
 	//! send the data to the stream
 	void send(std::ostream &out);
 private:
 	//! convert a property list in a html content string
-	std::string getCellContent(RVNGPropertyList const &pList) const;
+	std::string getCellContent(librevenge::RVNGPropertyList const &pList) const;
 	//! convert a property list in a html content string
-	std::string getRowContent(RVNGPropertyList const &pList) const;
+	std::string getRowContent(librevenge::RVNGPropertyList const &pList) const;
 	//! try to return the col width
 	bool getColumnsWidth(int i, int numSpanned, double &w) const;
 	//! a map cell content -> name

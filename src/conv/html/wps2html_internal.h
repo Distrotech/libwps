@@ -57,10 +57,10 @@ struct WPS_shared_ptr_noop_deleter
 #define WPS_DEBUG_MSG(M)
 #endif
 
-class RVNGProperty;
+class librevenge::RVNGProperty;
 namespace wps2html
 {
-bool getPointValue(RVNGProperty const &prop, double &res);
+bool getPointValue(librevenge::RVNGProperty const &prop, double &res);
 }
 #endif /* WPS2HTML_INTERNAL_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

@@ -30,7 +30,7 @@
 
 #include "WPSParser.h"
 
-class RVNGString;
+class librevenge::RVNGString;
 
 class WPSPageSpan;
 
@@ -59,7 +59,7 @@ public:
 	//! destructor
 	~WPS4Parser();
 	//! called by WPSDocument to parse the file
-	void parse(RVNGTextInterface *documentInterface);
+	void parse(librevenge::RVNGTextInterface *documentInterface);
 protected:
 	//! color
 	bool getColor(int id, uint32_t &color) const;
@@ -81,7 +81,7 @@ protected:
 	/** tries to parse the different OLE zones ( except the main zone ) */
 	bool createOLEStructures();
 	/** creates the main listener */
-	shared_ptr<WPSContentListener> createListener(RVNGTextInterface *interface);
+	shared_ptr<WPSContentListener> createListener(librevenge::RVNGTextInterface *interface);
 
 	// interface with text parser
 
@@ -99,9 +99,9 @@ protected:
 	 * \note actually all bookmarks (comments) are empty */
 	void createDocument(WPSEntry const &entry, libwps::SubDocumentType type);
 	/** creates a document for a footnote entry with label and then send the data*/
-	void createNote(WPSEntry const &entry, RVNGString const &label);
+	void createNote(WPSEntry const &entry, librevenge::RVNGString const &label);
 	//! creates a textbox and then send the data
-	void createTextBox(WPSEntry const &entry, WPSPosition const &pos, RVNGPropertyList &extras);
+	void createTextBox(WPSEntry const &entry, WPSPosition const &pos, librevenge::RVNGPropertyList &extras);
 	//! sends text corresponding to the entry to the listener (via WPS4Text)
 	void send(WPSEntry const &entry, libwps::SubDocumentType type);
 

@@ -53,7 +53,7 @@ public:
 	friend std::ostream &operator<<(std::ostream &o, WPSFont const &ft);
 
 	//! add to the propList
-	void addTo(RVNGPropertyList &propList) const;
+	void addTo(librevenge::RVNGPropertyList &propList) const;
 
 	//! accessor
 	bool isSet() const

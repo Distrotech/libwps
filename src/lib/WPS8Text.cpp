@@ -86,7 +86,7 @@ struct Bookmark
 	//! an index
 	int m_id;
 	//! the field value
-	RVNGString m_text;
+	librevenge::RVNGString m_text;
 	//! a string used to store the parsing errors
 	std::string m_error;
 };
@@ -261,7 +261,7 @@ struct Token
 	//! an unknown value
 	int m_unknown;
 	//! the field value
-	RVNGString m_text;
+	librevenge::RVNGString m_text;
 	//! a string used to store the parsing errors
 	std::string m_error;
 };
@@ -434,7 +434,7 @@ public:
 	SubDocument(RVNGInputStreamPtr input, WPS8Text &pars, WPSEntry const &entry) :
 		WPSSubDocument(input, 0), m_textParser(&pars), m_entry(entry), m_text("") {}
 	//! constructor for a comment entry
-	SubDocument(RVNGInputStreamPtr input, RVNGString const &text) :
+	SubDocument(RVNGInputStreamPtr input, librevenge::RVNGString const &text) :
 		WPSSubDocument(input, 0), m_textParser(0), m_entry(), m_text(text) {}
 
 	//! destructor
@@ -458,7 +458,7 @@ public:
 
 	WPS8Text *m_textParser;
 	WPSEntry m_entry;
-	RVNGString m_text;
+	librevenge::RVNGString m_text;
 private:
 	SubDocument(SubDocument const &orig);
 	SubDocument &operator=(SubDocument const &orig);
@@ -501,7 +501,7 @@ void SubDocument::parse(WPSContentListenerPtr &listener, libwps::SubDocumentType
 	{
 		WPS_DEBUG_MSG(("SubDocument::parse: find unknown type of document...\n"));
 	}
-	m_input->seek(actPos, RVNG_SEEK_SET);
+	m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 
 }
@@ -534,7 +534,7 @@ void WPS8Text::setListener(WPSContentListenerPtr &listen)
 int WPS8Text::numPages() const
 {
 	int numPage = 1;
-	m_input->seek(m_textPositions.begin(), RVNG_SEEK_SET);
+	m_input->seek(m_textPositions.begin(), librevenge::RVNG_SEEK_SET);
 	while (!m_input->isEnd() && m_input->tell() < m_textPositions.end())
 	{
 		if (libwps::readU16(m_input.get()) == 0x0C) numPage++;
@@ -572,9 +572,9 @@ WPSEntry WPS8Text::getHeaderEntry() const
 	// check if the zone is empty ie. only a eol
 	RVNGInputStreamPtr input = const_cast<WPS8Text *>(this)->getInput();
 	long actPos = input->tell();
-	input->seek(res.begin(), RVNG_SEEK_SET);
+	input->seek(res.begin(), librevenge::RVNG_SEEK_SET);
 	bool empty = libwps::read16(input) == 0xd;
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	if (empty)
 	{
 		m_state->setParsed(res, true);
@@ -590,9 +590,9 @@ WPSEntry WPS8Text::getFooterEntry() const
 	// check if the zone is empty ie. only a eol
 	RVNGInputStreamPtr input = const_cast<WPS8Text *>(this)->getInput();
 	long actPos = input->tell();
-	input->seek(res.begin(), RVNG_SEEK_SET);
+	input->seek(res.begin(), librevenge::RVNG_SEEK_SET);
 	bool empty = libwps::read16(input) == 0xd;
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	if (empty)
 	{
 		m_state->setParsed(res, true);
@@ -650,7 +650,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 			m_listener->closeSection();
 		int w = int(72.0*mainParser().pageWidth()/numColumns);
 		std::vector<int> colSize(size_t(numColumns), w);
-		m_listener->openSection(colSize, RVNG_POINT);
+		m_listener->openSection(colSize, librevenge::RVNG_POINT);
 	}
 	int lastCId=-1, lastPId=-1; /* -2: nothing, -1: send default, >= 0: readId */
 	std::vector<DataFOD>::iterator plcIt =	m_FODList.begin();
@@ -664,7 +664,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 	}
 	int actualPage = 1;
 	WPS8TextStyle::FontData special;
-	input->seek(entry.begin(), RVNG_SEEK_SET);
+	input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 	while (!input->isEnd())
 	{
 		long pos = input->tell();
@@ -1089,7 +1089,7 @@ long WPS8Text::readUTF16LE(RVNGInputStreamPtr input, long endPos, uint16_t first
 }
 
 bool WPS8Text::readString(RVNGInputStreamPtr input, long page_size,
-                          RVNGString &res)
+                          librevenge::RVNGString &res)
 {
 	res = "";
 	long page_offset = input->tell();
@@ -1129,7 +1129,7 @@ bool WPS8Text::readNotes(WPSEntry const &entry)
 	long debPos = entry.begin();
 	long length = entry.length();
 	long endPos = entry.end();
-	input->seek(debPos, RVNG_SEEK_SET);
+	input->seek(debPos, librevenge::RVNG_SEEK_SET);
 
 	long zone = (long) libwps::readU32(input);
 	int numTZones = int(m_state->m_textZones.size());
@@ -1444,7 +1444,7 @@ bool WPS8Text::bmktEndDataParser(long endPage, std::vector<long> const &textPtrs
 		if (id < 0 || (id > numBmkt && id > 100))
 		{
 			WPS_DEBUG_MSG(("WPS8Text::bmktEndDataParser: odd index =%d\n", id));
-			input->seek(pos, RVNG_SEEK_SET);
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			return false;
 		}
 		bmk.m_id = id;
@@ -1457,7 +1457,7 @@ bool WPS8Text::bmktEndDataParser(long endPage, std::vector<long> const &textPtrs
 	if (sz1 < 4*numBmkt || pos+1+sz1 > endPage)
 	{
 		WPS_DEBUG_MSG(("WPS8Text::bmktEndDataParser: pb with sz1 =%d\n", sz1));
-		input->seek(pos, RVNG_SEEK_SET);
+		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		return false;
 	}
 	f << ", Size(StrZone) = " << sz1;
@@ -1478,7 +1478,7 @@ bool WPS8Text::bmktEndDataParser(long endPage, std::vector<long> const &textPtrs
 	// probably int, dim(*914400), int, short, short
 	// ------ end of problematic part -------------
 
-	input->seek(endPage-sz1, RVNG_SEEK_SET);
+	input->seek(endPage-sz1, librevenge::RVNG_SEEK_SET);
 
 	pos = input->tell();
 	ascii().addPos(pos);
@@ -1511,8 +1511,8 @@ bool WPS8Text::bmktEndDataParser(long endPage, std::vector<long> const &textPtrs
 		if (pos == endPage) f << "_"; // can this happens ?
 		else
 		{
-			input->seek(pos, RVNG_SEEK_SET);
-			RVNGString val;
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
+			librevenge::RVNGString val;
 			int sz = (int) libwps::readU16(input);
 			if (pos + 2+ 2*sz > endPage || !readString(input, 2*sz, val))
 			{
@@ -1525,7 +1525,7 @@ bool WPS8Text::bmktEndDataParser(long endPage, std::vector<long> const &textPtrs
 		ascii().addPos(strPos[i]);
 		ascii().addNote(f.str().c_str());
 	}
-	input->seek(endPage, RVNG_SEEK_SET);
+	input->seek(endPage, librevenge::RVNG_SEEK_SET);
 
 	// ok, we store the bookmark and we create the plc and the data fod ...
 	std::vector<DataFOD> fods;
@@ -1658,7 +1658,7 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 		int sz = (int) libwps::read16(input);
 		if (sz < 2 || pos+sz > endPage)
 		{
-			input->seek(pos, RVNG_SEEK_SET);
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			return false;
 		}
 
@@ -1666,7 +1666,7 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 		std::string error;
 		if (!readBlockData(input, pos+sz, data, error) && data.m_recursData.size() == 0)
 		{
-			input->seek(pos, RVNG_SEEK_SET);
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			return false;
 		}
 
@@ -1737,14 +1737,14 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 		int sz = (int) libwps::read16(input);
 		if (sz < 2 || pos+sz > endPage)
 		{
-			input->seek(pos, RVNG_SEEK_SET);
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			return false;
 		}
 
 		std::string error;
 		if (!readBlockData(input, pos+sz, data, error)  && data.m_recursData.size() == 0)
 		{
-			input->seek(pos, RVNG_SEEK_SET);
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			return false;
 		}
 
@@ -1808,7 +1808,7 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 
 		if (pos+20+4*N > endPage)
 		{
-			input->seek(pos, RVNG_SEEK_SET);
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			return false;
 		}
 
@@ -1817,13 +1817,13 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 			long val = (long) libwps::read32(input);
 			if (val < 4*N)
 			{
-				input->seek(pos, RVNG_SEEK_SET);
+				input->seek(pos, librevenge::RVNG_SEEK_SET);
 				return false;
 			}
 			val += pos+20;
 			if (val > endPage)
 			{
-				input->seek(pos, RVNG_SEEK_SET);
+				input->seek(pos, librevenge::RVNG_SEEK_SET);
 				return false;
 			}
 			sPtrs.push_back(val);
@@ -1839,10 +1839,10 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 	for (size_t i = 0; i < numStrings; i++)
 	{
 		pos = sPtrs[i];
-		input->seek(pos, RVNG_SEEK_SET);
+		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		int sz = (int) libwps::read16(input);
 		if (sz < 0 || pos+2*sz+2 > endPage) return false;
-		RVNGString str;
+		librevenge::RVNGString str;
 		readString(input, 2*sz, str);
 
 		bool find = false;
@@ -1984,7 +1984,7 @@ bool WPS8Text::readPLC
 		return false;
 	}
 
-	input->seek(page_offset, RVNG_SEEK_SET);
+	input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 	int nPLC = (int) libwps::readU32(input);
 	int dataSz = (int) libwps::read32(input);
 	libwps::DebugStream f;
@@ -2187,7 +2187,7 @@ bool WPS8Text::readPLC
 
 	if (ok && endParser)
 	{
-		input->seek(pos, RVNG_SEEK_SET);
+		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		ok = (this->*endParser) (endPage, textPtrs);
 		pos = input->tell();
 		if (pos == endPage) return ok;

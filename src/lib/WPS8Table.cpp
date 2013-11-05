@@ -63,7 +63,7 @@ struct Cell : public WPSCell
 	virtual bool send(WPSContentListenerPtr &listener)
 	{
 		if (!listener) return true;
-		RVNGPropertyList propList;
+		librevenge::RVNGPropertyList propList;
 		listener->openTableCell(*this, propList);
 		sendContent(listener);
 		listener->closeTableCell();
@@ -336,7 +336,7 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 	}
 
 	entry.setParsed();
-	input->seek(page_offset, RVNG_SEEK_SET);
+	input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 
 	libwps::DebugStream f;
 	int mZone = (int) libwps::read32(input);
@@ -659,7 +659,7 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 				f << ", unk=(" << f2.str() << ")";
 
 			if (!error.empty()) f << ",###err=" << error;
-			input->seek(lastPosOk+sz, RVNG_SEEK_SET);
+			input->seek(lastPosOk+sz, librevenge::RVNG_SEEK_SET);
 
 			ascii().addPos(lastPosOk);
 			ascii().addNote(f.str().c_str());

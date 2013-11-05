@@ -46,16 +46,16 @@ public:
 	{
 	}
 	//! returns the class name corresponding to a propertylist
-	std::string getClass(RVNGPropertyList const &pList, RVNGPropertyListVector const &tabsStop);
+	std::string getClass(librevenge::RVNGPropertyList const &pList, librevenge::RVNGPropertyListVector const &tabsStop);
 	//! send the data to the stream
 	void send(std::ostream &out);
 protected:
 	//! convert a property list in a html content string
-	std::string getContent(RVNGPropertyList const &pList, bool isList) const;
+	std::string getContent(librevenge::RVNGPropertyList const &pList, bool isList) const;
 	//! a map content -> name
 	std::map<std::string, std::string> m_contentNameMap;
 	//! add data corresponding to the border
-	void parseBorders(RVNGPropertyList const &pList, std::ostream &out) const;
+	void parseBorders(librevenge::RVNGPropertyList const &pList, std::ostream &out) const;
 private:
 	ParagraphStyleManager(ParagraphStyleManager const &orig);
 	ParagraphStyleManager operator=(ParagraphStyleManager const &orig);
@@ -76,7 +76,7 @@ public:
 		{
 		}
 		//! set the property correspond to a level
-		void setLevel(int lvl, RVNGPropertyList const &property, bool ordered);
+		void setLevel(int lvl, librevenge::RVNGPropertyList const &property, bool ordered);
 		//! open a new level
 		void openLevel() const
 		{
@@ -111,13 +111,13 @@ public:
 	{
 	}
 	//! add a level to the corresponding list
-	void defineLevel(RVNGPropertyList const &property, bool ordered);
+	void defineLevel(librevenge::RVNGPropertyList const &property, bool ordered);
 	//! returns the class name corresponding to a propertylist
-	std::string openLevel(RVNGPropertyList const &pList, bool ordered);
+	std::string openLevel(librevenge::RVNGPropertyList const &pList, bool ordered);
 	//! close a level
 	void closeLevel();
 	//! returns the classname corresponding to a list element
-	std::string getClass(RVNGPropertyList const &pList, RVNGPropertyListVector const &tabsStop);
+	std::string getClass(librevenge::RVNGPropertyList const &pList, librevenge::RVNGPropertyListVector const &tabsStop);
 
 	//! send the data to the stream
 	void send(std::ostream &out);
@@ -146,16 +146,16 @@ public:
 	{
 	}
 	//! returns the class name corresponding to a propertylist
-	std::string getClass(RVNGPropertyList const &pList);
+	std::string getClass(librevenge::RVNGPropertyList const &pList);
 	//! send the data to the stream
 	void send(std::ostream &out);
 protected:
 	//! convert a property list in a html content string
-	std::string getContent(RVNGPropertyList const &pList) const;
+	std::string getContent(librevenge::RVNGPropertyList const &pList) const;
 	//! add data corresponding to a text position in out
 	void parseTextPosition(char const *value, std::ostream &out) const;
 	//! add data corresponding to the line decoration
-	void parseDecorations(RVNGPropertyList const &pList, std::ostream &out) const;
+	void parseDecorations(librevenge::RVNGPropertyList const &pList, std::ostream &out) const;
 	//! a map content -> name
 	std::map<std::string, std::string> m_contentNameMap;
 private:

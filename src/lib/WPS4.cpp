@@ -233,10 +233,10 @@ bool WPS4Parser::checkInFile(long pos)
 		return true;
 	RVNGInputStreamPtr input = getInput();
 	long actPos = input->tell();
-	input->seek(pos, RVNG_SEEK_SET);
+	input->seek(pos, librevenge::RVNG_SEEK_SET);
 	bool ok = input->tell() == pos;
 	if (ok) m_state->m_eof = pos;
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	return ok;
 }
 
@@ -248,7 +248,7 @@ void WPS4Parser::setListener(shared_ptr<WPSContentListener> listener)
 	m_textParser->setListener(m_listener);
 }
 
-shared_ptr<WPSContentListener> WPS4Parser::createListener(RVNGTextInterface *interface)
+shared_ptr<WPSContentListener> WPS4Parser::createListener(librevenge::RVNGTextInterface *interface)
 {
 	std::vector<WPSPageSpan> pageList;
 	WPSPageSpan page1(m_state->m_pageSpan), ps(m_state->m_pageSpan);
@@ -309,7 +309,7 @@ int WPS4Parser::readObject(RVNGInputStreamPtr input, WPSEntry const &entry)
 {
 	long actPos = input->tell();
 	int id=m_graphParser->readObject(input, entry);
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	return id;
 }
 
@@ -329,7 +329,7 @@ void WPS4Parser::send(WPSEntry const &entry, libwps::SubDocumentType)
 	RVNGInputStreamPtr input = getInput();
 	long actPos = input->tell();
 	m_textParser->readText(entry);
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 
 void WPS4Parser::createDocument(WPSEntry const &entry, libwps::SubDocumentType type)
@@ -345,7 +345,7 @@ void WPS4Parser::createDocument(WPSEntry const &entry, libwps::SubDocumentType t
 	}
 }
 
-void WPS4Parser::createNote(WPSEntry const &entry, RVNGString const &label)
+void WPS4Parser::createNote(WPSEntry const &entry, librevenge::RVNGString const &label)
 {
 	if (m_listener.get() == 0L) return;
 	WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
@@ -353,7 +353,7 @@ void WPS4Parser::createNote(WPSEntry const &entry, RVNGString const &label)
 	m_listener->insertLabelNote(WPSContentListener::FOOTNOTE, label, subdoc);
 }
 
-void WPS4Parser::createTextBox(WPSEntry const &entry, WPSPosition const &pos, RVNGPropertyList &extras)
+void WPS4Parser::createTextBox(WPSEntry const &entry, WPSPosition const &pos, librevenge::RVNGPropertyList &extras)
 {
 	if (m_listener.get() == 0L) return;
 	WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
@@ -362,7 +362,7 @@ void WPS4Parser::createTextBox(WPSEntry const &entry, WPSPosition const &pos, RV
 }
 
 // main function to parse the document
-void WPS4Parser::parse(RVNGTextInterface *documentInterface)
+void WPS4Parser::parse(librevenge::RVNGTextInterface *documentInterface)
 {
 	RVNGInputStreamPtr input=getInput();
 	if (!input)
@@ -437,7 +437,7 @@ bool WPS4Parser::createStructures()
 
 bool WPS4Parser::createOLEStructures()
 {
-	RVNGInputStreamPtr input=getInput();
+	RVNGInputStreamPtr input=getFileInput();
 	if (!input) return false;
 
 	if (!input->isStructured()) return true;
@@ -461,14 +461,14 @@ bool WPS4Parser::createOLEStructures()
 		WPS_DEBUG_MSG(("WPS4Parser::createOLEStructures:: Find unparsed ole: %s\n", name.c_str()));
 
 #ifdef DEBUG_WITH_FILES
-		RVNGInputStreamPtr ole = storage->getSubStream(name.c_str());
+		RVNGInputStreamPtr ole(input->getSubStreamByName(name.c_str()));
 		if (!ole.get())
 		{
 			WPS_DEBUG_MSG(("WPS4Parser::createOLEStructures: error: can find OLE part: \"%s\"\n", name.c_str()));
 			continue;
 		}
 
-		RVNGBinaryData data;
+		librevenge::RVNGBinaryData data;
 		if (libwps::readDataToEnd(ole,data))
 			libwps::Debug::dumpFile(data, name.c_str());
 #endif
@@ -522,13 +522,13 @@ bool WPS4Parser::findZones()
 {
 	RVNGInputStreamPtr input = getInput();
 
-	if (input->seek(0x100, RVNG_SEEK_SET) != 0 || input->tell() != 0x100)
+	if (input->seek(0x100, librevenge::RVNG_SEEK_SET) != 0 || input->tell() != 0x100)
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::findZones: error: incomplete header\n"));
 		throw libwps::ParseException();
 	}
 
-	input->seek(0x0, RVNG_SEEK_SET);
+	input->seek(0x0, librevenge::RVNG_SEEK_SET);
 	libwps::DebugStream f, f2;
 	f << "Entries(ZZHeader):";
 	int vers = libwps::read8(input);
@@ -609,7 +609,7 @@ bool WPS4Parser::findZones()
 	if (!m_textParser->readEntries()) return false;
 	// 0x64 -> 0x80
 	long actPos = 0x64;
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	readDocDim();
 
 	if (version() <= 1)
@@ -623,11 +623,11 @@ bool WPS4Parser::findZones()
 	}
 
 	actPos = 0x80;
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	parseEntry("EOBJ");
 
 	actPos = 0x86;
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	f.str("");
 	f << std::hex;
 	// {-1,-1}|{0,0}, 0,0, 0x[08][03][235=2col 6=3col 8=4col], 0|425|720
@@ -679,7 +679,7 @@ bool WPS4Parser::findZones()
 	parseEntry("End1");
 
 	actPos = 0x98;
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	f.str("");
 	f << "ZZHeader-II:";
 	bool empty = true;
@@ -741,7 +741,7 @@ bool WPS4Parser::findZones()
 	parseEntry("DocWInfo");
 
 	actPos = 0xb0;
-	input->seek(actPos, RVNG_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	f.str("");
 	f << "ZZHeader-III:";
 	empty = true;
@@ -775,7 +775,7 @@ bool WPS4Parser::readDocDim()
 {
 	WPSPageSpan page = WPSPageSpan();
 	RVNGInputStreamPtr &input = getInput();
-	input->seek(0x64, RVNG_SEEK_SET);
+	input->seek(0x64, librevenge::RVNG_SEEK_SET);
 	long actPos = input->tell();
 
 	libwps::DebugStream f;
@@ -843,7 +843,7 @@ bool WPS4Parser::readPrnt(WPSEntry const &entry)
 	if (!entry.valid()) return false;
 
 	RVNGInputStreamPtr &input = getInput();
-	input->seek(entry.begin(), RVNG_SEEK_SET);
+	input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 	libwps::DebugStream f;
 
 	long length = entry.length();
@@ -922,7 +922,7 @@ bool WPS4Parser::readDocWindowsInfo(WPSEntry const &entry)
 		return false;
 	}
 
-	input->seek(entry.begin(), RVNG_SEEK_SET);
+	input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 	libwps::DebugStream f;
 
 	std::string str("");
@@ -950,7 +950,7 @@ bool WPS4Parser::readDocWindowsInfo(WPSEntry const &entry)
 	f.str("");
 
 
-	input->seek(entry.begin()+0x132, RVNG_SEEK_SET);
+	input->seek(entry.begin()+0x132, librevenge::RVNG_SEEK_SET);
 	f << "ZZDocWInfo(II):" << std::hex;
 	// f0=f1=-1 in one file, f0=f1=0 in another file
 	// f0=e6|1b0|2d0 ( but 2d0 in 2/3 of the files), 100<f1<438

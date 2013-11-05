@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	RVNGFileStream input(argv[1]);
+	librevenge::RVNGFileStream input(argv[1]);
 
 	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input);
 	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)

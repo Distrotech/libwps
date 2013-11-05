@@ -32,8 +32,8 @@
 #include <librevenge/librevenge.h>
 #include "libwps_internal.h"
 
-class RVNGPropertyList;
-class RVNGTextInterface;
+class librevenge::RVNGPropertyList;
+class librevenge::RVNGTextInterface;
 
 /** a small structure used to store the informations about a list */
 class WPSList
@@ -58,7 +58,7 @@ public:
 			return m_type !=libwps::NONE && m_type != libwps::BULLET;
 		}
 		/** add the information of this level in the propList */
-		void addTo(RVNGPropertyList &propList, int startVal) const;
+		void addTo(librevenge::RVNGPropertyList &propList, int startVal) const;
 
 		/** returns true, if addTo has been called */
 		bool isSendToInterface() const
@@ -92,12 +92,12 @@ public:
 		int m_startValue;
 		/** the type of the level */
 		libwps::NumberingType m_type;
-		RVNGString m_prefix /** string which preceedes the number if we have an ordered level*/,
-		          m_suffix/** string which follows the number if we have an ordered level*/,
-		          m_bullet /** the bullet if we have an bullet level */;
+		librevenge::RVNGString m_prefix /** string which preceedes the number if we have an ordered level*/,
+		           m_suffix/** string which follows the number if we have an ordered level*/,
+		           m_bullet /** the bullet if we have an bullet level */;
 
 	protected:
-		/** true if it is already send to RVNGTextInterface */
+		/** true if it is already send to librevenge::RVNGTextInterface */
 		mutable bool m_sendToInterface;
 	};
 
@@ -145,7 +145,7 @@ public:
 	bool mustSendLevel(int level) const;
 
 	/** send the list information to the document interface */
-	void sendTo(RVNGTextInterface &docInterface, int level) const;
+	void sendTo(librevenge::RVNGTextInterface &docInterface, int level) const;
 
 protected:
 	std::vector<Level> m_levels;

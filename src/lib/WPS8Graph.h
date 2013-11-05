@@ -33,7 +33,7 @@
 
 #include "WPSDebug.h"
 
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 class WPS8Parser;
 
@@ -105,7 +105,7 @@ protected:
 	void sendBorder(int borderId);
 
 	//! adds a list of objects with given ids in the ole lists
-	void storeObjects(std::vector<RVNGBinaryData> const &objects,
+	void storeObjects(std::vector<librevenge::RVNGBinaryData> const &objects,
 	                  std::vector<int> const &ids,
 	                  std::vector<WPSPosition> const &positions);
 
@@ -131,7 +131,7 @@ protected:
 	/** \brief reads METAFILE/CODE
 	 *
 	 * \warning we must probably also recognize the enhanced metafile format: EMF */
-	bool readMetaFile(RVNGInputStreamPtr input, long endPos, RVNGBinaryData &pict);
+	bool readMetaFile(RVNGInputStreamPtr input, long endPos, librevenge::RVNGBinaryData &pict);
 
 	//! returns the debug file
 	libwps::DebugFile &ascii()

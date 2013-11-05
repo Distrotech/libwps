@@ -95,14 +95,14 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	if (smallFDP)
 	{
 		endPage--;
-		input->seek(endPage, RVNG_SEEK_SET);
+		input->seek(endPage, librevenge::RVNG_SEEK_SET);
 	}
 	else
-		input->seek(page_offset, RVNG_SEEK_SET);
+		input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 	uint16_t cfod = deplSize == 1 ? (uint16_t) libwps::readU8(m_input) : libwps::readU16(m_input);
 
 	f << "FDP: N="<<(int) cfod;
-	if (smallFDP) input->seek(page_offset, RVNG_SEEK_SET);
+	if (smallFDP) input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 	else f << ", unk=" << libwps::read16(m_input);
 
 	if (headerSize+(4+deplSize)*static_cast<long>(cfod) > length)
@@ -198,7 +198,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 			continue;
 		}
 
-		input->seek(pos, RVNG_SEEK_SET);
+		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		int szProp = smallSzInProp ? libwps::readU8(m_input) : libwps::readU16(m_input);
 		if (smallSzInProp) szProp++;
 		if (szProp == 0)
@@ -240,7 +240,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	ascii().addNote(f.str().c_str());
 
 	/* go to end of page */
-	input->seek(endPage, RVNG_SEEK_SET);
+	input->seek(endPage, librevenge::RVNG_SEEK_SET);
 
 	return m_textPositions.end() > lastReadPos;
 }

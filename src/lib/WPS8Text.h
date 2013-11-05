@@ -119,7 +119,7 @@ protected:
 	//
 	//! reads a string
 	bool readString(RVNGInputStreamPtr input, long page_size,
-	                RVNGString &res);
+	                librevenge::RVNGString &res);
 	//! reads a utf16 character, \return 0xfffd if an error
 	long readUTF16LE(RVNGInputStreamPtr input, long endPos, uint16_t firstC);
 

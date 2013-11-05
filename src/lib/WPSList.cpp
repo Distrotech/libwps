@@ -30,7 +30,7 @@
 #include <iostream>
 #include <cstring>
 
-void WPSList::Level::addTo(RVNGPropertyList &propList, int startVal) const
+void WPSList::Level::addTo(librevenge::RVNGPropertyList &propList, int startVal) const
 {
 	propList.insert("text:min-label-width", m_labelWidth);
 	propList.insert("text:space-before", m_labelIndent);
@@ -154,7 +154,7 @@ bool WPSList::mustSendLevel(int level) const
 }
 
 
-void WPSList::sendTo(RVNGTextInterface &docInterface, int level) const
+void WPSList::sendTo(librevenge::RVNGTextInterface &docInterface, int level) const
 {
 	if (level <= 0 || level > int(m_levels.size()) ||
 	        m_levels[size_t(level-1)].isDefault())
@@ -172,7 +172,7 @@ void WPSList::sendTo(RVNGTextInterface &docInterface, int level) const
 
 	if (m_levels[size_t(level-1)].isSendToInterface()) return;
 
-	RVNGPropertyList propList;
+	librevenge::RVNGPropertyList propList;
 	propList.insert("libwpd:id", m_id);
 	propList.insert("libwpd:level", level);
 	m_levels[size_t(level-1)].addTo(propList,m_actualIndices[size_t(level-1)]);

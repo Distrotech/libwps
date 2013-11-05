@@ -410,7 +410,7 @@ HtmlDocumentGenerator::~HtmlDocumentGenerator()
 {
 }
 
-void HtmlDocumentGenerator::setDocumentMetaData(const RVNGPropertyList &propList)
+void HtmlDocumentGenerator::setDocumentMetaData(const librevenge::RVNGPropertyList &propList)
 {
 	m_state->push(HtmlDocumentGeneratorInternal::Z_MetaData);
 	std::ostream &meta=m_state->output();
@@ -451,7 +451,7 @@ void HtmlDocumentGenerator::endDocument()
 	*m_output << "</html>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openPageSpan(const RVNGPropertyList & /* propList */)
+void HtmlDocumentGenerator::openPageSpan(const librevenge::RVNGPropertyList & /* propList */)
 {
 	m_state->m_actualPage++;
 }
@@ -460,7 +460,7 @@ void HtmlDocumentGenerator::closePageSpan()
 {
 }
 
-void HtmlDocumentGenerator::openHeader(const RVNGPropertyList & /* propList */)
+void HtmlDocumentGenerator::openHeader(const librevenge::RVNGPropertyList & /* propList */)
 {
 	m_state->m_ignore = true;
 }
@@ -471,7 +471,7 @@ void HtmlDocumentGenerator::closeHeader()
 }
 
 
-void HtmlDocumentGenerator::openFooter(const RVNGPropertyList & /* propList */)
+void HtmlDocumentGenerator::openFooter(const librevenge::RVNGPropertyList & /* propList */)
 {
 	m_state->m_ignore = true;
 }
@@ -481,7 +481,7 @@ void HtmlDocumentGenerator::closeFooter()
 	m_state->m_ignore = false;
 }
 
-void HtmlDocumentGenerator::openParagraph(const RVNGPropertyList &propList, const RVNGPropertyListVector &tabStops)
+void HtmlDocumentGenerator::openParagraph(const librevenge::RVNGPropertyList &propList, const librevenge::RVNGPropertyListVector &tabStops)
 {
 	if (m_state->m_ignore)
 		return;
@@ -497,7 +497,7 @@ void HtmlDocumentGenerator::closeParagraph()
 	m_state->output() << "</p>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openSpan(const RVNGPropertyList &propList)
+void HtmlDocumentGenerator::openSpan(const librevenge::RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
@@ -528,11 +528,11 @@ void HtmlDocumentGenerator::insertLineBreak()
 	m_state->output() << "<br>" << std::endl;
 }
 
-void HtmlDocumentGenerator::insertText(const RVNGString &text)
+void HtmlDocumentGenerator::insertText(const librevenge::RVNGString &text)
 {
 	if (m_state->m_ignore)
 		return;
-	RVNGString tempUTF8(text, true);
+	librevenge::RVNGString tempUTF8(text, true);
 	m_state->output() << tempUTF8.cstr();
 }
 
@@ -543,21 +543,21 @@ void HtmlDocumentGenerator::insertSpace()
 	m_state->output() << "&nbsp;";
 }
 
-void HtmlDocumentGenerator::defineOrderedListLevel(const RVNGPropertyList &propList)
+void HtmlDocumentGenerator::defineOrderedListLevel(const librevenge::RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
 	m_state->listManager().defineLevel(propList, true);
 }
 
-void HtmlDocumentGenerator::defineUnorderedListLevel(const RVNGPropertyList &propList)
+void HtmlDocumentGenerator::defineUnorderedListLevel(const librevenge::RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
 	m_state->listManager().defineLevel(propList, false);
 }
 
-void HtmlDocumentGenerator::openOrderedListLevel(const RVNGPropertyList &propList)
+void HtmlDocumentGenerator::openOrderedListLevel(const librevenge::RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
@@ -573,7 +573,7 @@ void HtmlDocumentGenerator::closeOrderedListLevel()
 	m_state->output() << "</ol>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openUnorderedListLevel(const RVNGPropertyList &propList)
+void HtmlDocumentGenerator::openUnorderedListLevel(const librevenge::RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
@@ -590,7 +590,7 @@ void HtmlDocumentGenerator::closeUnorderedListLevel()
 }
 
 
-void HtmlDocumentGenerator::openListElement(const RVNGPropertyList &propList, const RVNGPropertyListVector &tabStops)
+void HtmlDocumentGenerator::openListElement(const librevenge::RVNGPropertyList &propList, const librevenge::RVNGPropertyListVector &tabStops)
 {
 	if (m_state->m_ignore)
 		return;
@@ -604,7 +604,7 @@ void HtmlDocumentGenerator::closeListElement()
 	m_state->output() << "</li>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openFootnote(const RVNGPropertyList &)
+void HtmlDocumentGenerator::openFootnote(const librevenge::RVNGPropertyList &)
 {
 	if (m_state->m_ignore)
 		return;
@@ -620,7 +620,7 @@ void HtmlDocumentGenerator::closeFootnote()
 	m_state->pop();
 }
 
-void HtmlDocumentGenerator::openEndnote(const RVNGPropertyList &)
+void HtmlDocumentGenerator::openEndnote(const librevenge::RVNGPropertyList &)
 {
 	if (m_state->m_ignore)
 		return;
@@ -636,7 +636,7 @@ void HtmlDocumentGenerator::closeEndnote()
 	m_state->pop();
 }
 
-void HtmlDocumentGenerator::openComment(const RVNGPropertyList & /*propList*/)
+void HtmlDocumentGenerator::openComment(const librevenge::RVNGPropertyList & /*propList*/)
 {
 	if (m_state->m_ignore)
 		return;
@@ -652,7 +652,7 @@ void HtmlDocumentGenerator::closeComment()
 	m_state->pop();
 }
 
-void HtmlDocumentGenerator::openTextBox(const RVNGPropertyList & /*propList*/)
+void HtmlDocumentGenerator::openTextBox(const librevenge::RVNGPropertyList & /*propList*/)
 {
 	if (m_state->m_ignore)
 		return;
@@ -668,7 +668,7 @@ void HtmlDocumentGenerator::closeTextBox()
 	m_state->pop();
 }
 
-void HtmlDocumentGenerator::openTable(const RVNGPropertyList & /* propList */, const RVNGPropertyListVector &columns)
+void HtmlDocumentGenerator::openTable(const librevenge::RVNGPropertyList & /* propList */, const librevenge::RVNGPropertyListVector &columns)
 {
 	if (m_state->m_ignore)
 		return;
@@ -677,7 +677,7 @@ void HtmlDocumentGenerator::openTable(const RVNGPropertyList & /* propList */, c
 	m_state->output() << "<tbody>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openTableRow(const RVNGPropertyList &propList)
+void HtmlDocumentGenerator::openTableRow(const librevenge::RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;
@@ -691,7 +691,7 @@ void HtmlDocumentGenerator::closeTableRow()
 	m_state->output() << "</tr>" << std::endl;
 }
 
-void HtmlDocumentGenerator::openTableCell(const RVNGPropertyList &propList)
+void HtmlDocumentGenerator::openTableCell(const librevenge::RVNGPropertyList &propList)
 {
 	if (m_state->m_ignore)
 		return;

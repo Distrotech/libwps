@@ -29,7 +29,7 @@
 #include "libwps_internal.h"
 #include "WPSParser.h"
 
-class RVNGString;
+class librevenge::RVNGString;
 
 class WPSPageSpan;
 
@@ -60,7 +60,7 @@ public:
 	//! destructor
 	~WPS8Parser();
 	//! called by WPSDocument to parse the file
-	void parse(RVNGTextInterface *documentInterface);
+	void parse(librevenge::RVNGTextInterface *documentInterface);
 protected:
 	//! return true if the pos is in the file, update the file size if need
 	bool checkInFile(long pos);
@@ -70,7 +70,7 @@ protected:
 	//! set the listener
 	void setListener(shared_ptr<WPSContentListener> listener);
 	/** creates the main listener */
-	shared_ptr<WPSContentListener> createListener(RVNGTextInterface *interface);
+	shared_ptr<WPSContentListener> createListener(librevenge::RVNGTextInterface *interface);
 
 	/** tries to parse the main zone, ... */
 	bool createStructures();
@@ -90,7 +90,7 @@ protected:
 
 	//! creates a subdocument to send a textbox which correspond to the strsid text zone
 	void sendTextBox(WPSPosition const &pos, int strsid,
-	                 RVNGPropertyList frameExtras=RVNGPropertyList());
+	                 librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
 
 	//! sends text corresponding to the entry to the listener (via WPS8Text)
 	void send(WPSEntry const &entry);

@@ -148,7 +148,7 @@ void WPSPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFoote
 }
 
 void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
-                                    RVNGTextInterface *documentInterface)
+                                    librevenge::RVNGTextInterface *documentInterface)
 {
 	if (!listener || !documentInterface)
 	{
@@ -162,7 +162,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 		WPSPageSpanInternal::HeaderFooterPtr &hf = m_headerFooterList[i];
 		if (!hf) continue;
 
-		RVNGPropertyList propList;
+		librevenge::RVNGPropertyList propList;
 		switch (hf->getOccurence())
 		{
 		case WPSPageSpan::ODD:
@@ -207,7 +207,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 
 	if (!pageNumberInserted)
 	{
-		RVNGPropertyList propList;
+		librevenge::RVNGPropertyList propList;
 		propList.insert("libwpd:occurence", "all");
 		if (m_pageNumberPosition >= TopLeft &&
 		        m_pageNumberPosition <= TopInsideLeftAndRight)
@@ -226,7 +226,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 	}
 }
 
-void WPSPageSpan::getPageProperty(RVNGPropertyList &propList) const
+void WPSPageSpan::getPageProperty(librevenge::RVNGPropertyList &propList) const
 {
 	propList.insert("libwpd:num-pages", getPageSpan());
 
@@ -302,9 +302,9 @@ bool WPSPageSpan::operator==(shared_ptr<WPSPageSpan> const &page2) const
 	return true;
 }
 
-void WPSPageSpan::_insertPageNumberParagraph(RVNGTextInterface *documentInterface)
+void WPSPageSpan::_insertPageNumberParagraph(librevenge::RVNGTextInterface *documentInterface)
 {
-	RVNGPropertyList propList;
+	librevenge::RVNGPropertyList propList;
 	switch (m_pageNumberPosition)
 	{
 	case TopLeft:
@@ -331,11 +331,11 @@ void WPSPageSpan::_insertPageNumberParagraph(RVNGTextInterface *documentInterfac
 		break;
 	}
 
-	documentInterface->openParagraph(propList, RVNGPropertyListVector());
+	documentInterface->openParagraph(propList, librevenge::RVNGPropertyListVector());
 
 	propList.clear();
 	propList.insert("style:font-name", m_pageNumberingFontName.cstr());
-	propList.insert("fo:font-size", m_pageNumberingFontSize, RVNG_POINT);
+	propList.insert("fo:font-size", m_pageNumberingFontSize, librevenge::RVNG_POINT);
 	documentInterface->openSpan(propList);
 
 

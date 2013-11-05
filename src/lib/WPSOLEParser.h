@@ -64,7 +64,7 @@
 
 #include "WPSDebug.h"
 
-class RVNGBinaryData;
+class librevenge::RVNGBinaryData;
 
 namespace libwps
 {
@@ -110,18 +110,18 @@ public:
 		return m_objectsPosition;
 	}
 	//! returns the list of data which have been read
-	std::vector<RVNGBinaryData> const &getObjects() const
+	std::vector<librevenge::RVNGBinaryData> const &getObjects() const
 	{
 		return m_objects;
 	}
 
 	//! returns the picture corresponding to an id
-	bool getObject(int id, RVNGBinaryData &obj, WPSPosition &pos) const;
+	bool getObject(int id, librevenge::RVNGBinaryData &obj, WPSPosition &pos) const;
 
 	/*! \brief sets an object
 	 * just in case, the external parsing find another representation
 	 */
-	void setObject(int id, RVNGBinaryData const &obj, WPSPosition const &pos);
+	void setObject(int id, librevenge::RVNGBinaryData const &obj, WPSPosition const &pos);
 protected:
 
 	//!  the "Ole" small structure : unknown contain
@@ -140,20 +140,20 @@ protected:
 	/** the OlePres001 seems to contain standart picture file and size */
 	static bool isOlePres(RVNGInputStreamPtr &ip, std::string const &oleName);
 	/** extracts the picture of OlePres001 if it is possible */
-	static bool readOlePres(RVNGInputStreamPtr &ip, RVNGBinaryData &data,
+	static bool readOlePres(RVNGInputStreamPtr &ip, librevenge::RVNGBinaryData &data,
 	                        WPSPosition &pos, libwps::DebugFile &ascii);
 
 	//! theOle10Native : basic Windows© picture, with no size
 	static bool isOle10Native(RVNGInputStreamPtr &ip, std::string const &oleName);
 	/** extracts the picture if it is possible */
-	static bool readOle10Native(RVNGInputStreamPtr &ip, RVNGBinaryData &data,
+	static bool readOle10Native(RVNGInputStreamPtr &ip, librevenge::RVNGBinaryData &data,
 	                            libwps::DebugFile &ascii);
 
 	/** \brief the Contents : in general a picture : a PNG, an JPEG, a basic metafile,
 	 * I find also a Word art picture, which are not sucefully read
 	 */
 	static bool readContents(RVNGInputStreamPtr &input, std::string const &oleName,
-	                         RVNGBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
+	                         librevenge::RVNGBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
 
 	/** the CONTENTS : seems to store a header size, the header
 	 * and then a object in EMF (with the same header)...
@@ -161,7 +161,7 @@ protected:
 	 *  and many such Ole rejected
 	 */
 	static bool readCONTENTS(RVNGInputStreamPtr &input, std::string const &oleName,
-	                         RVNGBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
+	                         librevenge::RVNGBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
 
 
 	//! if filled, does not parse content with this name
@@ -170,7 +170,7 @@ protected:
 	std::vector<std::string> m_unknownOLEs;
 
 	//! list of pictures read
-	std::vector<RVNGBinaryData> m_objects;
+	std::vector<librevenge::RVNGBinaryData> m_objects;
 	//! list of picture size ( if known)
 	std::vector<WPSPosition> m_objectsPosition;
 	//! list of pictures id

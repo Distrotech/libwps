@@ -38,4 +38,11 @@ WPSParser::WPSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
 WPSParser::~WPSParser()
 {
 }
+
+RVNGInputStreamPtr WPSParser::getFileInput()
+{
+	if (!m_header) return RVNGInputStreamPtr();
+	return m_header->getFileInput();
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

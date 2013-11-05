@@ -34,10 +34,10 @@ bool FileData::readArrayBlock() const
 {
 	if (isRead()) return isArray();
 	long actPos = m_input->tell();
-	m_input->seek(m_beginOffset, RVNG_SEEK_SET);
+	m_input->seek(m_beginOffset, librevenge::RVNG_SEEK_SET);
 	std::string error;
 	bool ok = readBlockData(m_input, m_endOffset, const_cast<FileData &>(*this), error);
-	m_input->seek(actPos, RVNG_SEEK_SET);
+	m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	return ok;
 }
 
@@ -120,7 +120,7 @@ std::ostream &operator<< (std::ostream &o, FileData const &dt)
 		int numElt = int(size/sz);
 
 		long actPos = DT.m_input->tell();
-		DT.m_input->seek(dt.m_beginOffset, RVNG_SEEK_SET);
+		DT.m_input->seek(dt.m_beginOffset, librevenge::RVNG_SEEK_SET);
 		o << "###FAILS[sz="<< sz << "]=(" << std::hex;
 		long val = (long) libwps::read16(DT.m_input);
 		if (val) o << "unkn=" << val <<",";
@@ -143,7 +143,7 @@ std::ostream &operator<< (std::ostream &o, FileData const &dt)
 		}
 		o << ")" << std::dec;
 
-		DT.m_input->seek(actPos, RVNG_SEEK_SET);
+		DT.m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 
 		return o;
 	}
@@ -207,7 +207,7 @@ bool readBlockData(RVNGInputStreamPtr input, long endPos, FileData &dt, std::str
 	dt.m_input = input;
 
 	error = saveError;
-	input->seek(endPos, RVNG_SEEK_SET);
+	input->seek(endPos, librevenge::RVNG_SEEK_SET);
 
 	return false;
 }
@@ -246,7 +246,7 @@ bool readData(RVNGInputStreamPtr input, long endPos,
 		if (dt.m_type == 0x12)
 		{
 			dt.m_value = libwps::readU8(input);
-			input->seek(1, RVNG_SEEK_CUR);
+			input->seek(1, librevenge::RVNG_SEEK_CUR);
 		}
 		else
 			dt.m_value = libwps::readU16(input);
@@ -277,7 +277,7 @@ bool readData(RVNGInputStreamPtr input, long endPos,
 		dt.m_beginOffset = actPos+4;
 		dt.m_endOffset = newEndPos;
 		dt.m_input = input;
-		input->seek(newEndPos, RVNG_SEEK_SET);
+		input->seek(newEndPos, librevenge::RVNG_SEEK_SET);
 		return true;
 	}
 	default:

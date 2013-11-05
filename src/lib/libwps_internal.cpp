@@ -31,7 +31,7 @@
 
 namespace libwps
 {
-uint8_t readU8(RVNGInputStream *input)
+uint8_t readU8(librevenge::RVNGInputStream *input)
 {
 	unsigned long numBytesRead;
 	unsigned char const *p = input->read(sizeof(uint8_t), numBytesRead);
@@ -50,24 +50,24 @@ uint8_t readU8(RVNGInputStream *input)
 	return *(uint8_t const *)(p);
 }
 
-int8_t read8(RVNGInputStream *input)
+int8_t read8(librevenge::RVNGInputStream *input)
 {
 	return (int8_t) readU8(input);
 }
 
-uint16_t readU16(RVNGInputStream *input)
+uint16_t readU16(librevenge::RVNGInputStream *input)
 {
 	uint8_t p0 = readU8(input);
 	uint8_t p1 = readU8(input);
 	return (uint16_t) (p0|(p1<<8));
 }
 
-int16_t read16(RVNGInputStream *input)
+int16_t read16(librevenge::RVNGInputStream *input)
 {
 	return (int16_t) readU16(input);
 }
 
-uint32_t readU32(RVNGInputStream *input)
+uint32_t readU32(librevenge::RVNGInputStream *input)
 {
 	uint8_t p0 = readU8(input);
 	uint8_t p1 = readU8(input);
@@ -76,12 +76,12 @@ uint32_t readU32(RVNGInputStream *input)
 	return (uint32_t) ((p0<<0)|(p1<<8)|(p2<<16)|(p3<<24));
 }
 
-int32_t read32(RVNGInputStream *input)
+int32_t read32(librevenge::RVNGInputStream *input)
 {
 	return (int32_t) readU32(input);
 }
 
-bool readData(RVNGInputStreamPtr &input, unsigned long size, RVNGBinaryData &data)
+bool readData(RVNGInputStreamPtr &input, unsigned long size, librevenge::RVNGBinaryData &data)
 {
 	data.clear();
 	if (size == 0) return true;
@@ -95,14 +95,14 @@ bool readData(RVNGInputStreamPtr &input, unsigned long size, RVNGBinaryData &dat
 	return true;
 }
 
-bool readDataToEnd(RVNGInputStreamPtr &input, RVNGBinaryData &data)
+bool readDataToEnd(RVNGInputStreamPtr &input, librevenge::RVNGBinaryData &data)
 {
 	data.clear();
 	long pos=input->tell();
-	input->seek(0,RVNG_SEEK_END);
+	input->seek(0,librevenge::RVNG_SEEK_END);
 	long sz=input->tell()-pos;
 	if (sz < 0) return false;
-	input->seek(pos,RVNG_SEEK_SET);
+	input->seek(pos,librevenge::RVNG_SEEK_SET);
 	return readData(input, (unsigned long) sz, data) && input->isEnd();
 }
 

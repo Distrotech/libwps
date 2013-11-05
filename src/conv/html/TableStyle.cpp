@@ -28,12 +28,12 @@
 
 #include "TableStyle.h"
 
-void TableStyleManager::openTable(RVNGPropertyListVector const &colList)
+void TableStyleManager::openTable(librevenge::RVNGPropertyListVector const &colList)
 {
 	std::vector<double> colWidths;
 	for (unsigned long i = 0; i < colList.count(); i++)
 	{
-		RVNGPropertyList const &prop=colList[i];
+		librevenge::RVNGPropertyList const &prop=colList[i];
 		double tmp;
 		if (prop["style:column-width"] &&
 		        wps2html::getPointValue(*prop["style:column-width"], tmp))
@@ -85,7 +85,7 @@ bool TableStyleManager::getColumnsWidth(int col, int numSpanned, double &w) cons
 	return true;
 }
 
-std::string TableStyleManager::getCellClass(RVNGPropertyList const &pList)
+std::string TableStyleManager::getCellClass(librevenge::RVNGPropertyList const &pList)
 {
 	std::string content=getCellContent(pList);
 	std::map<std::string, std::string>::iterator it=m_cellContentNameMap.find(content);
@@ -97,7 +97,7 @@ std::string TableStyleManager::getCellClass(RVNGPropertyList const &pList)
 	return s.str();
 }
 
-std::string TableStyleManager::getRowClass(RVNGPropertyList const &pList)
+std::string TableStyleManager::getRowClass(librevenge::RVNGPropertyList const &pList)
 {
 	std::string content=getRowContent(pList);
 	std::map<std::string, std::string>::iterator it=m_rowContentNameMap.find(content);
@@ -125,7 +125,7 @@ void TableStyleManager::send(std::ostream &out)
 	}
 }
 
-std::string TableStyleManager::getCellContent(RVNGPropertyList const &pList) const
+std::string TableStyleManager::getCellContent(librevenge::RVNGPropertyList const &pList) const
 {
 	std::stringstream s;
 	s << "{\n";
@@ -148,7 +148,7 @@ std::string TableStyleManager::getCellContent(RVNGPropertyList const &pList) con
 	}
 	if (pList["fo:text-align"])
 	{
-		if (pList["fo:text-align"]->getStr() == RVNGString("end")) // stupid OOo convention..
+		if (pList["fo:text-align"]->getStr() == librevenge::RVNGString("end")) // stupid OOo convention..
 			s << "\ttext-align:right;\n";
 		else
 			s << "\ttext-align:" << pList["fo:text-align"]->getStr().cstr() << ";\n";
@@ -174,7 +174,7 @@ std::string TableStyleManager::getCellContent(RVNGPropertyList const &pList) con
 	return s.str();
 }
 
-std::string TableStyleManager::getRowContent(RVNGPropertyList const &pList) const
+std::string TableStyleManager::getRowContent(librevenge::RVNGPropertyList const &pList) const
 {
 	std::stringstream s;
 	s << "{\n";

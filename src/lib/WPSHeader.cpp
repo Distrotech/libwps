@@ -26,8 +26,8 @@
 
 #include "WPSHeader.h"
 
-WPSHeader::WPSHeader(RVNGInputStreamPtr &input, uint8_t majorVersion) :
-	m_input(input), m_majorVersion(majorVersion)
+WPSHeader::WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion) :
+	m_input(input), m_fileInput(fileInput), m_majorVersion(majorVersion)
 {
 }
 
@@ -50,12 +50,12 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 
 	if (!input->isStructured())
 	{
-		input->seek(0, RVNG_SEEK_SET);
+		input->seek(0, librevenge::RVNG_SEEK_SET);
 		if (libwps::readU8(input.get()) < 6
 		        && 0xFE == libwps::readU8(input.get()))
 		{
 			WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
-			return new WPSHeader(input, 2);
+			return new WPSHeader(input, input, 2);
 		}
 		return 0;
 	}
@@ -72,14 +72,14 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 			return 0;
 		}
 		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));
-		return new WPSHeader(document_mn0, 4);
+		return new WPSHeader(document_mn0, input, 4);
 	}
 
 	RVNGInputStreamPtr document_contents(input->getSubStreamByName("CONTENTS"));
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */
-		document_contents->seek(0, RVNG_SEEK_SET);
+		document_contents->seek(0, librevenge::RVNG_SEEK_SET);
 
 		char fileMagic[8];
 		for (int i=0; i<7 && !document_contents->isEnd(); i++)
@@ -90,13 +90,13 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
 		{
 			WPS_DEBUG_MSG(("Microsoft Works v8 (maybe 7) format detected\n"));
-			return new WPSHeader(document_contents, 8);
+			return new WPSHeader(document_contents, input, 8);
 		}
 
 		/* Works 2000 */
 		if (0 == strcmp(fileMagic, "CHNKINK"))
 		{
-			return new WPSHeader(document_contents, 5);
+			return new WPSHeader(document_contents, input, 5);
 		}
 	}
 

@@ -72,7 +72,7 @@ bool WPSFont::operator==(WPSFont const &ft) const
 	return true;
 }
 
-void WPSFont::addTo(RVNGPropertyList &propList) const
+void WPSFont::addTo(librevenge::RVNGPropertyList &propList) const
 {
 	double fontSizeChange = 1.0;
 	switch (m_attributes& 0x0000001f)
@@ -133,9 +133,9 @@ void WPSFont::addTo(RVNGPropertyList &propList) const
 	if (!m_name.empty())
 		propList.insert("style:font-name", m_name.c_str());
 	if (m_size>0)
-		propList.insert("fo:font-size", fontSizeChange*m_size, RVNG_POINT);
+		propList.insert("fo:font-size", fontSizeChange*m_size, librevenge::RVNG_POINT);
 
-	RVNGString color;
+	librevenge::RVNGString color;
 	color.sprintf("#%06x", m_color);
 	propList.insert("fo:color", color);
 

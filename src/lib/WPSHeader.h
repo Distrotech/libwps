@@ -29,7 +29,7 @@
 class WPSHeader
 {
 public:
-	WPSHeader(RVNGInputStreamPtr &input, uint8_t majorVersion);
+	WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion);
 	virtual ~WPSHeader();
 
 	static WPSHeader *constructHeader(RVNGInputStreamPtr &input);
@@ -37,6 +37,11 @@ public:
 	RVNGInputStreamPtr &getInput()
 	{
 		return m_input;
+	}
+
+	RVNGInputStreamPtr &getFileInput()
+	{
+		return m_fileInput;
 	}
 
 	uint8_t getMajorVersion() const
@@ -48,6 +53,7 @@ private:
 	WPSHeader(const WPSHeader &);
 	WPSHeader &operator=(const WPSHeader &);
 	RVNGInputStreamPtr m_input;
+	RVNGInputStreamPtr m_fileInput;
 	uint8_t m_majorVersion;
 };
 

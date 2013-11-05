@@ -30,7 +30,7 @@
 
 #include "WPSDebug.h"
 
-class RVNGTextInterface;
+class librevenge::RVNGTextInterface;
 
 class WPSTextParser;
 
@@ -41,7 +41,7 @@ public:
 	WPSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
 	virtual ~WPSParser();
 
-	virtual void parse(RVNGTextInterface *documentInterface) = 0;
+	virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
 
 	//! a map to retrieve a file entry by name
 	typedef std::multimap<std::string, WPSEntry> NameMultiMap;
@@ -51,6 +51,7 @@ protected:
 	{
 		return m_input;
 	}
+	RVNGInputStreamPtr getFileInput();
 	WPSHeaderPtr &getHeader()
 	{
 		return m_header;
