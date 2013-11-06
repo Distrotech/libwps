@@ -599,7 +599,7 @@ void WPSContentListener::setDocumentLanguage(int lcid)
 	if (lcid <= 0) return;
 	std::string lang = libwps_tools_win::Language::localeName(lcid);
 	if (!lang.length()) return;
-	m_ds->m_metaData.insert("libwpd:language", lang.c_str());
+	m_ds->m_metaData.insert("librevenge:language", lang.c_str());
 }
 
 void WPSContentListener::startDocument()
@@ -675,7 +675,7 @@ void WPSContentListener::_openPageSpan()
 
 	librevenge::RVNGPropertyList propList;
 	currentPage.getPageProperty(propList);
-	propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
+	propList.insert("librevenge:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
 
 	if (!m_ps->m_isPageSpanOpened)
 		m_documentInterface->openPageSpan(propList);
@@ -972,7 +972,7 @@ void WPSContentListener::_changeList()
 			m_ps->m_list->sendTo(*m_documentInterface, m_ps->m_paragraph.m_listLevelIndex);
 		}
 
-		propList2.insert("libwpd:id", m_ps->m_list->getId());
+		propList2.insert("librevenge:id", m_ps->m_list->getId());
 		m_ps->m_list->closeElement();
 	}
 
@@ -1142,12 +1142,12 @@ void WPSContentListener::insertLabelNote(const NoteType noteType, librevenge::RV
 			propList.insert("text:label", label);
 		if (noteType == FOOTNOTE)
 		{
-			propList.insert("libwpd:number", ++(m_ds->m_footNoteNumber));
+			propList.insert("librevenge:number", ++(m_ds->m_footNoteNumber));
 			m_documentInterface->openFootnote(propList);
 		}
 		else
 		{
-			propList.insert("libwpd:number", ++(m_ds->m_endNoteNumber));
+			propList.insert("librevenge:number", ++(m_ds->m_endNoteNumber));
 			m_documentInterface->openEndnote(propList);
 		}
 
@@ -1207,7 +1207,7 @@ void WPSContentListener::insertPicture
 	if (!_openFrame(pos, frameExtras)) return;
 
 	librevenge::RVNGPropertyList propList;
-	propList.insert("libwpd:mimetype", type.c_str());
+	propList.insert("librevenge:mimetype", type.c_str());
 	m_documentInterface->insertBinaryObject(propList, binaryData);
 
 	_closeFrame();
@@ -1282,8 +1282,8 @@ void WPSContentListener::_handleFrameParameters
 	propList.insert("svg:height", double(pos.size()[1]), unit);
 	if (pos.naturalSize().x() > 4*pointFactor && pos.naturalSize().y() > 4*pointFactor)
 	{
-		propList.insert("libwpd:naturalWidth", pos.naturalSize().x(), pos.unit());
-		propList.insert("libwpd:naturalHeight", pos.naturalSize().y(), pos.unit());
+		propList.insert("librevenge:naturalWidth", pos.naturalSize().x(), pos.unit());
+		propList.insert("librevenge:naturalHeight", pos.naturalSize().y(), pos.unit());
 	}
 
 	if ( pos.m_wrapping ==  WPSPosition::WDynamic)
@@ -1654,7 +1654,7 @@ void WPSContentListener::openTableRow(float h, librevenge::RVNGUnit unit, bool h
 		return;
 	}
 	librevenge::RVNGPropertyList propList;
-	propList.insert("libwpd:is-header-row", headerRow);
+	propList.insert("librevenge:is-header-row", headerRow);
 
 	if (h > 0)
 		propList.insert("style:row-height", h, unit);
@@ -1688,8 +1688,8 @@ void WPSContentListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
 		closeTableCell();
 	}
 	librevenge::RVNGPropertyList propList;
-	propList.insert("libwpd:column", pos[0]);
-	propList.insert("libwpd:row", pos[1]);
+	propList.insert("librevenge:column", pos[0]);
+	propList.insert("librevenge:row", pos[1]);
 	propList.insert("table:number-columns-spanned", span[0]);
 	propList.insert("table:number-rows-spanned", span[1]);
 	m_documentInterface->openTableCell(propList);
@@ -1710,8 +1710,8 @@ void WPSContentListener::openTableCell(WPSCell const &cell, librevenge::RVNGProp
 	}
 
 	librevenge::RVNGPropertyList propList(extras);
-	propList.insert("libwpd:column", cell.position()[0]);
-	propList.insert("libwpd:row", cell.position()[1]);
+	propList.insert("librevenge:column", cell.position()[0]);
+	propList.insert("librevenge:row", cell.position()[1]);
 
 	propList.insert("table:number-columns-spanned", cell.numSpannedCells()[0]);
 	propList.insert("table:number-rows-spanned", cell.numSpannedCells()[1]);

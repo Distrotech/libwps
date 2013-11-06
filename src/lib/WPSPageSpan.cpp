@@ -166,13 +166,13 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 		switch (hf->getOccurence())
 		{
 		case WPSPageSpan::ODD:
-			propList.insert("libwpd:occurence", "odd");
+			propList.insert("librevenge:occurence", "odd");
 			break;
 		case WPSPageSpan::EVEN:
-			propList.insert("libwpd:occurence", "even");
+			propList.insert("librevenge:occurence", "even");
 			break;
 		case WPSPageSpan::ALL:
-			propList.insert("libwpd:occurence", "all");
+			propList.insert("librevenge:occurence", "all");
 			break;
 		case WPSPageSpan::NEVER:
 		default:
@@ -208,7 +208,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 	if (!pageNumberInserted)
 	{
 		librevenge::RVNGPropertyList propList;
-		propList.insert("libwpd:occurence", "all");
+		propList.insert("librevenge:occurence", "all");
 		if (m_pageNumberPosition >= TopLeft &&
 		        m_pageNumberPosition <= TopInsideLeftAndRight)
 		{
@@ -228,7 +228,7 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 
 void WPSPageSpan::getPageProperty(librevenge::RVNGPropertyList &propList) const
 {
-	propList.insert("libwpd:num-pages", getPageSpan());
+	propList.insert("librevenge:num-pages", getPageSpan());
 
 	propList.insert("fo:page-height", getFormLength());
 	propList.insert("fo:page-width", getFormWidth());
