@@ -95,20 +95,12 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 # Begin Source File
 
-SOURCE=..\..\src\conv\text\TextDocumentGenerator.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\conv\text\wps2text.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl;inc;xsd"
-# Begin Source File
-
-SOURCE=..\..\src\conv\text\TextDocumentGenerator.h
-# End Source File
 # End Group
 # End Target
 # End Project

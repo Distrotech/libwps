@@ -21,9 +21,12 @@
 
 #include <stdio.h>
 #include <string.h>
+
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
 #include <librevenge-stream/librevenge-stream.h>
+
 #include <libwps/libwps.h>
-#include "TextDocumentGenerator.h"
 
 int main(int argc, char *argv[])
 {
@@ -42,7 +45,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	TextDocumentGenerator listenerImpl;
+	librevenge::RVNGTextTextGenerator listenerImpl;
 	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
 
 	if (error == WPS_FILE_ACCESS_ERROR)

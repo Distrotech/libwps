@@ -1,6 +1,8 @@
+if BUILD_TOOLS
+
 bin_PROGRAMS = wps2html
 
-AM_CXXFLAGS = -I$(top_srcdir)/inc $(REVENGE_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/inc $(REVENGE_CFLAGS) $(REVENGE_GENERATORS_CFLAGS) $(REVENGE_STREAM_CFLAGS) $(DEBUG_CXXFLAGS)
 
 wps2html_DEPENDENCIES = @WPS2HTML_WIN32_RESOURCE@
 
@@ -8,27 +10,19 @@ if STATIC_TOOLS
 
 wps2html_LDADD = \
 	../../lib/@WPS_OBJDIR@/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.a \
-	$(REVENGE_LIBS) @WPS2HTML_WIN32_RESOURCE@
+	$(REVENGE_LIBS) $(REVENGE_GENERATORS_LIBS) $(REVENGE_STREAM_LIBS) @WPS2HTML_WIN32_RESOURCE@
 wps2html_LDFLAGS = -all-static
 
 else	
 
 wps2html_LDADD = \
 	../../lib/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la \
-	$(REVENGE_LIBS) @WPS2HTML_WIN32_RESOURCE@
+	$(REVENGE_LIBS) $(REVENGE_GENERATORS_LIBS) $(REVENGE_STREAM_LIBS) @WPS2HTML_WIN32_RESOURCE@
 
 endif
 
 wps2html_SOURCES = 			\
-	HtmlDocumentGenerator.cpp	\
-	HtmlDocumentGenerator.h		\
-	TableStyle.cpp			\
-	TableStyle.h			\
-	TextRunStyle.cpp		\
-	TextRunStyle.h			\
-	wps2html.cpp			\
-	wps2html_internal.cpp		\
-	wps2html_internal.h
+	wps2html.cpp
 
 if OS_WIN32
 
@@ -44,3 +38,4 @@ EXTRA_DIST = \
 BUILD_EXTRA_DIST = \
 	wps2html.rc	 
 
+endif

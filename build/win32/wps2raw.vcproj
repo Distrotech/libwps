@@ -202,28 +202,6 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			>
 			<File
-				RelativePath="..\..\src\conv\raw\RawDocumentGenerator.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\src\conv\raw\wps2raw.cpp"
 				>
 				<FileConfiguration
@@ -250,10 +228,6 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			>
-			<File
-				RelativePath="..\..\src\conv\raw\RawDocumentGenerator.h"
-				>
-			</File>
 		</Filter>
 	</Files>
 	<Globals>

@@ -20,9 +20,12 @@
  */
 
 #include <stdio.h>
+
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
 #include <librevenge-stream/librevenge-stream.h>
+
 #include <libwps/libwps.h>
-#include "HtmlDocumentGenerator.h"
 
 int main(int argc, char *argv[])
 {
@@ -41,7 +44,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	HtmlDocumentGenerator listenerImpl;
+	librevenge::RVNGHTMLTextGenerator listenerImpl;
 	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
 
 	if (error == WPS_FILE_ACCESS_ERROR)
