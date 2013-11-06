@@ -26,7 +26,6 @@
 #include <vector>
 #include "libwps_internal.h"
 
-class librevenge::RVNGPropertyList;
 class WPSContentListener;
 
 namespace WPSPageSpanInternal

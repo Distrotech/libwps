@@ -32,8 +32,6 @@
 
 #include "WPSDebug.h"
 
-class librevenge::RVNGBinaryData;
-
 class WPS4Parser;
 
 namespace WPS4GraphInternal

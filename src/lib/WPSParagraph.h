@@ -35,8 +35,6 @@
 
 #include "WPSList.h"
 
-class librevenge::RVNGPropertyListVector;
-
 struct WPSTabStop
 {
 	enum Alignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };

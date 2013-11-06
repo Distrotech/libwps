@@ -31,11 +31,6 @@
 
 #include "libwps_internal.h"
 
-class librevenge::RVNGBinaryData;
-class librevenge::RVNGTextInterface;
-class librevenge::RVNGString;
-class librevenge::RVNGPropertyListVector;
-
 class WPSList;
 class WPSPageSpan;
 struct WPSParagraph;

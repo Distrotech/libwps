@@ -33,8 +33,6 @@
 
 #include "WPSDebug.h"
 
-class librevenge::RVNGBinaryData;
-
 class WPS8Parser;
 
 namespace WPS8GraphInternal

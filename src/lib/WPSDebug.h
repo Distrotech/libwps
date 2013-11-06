@@ -30,8 +30,6 @@
 
 #include "libwps_internal.h"
 
-class librevenge::RVNGBinaryData;
-
 #  if defined(DEBUG_WITH_FILES)
 #include <fstream>
 #include <map>

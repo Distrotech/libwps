@@ -64,8 +64,6 @@
 
 #include "WPSDebug.h"
 
-class librevenge::RVNGBinaryData;
-
 namespace libwps
 {
 class Storage;

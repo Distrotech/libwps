@@ -30,8 +30,6 @@
 
 #include "WPSDebug.h"
 
-class librevenge::RVNGTextInterface;
-
 class WPSTextParser;
 
 class WPSParser

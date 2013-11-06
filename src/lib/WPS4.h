@@ -30,8 +30,6 @@
 
 #include "WPSParser.h"
 
-class librevenge::RVNGString;
-
 class WPSPageSpan;
 
 namespace WPS4ParserInternal

@@ -32,9 +32,6 @@
 #include <librevenge/librevenge.h>
 #include "libwps_internal.h"
 
-class librevenge::RVNGPropertyList;
-class librevenge::RVNGTextInterface;
-
 /** a small structure used to store the informations about a list */
 class WPSList
 {

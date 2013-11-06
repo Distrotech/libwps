@@ -29,8 +29,6 @@
 #include "libwps_internal.h"
 #include "WPSParser.h"
 
-class librevenge::RVNGString;
-
 class WPSPageSpan;
 
 namespace WPS8ParserInternal

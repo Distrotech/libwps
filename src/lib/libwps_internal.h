@@ -35,8 +35,6 @@
 #include <librevenge-stream/librevenge-stream.h>
 #include <librevenge/librevenge.h>
 
-class librevenge::RVNGBinaryData;
-
 #if defined(_MSC_VER) || defined(__DJGPP__)
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
@@ -182,7 +180,6 @@ bool readDataToEnd(RVNGInputStreamPtr &input, librevenge::RVNGBinaryData &data);
 
 // Various helper structures for the parser..
 /* ---------- small enum/class ------------- */
-class librevenge::RVNGPropertyListVector;
 
 struct WPSColumnDefinition
 {
