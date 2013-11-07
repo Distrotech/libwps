@@ -1207,7 +1207,7 @@ void WPSContentListener::insertPicture
 	if (!_openFrame(pos, frameExtras)) return;
 
 	librevenge::RVNGPropertyList propList;
-	propList.insert("librevenge:mimetype", type.c_str());
+	propList.insert("librevenge:mime-type", type.c_str());
 	m_documentInterface->insertBinaryObject(propList, binaryData);
 
 	_closeFrame();
