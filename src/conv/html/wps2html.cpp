@@ -44,7 +44,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	librevenge::RVNGHTMLTextGenerator listenerImpl;
+	librevenge::RVNGString document;
+	librevenge::RVNGHTMLTextGenerator listenerImpl(document);
 	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
 
 	if (error == WPS_FILE_ACCESS_ERROR)
@@ -58,6 +59,8 @@ int main(int argc, char *argv[])
 
 	if (error != WPS_OK)
 		return 1;
+
+	printf("%s", document.cstr());
 
 	return 0;
 }
