@@ -230,16 +230,16 @@ void WPSPageSpan::getPageProperty(librevenge::RVNGPropertyList &propList) const
 {
 	propList.insert("librevenge:num-pages", getPageSpan());
 
-	propList.insert("fo:page-height", getFormLength());
-	propList.insert("fo:page-width", getFormWidth());
+	propList.insert("fo:page-height", getFormLength(), librevenge::RVNG_INCH);
+	propList.insert("fo:page-width", getFormWidth(), librevenge::RVNG_INCH);
 	if (getFormOrientation() == WPSPageSpan::LANDSCAPE)
 		propList.insert("style:print-orientation", "landscape");
 	else
 		propList.insert("style:print-orientation", "portrait");
-	propList.insert("fo:margin-left", getMarginLeft());
-	propList.insert("fo:margin-right", getMarginRight());
-	propList.insert("fo:margin-top", getMarginTop());
-	propList.insert("fo:margin-bottom", getMarginBottom());
+	propList.insert("fo:margin-left", getMarginLeft(), librevenge::RVNG_INCH);
+	propList.insert("fo:margin-right", getMarginRight(), librevenge::RVNG_INCH);
+	propList.insert("fo:margin-top", getMarginTop(), librevenge::RVNG_INCH);
+	propList.insert("fo:margin-bottom", getMarginBottom(), librevenge::RVNG_INCH);
 }
 
 

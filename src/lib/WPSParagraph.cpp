@@ -70,7 +70,7 @@ void WPSTabStop::addTo(librevenge::RVNGPropertyListVector &propList, double deca
 	double position = m_position+decalX;
 	if (position < 0.00005f && position > -0.00005f)
 		position = 0.0;
-	tab.insert("style:position", position);
+	tab.insert("style:position", position, librevenge::RVNG_INCH);
 
 	propList.append(tab);
 }
@@ -203,9 +203,9 @@ void WPSParagraph::addTo(librevenge::RVNGPropertyList &propList, librevenge::RVN
 	if (!inTable)
 	{
 		// these properties are not appropriate when a table is opened..
-		propList.insert("fo:margin-left", m_listLevelIndex >= 1 ? m_listLevel.m_labelIndent : m_margins[1]);
-		propList.insert("fo:text-indent", m_margins[0]);
-		propList.insert("fo:margin-right", m_margins[2]);
+		propList.insert("fo:margin-left", m_listLevelIndex >= 1 ? m_listLevel.m_labelIndent : m_margins[1], librevenge::RVNG_INCH);
+		propList.insert("fo:text-indent", m_margins[0], librevenge::RVNG_INCH);
+		propList.insert("fo:margin-right", m_margins[2], librevenge::RVNG_INCH);
 		if (m_backgroundColor !=  0xFFFFFF)
 		{
 			std::stringstream stream;

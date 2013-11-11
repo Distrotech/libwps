@@ -675,7 +675,7 @@ void WPSContentListener::_openPageSpan()
 
 	librevenge::RVNGPropertyList propList;
 	currentPage.getPageProperty(propList);
-	propList.insert("librevenge:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
+	propList.insert("librevenge:is-last-page-span", bool(m_ps->m_currentPage + 1 == m_ds->m_pageList.size()));
 
 	if (!m_ps->m_isPageSpanOpened)
 		m_documentInterface->openPageSpan(propList);
@@ -735,8 +735,8 @@ void WPSContentListener::_openSection()
 	m_ps->m_numColumns = int(m_ps->m_textColumns.size());
 
 	librevenge::RVNGPropertyList propList;
-	propList.insert("fo:margin-left", 0.);
-	propList.insert("fo:margin-right", 0.);
+	propList.insert("fo:margin-left", 0., librevenge::RVNG_INCH);
+	propList.insert("fo:margin-right", 0., librevenge::RVNG_INCH);
 	if (m_ps->m_numColumns > 1)
 		propList.insert("text:dont-balance-text-columns", false);
 
@@ -747,8 +747,8 @@ void WPSContentListener::_openSection()
 		librevenge::RVNGPropertyList column;
 		// The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
 		column.insert("style:rel-width", col.m_width * 1440.0, librevenge::RVNG_TWIP);
-		column.insert("fo:start-indent", col.m_leftGutter);
-		column.insert("fo:end-indent", col.m_rightGutter);
+		column.insert("fo:start-indent", col.m_leftGutter, librevenge::RVNG_INCH);
+		column.insert("fo:end-indent", col.m_rightGutter, librevenge::RVNG_INCH);
 		columns.append(column);
 	}
 	m_documentInterface->openSection(propList, columns);
@@ -1139,7 +1139,7 @@ void WPSContentListener::insertLabelNote(const NoteType noteType, librevenge::RV
 
 		librevenge::RVNGPropertyList propList;
 		if (label.len())
-			propList.insert("text:label", label);
+			propList.insert("text:label", librevenge::RVNGPropertyFactory::newStringProp(label));
 		if (noteType == FOOTNOTE)
 		{
 			propList.insert("librevenge:number", ++(m_ds->m_footNoteNumber));
@@ -1607,7 +1607,7 @@ void WPSContentListener::openTable(std::vector<float> const &colWidth, libreveng
 
 	librevenge::RVNGPropertyList propList;
 	propList.insert("table:align", "left");
-	propList.insert("fo:margin-left", 0.0);
+	propList.insert("fo:margin-left", 0.0, librevenge::RVNG_INCH);
 
 	float tableWidth = 0;
 	librevenge::RVNGPropertyListVector columns;
