@@ -1208,7 +1208,8 @@ void WPSContentListener::insertPicture
 
 	librevenge::RVNGPropertyList propList;
 	propList.insert("librevenge:mime-type", type.c_str());
-	m_documentInterface->insertBinaryObject(propList, binaryData);
+	propList.insert("office:binary-data", binaryData);
+	m_documentInterface->insertBinaryObject(propList);
 
 	_closeFrame();
 }
