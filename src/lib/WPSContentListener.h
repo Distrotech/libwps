@@ -31,6 +31,8 @@
 
 #include "libwps_internal.h"
 
+#include "WPSListener.h"
+
 class WPSList;
 class WPSPageSpan;
 struct WPSParagraph;
@@ -39,7 +41,7 @@ struct WPSTabStop;
 struct WPSContentParsingState;
 struct WPSDocumentParsingState;
 
-class WPSContentListener
+class WPSContentListener : public WPSListener
 {
 public:
 	WPSContentListener(std::vector<WPSPageSpan> const &pageList, librevenge::RVNGTextInterface *documentInterface);
@@ -62,8 +64,6 @@ public:
 	void insertUnicode(uint32_t character);
 	//! adds a unicode string
 	void insertUnicodeString(librevenge::RVNGString const &str);
-	//! adds an unicode character to a string ( with correct encoding ).
-	static void appendUnicode(uint32_t val, librevenge::RVNGString &buffer);
 
 	void insertTab();
 	void insertEOL(bool softBreak=false);
@@ -90,8 +90,6 @@ public:
 	shared_ptr<WPSList> getCurrentList() const;
 
 	// ------- fields ----------------
-	/** Defines some basic type for field */
-	enum FieldType { None, PageNumber, Date, Time, Title, Link, Database };
 	//! adds a field type
 	void insertField(FieldType type);
 	//! insert a date/time field with given format (see strftime)
@@ -128,7 +126,7 @@ public:
 	/** low level function to define a cell.
 		\param cell the cell position, alignement, ...
 		\param extras to be used to pass extra data, for instance spreadsheet data*/
-	void openTableCell(WPSCell const &cell, librevenge::RVNGPropertyList const &extras);
+	void openTableCell(WPSCell const &cell, librevenge::RVNGPropertyList const &extras=librevenge::RVNGPropertyList());
 	/** close a cell */
 	void closeTableCell();
 	/** add empty cell */

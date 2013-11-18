@@ -652,8 +652,7 @@ bool WPS8Parser::createOLEStructures()
 	WPSOLEParser oleParser("CONTENTS");
 	if (!oleParser.parse(input)) return false;
 
-	m_graphParser->storeObjects(oleParser.getObjects(),oleParser.getObjectsId(),
-	                            oleParser.getObjectsPosition());
+	m_graphParser->storeObjects(oleParser.getObjects(),oleParser.getObjectsId());
 #ifdef DEBUG
 	// there can remain some embedded Works subdocument ( WKS, ... )
 	// with name MN0 and some unknown picture ole

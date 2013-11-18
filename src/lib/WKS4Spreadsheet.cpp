@@ -1,0 +1,1601 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+/* libwps
+ * Version: MPL 2.0 / LGPLv2.1+
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * Major Contributor(s):
+ * Copyright (C) 2006, 2007 Andrew Ziem
+ * Copyright (C) 2004 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
+ *
+ * For minor contributions see the git repository.
+ *
+ * Alternatively, the contents of this file may be used under the terms
+ * of the GNU Lesser General Public License Version 2.1 or later
+ * (LGPLv2.1+), in which case the provisions of the LGPLv2.1+ are
+ * applicable instead of those above.
+ */
+
+#include <stdlib.h>
+#include <string.h>
+
+#include <cmath>
+#include <sstream>
+
+#include <librevenge-stream/librevenge-stream.h>
+
+#include "libwps_internal.h"
+#include "libwps_tools_win.h"
+
+#include "WPSCell.h"
+#include "WKSContentListener.h"
+#include "WPSEntry.h"
+#include "WPSFont.h"
+
+#include "WKS4.h"
+
+#include "WKS4Spreadsheet.h"
+
+namespace WKS4SpreadsheetInternal
+{
+
+///////////////////////////////////////////////////////////////////
+//! a class used to store a style of a WKS4 cell
+struct Style : public WPSCellFormat
+{
+	/** the different types of cell's field */
+	enum FormatType { F_TEXT, F_NUMBER, F_DATE, F_TIME, F_UNKNOWN };
+
+	/*   subformat:
+	          NUMBER             DATE                 TIME       TEXT
+	  0 :    default           default               default    default
+	  1 :    decimal            3/2/00             10:03:00 AM  -------
+	  2 :   exponential      3 Feb, 2000            10:03 AM    -------
+	  3 :   percent             3, Feb              10:03:00    -------
+	  4 :    money             Feb, 2000              10:03     -------
+	  5 :    thousand       Thu, 3 Feb, 2000         -------    -------
+	  6 :  percent/thou     3 February 2000          -------    -------
+	  7 :   money/thou  Thursday, February 3, 2000   -------    -------
+
+	 */
+	//! construtor
+	Style() : WPSCellFormat(), m_font(), m_fontType(libwps_tools_win::Font::DOS_850), m_extra("")
+	{
+		for (int i = 0; i < 10; i++) m_unknFlags[i] = 0;
+	}
+
+	//! operator<<
+	friend std::ostream &operator<<(std::ostream &o, Style const &style);
+	//! operator==
+	bool operator==(Style const &st) const;
+	//! operator!=
+	bool operator!=(Style const &st) const
+	{
+		return !(*this==st);
+	}
+	/** the font */
+	WPSFont m_font;
+	//! font encoding type
+	libwps_tools_win::Font::Type m_fontType;
+	/** some flag */
+	int m_unknFlags[10];
+	/** extra data */
+	std::string m_extra;
+};
+
+//! operator<<
+std::ostream &operator<<(std::ostream &o, Style const &style)
+{
+	o << "font=[" << style.m_font << "],";
+	o << static_cast<WPSCellFormat const &>(style) << ",";
+
+	bool hasUnkn = false;
+	for (int i = 0; i < 10; i++) if (style.m_unknFlags[i])hasUnkn=true;
+	if (hasUnkn)
+	{
+		o << "unkn=[" << std::hex;
+		for (int i = 0; i < 10; i++)
+		{
+			if (style.m_unknFlags[i]) o << "fS" << i << "=" << style.m_unknFlags[i] << ",";
+		}
+		o << std::dec << "]";
+	}
+	if (style.m_extra.length())
+		o << ", extra=[" << style.m_extra << "]";
+
+	return o;
+}
+
+bool Style::operator==(Style const &st) const
+{
+	if (m_font!=st.m_font) return false;
+	if (m_format!=st.m_format || m_subFormat!=st.m_subFormat || m_digits!=st.m_digits || m_protected !=st.m_protected)
+		return false;
+	int diff = WPSCellFormat::compare(st);
+	if (diff) return false;
+	for (int i = 0; i < 10; i++)
+	{
+		if (m_unknFlags[i]!=st.m_unknFlags[i])
+			return false;
+	}
+	return m_extra==st.m_extra;
+}
+
+///////////////////////////////////////////////////////////////////
+//! the style manager
+class StyleManager
+{
+public:
+	StyleManager() : m_stylesList() {}
+	//! add a new style and returns its id
+	int add(Style const &st, bool dosFile)
+	{
+		if (dosFile)
+		{
+			for (size_t i=0; i < m_stylesList.size(); ++i)
+			{
+				if (m_stylesList[i]==st) return int(i);
+			}
+		}
+		m_stylesList.push_back(st);
+		return int(m_stylesList.size())-1;
+	}
+	//! returns the style with id
+	bool get(int id, Style &style) const
+	{
+		if (id<0|| id >= (int) m_stylesList.size())
+		{
+			WPS_DEBUG_MSG(("WKS4ParserInternal::StyleManager::get can not find style %d\n", id));
+			return false;
+		}
+		style=m_stylesList[size_t(id)];
+		return true;
+	}
+	//! returns the number of style
+	int size() const
+	{
+		return (int) m_stylesList.size();
+	}
+	//! print a style
+	void print(int id, std::ostream &o) const
+	{
+		if (id < 0) return;
+		if (id < int(m_stylesList.size()))
+			o << ", style=" << m_stylesList[size_t(id)];
+		else
+		{
+			WPS_DEBUG_MSG(("WKS4ParserInternal::StyleManager::print: can not find a style\n"));
+			o << ", ###style=" << id;
+		}
+	}
+
+protected:
+	//! the styles
+	std::vector<Style> m_stylesList;
+};
+
+//! a cellule of a WKS4 spreadsheet
+class Cell : public WPSCell
+{
+public:
+	/// constructor
+	Cell() : m_styleId(-1), m_content() { }
+
+	//! operator<<
+	friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
+
+	//! call when a cell must be send
+	bool send(WPSListenerPtr &/*listener*/)
+	{
+		WPS_DEBUG_MSG(("WKS4SpreadsheetInternal::Cell::send: must not be called\n"));
+		return false;
+	}
+
+	//! call when the content of a cell must be send
+	bool sendContent(WPSListenerPtr &/*listener*/)
+	{
+		WPS_DEBUG_MSG(("WKS4SpreadsheetInternal::Cell::sendContent: must not be called\n"));
+		return false;
+	}
+
+	//! the style
+	int m_styleId;
+	//! the content
+	WKSContentListener::CellContent m_content;
+};
+
+//! operator<<
+std::ostream &operator<<(std::ostream &o, Cell const &cell)
+{
+	o << reinterpret_cast<WPSCell const &>(cell)
+	  << cell.m_content << ",style=" << cell.m_styleId << ",";
+	return o;
+}
+
+///////////////////////////////////////////////////////////////////
+//! the spreadsheet of a WPS4Spreadsheet
+class Spreadsheet
+{
+public:
+	//! a constructor
+	Spreadsheet() : m_numCols(0), m_numRows(0), m_widthCols(), m_heightRows(), m_cellsList(),
+		m_rowPageBreaksList() {}
+	//! returns the last cell
+	Cell *getLastCell()
+	{
+		if (m_cellsList.size()) return &m_cellsList[size_t(m_cellsList.size()-1)];
+		return 0;
+	}
+	//! set the columns size
+	void setColumnWidth(int col, int w)
+	{
+		if (col < 0) return;
+		if (col >= int(m_widthCols.size())) m_widthCols.resize(size_t(col)+1, -1);
+		m_widthCols[size_t(col)] = w;
+		if (col >= m_numCols) m_numCols++;
+	}
+	//! set the rows size
+	void setRowHeight(int row, int h)
+	{
+		if (row < 0) return;
+		if (row >= int(m_heightRows.size())) m_heightRows.resize(size_t(row)+1, -1);
+		m_heightRows[size_t(row)] = h;
+		if (row >= m_numRows) m_numRows++;
+	}
+
+	//! convert the m_widthCols, m_heightRows in a vector of of point size
+	static std::vector<float> convertInPoint(std::vector<int> const &list,
+	        float defSize)
+	{
+		size_t numElt = list.size();
+		std::vector<float> res;
+		res.resize(numElt);
+		for (size_t i = 0; i < numElt; i++)
+		{
+			if (list[i] < 0) res[i] = defSize;
+			else res[i] = float(list[i])/20.f;
+		}
+		return res;
+	}
+	//! returns true if the spreedsheet is empty
+	bool empty() const
+	{
+		return m_cellsList.size() == 0;
+	}
+	/** the number of columns */
+	int m_numCols;
+	/** the number of rows */
+	int m_numRows;
+
+	/** the column size in TWIP (?) */
+	std::vector<int> m_widthCols;
+	/** the row size in TWIP (?) */
+	std::vector<int> m_heightRows;
+	/** the list of not empty cells */
+	std::vector<Cell> m_cellsList;
+	/** the list of row page break */
+	std::vector<int> m_rowPageBreaksList;
+
+	/** returns the last Right Bottom cell position */
+	Vec2i getRightBottomPosition() const
+	{
+		int maxX = 0, maxY = 0;
+		size_t numCell = m_cellsList.size();
+		for (size_t i = 0; i < numCell; i++)
+		{
+			Vec2i const &p = m_cellsList[i].position();
+			if (p[0] > maxX) maxX = p[0];
+			if (p[1] > maxY) maxY = p[1];
+		}
+		return Vec2i(maxX, maxY);
+	}
+};
+
+//! the state of WKS4
+struct State
+{
+	State() :  m_eof(-1), m_version(-1),  m_styleManager(), m_spreadsheet()
+	{
+	}
+	//! the last file position
+	long m_eof;
+	//! the file version
+	int m_version;
+	//! the style manager
+	StyleManager m_styleManager;
+	//! the spreadsheet
+	Spreadsheet m_spreadsheet;
+};
+
+}
+
+// constructor, destructor
+WKS4Spreadsheet::WKS4Spreadsheet(WKS4Parser &parser) :
+	m_input(parser.getInput()), m_listener(), m_mainParser(parser), m_state(new WKS4SpreadsheetInternal::State),
+	m_asciiFile(parser.ascii())
+{
+	m_state.reset(new WKS4SpreadsheetInternal::State);
+}
+
+WKS4Spreadsheet::~WKS4Spreadsheet ()
+{
+}
+
+int WKS4Spreadsheet::version() const
+{
+	if (m_state->m_version<0)
+		m_state->m_version=m_mainParser.version();
+	return m_state->m_version;
+}
+
+bool WKS4Spreadsheet::checkFilePosition(long pos)
+{
+	if (m_state->m_eof < 0)
+	{
+		long actPos = m_input->tell();
+		m_input->seek(0, librevenge::RVNG_SEEK_END);
+		m_state->m_eof=m_input->tell();
+		m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
+	}
+	return pos <= m_state->m_eof;
+}
+
+
+////////////////////////////////////////////////////////////
+// low level
+
+////////////////////////////////////////////////////////////
+//   parse sheet data
+////////////////////////////////////////////////////////////
+bool WKS4Spreadsheet::readSheetSize()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x6)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readSheetSize: not a sheet zone\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz < 8)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readSheetSize: block is too short\n"));
+		return false;
+	}
+	f << "Entries(Sheet):";
+	for (int i = 0; i < 2; i++)   // always 2 zero ?
+	{
+		int val = libwps::read16(m_input);
+		if (!val) continue;
+		f << "f" << i << "=" << std::hex << val << std::dec << ",";
+	}
+	int nCol = libwps::read16(m_input)+1;
+	f << "nCols=" << nCol << ",";
+	int nRow =  libwps::read16(m_input);
+	f << "nRow=" << nRow << ",";
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	if (nRow <= 0 || nCol <= 0) return false;
+
+	m_state->m_spreadsheet.m_numRows = nRow;
+	m_state->m_spreadsheet.m_numCols = nCol;
+	return true;
+
+}
+
+bool WKS4Spreadsheet::readColumnSize()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x8)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readColumnSize: not a column size zone\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz < 3)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readColumnSize: block is too short\n"));
+		return false;
+	}
+
+	int col = libwps::read16(m_input);
+	int width = libwps::readU8(m_input);
+
+	bool ok = col >= 0 && col < m_state->m_spreadsheet.m_numCols+10;
+	f << "Entries(Column):Col" << col << "";
+	if (!ok) f << "###";
+	f << ":width=" << width;
+
+	if (ok)
+	{
+		if (col >= m_state->m_spreadsheet.m_numCols)
+		{
+			static bool first = true;
+			if (first)
+			{
+				first = false;
+				WPS_DEBUG_MSG(("WKS4Spreadsheet::readColumnSize: I must increase the number of columbs\n"));
+			}
+			f << "###";
+		}
+		// checkme: unit in character(?) -> TWIP
+		m_state->m_spreadsheet.setColumnWidth(col, width*105);
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	return ok;
+}
+
+bool WKS4Spreadsheet::readColumnSize2()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x546b)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readColumnSize2: not a column size zone\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz != 4)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readColumnSize2: block size is odd\n"));
+		return false;
+	}
+
+	int col = libwps::read16(m_input);
+	int width = libwps::readU16(m_input); // unit? 1point ~ 115
+
+	bool ok = col >= 0 && col < m_state->m_spreadsheet.m_numCols+10;
+	if (ok)m_state->m_spreadsheet.setColumnWidth(col, width & 0x7FFF);
+
+	f << "Entries(Colum2):Col" << col << ":";
+	if (!ok) f << "###";
+	if (width & 0x8000)
+	{
+		f << "flag?,";
+		width &= 0x7FFF;
+	}
+	f << "width(unit?)=" << width;
+
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	return true;
+}
+
+bool WKS4Spreadsheet::readRowSize2()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x5465)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readRowSize2: not a row size zone\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz != 4)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readRowSize2: block size is odd\n"));
+		return false;
+	}
+
+	int row = libwps::read16(m_input);
+	int width = libwps::readU16(m_input); // unit? 1point ~ 105
+
+	bool ok = row >= 0 && row < m_state->m_spreadsheet.m_numRows+10;
+	if (ok)m_state->m_spreadsheet.setRowHeight(row, width & 0x7FFF);
+	f << "Entries(Row2):Row" << row << ":";
+	if (!ok) f << "###";
+	if (width & 0x8000)
+	{
+		f << "flag?,";
+		width &= 0x7FFF;
+	}
+	f << "width(unit?)=" << width;
+
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	return true;
+}
+
+
+bool WKS4Spreadsheet::readPageBreak()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+
+	if (type != 0x5413)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readPageBreak: not a pgbreak zone\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz < 2)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readPageBreak: seems very short\n"));
+		ascii().addPos(pos);
+		ascii().addNote("Entries(PBRK)###");
+		return true;
+	}
+	int row = libwps::read16(m_input)+1;
+	m_state->m_spreadsheet.m_rowPageBreaksList.push_back(row);
+
+	f << "Entries(PBRK): row="<< row;
+	if (sz != 2) ascii().addDelimiter(m_input->tell(),'#');
+
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool WKS4Spreadsheet::readStyle()
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x545a)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readStyle: not a style property\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz < 8)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readStyle: style property is too short\n"));
+		return false;
+	}
+
+	// win3 has 8 bytes while last version is at least 10 bytes
+	int numRead = sz > 10 ? 10 : int(sz);
+	int fl[10];
+	for (int i = 0; i < 10; i++) fl[i] = 0;
+	for (int i = 0; i < numRead; i++) fl[i] = libwps::readU8(m_input);
+
+	WKS4SpreadsheetInternal::Style style;
+	if (!m_mainParser.getFont(256*fl[5] + fl[4], style.m_font, style.m_fontType))
+	{
+		style.m_fontType=version()<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
+		f << ",#fontId = " << 256*fl[5] + fl[4];
+
+		static bool first = true;
+		if (first)
+		{
+			WPS_DEBUG_MSG(("WKS4Spreadsheet::readStyle: can not find a font\n"));
+			first = false;
+		}
+	}
+	fl[4] = fl[5] = 0;
+
+	// Border
+	if (fl[8] || fl[9])
+	{
+		// fl[8],fl[9] : width when defined ? fl[2],fl[3] : type
+		for (int i = 0; i < 2; i++)
+		{
+			bool setL2 = (fl[2+i]&0xF)!=0;
+			bool setL8 = (fl[8+i]&0xF)!=0;
+			if (setL2==setL8) fl[8+i] &= 0xF0;
+			bool setH2 = (fl[2+i]&0xF0)!=0;
+			bool setH8 = (fl[8+i]&0xF0)!=0;
+			if (setH2==setH8) fl[8+i] &= 0x0F;
+		}
+	}
+
+	int border = 0;
+	if (fl[2] & 0xF)
+	{
+		border |= WPSBorder::LeftBit;
+		if ((fl[2] & 0xF) != 1) f << ",bType(lef)=" << int(fl[2] & 0xF);
+	}
+	if (fl[2] & 0xF0)
+	{
+		border |= WPSBorder::TopBit;
+		if ((fl[2] >> 4) != 1) f << ",bType(top)=" << int(fl[2] >> 4);
+	}
+	if (fl[3] & 0xF)
+	{
+		border |= WPSBorder::RightBit;
+		if ((fl[3] & 0xF) != 1) f << ",bType(rig)=" << int(fl[3] & 0xF);
+	}
+	if (fl[3] & 0xF0)
+	{
+		border |= WPSBorder::BottomBit;
+		if ((fl[3] >> 4) != 1) f << ",bType(bot)=" << int(fl[3] >> 4);
+	}
+	style.setBorders(border, WPSBorder());
+	fl[3] = fl[2] = 0;
+
+	if (fl[1] & 0xC)
+	{
+		switch ((fl[1] & 0xC) >> 2)
+		{
+		case 1:
+			style.setHAlignement(WPSCell::HALIGN_LEFT);
+			break;
+		case 2:
+			style.setHAlignement(WPSCell::HALIGN_CENTER);
+			break;
+		case 3:
+			style.setHAlignement(WPSCell::HALIGN_RIGHT);
+			break;
+		default:
+			break;
+		}
+		fl[1] &= 0xF3;
+	}
+	switch ((fl[0]&0x7))
+	{
+	case 0:
+		style.setFormat(WPSCell::F_NUMBER,1);
+		break; // general number, checkme
+	case 1:
+		style.setFormat(WPSCell::F_NUMBER,2);
+		fl[0] &= 0xF8;
+		break;
+	case 2:
+		style.setFormat(WPSCell::F_NUMBER,4);
+		fl[0] &= 0xF8;
+		break;
+	case 3:
+		style.setFormat(WPSCell::F_NUMBER,3);
+		fl[0] &= 0xF8;
+		break;
+	case 4:
+		style.setFormat(WPSCell::F_NUMBER,5);
+		fl[0] &= 0xF8;
+		break;
+	case 6:
+		style.setFormat(WPSCell::F_DATE);
+		fl[0] &= 0xF8;
+		if (fl[1] & 2) fl[1] &= 0x1;
+		else f << ", #dateWithoutFl1&2";
+		break;
+	case 5: // this is case seem complex, checkMe
+		if (fl[0] == 5)
+		{
+			style.setFormat(WPSCell::F_TEXT);  // or number
+			fl[0] &= 0xF8;
+			break;
+		}
+		else if (fl[0] == 0x85 || fl[0] == 0xa5)
+		{
+			style.setFormat(WPSCell::F_TIME);
+			fl[0] &= 0xF8;
+			break;
+		}
+		// find also fl[0] = 0xc5 with text = "%" ....
+		break;
+	default:
+		f << ", ##type=" << std::hex << int(fl[0]&0xF) << std::dec;
+		break;
+	}
+	if (style.format() == WPSCell::F_NUMBER)
+	{
+		int digits = 0;
+		if (fl[1] &= 0x1)
+		{
+			digits = 8;
+			fl[1] &= 2;
+		}
+		digits += (fl[0]>>5);
+		fl[0] &= 0x18;
+		style.setDigits(digits);
+	}
+	fl[2] = (fl[1] & 3);  // 0 or 2
+	fl[1] &= 0xF0; // 10, 20, 40, 50, 60, 80, 90 : related to text field ?
+	for (int i = 0; i < 10; i++) style.m_unknFlags[i] = fl[i];
+	uint32_t color;
+	if ((fl[6]>>4) && m_mainParser.getColor((fl[6]>>4),color))   // CHECKME
+	{
+		fl[6] &= 0xF;
+		style.setBackgroundColor(color);
+	}
+	// CHECKME: (fl[6]&0xf) or (fl[6]>>8) is probably the background color...
+	// fl[7] : seem a number increasing with row?
+	style.m_extra = f.str();
+
+	/* end of parsing */
+	f.str("");
+	f << "Entries(Style):Style" << m_state->m_styleManager.size() << "," << style;
+
+	m_state->m_styleManager.add(style, false);
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	if (sz != numRead) ascii().addDelimiter(m_input->tell(),'#');
+	return true;
+}
+
+bool WKS4Spreadsheet::readDOSCellProperty()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x5402)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSCellProperty: not a cell property\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz < 2)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSCellProperty: cell property is too short\n"));
+		return false;
+	}
+
+	f << "Entries(CellDosProperty):";
+	WKS4SpreadsheetInternal::Cell *cell = m_state->m_spreadsheet.getLastCell();
+	WKS4SpreadsheetInternal::Style style;
+	if (cell && cell->m_styleId>=0)
+	{
+		if (!m_state->m_styleManager.get(cell->m_styleId, style))
+			f << ",###style";
+	}
+
+	int fl[2];
+	for (int i = 0; i < 2; i++)
+		fl[i] = libwps::readU8(m_input);
+
+	switch((fl[0] & 0x7))
+	{
+	case 0x5:
+		if (cell && cell->m_content.m_contentType == WKSContentListener::CellContent::C_TEXT) fl[0] &= 0xF8;
+		break;
+	case 0x6:
+		if (cell && cell->m_content.m_contentType == WKSContentListener::CellContent::C_NUMBER) fl[0] &= 0xF8;
+		break;
+	case 0x7:
+		if (cell && cell->m_content.m_contentType == WKSContentListener::CellContent::C_FORMULA) fl[0] &= 0xF8;
+		break;
+	default:
+		break;
+	}
+	WPSCell::FormatType newForm = WPSCell::F_UNKNOWN;
+	int subForm = 0;
+	switch(fl[0]>>5)
+	{
+	case 0:
+		newForm = WPSCell::F_NUMBER;
+		subForm=1;
+		fl[0] &= 0x1F;
+		break;
+	case 1:
+		newForm = WPSCell::F_NUMBER;
+		subForm=2;
+		fl[0] &= 0x1F;
+		break;
+	case 2:
+		newForm = WPSCell::F_NUMBER;
+		subForm=4;
+		fl[0] &= 0x1F;
+		break;
+	case 3:
+		newForm = WPSCell::F_NUMBER;
+		subForm=3;
+		fl[0] &= 0x1F;
+		break;
+	case 4:
+		newForm = WPSCell::F_NUMBER;
+		subForm=5;
+		fl[0] &= 0x1F;
+		break;
+	case 5: // normal (or time)
+		fl[0] &= 0x1F;
+		break;
+	case 6:
+		newForm = WPSCell::F_DATE;
+		fl[0] &= 0x1F;
+		break;
+	default:
+		break;
+	}
+	if (newForm != WPSCell::F_UNKNOWN &&
+	        (newForm != style.format() || subForm != style.subformat()))
+	{
+		if (newForm != style.format())
+			f << "#prevForm = " << int(style.format());
+		else
+			f << "#prevSubForm = " << style.subformat();
+		style.setFormat(newForm, subForm);
+	}
+
+	uint32_t fflags = 0;
+	if (fl[0] & 0x10)
+	{
+		fflags |= WPS_ITALICS_BIT;
+		fl[0] &= 0xEF;
+	}
+	if (fl[1] & 0x20)
+	{
+		fflags |= WPS_BOLD_BIT;
+		fl[1] &= 0xDF;
+	}
+	if (fl[1] & 0x40)
+	{
+		fflags |= WPS_UNDERLINE_BIT;
+		fl[1] &= 0xBF;
+	}
+	style.m_font.m_attributes=fflags;
+	switch(fl[1]&3)   // CHECKME
+	{
+	case 1:
+		style.setHAlignement(WPSCell::HALIGN_LEFT);
+		break;
+	case 2:
+		style.setHAlignement(WPSCell::HALIGN_CENTER);
+		break;
+	case 3:
+		style.setHAlignement(WPSCell::HALIGN_RIGHT);
+		break;
+	case 0:
+		break;
+	}
+	fl[1] &= 0xFC;
+	style.m_unknFlags[0] = fl[0];
+	style.m_unknFlags[1] = fl[1];
+	int id = m_state->m_styleManager.add(style, true);
+	if (cell) cell->m_styleId=id;
+
+#ifdef DEBUG_WITH_FILES
+	if (cell) f << *cell;
+	m_state->m_styleManager.print(id, f);
+#endif
+	if (sz > 2) ascii().addDelimiter(pos+6, '#');
+
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+
+}
+
+bool WKS4Spreadsheet::readCell()
+{
+	WKS4SpreadsheetInternal::Cell cell;
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if ((type != 0x545b) && (type < 0xc || type > 0x10))
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: not a cell property\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	long endPos = pos+4+sz;
+
+	if (sz < 5)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: cell def is too short\n"));
+		return false;
+	}
+
+	bool dosFile = version() < 3;
+	int unkn1 = 0;
+	if (dosFile)
+	{
+		unkn1 = (int) libwps::readU8(m_input);
+		if (unkn1) f << "unkn1=" << std::hex << unkn1 << std::dec << ",";
+	}
+	int cellPos[2];
+	for (int i=0; i<2; i++)
+		cellPos[i]=(int) libwps::read16(m_input);
+	cell.setPosition(Vec2i(cellPos[0],cellPos[1]));
+	if (!dosFile) cell.m_styleId = (int) libwps::read16(m_input);
+	if (cellPos[0] < 0 || cellPos[1] < 0)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: cell pos is bad\n"));
+		return false;
+	}
+
+	if (type & 0xFF00)
+	{
+		if (dosFile)
+		{
+			static bool first = true;
+			if (first)
+			{
+				first = false;
+				WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: find type=%ld in dos version\n", type));
+			}
+			f << "###";
+		}
+		f << "winVersion,";
+	}
+
+	long dataPos = m_input->tell();
+	int dataSz = int(endPos-dataPos);
+
+	bool ok = true;
+	switch(type)
+	{
+	case 12:
+	{
+		if (dataSz == 0)
+		{
+			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NONE;
+			break;
+		}
+		ok = false;
+		break;
+	}
+	case 13:
+	{
+		if (dataSz == 2)
+		{
+			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
+			cell.m_content.setValue(libwps::read16(m_input));
+			break;
+		}
+		ok = false;
+		break;
+	}
+	case 14:
+	{
+		double val;
+		if (dataSz == 8 && readNumber(endPos, val))
+		{
+			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
+			cell.m_content.setValue(val);
+			break;
+		}
+		ok = false;
+		break;
+	}
+	case 15:
+	{
+		cell.m_content.m_contentType=WKSContentListener::CellContent::C_TEXT;
+		long begText=m_input->tell(), endText=begText+dataSz;
+		std::string s("");
+		for (int i = 0; i < dataSz; i++)
+		{
+			char c = (char) libwps::read8(m_input);
+			if (c=='\0')
+			{
+				endText=m_input->tell()-1;
+				if (i == dataSz-1) break;
+				WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: cell content seem bad\n"));
+				f << "###";
+				break;
+			}
+			s += c;
+		}
+		f << s;
+		// CHECKME: dosFile string begins alway? by an extra character " or '
+		if (dosFile && s.length() && (s[0]=='\"' || s[0]=='\''))
+			++begText;
+		cell.m_content.m_textEntry.setBegin(begText);
+		cell.m_content.m_textEntry.setEnd(endText);
+		break;
+	}
+	case 16:
+	{
+		double val;
+		if (dataSz >= 8 && readNumber( dataPos+8, val))
+		{
+			cell.m_content.m_contentType=WKSContentListener::CellContent::C_FORMULA;
+			cell.m_content.setValue(val);
+			std::vector<WKSContentListener::FormulaInstruction> formula;
+			std::string error;
+			if (!readFormula(endPos, cell.position(), cell.m_content.m_formula, error))
+				ascii().addDelimiter(m_input->tell()-1, '#');
+			if (error.length()) f << error;
+			break;
+		}
+		ok = false;
+		break;
+	}
+	case 0x545b:   // CHECKME: sometime we do not read the good number
+	{
+		double val;
+		if (dataSz == 4 && readFloat4(endPos, val))
+		{
+			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
+			cell.m_content.setValue(val);
+			break;
+		}
+		ok = false;
+		break;
+	}
+	default:
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: unknown type=%ld\n", type));
+		ok = false;
+		break;
+	}
+	if (!ok) ascii().addDelimiter(dataPos, '#');
+
+	if (dosFile)
+	{
+		WKS4SpreadsheetInternal::Style style;
+		switch (cell.m_content.m_contentType)
+		{
+		case WKSContentListener::CellContent::C_NONE:
+			break;
+		case WKSContentListener::CellContent::C_TEXT:
+			style.setFormat(WPSCell::F_TEXT);
+			break;
+		case WKSContentListener::CellContent::C_NUMBER:
+		case WKSContentListener::CellContent::C_FORMULA:
+		case WKSContentListener::CellContent::C_UNKNOWN:
+		default:
+			style.setFormat(WPSCell::F_NUMBER);
+			break;
+		}
+
+		bool canHaveDigits = false;
+		switch(unkn1 & 0xF0)
+		{
+		case 0:
+		case 0x10:
+		case 0x20:
+		case 0x30:
+		case 0x40:
+			if (style.format() != WPSCell::F_TEXT)
+			{
+				canHaveDigits = true;
+				int styleID = (unkn1>>8);
+				if (styleID == 2) styleID = 3;
+				else if (styleID == 3) styleID = 2;
+				style.setFormat(WPSCell::F_NUMBER,1+styleID);
+			}
+			break;
+		case 0x70:
+			switch(unkn1)
+			{
+			case 0x70:
+				if (style.format() == WPSCell::F_TEXT) unkn1 = 0;
+				break;
+			case 0x71:
+				if (style.format() == WPSCell::F_NUMBER) unkn1 = 0;
+				break;
+			case 0x72:
+			case 0x73:
+			case 0x74: // CHECKME: probably date for all field between 0x72 <-> 0x7a
+			case 0x79:
+			case 0x7a:
+				// note: text cell seems to have random flag, so we can ignore
+				if (style.format() != WPSCell::F_TEXT) style.setFormat(WPSCell::F_DATE);
+				unkn1 = 0;
+				break;
+			case 0x7b:
+			case 0x7c:
+				// note: text cell seems to have random flag, so we can ignore
+				if (style.format() != WPSCell::F_TEXT) style.setFormat(WPSCell::F_TIME);
+				unkn1 = 0;
+				break;
+			default:
+				break;
+			}
+			break;
+		case 0xF0:
+			if (unkn1 == 0xF1)
+			{
+				unkn1=0;  // default ?
+				break;
+			}
+			if (unkn1 == 0xF2)
+			{
+				style.setFormat(WPSCell::F_DATE);
+				unkn1=0;
+				break;
+			}
+			break;
+		}
+		if (canHaveDigits)
+		{
+			style.setDigits(unkn1 & 0xF);
+			unkn1= 0;
+			// note: CellDosProperty (fl[1]>>3)&7 seems also to code digits
+		}
+
+		cell.m_styleId=m_state->m_styleManager.add(style, true);
+	}
+	m_state->m_spreadsheet.m_cellsList.push_back(cell);
+	m_input->seek(pos+sz, librevenge::RVNG_SEEK_SET);
+
+	std::string extra=f.str();
+	f.str("");
+	f << "Entries(CellContent):" << cell << "," << extra;
+#ifdef DEBUG_WITH_FILES
+	m_state->m_styleManager.print(cell.m_styleId, f);
+#endif
+
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	return true;
+}
+
+
+////////////////////////////////////////////////////////////
+// Data
+////////////////////////////////////////////////////////////
+bool WKS4Spreadsheet::readCell(Vec2i actPos, WKSContentListener::FormulaInstruction &instr)
+{
+	instr=WKSContentListener::FormulaInstruction();
+	instr.m_type=WKSContentListener::FormulaInstruction::F_Cell;
+	bool ok = true;
+	int pos[2];
+	bool absolute[2] = { true, true};
+	for (int dim = 0; dim < 2; dim++)
+	{
+		int val = (int) libwps::readU16(m_input);
+		if ((val & 0xF000) == 0); // absolue value ?
+		else if ((val & 0xc000) == 0x8000)   // relative ?
+		{
+			val &= 0x3FFF;
+			if (val & 0x2000) val = val - 0x4000;
+			val += actPos[dim];
+			absolute[dim] = false;
+		}
+		else
+		{
+			WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: can not read cell %x\n", val));
+			ok = false;
+		}
+		pos[dim] = val;
+	}
+
+	if (pos[0] < 0 || pos[1] < 0)
+	{
+		std::stringstream f;
+		f << "###[" << pos[1] << "," << pos[0] << "]";
+		if (ok)
+		{
+			WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: can not read cell position\n"));
+		}
+		return false;
+	}
+	instr.m_position[0]=Vec2i(pos[0],pos[1]);
+	instr.m_positionRelative[0]=Vec2b(!absolute[0],!absolute[1]);
+	return ok;
+}
+
+bool WKS4Spreadsheet::readFloat4(long endPos, double &res)
+{
+	res = 0;
+	long pos = m_input->tell();
+	int sz = int(endPos - pos);
+	if (sz != 4) return false;
+
+	float mantisse = 0;
+	/** first small byte is used to decide if we store 100*N or N.
+	    Does the second small bute has also a meaning ?
+	It find some file where the third some bytes is set, so this one is normal...
+	*/
+	int first = (int) libwps::readU8(m_input);
+	mantisse = first & 0xFE;
+	for (int i = 0; i < 1; i++)
+		mantisse = mantisse/256.f + (float) libwps::readU8(m_input);
+	int mantExp = (int) libwps::readU8(m_input);
+	mantisse = (mantisse/256.f + float(0x10+(mantExp & 0x0F)))/16.f;
+	int exp = ((mantExp&0xF0)>>4)+int(libwps::readU8(m_input)<<4);
+	int sign = 1;
+	if (exp & 0x800)
+	{
+		exp &= 0x7ff;
+		sign = -1;
+	}
+
+	if (exp == 0)
+	{
+		if (mantisse <= 1. && mantisse>=1.)  return true; // ok zero
+		// fixme find Nan representation
+		return false;
+	}
+	if (exp == 0x7FF)
+	{
+		if (mantisse == 1.)
+		{
+			res=std::numeric_limits<double>::quiet_NaN();
+			return true; // ok 0x7FF and 0xFFF are nan
+		}
+		return false;
+	}
+
+	exp -= 0x3ff;
+	res = std::ldexp(mantisse, exp);
+	if (sign == -1)
+	{
+		res *= -1.;
+	}
+	if (first & 1) res/=100;
+	if (first & 2)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFloat4: ARRGGGGGGGGGG find a float with first & 2 ARRGGGGGGGGGG,\n some float can be broken\n"));
+	}
+	return true;
+}
+
+bool WKS4Spreadsheet::readNumber(long endPos, double &res)
+{
+	res = 0;
+	long pos = m_input->tell();
+	int sz = int(endPos - pos);
+	if (sz != 8) return false;
+
+	float mantisse = 0;
+	for (int i = 0; i < 6; i++)
+		mantisse = mantisse/256.f + (float)libwps::readU8(m_input);
+	int mantExp = (int) libwps::readU8(m_input);
+	mantisse = (mantisse/256.f + float(0x10+(mantExp & 0x0F)))/16.f;
+	int exp = ((mantExp&0xF0)>>4)+int(libwps::readU8(m_input)<<4);
+	int sign = 1;
+	if (exp & 0x800)
+	{
+		exp &= 0x7ff;
+		sign = -1;
+	}
+
+	if (exp == 0)
+	{
+		if (mantisse == 1.)  return true; // ok zero
+		// fixme find Nan representation
+		return false;
+	}
+	if (exp == 0x7FF)
+	{
+		if (mantisse == 1.)
+		{
+			res=std::numeric_limits<double>::quiet_NaN();
+			return true; // ok 0x7FF and 0xFFF are nan
+		}
+		return false;
+	}
+
+	exp -= 0x3ff;
+	res = std::ldexp(mantisse, exp);
+	if (sign == -1)
+	{
+		res *= -1.;
+	}
+	return true;
+}
+struct Functions
+{
+	char const *m_name;
+	int m_arity;
+};
+
+namespace WKS4SpreadsheetInternal
+{
+static Functions const s_listFunctions[] =
+{
+	{ "", 0} /*SPEC: number*/, {"", 0}/*SPEC: cell*/, {"", 0}/*SPEC: cells*/, {"=", 1} /*=*/,
+	{ "(", 1} /* SPEC: () */, {"", 0}/*SPEC: number*/, { "", -2} /*UNKN*/, {"", -2}/*UNKN*/,
+	{ "-", 1}, {"+", 2}, {"-", 2}, {"*", 2},
+	{ "/", 2}, { "", -2} /*UNKN*/, {"=", 2}, {"<>", 2},
+
+	{ "<=", 2},{ ">=", 2},{ "<", 2},{ ">", 2},
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/, { "Not", 1}, { "+", 1},
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+	{ "NA", 0} /* Error*/,{ "Abs", 1},{ "Int", 1},{ "Sqrt", 1},
+	{ "Log10", 1},{ "Ln", 1},{ "Pi", 0},{ "Sin", 1},
+	{ "Cos", 1},{ "Tan", 1},{ "Atan2", 2},{ "Atan", 1},
+	{ "Asin", 1},{ "Acos", 1},{ "Exp", 1},{ "Mod", 2},
+
+	{ "Choose", -1},{ "IsNa", 1},{ "IsError", 1},{ "False", 0},
+	{ "True", 0},{ "Rand", 0},{ "Date", 3},{ "Now", 0},
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "If", 3},
+	{ "Day", 1},{ "Month", 1},{ "Year", 1},{ "Round", 2},
+
+	{ "Time", 3},{ "Hour", 1},{ "Minute", 1},{ "Second", 1},
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+	{ "Sum", -1},{ "Average", -1},{ "Count", -1},{ "Min", -1},
+	{ "Max", -1},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Var", -1},
+	{ "StDev", -1},{ "", -2} /*UNKN*/, { "HLookup", 3},{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Index", 3} /*UNKN*/,{ "", -2} /*UNKN*/,
+};
+}
+
+bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
+                                  std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error)
+{
+	formula.resize(0);
+	error = "";
+	long pos = m_input->tell();
+	if (endPos - pos < 2) return false;
+	int sz = (int) libwps::readU16(m_input);
+	if (endPos-pos-2 != sz) return false;
+
+	std::stringstream f;
+	std::vector<std::vector<WKSContentListener::FormulaInstruction> > stack;
+	bool ok = true;
+	while(long(m_input->tell()) != endPos)
+	{
+		double val;
+		pos = m_input->tell();
+		if (pos > endPos) return false;
+		int wh = (int) libwps::readU8(m_input);
+		int arity = 0;
+		WKSContentListener::FormulaInstruction instr;
+		switch(wh)
+		{
+		case 0x0:
+			if (endPos-pos<9 || !readNumber(pos+9, val))
+			{
+				f.str("");
+				f << "###number";
+				error=f.str();
+				ok = false;
+				break;
+			}
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Double;
+			instr.m_doubleValue=val;
+			break;
+		case 0x1:
+		{
+			if (endPos-pos<5)
+			{
+				f.str("");
+				f << "###cell short";
+				error=f.str();
+				ok = false;
+				break;
+			}
+			ok = readCell(position, instr);
+			break;
+		}
+		case 0x2:
+		{
+			if (endPos-pos<9 || !readCell(position, instr))
+			{
+				f.str("");
+				f << "###list cell short";
+				error=f.str();
+				ok = false;
+				break;
+			}
+			WKSContentListener::FormulaInstruction instr2;
+			if (!readCell(position, instr2))
+			{
+				f.str("");
+				f << "###list cell short";
+				error=f.str();
+				ok = false;
+				break;
+			}
+			instr.m_type=WKSContentListener::FormulaInstruction::F_CellList;
+			instr.m_position[1]=instr2.m_position[0];
+			instr.m_positionRelative[1]=instr2.m_positionRelative[0];
+			break;
+		}
+		case 0x5:
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Long;
+			instr.m_longValue=(long) libwps::read16(m_input);
+			break;
+		default:
+			if (wh > 0x63 || WKS4SpreadsheetInternal::s_listFunctions[wh].m_arity == -2)
+			{
+				f.str("");
+				f << "##Funct" << std::hex << wh;
+				error=f.str();
+				ok = false;
+				break;
+			}
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Function;
+			instr.m_content=WKS4SpreadsheetInternal::s_listFunctions[wh].m_name;
+			ok=!instr.m_content.empty();
+			arity = WKS4SpreadsheetInternal::s_listFunctions[wh].m_arity;
+			if (arity == -1) arity = (int) libwps::read8(m_input);
+			break;
+		}
+
+		if (!ok) break;
+		std::vector<WKSContentListener::FormulaInstruction> child;
+		if (instr.m_type!=WKSContentListener::FormulaInstruction::F_Function)
+		{
+			child.push_back(instr);
+			stack.push_back(child);
+			continue;
+		}
+		size_t numElt = stack.size();
+		if ((int) numElt < arity)
+		{
+			f.str("");
+			f << instr.m_content << "[##" << arity << "]";
+			error=f.str();
+			ok = false;
+			break;
+		}
+		if ((instr.m_content[0] >= 'A' && instr.m_content[0] <= 'Z') || instr.m_content[0] == '(')
+		{
+			if (instr.m_content[0] != '(')
+				child.push_back(instr);
+
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Operator;
+			instr.m_content="(";
+			child.push_back(instr);
+			for (int i = 0; i < arity; i++)
+			{
+				if (i)
+				{
+					instr.m_content=";";
+					child.push_back(instr);
+				}
+				std::vector<WKSContentListener::FormulaInstruction> const &node=
+				    stack[size_t((int)numElt-arity+i)];
+				child.insert(child.end(), node.begin(), node.end());
+			}
+			instr.m_content=")";
+			child.push_back(instr);
+
+			stack.resize(size_t((int) numElt-arity+1));
+			stack[size_t((int)numElt-arity)] = child;
+			continue;
+		}
+		if (arity==1)
+		{
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Operator;
+			stack[numElt-1].insert(stack[numElt-1].begin(), instr);
+			continue;
+		}
+		if (arity==2)
+		{
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Operator;
+			stack[numElt-2].push_back(instr);
+			stack[numElt-2].insert(stack[numElt-2].end(), stack[numElt-1].begin(), stack[numElt-1].end());
+			stack.resize(numElt-1);
+			continue;
+		}
+		ok=false;
+		error = "### unexpected arity";
+		break;
+	}
+
+	if (!ok) ;
+	else if (stack.size()==1 && stack[0].size()>1 && stack[0][0].m_content=="=")
+	{
+		formula.insert(formula.begin(),stack[0].begin()+1,stack[0].end());
+		return true;
+	}
+	else
+		error = "###stack problem";
+
+	static bool first = true;
+	if (first)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFormula: I can not read some formula\n"));
+		first = false;
+	}
+
+	f.str("");
+	for (size_t i = 0; i < stack.size(); ++i)
+	{
+		for (size_t j=0; j < stack[i].size(); ++j)
+			f << stack[i][j] << ",";
+	}
+	f << error;
+	error = f.str();
+	return false;
+}
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+void WKS4Spreadsheet::sendSpreadsheet()
+{
+	if (!m_listener)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::sendSpreadsheet: I can not find the listener\n"));
+		return;
+	}
+	WKS4SpreadsheetInternal::Spreadsheet &sheet = m_state->m_spreadsheet;
+	size_t numCell = sheet.m_cellsList.size();
+
+	int prevRow = -1, prevCell = -1;
+	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthCols,76), librevenge::RVNG_POINT);
+	std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
+	WKSContentListener::CellContent emptyContent;
+	for (size_t i = 0; i < numCell; i++)
+	{
+		WKS4SpreadsheetInternal::Cell const &cell= sheet.m_cellsList[i];
+		// FIXME: openSheetRow/openSheetCell must do that
+		if (cell.position()[1] != prevRow)
+		{
+			while (cell.position()[1] > prevRow)
+			{
+				if (prevRow != -1)
+				{
+					if (prevCell == -1)
+					{
+						WKS4SpreadsheetInternal::Cell lCell;
+						lCell.setPosition(Vec2i(0, prevRow));
+						m_listener->openSheetCell(lCell, emptyContent);
+						m_listener->insertCharacter(' ');
+						m_listener->closeSheetCell();
+					}
+					m_listener->closeSheetRow();
+				}
+				prevRow++;
+				if (prevRow < int(rowHeight.size()))
+					m_listener->openSheetRow(rowHeight[size_t(prevRow)], librevenge::RVNG_POINT);
+				else
+					m_listener->openSheetRow(16, librevenge::RVNG_POINT);
+				prevCell = -1;
+			}
+		}
+		while (cell.position()[0] > ++prevCell)
+		{
+			WKS4SpreadsheetInternal::Cell lCell;
+			lCell.setPosition(Vec2i(prevCell, cell.position()[1]));
+			m_listener->openSheetCell(lCell, emptyContent);
+			m_listener->insertCharacter(' ');
+			m_listener->closeSheetCell();
+		}
+		sendCellContent(cell);
+	}
+	if (prevRow!=-1) m_listener->closeSheetRow();
+	m_listener->closeSheet();
+}
+
+void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
+{
+	if (m_listener.get() == 0L)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::sendCellContent: I can not find the listener\n"));
+		return;
+	}
+
+	WKS4SpreadsheetInternal::Style cellStyle;
+	if (cell.m_styleId<0 || !m_state->m_styleManager.get(cell.m_styleId,cellStyle))
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::sendCellContent: I can not find the cell style\n"));
+		if (version()>=3) cellStyle.m_fontType=libwps_tools_win::Font::WIN3_WEUROPE;
+	}
+
+	librevenge::RVNGPropertyList propList;
+	libwps_tools_win::Font::Type fontType = cellStyle.m_fontType;
+	m_listener->setFont(cellStyle.m_font);
+
+	WKS4SpreadsheetInternal::Cell finalCell(cell);
+	finalCell.WPSCellFormat::operator=(cellStyle);
+	m_listener->openSheetCell(finalCell, cell.m_content, propList);
+
+	if (cell.m_content.m_textEntry.valid())
+	{
+		m_input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
+		bool prevEOL=false;
+		while (!m_input->isEnd() && m_input->tell()<cell.m_content.m_textEntry.end())
+		{
+			unsigned char c=(unsigned char) libwps::readU8(m_input);
+			if (c==0xd)
+			{
+				m_listener->insertEOL();
+				prevEOL=true;
+			}
+			else if (c==0xa)
+			{
+				if (!prevEOL)
+				{
+					WPS_DEBUG_MSG(("WKS4Spreadsheet::sendCellContent: find 0xa without 0xd\n"));
+				}
+				prevEOL=false;
+			}
+			else
+			{
+				m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType));
+				prevEOL=false;
+			}
+		}
+	}
+	m_listener->closeSheetCell();
+}
+
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

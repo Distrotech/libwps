@@ -37,8 +37,9 @@ int main(int argc, char *argv[])
 
 	librevenge::RVNGFileStream input(argv[1]);
 
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input);
-	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)
+	WPSKind kind;
+	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind);
+	if (confidence == WPS_CONFIDENCE_NONE || kind != WPS_TEXT)
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;

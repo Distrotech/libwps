@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  * Major Contributor(s):
- * Copyright (C) 2002-2003 William Lachance (william.lachance@sympatico.ca)
- * Copyright (C) 2002-2004 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
+ * Copyright (C) 2002,2004 Marc Maurer (uwog@uwog.net)
  *
  * For minor contributions see the git repository.
  *
@@ -30,25 +30,59 @@
 
 int main(int argc, char *argv[])
 {
+	bool printIndentLevel = false;
+	char *file = 0;
+
 	if (argc < 2)
 	{
-		printf("Usage: wps2text <Works Document>\n");
+		printf("Usage: wks2raw [OPTION] <Works Spreadsheet Document>\n");
 		return -1;
 	}
 
-	librevenge::RVNGFileStream input(argv[1]);
+	if (!strcmp(argv[1], "--callgraph"))
+	{
+		if (argc == 2)
+		{
+			printf("Usage: wks2raw [OPTION] <Works Spreadsheet Document>\n");
+			return -1;
+		}
+
+		printIndentLevel = true;
+		file = argv[2];
+	}
+	else if (!strcmp(argv[1], "--help"))
+	{
+		printf("Usage: wks2raw [OPTION] <Works Spreadsheet Document>\n");
+		printf("\n");
+		printf("Options:\n");
+		printf("--callgraph		    Display the call graph nesting level\n");
+		printf("--help              Shows this help message\n");
+		return 0;
+	}
+	else
+		file = argv[1];
+
+	librevenge::RVNGFileStream input(file);
 
 	WPSKind kind;
 	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind);
-	if (confidence == WPS_CONFIDENCE_NONE || kind != WPS_TEXT)
+	if (confidence == WPS_CONFIDENCE_NONE)
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
 	}
 
-	librevenge::RVNGString document;
-	librevenge::RVNGTextTextGenerator listenerImpl(document);
-	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
+	WPSResult error=WPS_OK;
+	if (kind == WPS_SPREADSHEET)
+	{
+		librevenge::RVNGRawSpreadsheetGenerator listenerImpl(printIndentLevel);
+		error= WPSDocument::parse(&input, &listenerImpl);
+	}
+	else
+	{
+		printf("ERROR: Unsupported file format!\n");
+		return 1;
+	}
 
 	if (error == WPS_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
@@ -61,8 +95,6 @@ int main(int argc, char *argv[])
 
 	if (error != WPS_OK)
 		return 1;
-
-	printf("%s", document.cstr());
 
 	return 0;
 }

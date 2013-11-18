@@ -33,6 +33,7 @@
 #include "WPSContentListener.h"
 #include "WPSEntry.h"
 #include "WPSFont.h"
+#include "WPSOLEParser.h"
 #include "WPSParagraph.h"
 #include "WPSPosition.h"
 
@@ -48,11 +49,13 @@ namespace WPS8GraphInternal
 struct Pict
 {
 	//! constructor
-	Pict() : m_data(), m_size(), m_parsed(false) {}
+	Pict() : m_data(), m_size(), m_mime("image/pict"), m_parsed(false) {}
 	//! the content
 	librevenge::RVNGBinaryData m_data;
 	//! the size of the picture (if known)
 	Vec2f m_size;
+	//! the mime type
+	std::string m_mime;
 	//! flag to know if the data was send to the listener
 	bool m_parsed;
 };
@@ -138,9 +141,8 @@ void WPS8Graph::computePositions() const
 	m_state->m_numPages = (m_state->m_pictMap.size() || m_state->m_oleMap.size()) ? 1 : 0;
 }
 
-void WPS8Graph::storeObjects(std::vector<librevenge::RVNGBinaryData> const &objects,
-                             std::vector<int> const &ids,
-                             std::vector<WPSPosition> const &positions)
+void WPS8Graph::storeObjects(std::vector<WPSOLEParserObject> const &objects,
+                             std::vector<int> const &ids)
 {
 	size_t numObject = objects.size();
 	if (numObject != ids.size())
@@ -151,9 +153,10 @@ void WPS8Graph::storeObjects(std::vector<librevenge::RVNGBinaryData> const &obje
 	for (size_t i = 0; i < numObject; i++)
 	{
 		WPS8GraphInternal::Pict ole;
-		ole.m_data = objects[i];
-		float scale = 1.0f/positions[i].getInvUnitScale(librevenge::RVNG_INCH);
-		ole.m_size = scale*positions[i].naturalSize();
+		ole.m_data = objects[i].m_data;
+		float scale = 1.0f/objects[i].m_position.getInvUnitScale(librevenge::RVNG_INCH);
+		ole.m_size = scale*objects[i].m_position.naturalSize();
+		ole.m_mime = objects[i].m_mime;
 		m_state->m_oleMap[ids[i]] = ole;
 	}
 }
@@ -235,7 +238,7 @@ bool WPS8Graph::sendObject(WPSPosition const &posi, int id, bool ole)
 	WPSPosition finalPos(posi);
 	finalPos.setSize(size);
 	finalPos.setNaturalSize(naturalSize);
-	m_listener->insertPicture(finalPos, pict.m_data);
+	m_listener->insertPicture(finalPos, pict.m_data, pict.m_mime);
 	return true;
 }
 
@@ -303,7 +306,7 @@ void WPS8Graph::sendObjects(int page, int)
 			position.setNaturalSize(pict.m_size);
 			position.setRelativePosition(WPSPosition::CharBaseLine);
 			position.m_wrapping = WPSPosition::WDynamic;
-			m_listener->insertPicture(position, pict.m_data);
+			m_listener->insertPicture(position, pict.m_data, pict.m_mime);
 		}
 	}
 
@@ -360,7 +363,7 @@ void WPS8Graph::sendBorder(int borderId)
 		if (border.m_pictList[id].m_size.x() > 0 &&
 		        border.m_pictList[id].m_size.y() > 0)
 			pos.setSize(border.m_pictList[id].m_size);
-		m_listener->insertPicture(pos, border.m_pictList[id].m_data);
+		m_listener->insertPicture(pos, border.m_pictList[id].m_data, border.m_pictList[id].m_mime);
 		if (i == 3)
 		{
 			message = librevenge::RVNGString("-----");

@@ -36,13 +36,12 @@ class WPSParser
 {
 	friend class WPSTextParser;
 public:
-	WPSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
-	virtual ~WPSParser();
-
-	virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
-
 	//! a map to retrieve a file entry by name
 	typedef std::multimap<std::string, WPSEntry> NameMultiMap;
+
+	WPSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
+	virtual ~WPSParser();
+	virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
 
 protected:
 	RVNGInputStreamPtr &getInput()
@@ -62,6 +61,12 @@ protected:
 	{
 		m_version=vers;
 	}
+	//! a DebugFile used to write what we recognize when we parse the document
+	libwps::DebugFile &ascii()
+	{
+		return m_asciiFile;
+	}
+
 	NameMultiMap &getNameEntryMap()
 	{
 		return m_nameMultiMap;
@@ -69,11 +74,6 @@ protected:
 	NameMultiMap const &getNameEntryMap() const
 	{
 		return m_nameMultiMap;
-	}
-	//! a DebugFile used to write what we recognize when we parse the document
-	libwps::DebugFile &ascii()
-	{
-		return m_asciiFile;
 	}
 
 private:
@@ -86,10 +86,11 @@ private:
 	WPSHeaderPtr m_header;
 	// the file version
 	int m_version;
-	//! a map to retrieve a file entry by name
-	NameMultiMap m_nameMultiMap;
 	//! the debug file
 	libwps::DebugFile m_asciiFile;
+
+	//! a map to retrieve a file entry by name
+	NameMultiMap m_nameMultiMap;
 };
 
 #endif /* WPSPARSER_H */

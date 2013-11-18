@@ -32,8 +32,8 @@
 
 void WPSList::Level::addTo(librevenge::RVNGPropertyList &propList, int startVal) const
 {
-	propList.insert("text:min-label-width", m_labelWidth, librevenge::RVNG_INCH);
-	propList.insert("text:space-before", m_labelIndent, librevenge::RVNG_INCH);
+	propList.insert("text:min-label-width", m_labelWidth);
+	propList.insert("text:space-before", m_labelIndent);
 	switch(m_type)
 	{
 	case libwps::BULLET:
@@ -50,8 +50,8 @@ void WPSList::Level::addTo(librevenge::RVNGPropertyList &propList, int startVal)
 	case libwps::UPPERCASE:
 	case libwps::LOWERCASE_ROMAN:
 	case libwps::UPPERCASE_ROMAN:
-		if (m_prefix.len()) propList.insert("style:num-prefix",librevenge::RVNGPropertyFactory::newStringProp(m_prefix));
-		if (m_suffix.len()) propList.insert("style:num-suffix",librevenge::RVNGPropertyFactory::newStringProp(m_suffix));
+		if (m_prefix.len()) propList.insert("style:num-prefix",m_prefix);
+		if (m_suffix.len()) propList.insert("style:num-suffix", m_suffix);
 		propList.insert("style:num-format", libwps::numberingTypeToString(m_type).c_str());
 		propList.insert("text:start-value", startVal);
 		break;

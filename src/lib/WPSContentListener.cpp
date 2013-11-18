@@ -231,57 +231,6 @@ void WPSContentListener::insertUnicodeString(librevenge::RVNGString const &str)
 	m_ps->m_textBuffer.append(str);
 }
 
-void WPSContentListener::appendUnicode(uint32_t val, librevenge::RVNGString &buffer)
-{
-	if (val < 0x20)
-	{
-		WPS_DEBUG_MSG(("WPSContentListener::appendUnicode: find an old char %x, skip it\n", val));
-		return;
-	}
-	uint8_t first;
-	int len;
-	if (val < 0x80)
-	{
-		first = 0;
-		len = 1;
-	}
-	else if (val < 0x800)
-	{
-		first = 0xc0;
-		len = 2;
-	}
-	else if (val < 0x10000)
-	{
-		first = 0xe0;
-		len = 3;
-	}
-	else if (val < 0x200000)
-	{
-		first = 0xf0;
-		len = 4;
-	}
-	else if (val < 0x4000000)
-	{
-		first = 0xf8;
-		len = 5;
-	}
-	else
-	{
-		first = 0xfc;
-		len = 6;
-	}
-
-	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
-	int i;
-	for (i = len - 1; i > 0; --i)
-	{
-		outbuf[i] = uint8_t((val & 0x3f) | 0x80);
-		val >>= 6;
-	}
-	outbuf[0] = uint8_t(val | first);
-	for (i = 0; i < len; i++) buffer.append(char(outbuf[i]));
-}
-
 void WPSContentListener::insertEOL(bool soft)
 {
 	if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
@@ -675,7 +624,7 @@ void WPSContentListener::_openPageSpan()
 
 	librevenge::RVNGPropertyList propList;
 	currentPage.getPageProperty(propList);
-	propList.insert("librevenge:is-last-page-span", bool(m_ps->m_currentPage + 1 == m_ds->m_pageList.size()));
+	propList.insert("librevenge:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
 
 	if (!m_ps->m_isPageSpanOpened)
 		m_documentInterface->openPageSpan(propList);
@@ -735,8 +684,8 @@ void WPSContentListener::_openSection()
 	m_ps->m_numColumns = int(m_ps->m_textColumns.size());
 
 	librevenge::RVNGPropertyList propList;
-	propList.insert("fo:margin-left", 0., librevenge::RVNG_INCH);
-	propList.insert("fo:margin-right", 0., librevenge::RVNG_INCH);
+	propList.insert("fo:margin-left", 0.);
+	propList.insert("fo:margin-right", 0.);
 	if (m_ps->m_numColumns > 1)
 		propList.insert("text:dont-balance-text-columns", false);
 
@@ -747,8 +696,8 @@ void WPSContentListener::_openSection()
 		librevenge::RVNGPropertyList column;
 		// The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
 		column.insert("style:rel-width", col.m_width * 1440.0, librevenge::RVNG_TWIP);
-		column.insert("fo:start-indent", col.m_leftGutter, librevenge::RVNG_INCH);
-		column.insert("fo:end-indent", col.m_rightGutter, librevenge::RVNG_INCH);
+		column.insert("fo:start-indent", col.m_leftGutter);
+		column.insert("fo:end-indent", col.m_rightGutter);
 		columns.append(column);
 	}
 	m_documentInterface->openSection(propList, columns);
@@ -1139,7 +1088,7 @@ void WPSContentListener::insertLabelNote(const NoteType noteType, librevenge::RV
 
 		librevenge::RVNGPropertyList propList;
 		if (label.len())
-			propList.insert("text:label", librevenge::RVNGPropertyFactory::newStringProp(label));
+			propList.insert("text:label", label);
 		if (noteType == FOOTNOTE)
 		{
 			propList.insert("librevenge:number", ++(m_ds->m_footNoteNumber));
@@ -1608,7 +1557,7 @@ void WPSContentListener::openTable(std::vector<float> const &colWidth, libreveng
 
 	librevenge::RVNGPropertyList propList;
 	propList.insert("table:align", "left");
-	propList.insert("fo:margin-left", 0.0, librevenge::RVNG_INCH);
+	propList.insert("fo:margin-left", 0.0);
 
 	float tableWidth = 0;
 	librevenge::RVNGPropertyListVector columns;
@@ -1711,42 +1660,7 @@ void WPSContentListener::openTableCell(WPSCell const &cell, librevenge::RVNGProp
 	}
 
 	librevenge::RVNGPropertyList propList(extras);
-	propList.insert("librevenge:column", cell.position()[0]);
-	propList.insert("librevenge:row", cell.position()[1]);
-
-	propList.insert("table:number-columns-spanned", cell.numSpannedCells()[0]);
-	propList.insert("table:number-rows-spanned", cell.numSpannedCells()[1]);
-
-	std::vector<WPSBorder> const &borders = cell.borders();
-	for (size_t c = 0; c < borders.size(); c++)
-	{
-		std::string property = borders[c].getPropertyValue();
-		if (property.length() == 0) continue;
-		switch(c)
-		{
-		case WPSBorder::Left:
-			propList.insert("fo:border-left", property.c_str());
-			break;
-		case WPSBorder::Right:
-			propList.insert("fo:border-right", property.c_str());
-			break;
-		case WPSBorder::Top:
-			propList.insert("fo:border-top", property.c_str());
-			break;
-		case WPSBorder::Bottom:
-			propList.insert("fo:border-bottom", property.c_str());
-			break;
-		default:
-			WPS_DEBUG_MSG(("WPSContentListener::openTableCell: can not send %d border\n",int(c)));
-			break;
-		}
-	}
-	if (cell.backgroundColor() != 0xFFFFFF)
-	{
-		char color[20];
-		sprintf(color,"#%06x",cell.backgroundColor());
-		propList.insert("fo:background-color", color);
-	}
+	cell.addTo(propList);
 
 	m_ps->m_isTableCellOpened = true;
 	m_documentInterface->openTableCell(propList);

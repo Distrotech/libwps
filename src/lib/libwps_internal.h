@@ -54,6 +54,7 @@ typedef unsigned int uint32_t;
 // define localtime_r on Windows, so that can use
 // thread-safe functions on other environments
 #ifdef _WIN32
+#  define gmtime_r(tp,tmp) (gmtime(tp)?(*(tmp)=*gmtime(tp),(tmp)):0)
 #  define localtime_r(tp,tmp) (localtime(tp)?(*(tmp)=*localtime(tp),(tmp)):0)
 #endif
 
@@ -80,6 +81,7 @@ struct WPS_shared_ptr_noop_deleter
 typedef shared_ptr<librevenge::RVNGInputStream> RVNGInputStreamPtr;
 
 class WPSCell;
+class WPSListener;
 class WPSContentListener;
 class WPSEntry;
 class WPSFont;
@@ -87,14 +89,24 @@ class WPSHeader;
 class WPSPosition;
 class WPSSubDocument;
 
+class WKSContentListener;
+class WKSSubDocument;
+
 /** shared pointer to WPSCell */
 typedef shared_ptr<WPSCell> WPSCellPtr;
+/** shared pointer to WPSListener */
+typedef shared_ptr<WPSListener> WPSListenerPtr;
 /** shared pointer to WPSContentListener */
 typedef shared_ptr<WPSContentListener> WPSContentListenerPtr;
 /** shared pointer to WPSHeader */
 typedef shared_ptr<WPSHeader> WPSHeaderPtr;
 /** shared pointer to WPSSubDocument */
 typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
+
+/** shared pointer to WKSContentListener */
+typedef shared_ptr<WKSContentListener> WKSContentListenerPtr;
+/** shared pointer to WKSSubDocument */
+typedef shared_ptr<WKSSubDocument> WKSSubDocumentPtr;
 
 /* ---------- debug  --------------- */
 #ifdef DEBUG

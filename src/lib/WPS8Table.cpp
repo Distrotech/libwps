@@ -60,18 +60,23 @@ struct Cell : public WPSCell
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
 	//! call when a cell must be send
-	virtual bool send(WPSContentListenerPtr &listener)
+	virtual bool send(WPSListenerPtr &listener)
 	{
 		if (!listener) return true;
-		librevenge::RVNGPropertyList propList;
-		listener->openTableCell(*this, propList);
+		WPSContentListener *listen=dynamic_cast<WPSContentListener *>(listener.get());
+		if (!listen)
+		{
+			WPS_DEBUG_MSG(("WPS8TableInternal::Cell::send: unexpected listener\n"));
+			return true;
+		}
+		listen->openTableCell(*this);
 		sendContent(listener);
-		listener->closeTableCell();
+		listen->closeTableCell();
 		return true;
 	}
 
 	//! call when the content of a cell must be send
-	virtual bool sendContent(WPSContentListenerPtr &)
+	virtual bool sendContent(WPSListenerPtr &)
 	{
 		m_tableParser.sendTextInCell(m_strsId, m_id);
 		return true;

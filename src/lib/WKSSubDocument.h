@@ -21,22 +21,22 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#ifndef WPSSUBDOCUMENT_H
-#define WPSSUBDOCUMENT_H
+#ifndef WKSSUBDOCUMENT_H
+#define WKSSUBDOCUMENT_H
 
 #include "libwps_internal.h"
 
-class WPSContentListener;
-class WPSParser;
+class WKSContentListener;
+class WKSParser;
 
-/** Basic class used to store a sub document */
-class WPSSubDocument
+/** Basic class used to store a spreadsheet sub document */
+class WKSSubDocument
 {
 public:
 	/// constructor
-	WPSSubDocument(RVNGInputStreamPtr &input, WPSParser *parser, int id=0);
+	WKSSubDocument(RVNGInputStreamPtr &input, WKSParser *parser, int id=0);
 	/// destructor
-	virtual ~WPSSubDocument();
+	virtual ~WKSSubDocument();
 
 	/// returns the input
 	RVNGInputStreamPtr &getInput()
@@ -44,7 +44,7 @@ public:
 		return m_input;
 	}
 	/// returns the parser
-	WPSParser *parser() const
+	WKSParser *parser() const
 	{
 		return m_parser;
 	}
@@ -60,8 +60,8 @@ public:
 	}
 
 	/// an operator =
-	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const;
-	bool operator!=(shared_ptr<WPSSubDocument> const &doc) const
+	virtual bool operator==(shared_ptr<WKSSubDocument> const &doc) const;
+	bool operator!=(shared_ptr<WKSSubDocument> const &doc) const
 	{
 		return !operator==(doc);
 	}
@@ -69,17 +69,17 @@ public:
 	/** virtual parse function
 	 *
 	 * this function is called to parse the subdocument */
-	virtual void parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType) = 0;
+	virtual void parse(shared_ptr<WKSContentListener> &listener, libwps::SubDocumentType subDocumentType) = 0;
 
 protected:
 	RVNGInputStreamPtr m_input;
-	WPSParser *m_parser;
+	WKSParser *m_parser;
 	int m_id;
 private:
-	WPSSubDocument(const WPSSubDocument &);
-	WPSSubDocument &operator=(const WPSSubDocument &);
+	WKSSubDocument(const WKSSubDocument &);
+	WKSSubDocument &operator=(const WKSSubDocument &);
 
 };
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
 
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

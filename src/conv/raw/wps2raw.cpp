@@ -64,15 +64,25 @@ int main(int argc, char *argv[])
 
 	librevenge::RVNGFileStream input(file);
 
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input);
-	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)
+	WPSKind kind;
+	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind);
+	if (confidence == WPS_CONFIDENCE_NONE)
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
 	}
 
-	librevenge::RVNGRawTextGenerator listenerImpl(printIndentLevel);
-	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
+	WPSResult error=WPS_OK;
+	if (kind == WPS_TEXT)
+	{
+		librevenge::RVNGRawTextGenerator listenerImpl(printIndentLevel);
+		error= WPSDocument::parse(&input, &listenerImpl);
+	}
+	else
+	{
+		printf("ERROR: Unsupported file format!\n");
+		return 1;
+	}
 
 	if (error == WPS_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");

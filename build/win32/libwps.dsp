@@ -95,6 +95,26 @@ SOURCE=..\..\src\lib\libwps_tools_win.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WKS4.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKS4Spreadsheet.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSContentListener.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSParser.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSSubDocument.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPS4.cpp
 # End Source File
 # Begin Source File
@@ -200,6 +220,26 @@ SOURCE=..\..\src\lib\libwps_internal.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\libwps_tools_win.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKS4.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKS4Spreadsheet.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSContentListener.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSParser.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSSubDocument.h
 # End Source File
 # Begin Source File
 

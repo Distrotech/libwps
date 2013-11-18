@@ -71,6 +71,7 @@
 
 #include <librevenge/librevenge.h>
 
+#include "WPSHeader.h"
 #include "WPSPosition.h"
 
 #include "WPSOLEParser.h"
@@ -225,41 +226,12 @@ struct OleDef
 
 // constructor/destructor
 WPSOLEParser::WPSOLEParser(const std::string &mainName)
-	: m_avoidOLE(mainName), m_unknownOLEs(),
-	  m_objects(), m_objectsPosition(), m_objectsId(), m_compObjIdName()
+	: m_avoidOLE(mainName), m_unknownOLEs(), m_objects(), m_objectsId(), m_compObjIdName()
 {
 }
 
 WPSOLEParser::~WPSOLEParser()
 {
-}
-
-// interface
-bool WPSOLEParser::getObject(int id, librevenge::RVNGBinaryData &obj, WPSPosition &pos)  const
-{
-	for (size_t i = 0; i < m_objectsId.size(); i++)
-	{
-		if (m_objectsId[i] != id) continue;
-		obj = m_objects[i];
-		pos = m_objectsPosition[i];
-		return true;
-	}
-	obj.clear();
-	return false;
-}
-
-void WPSOLEParser::setObject(int id, librevenge::RVNGBinaryData const &obj, WPSPosition const &pos)
-{
-	for (size_t i = 0; i < m_objectsId.size(); i++)
-	{
-		if (m_objectsId[i] != id) continue;
-		m_objects[i] = obj;
-		m_objectsPosition[i] = pos;
-		return;
-	}
-	m_objects.push_back(obj);
-	m_objectsPosition.push_back(pos);
-	m_objectsId.push_back(id);
 }
 
 // parsing
@@ -348,9 +320,9 @@ bool WPSOLEParser::parse(RVNGInputStreamPtr file)
 
 		// try to find a representation for each id
 		// FIXME: maybe we must also find some for each subid
-		librevenge::RVNGBinaryData pict;
+		WPSOLEParserObject pict;
 		int confidence = -1000;
-		WPSPosition actualPos, potentialSize;
+		WPSPosition potentialSize;
 
 		while (pos != listsById.end())
 		{
@@ -371,6 +343,7 @@ bool WPSOLEParser::parse(RVNGInputStreamPtr file)
 			librevenge::RVNGBinaryData data;
 			bool hasData = false;
 			int newConfidence = -2000;
+			std::string mime("image/pict");
 			bool ok = true;
 			WPSPosition pictPos;
 
@@ -379,6 +352,12 @@ bool WPSOLEParser::parse(RVNGInputStreamPtr file)
 				if (readMM(ole, dOle.m_dir, asciiFile));
 				else if (readObjInfo(ole, dOle.m_dir, asciiFile));
 				else if (readOle(ole, dOle.m_dir, asciiFile));
+				else if (readMN0AndCheckWKS(ole, dOle.m_dir, data, asciiFile))
+				{
+					hasData = true;
+					newConfidence = 10;
+					mime="image/wks-ods";
+				}
 				else if (isOlePres(ole, dOle.m_dir) &&
 				         readOlePres(ole, data, pictPos, asciiFile))
 				{
@@ -424,15 +403,16 @@ bool WPSOLEParser::parse(RVNGInputStreamPtr file)
 				if (dOle.m_subId != -1) newConfidence -= 10;
 
 				if (newConfidence > confidence ||
-				        (newConfidence == confidence && pict.size() < data.size()))
+				        (newConfidence == confidence && pict.m_data.size() < data.size()))
 				{
 					confidence = newConfidence;
-					pict = data;
-					actualPos = pictPos;
+					pict.m_data = data;
+					pict.m_position = pictPos;
+					pict.m_mime = mime;
 				}
 
-				if (actualPos.naturalSize().x() > 0 && actualPos.naturalSize().y() > 0)
-					potentialSize = actualPos;
+				if (pict.m_position.naturalSize().x() > 0 && pict.m_position.naturalSize().y() > 0)
+					potentialSize = pict.m_position;
 #ifdef DEBUG_WITH_FILES
 				libwps::Debug::dumpFile(data, dOle.m_name.c_str());
 #endif
@@ -445,16 +425,15 @@ bool WPSOLEParser::parse(RVNGInputStreamPtr file)
 #endif
 		}
 
-		if (pict.size())
+		if (pict.m_data.size())
 		{
 			m_objects.push_back(pict);
-			if (actualPos.naturalSize().x() <= 0. || actualPos.naturalSize().y() <= 0.)
+			if (pict.m_position.naturalSize().x() <= 0. || pict.m_position.naturalSize().y() <= 0.)
 			{
 				Vec2f size = potentialSize.naturalSize();
 				if (size.x() > 0 && size.y() > 0)
-					actualPos.setNaturalSize(actualPos.getInvUnitScale(potentialSize.unit())*size);
+					pict.m_position.setNaturalSize(pict.m_position.getInvUnitScale(potentialSize.unit())*size);
 			}
-			m_objectsPosition.push_back(actualPos);
 			m_objectsId.push_back(id);
 		}
 	}
@@ -1135,4 +1114,24 @@ bool WPSOLEParser::readCONTENTS(RVNGInputStreamPtr &input,
 	ascii.skipZone(hSize+4, input->tell()-1);
 	return true;
 }
+
+////////////////////////////////////////////////////////////////
+//
+// finally the MN0 subdirectory
+//
+////////////////////////////////////////////////////////////////
+bool WPSOLEParser::readMN0AndCheckWKS(RVNGInputStreamPtr &input, std::string const &oleName,
+                                      librevenge::RVNGBinaryData &data,  libwps::DebugFile &/*ascii*/)
+{
+	if (strcmp(oleName.c_str(),"MN0") != 0) return false;
+	WPSHeader *header=WPSHeader::constructHeader(input);
+	if (!header) return false;
+	bool ok=header->getKind()==WPS_SPREADSHEET;
+	delete header;
+	if (!ok) return false;
+
+	input->seek(0, librevenge::RVNG_SEEK_SET);
+	return libwps::readDataToEnd(input, data);
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

@@ -1,5 +1,5 @@
 if BUILD_TOOLS
 
-SUBDIRS = html raw text
+SUBDIRS = html raw text wks2raw
 
 endif

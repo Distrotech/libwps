@@ -32,6 +32,7 @@
 
 #include "WPSDebug.h"
 
+struct WPSOLEParserObject;
 class WPS4Parser;
 
 namespace WPS4GraphInternal
@@ -84,9 +85,8 @@ protected:
 	int version() const;
 
 	//! store a list of object
-	void storeObjects(std::vector<librevenge::RVNGBinaryData> const &objects,
-	                  std::vector<int> const &ids,
-	                  std::vector<WPSPosition> const &positions);
+	void storeObjects(std::vector<WPSOLEParserObject> const &objects,
+	                  std::vector<int> const &ids);
 
 	/** tries to find a picture in the zone pointed by \a entry
 	 * \return the object id or -1 if find nothing

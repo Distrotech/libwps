@@ -23,6 +23,7 @@
  */
 
 #include <libwps/libwps.h>
+#include "WKS4.h"
 #include "WPS4.h"
 #include "WPS8.h"
 #include "WPSHeader.h"
@@ -48,12 +49,14 @@ the full 100%.
 /**
 Analyzes the content of an input stream to see if it can be parsed
 \param ip The input stream
+\param kind The document kind
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip)
+WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip, WPSKind &kind)
 {
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
+	kind=WPS_TEXT;
 	WPSHeaderPtr header;
 	shared_ptr<librevenge::RVNGInputStream > input(ip, WPS_shared_ptr_noop_deleter<librevenge::RVNGInputStream>());
 	try
@@ -62,6 +65,7 @@ WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip
 
 		if (!header)
 			return WPS_CONFIDENCE_NONE;
+		kind = header->getKind();
 
 		WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 		switch (header->getMajorVersion())
@@ -73,7 +77,7 @@ WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip
 			break;
 		case 5:
 		case 2:
-			confidence = WPS_CONFIDENCE_GOOD;
+			confidence = WPS_CONFIDENCE_EXCELLENT;
 			break;
 		default:
 			break;
@@ -116,7 +120,7 @@ WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGTe
 	{
 		header.reset(WPSHeader::constructHeader(input));
 
-		if (!header)
+		if (!header || header->getKind() != WPS_TEXT)
 			return WPS_UNKNOWN_ERROR;
 
 		switch (header->getMajorVersion())
@@ -137,6 +141,62 @@ WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGTe
 		case 2:
 		{
 			parser.reset(new WPS4Parser(header->getInput(), header));
+			if (!parser) return WPS_UNKNOWN_ERROR;
+			parser->parse(documentInterface);
+			break;
+		}
+		default:
+			break;
+		}
+	}
+	catch (libwps::FileException)
+	{
+		WPS_DEBUG_MSG(("File exception trapped\n"));
+		error = WPS_FILE_ACCESS_ERROR;
+	}
+	catch (libwps::ParseException)
+	{
+		WPS_DEBUG_MSG(("Parse exception trapped\n"));
+		error = WPS_PARSE_ERROR;
+	}
+	catch (...)
+	{
+		//fixme: too generic
+		WPS_DEBUG_MSG(("Unknown exception trapped\n"));
+		error = WPS_UNKNOWN_ERROR;
+	}
+
+	return error;
+}
+
+/**
+Parses the input stream content. It will make callbacks to the functions provided by a
+librevenge::RVNGSpreadsheetInterface class implementation when needed. This is often commonly called the
+'main parsing routine'.
+\param ip The input stream
+\param documentInterface A SpreadsheetInterface implementation
+*/
+WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGSpreadsheetInterface *documentInterface)
+{
+	WPSResult error = WPS_OK;
+
+	WPSHeaderPtr header;
+	shared_ptr<WKSParser> parser;
+	shared_ptr<librevenge::RVNGInputStream > input(ip, WPS_shared_ptr_noop_deleter<librevenge::RVNGInputStream>());
+	try
+	{
+		header.reset(WPSHeader::constructHeader(input));
+
+		if (!header || header->getKind() != WPS_SPREADSHEET)
+			return WPS_UNKNOWN_ERROR;
+
+		switch (header->getMajorVersion())
+		{
+		case 4:
+		case 3:
+		case 2:
+		{
+			parser.reset(new WKS4Parser(header->getInput(), header));
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
 			break;

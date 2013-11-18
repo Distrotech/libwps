@@ -8,7 +8,7 @@
  *
  * Major Contributor(s):
  * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
- * Copyright (C) 2002-2003 Marc Maurer (uwog@uwog.net)
+ * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
  *
  * For minor contributions see the git repository.
  *
@@ -20,60 +20,60 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#ifndef WPSHEADER_H
-#define WPSHEADER_H
+#ifndef WKSPARSER_H
+#define WKSPARSER_H
+
+#include <map>
+#include <string>
 
 #include "libwps_internal.h"
-#include <librevenge-stream/librevenge-stream.h>
 
-#include "libwps/libwps.h"
+#include "WPSDebug.h"
 
-class WPSHeader
+class WKSParser
 {
 public:
-	WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, WPSKind kind=WPS_TEXT);
-	virtual ~WPSHeader();
+	WKSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
+	virtual ~WKSParser();
+	virtual void parse(librevenge::RVNGSpreadsheetInterface *documentInterface) = 0;
 
-	static WPSHeader *constructHeader(RVNGInputStreamPtr &input);
-
+protected:
 	RVNGInputStreamPtr &getInput()
 	{
 		return m_input;
 	}
-
-	RVNGInputStreamPtr &getFileInput()
+	RVNGInputStreamPtr getFileInput();
+	WPSHeaderPtr &getHeader()
 	{
-		return m_fileInput;
+		return m_header;
 	}
-
-	WPSKind getKind() const
+	int version() const
 	{
-		return m_kind;
+		return m_version;
 	}
-
-	void setKind(WPSKind kind)
+	void setVersion(int vers)
 	{
-		m_kind=kind;
+		m_version=vers;
 	}
-
-	uint8_t getMajorVersion() const
+	//! a DebugFile used to write what we recognize when we parse the document
+	libwps::DebugFile &ascii()
 	{
-		return m_majorVersion;
-	}
-
-	void setMajorVersion(uint8_t version)
-	{
-		m_majorVersion=version;
+		return m_asciiFile;
 	}
 
 private:
-	WPSHeader(const WPSHeader &);
-	WPSHeader &operator=(const WPSHeader &);
+	WKSParser(const WKSParser &);
+	WKSParser &operator=(const WKSParser &);
+
+	// the main input
 	RVNGInputStreamPtr m_input;
-	RVNGInputStreamPtr m_fileInput;
-	uint8_t m_majorVersion;
-	WPSKind m_kind;
+	// the header
+	WPSHeaderPtr m_header;
+	// the file version
+	int m_version;
+	//! the debug file
+	libwps::DebugFile m_asciiFile;
 };
 
-#endif /* WPSHEADER_H */
+#endif /* WKSPARSER_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

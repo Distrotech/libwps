@@ -25,20 +25,20 @@
 #include "WPSEntry.h"
 #include "WPSHeader.h"
 
-#include "WPSParser.h"
+#include "WKSParser.h"
 
-WPSParser::WPSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
-	m_input(input), m_header(header), m_version(0), m_asciiFile(), m_nameMultiMap()
+WKSParser::WKSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
+	m_input(input), m_header(header), m_version(0), m_asciiFile()
 {
 	if (header)
 		m_version = header->getMajorVersion();
 }
 
-WPSParser::~WPSParser()
+WKSParser::~WKSParser()
 {
 }
 
-RVNGInputStreamPtr WPSParser::getFileInput()
+RVNGInputStreamPtr WKSParser::getFileInput()
 {
 	if (!m_header) return RVNGInputStreamPtr();
 	return m_header->getFileInput();

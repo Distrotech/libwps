@@ -26,8 +26,8 @@
 
 #include "WPSHeader.h"
 
-WPSHeader::WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion) :
-	m_input(input), m_fileInput(fileInput), m_majorVersion(majorVersion)
+WPSHeader::WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, WPSKind kind) :
+	m_input(input), m_fileInput(fileInput), m_majorVersion(majorVersion), m_kind(kind)
 {
 }
 
@@ -51,12 +51,24 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 	if (!input->isStructured())
 	{
 		input->seek(0, librevenge::RVNG_SEEK_SET);
-		if (libwps::readU8(input.get()) < 6
-		        && 0xFE == libwps::readU8(input.get()))
+		uint8_t firstOffset = libwps::readU8(input);
+		uint8_t secondOffset = libwps::readU8(input);
+
+		if (firstOffset < 6 && secondOffset == 0xFE)
 		{
 			WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
 			return new WPSHeader(input, input, 2);
 		}
+		if ((firstOffset == 0xFF || firstOffset == 00) && secondOffset == 0x0)
+		{
+			if (libwps::readU16(input) == 2 && libwps::readU16(input) == 0x0404 &&
+			        libwps::readU16(input) == 0x5405 && libwps::readU16(input) == 2)
+			{
+				WPS_DEBUG_MSG(("Microsoft Works wks detected\n"));
+				return new WPSHeader(input, input, 2, WPS_SPREADSHEET);
+			}
+		}
+
 		return 0;
 	}
 

@@ -63,6 +63,7 @@
 #include "libwps_internal.h"
 
 #include "WPSDebug.h"
+#include "WPSPosition.h"
 
 namespace libwps
 {
@@ -73,6 +74,21 @@ namespace WPSOLEParserInternal
 {
 class CompObj;
 }
+
+/** small struct to store an object */
+struct WPSOLEParserObject
+{
+	/// constructor
+	WPSOLEParserObject() : m_position(), m_data(), m_mime("image/pict")
+	{
+	}
+	/// the position
+	WPSPosition m_position;
+	/// the data
+	librevenge::RVNGBinaryData m_data;
+	/// the mime type
+	std::string m_mime;
+};
 
 /** \brief a class used to parse some basic oles
     Tries to read the different ole parts and stores their contents in form of picture.
@@ -103,23 +119,10 @@ public:
 		return m_objectsId;
 	}
 	//! returns the list of data positions which have been read
-	std::vector<WPSPosition> const &getObjectsPosition() const
-	{
-		return m_objectsPosition;
-	}
-	//! returns the list of data which have been read
-	std::vector<librevenge::RVNGBinaryData> const &getObjects() const
+	std::vector<WPSOLEParserObject> const &getObjects() const
 	{
 		return m_objects;
 	}
-
-	//! returns the picture corresponding to an id
-	bool getObject(int id, librevenge::RVNGBinaryData &obj, WPSPosition &pos) const;
-
-	/*! \brief sets an object
-	 * just in case, the external parsing find another representation
-	 */
-	void setObject(int id, librevenge::RVNGBinaryData const &obj, WPSPosition const &pos);
 protected:
 
 	//!  the "Ole" small structure : unknown contain
@@ -161,6 +164,9 @@ protected:
 	static bool readCONTENTS(RVNGInputStreamPtr &input, std::string const &oleName,
 	                         librevenge::RVNGBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
 
+	//!  the "MN0" small structure : can contains a WKS file...
+	static bool readMN0AndCheckWKS(RVNGInputStreamPtr &input, std::string const &oleName,
+	                               librevenge::RVNGBinaryData &wksData,  libwps::DebugFile &ascii);
 
 	//! if filled, does not parse content with this name
 	std::string m_avoidOLE;
@@ -168,9 +174,7 @@ protected:
 	std::vector<std::string> m_unknownOLEs;
 
 	//! list of pictures read
-	std::vector<librevenge::RVNGBinaryData> m_objects;
-	//! list of picture size ( if known)
-	std::vector<WPSPosition> m_objectsPosition;
+	std::vector<WPSOLEParserObject> m_objects;
 	//! list of pictures id
 	std::vector<int> m_objectsId;
 

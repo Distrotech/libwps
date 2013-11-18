@@ -33,6 +33,7 @@
 
 #include "WPSDebug.h"
 
+struct WPSOLEParserObject;
 class WPS8Parser;
 
 namespace WPS8GraphInternal
@@ -103,9 +104,8 @@ protected:
 	void sendBorder(int borderId);
 
 	//! adds a list of objects with given ids in the ole lists
-	void storeObjects(std::vector<librevenge::RVNGBinaryData> const &objects,
-	                  std::vector<int> const &ids,
-	                  std::vector<WPSPosition> const &positions);
+	void storeObjects(std::vector<WPSOLEParserObject> const &objects,
+	                  std::vector<int> const &ids);
 
 	//! finds all entries which correspond to some pictures, parses them and stores data
 	bool readStructures(RVNGInputStreamPtr input);
