@@ -189,6 +189,7 @@ public:
 	void closeSheetRow();
 	/** low level function to define a cell.
 		\param cell the cell position, alignement, ...
+		\param content the cell content
 		\param extras to be used to pass extra data, for instance spreadsheet data*/
 	void openSheetCell(WPSCell const &cell, CellContent const &content, librevenge::RVNGPropertyList const &extras=librevenge::RVNGPropertyList());
 	/** close a cell */
