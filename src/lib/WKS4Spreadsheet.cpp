@@ -24,6 +24,7 @@
 
 #include <cmath>
 #include <sstream>
+#include <limits>
 
 #include <librevenge-stream/librevenge-stream.h>
 

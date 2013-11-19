@@ -24,7 +24,7 @@
  */
 
 #include <time.h>
-
+#include <stdio.h>
 #include <sstream>
 
 #include <librevenge/librevenge.h>

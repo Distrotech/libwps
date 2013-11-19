@@ -97,10 +97,10 @@ public:
 		return m_subFormat;
 	}
 	//! sets the format type
-	void setFormat(FormatType format, int subformat=0)
+	void setFormat(FormatType format_, int subformat_=0)
 	{
-		m_format = format;
-		m_subFormat = subformat;
+		m_format = format_;
+		m_subFormat = subformat_;
 	}
 	//! sets the subformat
 	void setSubformat(int subFormat)

@@ -65,7 +65,7 @@ private:
 };
 
 WKSDocumentParsingState::WKSDocumentParsingState() :
-	m_metaData(), m_isDocumentStarted(false), m_subDocuments(), m_formulaId(0), m_numberingSendSet()
+	m_metaData(), m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments(), m_formulaId(0), m_numberingSendSet()
 {
 }
 
