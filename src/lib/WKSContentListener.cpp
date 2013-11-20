@@ -746,20 +746,18 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 		s << "Formula" << ++m_ds->m_formulaId;
 		std::string formulaName=s.str();
 
-		librevenge::RVNGPropertyList formulaList;
 		librevenge::RVNGPropertyListVector formulaVect;
-		formulaList.insert("librevenge:formula-name", formulaName.c_str());
 		for (size_t i=0; i < content.m_formula.size(); ++i)
 			formulaVect.append(content.m_formula[i].getPropertyList());
-		m_documentInterface->defineSheetFormula(formulaList, formulaVect);
-		propList.insert("librevenge:formula-name", formulaName.c_str());
+		propList.insert("librevenge:formula", formulaVect);
 	}
-	if (content.isValueSet() || content.m_formula.size())
+	bool hasFormula=!content.m_formula.empty();
+	if (content.isValueSet() || hasFormula)
 	{
 		bool hasValue=content.isValueSet();
-		if (content.m_formula.size() && (content.m_value >= 0 && content.m_value <= 0))
+		if (hasFormula && (content.m_value >= 0 && content.m_value <= 0))
 			hasValue=false;
-		switch (cell.format())
+		switch (cell.getFormat())
 		{
 		case WPSCellFormat::F_TEXT:
 			if (!hasValue) break;
@@ -768,17 +766,18 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 			break;
 		case WPSCellFormat::F_NUMBER:
 			propList.insert("librevenge:value-type", cell.getValueType().c_str());
-			if (!hasValue) break;
+			if (hasFormula) break;
 			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
 			break;
 		case WPSCellFormat::F_BOOLEAN:
 			propList.insert("librevenge:value-type", "boolean");
+			if (hasFormula) break;
 			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
 			break;
 		case WPSCellFormat::F_DATE:
 		{
 			propList.insert("librevenge:value-type", "date");
-			if (!hasValue) break;
+			if (hasFormula) break;
 			int Y=0, M=0, D=0;
 			if (!CellContent::double2Date(content.m_value, Y, M, D)) break;
 			propList.insert("librevenge:year", Y);
@@ -789,7 +788,7 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 		case WPSCellFormat::F_TIME:
 		{
 			propList.insert("librevenge:value-type", "time");
-			if (!hasValue) break;
+			if (hasFormula) break;
 			int H=0, M=0, S=0;
 			if (!CellContent::double2Time(content.m_value,H,M,S))
 				break;
@@ -799,7 +798,7 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 			break;
 		}
 		case WPSCellFormat::F_UNKNOWN:
-			if (!content.m_formula.empty() || !hasValue) break;
+			if (hasFormula || !hasValue) break;
 			propList.insert("librevenge:value-type", cell.getValueType().c_str());
 			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
 			break;

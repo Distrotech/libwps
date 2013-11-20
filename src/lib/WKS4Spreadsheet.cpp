@@ -589,53 +589,73 @@ bool WKS4Spreadsheet::readStyle()
 		}
 		fl[1] &= 0xE3;
 	}
-	switch ((fl[0]&0x7))
+	switch ((fl[0]&0xf))
 	{
 	case 0:
 		style.setFormat(WPSCell::F_NUMBER,1);
-		break; // general number, checkme
+		break;
 	case 1:
 		style.setFormat(WPSCell::F_NUMBER,2);
-		fl[0] &= 0xF8;
 		break;
 	case 2:
 		style.setFormat(WPSCell::F_NUMBER,4);
-		fl[0] &= 0xF8;
 		break;
 	case 3:
 		style.setFormat(WPSCell::F_NUMBER,3);
-		fl[0] &= 0xF8;
 		break;
 	case 4:
 		style.setFormat(WPSCell::F_NUMBER,5);
-		fl[0] &= 0xF8;
 		break;
+	case 5:
+	{
+		int wh=(fl[0]>>5);
+		switch(wh)
+		{
+		case 0:
+			style.setFormat(WPSCell::F_TEXT);
+			break;
+		case 1:
+			style.setFormat(WPSCell::F_BOOLEAN);
+			break;
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		{
+			char const *(format[]) = { "%H:%M%p", "%I:%M:%S%p", "%H:%M", "%H:%M:%S" };
+			style.setDTFormat(WPSCell::F_TIME, format[wh-2]);
+			break;
+		}
+		default:
+			f << "#type=" << std::hex << fl[0] << std::dec << ",";
+			break;
+		}
+		break;
+	}
 	case 6:
 	{
-		style.setFormat(WPSCell::F_DATE, (fl[0]>>5));
+		char const *(format[]) = { "%m/%d/%Y", "%d %B %Y", "%m/%Y", "%B %Y", "%m/%d", "%d %B", "%m/%d/%y:6"/*TODO*/, "%B"};
+		style.setDTFormat(WPSCell::F_DATE, format[int(fl[0]>>5)]);
 		fl[0] &= 0x18;
 		break;
 	}
-	case 5: // this is case seem complex, checkMe
-		if (fl[0] == 5)
-		{
-			style.setFormat(WPSCell::F_TEXT);  // or number
-			fl[0] &= 0xF8;
-			break;
-		}
-		else if (fl[0] == 0x85 || fl[0] == 0xa5)
-		{
-			style.setFormat(WPSCell::F_TIME);
-			fl[0] &= 0xF8;
-			break;
-		}
-		// find also fl[0] = 0xc5 with text = "%" ....
+	case 0xa:
+		style.setFormat(WPSCell::F_NUMBER, 6);
+		break;
+	case 0xc:
+		style.setFormat(WPSCell::F_NUMBER, 7);
+		break;
+	case 0xd:
+		style.setFormat(WPSCell::F_NUMBER, 4);
 		break;
 	default:
-		f << ", ##type=" << std::hex << fl[0] << std::dec << ",";
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readStyle: find unknown format %d\n", (fl[0]&0xF)));
+		f << ", ##type=" << std::hex << (fl[0]&0xf) << std::dec << ",";
 		break;
 	}
-	if (style.format() == WPSCell::F_NUMBER)
+	fl[0] &= 0xF0;
+
+	if (style.getFormat() == WPSCell::F_NUMBER)
 	{
 		int digits = 0;
 		if (fl[1] &= 0x1)
@@ -647,8 +667,23 @@ bool WKS4Spreadsheet::readStyle()
 		fl[0] &= 0x18;
 		style.setDigits(digits);
 	}
-	fl[2] = (fl[1] & 3);  // 0 or 2
-	fl[1] &= 0xF0; // 10, 20, 40, 50, 60, 80, 90 : related to text field ?
+	if (fl[1]&0x20) f << "ajust[text],";
+	switch(fl[1]>>6)
+	{
+	case 0:
+		style.setVAlignement(WPSCellFormat::VALIGN_BOTTOM);
+		break;
+	case 1:
+		style.setVAlignement(WPSCellFormat::VALIGN_CENTER);
+		break;
+	case 2:
+		style.setVAlignement(WPSCellFormat::VALIGN_TOP);
+		break;
+	default:
+		f << "##vAlign=3,";
+		break;
+	}
+	fl[1] &= 0x10; // 10
 	//
 	// the color
 	//
@@ -817,12 +852,12 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	}
 	fl[0] &= 0x1F;
 	if (newForm != WPSCell::F_UNKNOWN &&
-	        (newForm != style.format() || subForm != style.subformat()))
+	        (newForm != style.getFormat() || subForm != style.getSubFormat()))
 	{
-		if (newForm != style.format())
-			f << "#prevForm = " << int(style.format());
+		if (newForm != style.getFormat())
+			f << "#prevForm = " << int(style.getFormat());
 		else
-			f << "#prevSubForm = " << style.subformat();
+			f << "#prevSubForm = " << style.getSubFormat();
 		style.setFormat(newForm, subForm);
 	}
 
@@ -1057,7 +1092,7 @@ bool WKS4Spreadsheet::readCell()
 		case 0x20:
 		case 0x30:
 		case 0x40:
-			if (style.format() != WPSCell::F_TEXT)
+			if (style.getFormat() != WPSCell::F_TEXT)
 			{
 				canHaveDigits = true;
 				int styleID = (unkn1>>8);
@@ -1070,10 +1105,10 @@ bool WKS4Spreadsheet::readCell()
 			switch(unkn1)
 			{
 			case 0x70:
-				if (style.format() == WPSCell::F_TEXT) unkn1 = 0;
+				if (style.getFormat() == WPSCell::F_TEXT) unkn1 = 0;
 				break;
 			case 0x71:
-				if (style.format() == WPSCell::F_NUMBER) unkn1 = 0;
+				if (style.getFormat() == WPSCell::F_NUMBER) unkn1 = 0;
 				break;
 			case 0x72:
 			case 0x73:
@@ -1081,13 +1116,13 @@ bool WKS4Spreadsheet::readCell()
 			case 0x79:
 			case 0x7a:
 				// note: text cell seems to have random flag, so we can ignore
-				if (style.format() != WPSCell::F_TEXT) style.setFormat(WPSCell::F_DATE);
+				if (style.getFormat() != WPSCell::F_TEXT) style.setFormat(WPSCell::F_DATE);
 				unkn1 = 0;
 				break;
 			case 0x7b:
 			case 0x7c:
 				// note: text cell seems to have random flag, so we can ignore
-				if (style.format() != WPSCell::F_TEXT) style.setFormat(WPSCell::F_TIME);
+				if (style.getFormat() != WPSCell::F_TEXT) style.setFormat(WPSCell::F_TIME);
 				unkn1 = 0;
 				break;
 			default:

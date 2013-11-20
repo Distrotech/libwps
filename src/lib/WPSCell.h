@@ -44,28 +44,27 @@ public:
 	enum HorizontalAlignment { HALIGN_LEFT, HALIGN_RIGHT, HALIGN_CENTER,
 	                           HALIGN_FULL, HALIGN_DEFAULT
 	                         };
+	/** the default vertical alignement. */
+	enum VerticalAlignment { VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM, VALIGN_DEFAULT };
+
 	/** the different types of cell's field */
 	enum FormatType { F_TEXT, F_BOOLEAN, F_NUMBER, F_DATE, F_TIME, F_UNKNOWN };
 
 	/*   subformat:
-	          NUMBER             DATE                 TIME       TEXT
-	  0 :    default           default[3/2/2000]     default    default
-	  1 :    decimal            3/2/00             10:03:00 AM  -------
-	  2 :   exponential      3 Feb, 2000            10:03 AM    -------
-	  3 :   percent             3, Feb              10:03:00    -------
-	  4 :    money             Feb, 2000              10:03     -------
-	  5 :    thousand       Thu, 3 Feb, 2000         -------    -------
-	  6 :  percent/thou     3 February 2000          -------    -------
-	  7 :   money/thou  Thursday, February 3, 2000   -------    -------
-	  8 :                       3/2
-	  9 :                       2/2000
-	  10:                       3 february
-	  11:                       february 2000
+	          NUMBER             DATE                 TIME               TEXT
+	  0 :    default           default[3/2/2000]  default[10:03:00]    default
+	  1 :    decimal
+	  2 :    exponential
+	  3 :    percent
+	  4 :    money
+	  5 :    thousand
+	  6 :    fixed
+	  7 :    fraction
 	 */
 
 	//! constructor
 	WPSCellFormat() :
-		m_hAlign(HALIGN_DEFAULT), m_bordersList(), m_format(F_UNKNOWN), m_subFormat(0), m_digits(-1000), m_protected(false), m_backgroundColor(0xFFFFFF) { }
+		m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(), m_format(F_UNKNOWN), m_subFormat(0), m_DTFormat(""), m_digits(-1000), m_protected(false), m_backgroundColor(0xFFFFFF) { }
 	//! destructor
 	virtual ~WPSCellFormat() {}
 	//! returns true if this is a basic format style
@@ -92,16 +91,31 @@ public:
 		m_hAlign = align;
 	}
 
+	//! returns the vertical alignement
+	VerticalAlignment vAlignement() const
+	{
+		return m_vAlign;
+	}
+	//! sets the vertical alignement
+	void setVAlignement(VerticalAlignment align)
+	{
+		m_vAlign = align;
+	}
 
 	//! returns the format type
-	FormatType format() const
+	FormatType getFormat() const
 	{
 		return m_format;
 	}
 	//! returns the subformat type
-	int subformat() const
+	int getSubFormat() const
 	{
 		return m_subFormat;
+	}
+	//! returns the date/time format ( if set)
+	std::string getDTFormat() const
+	{
+		return m_DTFormat;
 	}
 	//! sets the format type
 	void setFormat(FormatType form, int subForm=0)
@@ -109,10 +123,12 @@ public:
 		m_format = form;
 		m_subFormat = subForm;
 	}
-	//! sets the subformat
-	void setSubformat(int subForm)
+	//! sets the format type
+	void setDTFormat(FormatType form, std::string const &dtFormat="")
 	{
-		m_subFormat = subForm;
+		m_format = form;
+		m_subFormat = 0;
+		m_DTFormat = dtFormat;
 	}
 
 	//! returns the number of digits ( for a number)
@@ -189,14 +205,21 @@ public:
 	};
 
 protected:
+	//! convert a DTFormat in a propertyList
+	static bool convertDTFormat(std::string const &dtFormat, librevenge::RVNGPropertyListVector &propListVector);
+
 	//! the cell alignement : by default nothing
 	HorizontalAlignment m_hAlign;
+	//! the cell vertical alignement : by default nothing
+	VerticalAlignment m_vAlign;
 	//! the cell border WPSBorder::Pos
 	std::vector<WPSBorder> m_bordersList;
 	//! the cell format : by default unknown
 	FormatType m_format;
 	//! the sub format
 	int m_subFormat;
+	//! a date/time format ( using a subset of strftime format )
+	std::string m_DTFormat;
 	//! the number of digits
 	int m_digits;
 	//! cell protected

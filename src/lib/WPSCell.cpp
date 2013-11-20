@@ -32,6 +32,105 @@
 
 #include "WPSCell.h"
 
+bool WPSCellFormat::convertDTFormat(std::string const &dtFormat, librevenge::RVNGPropertyListVector &propVect)
+{
+	propVect.clear();
+	size_t len=dtFormat.size();
+	std::string text("");
+	librevenge::RVNGPropertyList list;
+	for (size_t c=0; c < len; ++c)
+	{
+		if (dtFormat[c]!='%' || c+1==len)
+		{
+			text+=dtFormat[c];
+			continue;
+		}
+		char ch=dtFormat[++c];
+		if (ch=='%')
+		{
+			text += '%';
+			continue;
+		}
+		if (!text.empty())
+		{
+			list.clear();
+			list.insert("librevenge:value-type", "text");
+			list.insert("librevenge:text", text.c_str());
+			propVect.append(list);
+			text.clear();
+		}
+		list.clear();
+		switch(ch)
+		{
+		case 'Y':
+			list.insert("number:style", "long");
+		case 'y':
+			list.insert("librevenge:value-type", "year");
+			propVect.append(list);
+			break;
+		case 'B':
+			list.insert("number:style", "long");
+		case 'b':
+		case 'h':
+			list.insert("librevenge:value-type", "month");
+			list.insert("number:textual", true);
+			propVect.append(list);
+			break;
+		case 'm':
+			list.insert("librevenge:value-type", "month");
+			propVect.append(list);
+			break;
+		case 'e':
+			list.insert("number:style", "long");
+		case 'd':
+			list.insert("librevenge:value-type", "day");
+			propVect.append(list);
+			break;
+		case 'A':
+			list.insert("number:style", "long");
+		case 'a':
+			list.insert("librevenge:value-type", "day-of-week");
+			propVect.append(list);
+			break;
+
+		case 'H':
+			list.insert("number:style", "long");
+		case 'I':
+			list.insert("librevenge:value-type", "hours");
+			propVect.append(list);
+			break;
+		case 'M':
+			list.insert("librevenge:value-type", "minutes");
+			list.insert("number:style", "long");
+			propVect.append(list);
+			break;
+		case 'S':
+			list.insert("librevenge:value-type", "seconds");
+			list.insert("number:style", "long");
+			propVect.append(list);
+			break;
+		case 'p':
+			list.insert("librevenge:value-type", "text");
+			list.insert("librevenge:text", " ");
+			propVect.append(list);
+			list.clear();
+			list.insert("librevenge:value-type", "am-pm");
+			propVect.append(list);
+			break;
+		default:
+			WPS_DEBUG_MSG(("WPSCellFormat::convertDTFormat: find unimplement command %c(ignored)\n", ch));
+		}
+	}
+	if (!text.empty())
+	{
+		list.clear();
+		list.insert("librevenge:value-type", "text");
+		list.insert("librevenge:text", text.c_str());
+		propVect.append(list);
+	}
+	return propVect.count()!=0;
+}
+
 void WPSCellFormat::setBorders(int wh, WPSBorder const &border)
 {
 	int const allBits = WPSBorder::LeftBit|WPSBorder::RightBit|WPSBorder::TopBit|WPSBorder::BottomBit;
@@ -73,6 +172,22 @@ void WPSCellFormat::addTo(librevenge::RVNGPropertyList &propList) const
 	case HALIGN_DEFAULT:
 	default:
 		break;
+	}
+	switch(vAlignement())
+	{
+	case VALIGN_TOP:
+		propList.insert("style:vertical-align", "top");
+		break;
+	case VALIGN_CENTER:
+		propList.insert("style:vertical-align", "middle");
+		break;
+	case VALIGN_BOTTOM:
+		propList.insert("style:vertical-align", "bottom");
+		break;
+	case VALIGN_DEFAULT:
+		break; // default
+	default:
+		WPS_DEBUG_MSG(("MWAWCell::addTo: called with unknown valign=%d\n", vAlignement()));
 	}
 
 	for (size_t c = 0; c < m_bordersList.size(); c++)
@@ -118,14 +233,14 @@ std::string WPSCellFormat::getValueType() const
 		case 0: // default
 		case 1: // decimal
 		case 5: // thousand
+		case 6: // fixed
+		case 7: // fraction
 		default:
 			return "float";
 		case 2:
 			return "scientific";
-		case 6:
 		case 3:
 			return "percentage";
-		case 7:
 		case 4:
 			return "currency";
 		}
@@ -165,12 +280,21 @@ bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propLis
 		case 2:
 			propList.insert("librevenge:value-type", "scientific");
 			break;
-		case 6:
-			propList.insert("number:grouping", true);
 		case 3:
 			propList.insert("librevenge:value-type", "percentage");
 			break;
+		case 6: // fixed
+			propList.insert("librevenge:value-type", "number");
+			propList.insert("number:min-integer-digits", m_digits+1);
+			propList.insert("number:decimal-places", 0);
+			break;
 		case 7:
+			propList.insert("librevenge:value-type", "fraction");
+			propList.insert("number:min-integer-digits", 0);
+			propList.insert("number:min-numerator-digits", 1);
+			propList.insert("number:min-denominator-digits", 1);
+			propList.remove("number:decimal-places");
+			break;
 		case 4:
 		{
 			// DOME: implement non us currency
@@ -187,8 +311,6 @@ bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propLis
 			list.insert("librevenge:value-type", "number");
 			if (m_digits>-1000)
 				list.insert("number:decimal-places", m_digits);
-			if (m_subFormat==7)
-				list.insert("number:grouping", true);
 			pVect.append(list);
 			break;
 		}
@@ -197,167 +319,13 @@ bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propLis
 		}
 		return true;
 	case F_DATE:
-	{
 		propList.insert("librevenge:value-type", "date");
 		propList.insert("number:automatic-order", "true");
-		librevenge::RVNGPropertyList list;
-		switch (m_subFormat)
-		{
-		case 0:
-		case 1:
-			list.insert("librevenge:value-type", "month");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", "/");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "day");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", "/");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "year");
-			if (m_subFormat==0)
-				list.insert("number:style", "long");
-			pVect.append(list);
-			break;
-		case 5:
-			list.clear();
-			list.insert("librevenge:value-type", "day-of-week");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", ", ");
-			pVect.append(list);
-		case 2:
-			list.clear();
-			list.insert("librevenge:value-type", "day");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", " ");
-			pVect.append(list);
-		case 4:
-			list.clear();
-			list.insert("librevenge:value-type", "month");
-			list.insert("number:textual", true);
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", ", ");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "year");
-			list.insert("number:style", "long");
-			pVect.append(list);
-			break;
-		case 3:
-			list.clear();
-			list.insert("librevenge:value-type", "day");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", ", ");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "month");
-			list.insert("number:textual", true);
-			pVect.append(list);
-			break;
-		case 7:
-			list.clear();
-			list.insert("librevenge:value-type", "day-of-week");
-			list.insert("number:style", "long");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", ", ");
-			pVect.append(list);
-		case 6:
-			if (m_subFormat==6)
-			{
-				list.clear();
-				list.insert("librevenge:value-type", "day");
-				pVect.append(list);
-				list.clear();
-				list.insert("librevenge:value-type", "text");
-				list.insert("librevenge:text", " ");
-				pVect.append(list);
-			}
-			list.clear();
-			list.insert("librevenge:value-type", "month");
-			list.insert("number:textual", true);
-			list.insert("number:style", "long");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", " ");
-			pVect.append(list);
-			if (m_subFormat==7)
-			{
-				list.clear();
-				list.insert("librevenge:value-type", "day");
-				pVect.append(list);
-				list.clear();
-				list.insert("librevenge:value-type", "text");
-				list.insert("librevenge:text", ", ");
-				pVect.append(list);
-			}
-			list.clear();
-			list.insert("librevenge:value-type", "year");
-			list.insert("number:style", "long");
-			pVect.append(list);
-			break;
-		default:
-			return false;
-		}
-		return true;
-	}
+		return convertDTFormat(m_DTFormat.empty() ? "%m/%d/%Y" : m_DTFormat, pVect);
 	case F_TIME:
-	{
-		if (m_subFormat < 0 || m_subFormat > 5)
-			break;
 		propList.insert("librevenge:value-type", "time");
 		propList.insert("number:automatic-order", "true");
-		librevenge::RVNGPropertyList list;
-		list.insert("librevenge:value-type", "hours");
-		if (m_subFormat <= 3)
-			list.insert("number:style", "long");
-		pVect.append(list);
-		list.clear();
-		list.insert("librevenge:value-type", "text");
-		list.insert("librevenge:text", ":");
-		pVect.append(list);
-		list.clear();
-		list.insert("librevenge:value-type", "minutes");
-		list.insert("number:style", "long");
-		pVect.append(list);
-		if (m_subFormat != 2 && m_subFormat != 4)
-		{
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", ":");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "seconds");
-			list.insert("number:style", "long");
-			pVect.append(list);
-		}
-		if (m_subFormat <= 3)
-		{
-			list.clear();
-			list.insert("librevenge:value-type", "text");
-			list.insert("librevenge:text", " ");
-			pVect.append(list);
-			list.clear();
-			list.insert("librevenge:value-type", "am-pm");
-			pVect.append(list);
-		}
-		return true;
-	}
+		return convertDTFormat(m_DTFormat.empty() ? "%H:%M:%S" : m_DTFormat, pVect);
 	case F_TEXT:
 	case F_UNKNOWN:
 	default:
@@ -372,10 +340,14 @@ int WPSCellFormat::compare(WPSCellFormat const &cell, bool onlyNumbering) const
 	if (m_format>cell.m_format) return -1;
 	if (m_subFormat<cell.m_subFormat) return 1;
 	if (m_subFormat>cell.m_subFormat) return -1;
+	if (m_DTFormat<cell.m_DTFormat) return 1;
+	if (m_DTFormat>cell.m_DTFormat) return -1;
 	if (m_digits<cell.m_digits) return 1;
 	if (m_digits>cell.m_digits) return -1;
 	if (onlyNumbering) return 0;
 	int diff = int(m_hAlign) - int(cell.m_hAlign);
+	if (diff) return diff;
+	diff = int(m_vAlign) - int(cell.m_vAlign);
 	if (diff) return diff;
 	diff = int(m_backgroundColor) - int(cell.m_backgroundColor);
 	if (diff) return diff;
@@ -410,6 +382,21 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 	default:
 		break; // default
 	}
+	switch(cell.m_vAlign)
+	{
+	case WPSCellFormat::VALIGN_TOP:
+		o << "yTop,";
+		break;
+	case WPSCellFormat::VALIGN_CENTER:
+		o << "yCenter,";
+		break;
+	case WPSCellFormat::VALIGN_BOTTOM:
+		o << "yBottom,";
+		break;
+	case WPSCellFormat::VALIGN_DEFAULT:
+	default:
+		break; // default
+	}
 	int subForm = cell.m_subFormat;
 	switch(cell.m_format)
 	{
@@ -430,95 +417,37 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 		{
 		case 1:
 			o << "[decimal]";
-			subForm = 0;
 			break;
 		case 2:
 			o << "[exp]";
-			subForm = 0;
 			break;
 		case 3:
 			o << "[percent]";
-			subForm = 0;
 			break;
 		case 4:
 			o << "[money]";
-			subForm = 0;
 			break;
 		case 5:
 			o << "[thousand]";
-			subForm = 0;
 			break;
 		case 6:
-			o << "[percent,thousand]";
-			subForm = 0;
+			o << "[fixed]";
 			break;
 		case 7:
-			o << "[money,thousand]";
-			subForm = 0;
+			o << "[fraction]";
 			break;
 		default:
+			o << "[Fo" << subForm << "]";
+		case 0:
 			break;
 		}
+		subForm=0;
 		break;
 	case WPSCellFormat::F_DATE:
-		o << "date";
-		switch(subForm)
-		{
-		case 1:
-			o << "[mm/dd/yy]";
-			subForm = 0;
-			break;
-		case 2:
-			o << "[dd Mon, yyyy]";
-			subForm = 0;
-			break;
-		case 3:
-			o << "[dd, Mon]";
-			subForm = 0;
-			break;
-		case 4:
-			o << "[Mon, yyyy]";
-			subForm = 0;
-			break;
-		case 5:
-			o << "[Da, Mon dd, yyyy]";
-			subForm = 0;
-			break;
-		case 6:
-			o << "[Month dd yyyy]";
-			subForm = 0;
-			break;
-		case 7:
-			o << "[Day, Month dd, yyyy]";
-			subForm = 0;
-			break;
-		default:
-			break;
-		}
+		o << "date[" << cell.getDTFormat() << "]";
 		break;
 	case WPSCellFormat::F_TIME:
-		o << "time";
-		switch(subForm)
-		{
-		case 1:
-			o << "[hh:mm:ss AM]";
-			subForm = 0;
-			break;
-		case 2:
-			o << "[hh:mm AM]";
-			subForm = 0;
-			break;
-		case 3:
-			o << "[hh:mm:ss]";
-			subForm = 0;
-			break;
-		case 4:
-			o << "[hh:mm]";
-			subForm = 0;
-			break;
-		default:
-			break;
-		}
+		o << "time[" << cell.getDTFormat() << "]";
 		break;
 	case WPSCellFormat::F_UNKNOWN:
 	default:
