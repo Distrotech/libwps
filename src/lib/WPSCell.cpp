@@ -23,8 +23,9 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#include <time.h>
 #include <stdio.h>
+#include <time.h>
+
 #include <sstream>
 
 #include <librevenge/librevenge.h>
@@ -107,23 +108,39 @@ void WPSCellFormat::addTo(librevenge::RVNGPropertyList &propList) const
 		propList.insert("style:cell-protect","protected");
 }
 
-int WPSCellFormat::getUniqueIdForNumberingStyle() const
+std::string WPSCellFormat::getValueType() const
 {
-	if (m_subFormat < 0 || m_subFormat >= 8) return -1;
 	switch(m_format)
 	{
 	case F_NUMBER:
-		return m_subFormat;
+		switch(m_subFormat)
+		{
+		case 0: // default
+		case 1: // decimal
+		case 5: // thousand
+		default:
+			return "float";
+		case 2:
+			return "scientific";
+		case 6:
+		case 3:
+			return "percentage";
+		case 7:
+		case 4:
+			return "currency";
+		}
+	case F_BOOLEAN:
+		return "boolean";
 	case F_DATE:
-		return 8+m_subFormat;
+		return "date";
 	case F_TIME:
-		return 16+m_subFormat;
+		return "time";
 	case F_TEXT:
 	case F_UNKNOWN:
 	default:
 		break;
 	}
-	return -1;
+	return "float";
 }
 
 bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &pVect) const
@@ -131,6 +148,9 @@ bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propLis
 	pVect=librevenge::RVNGPropertyListVector();
 	switch(m_format)
 	{
+	case F_BOOLEAN:
+		propList.insert("librevenge:value-type", "boolean");
+		break;
 	case F_NUMBER:
 		if (m_digits>-1000)
 			propList.insert("number:decimal-places", m_digits);
@@ -200,6 +220,8 @@ bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propLis
 			pVect.append(list);
 			list.clear();
 			list.insert("librevenge:value-type", "year");
+			if (m_subFormat==0)
+				list.insert("number:style", "long");
 			pVect.append(list);
 			break;
 		case 5:
@@ -344,18 +366,19 @@ bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propLis
 	return false;
 }
 
-int WPSCellFormat::compare(WPSCellFormat const &cell) const
+int WPSCellFormat::compare(WPSCellFormat const &cell, bool onlyNumbering) const
 {
+	if (m_format<cell.m_format) return 1;
+	if (m_format>cell.m_format) return -1;
+	if (m_subFormat<cell.m_subFormat) return 1;
+	if (m_subFormat>cell.m_subFormat) return -1;
+	if (m_digits<cell.m_digits) return 1;
+	if (m_digits>cell.m_digits) return -1;
+	if (onlyNumbering) return 0;
 	int diff = int(m_hAlign) - int(cell.m_hAlign);
 	if (diff) return diff;
 	diff = int(m_backgroundColor) - int(cell.m_backgroundColor);
 	if (diff) return diff;
-	if (m_format<cell.m_format) return 1;
-	if (m_format<cell.m_format) return -1;
-	if (m_subFormat<cell.m_subFormat) return 1;
-	if (m_subFormat<cell.m_subFormat) return -1;
-	if (m_digits<cell.m_digits) return 1;
-	if (m_digits<cell.m_digits) return -1;
 	if (m_protected !=cell.m_protected) return m_protected ? 1 : -1;
 	diff = int(m_bordersList.size()) - int(cell.m_bordersList.size());
 	if (diff) return diff;
@@ -390,6 +413,9 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 	int subForm = cell.m_subFormat;
 	switch(cell.m_format)
 	{
+	case WPSCellFormat::F_BOOLEAN:
+		o << "boolean";
+		break;
 	case WPSCellFormat::F_TEXT:
 		o << "text";
 		if (subForm)

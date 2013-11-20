@@ -324,7 +324,7 @@ bool WKS4Parser::readZone()
 		return false;
 	}
 
-	bool ok = true, parse_ = false;
+	bool ok = true, isParsed = false;
 	input->seek(pos, librevenge::RVNG_SEEK_SET);
 	switch(type)
 	{
@@ -340,17 +340,17 @@ bool WKS4Parser::readZone()
 			// case 5: ff
 		case 0x6:
 			ok = m_spreadsheetParser->readSheetSize();
-			parse_ = true;
+			isParsed = true;
 			break;
 			// case 7|9: 0a00010001000a000f00270000000000000000000000000004000400960000 or similar
 		case 0x8:
 			ok = m_spreadsheetParser->readColumnSize();
-			parse_ = true;
+			isParsed = true;
 			break;
 			// case a: id + small id
 		case 0xb:
 			ok = readZoneB();
-			parse_=true;
+			isParsed=true;
 			break;
 		case 0xc:
 		case 0xd:
@@ -358,7 +358,7 @@ bool WKS4Parser::readZone()
 		case 0xf:
 		case 0x10:
 			ok = m_spreadsheetParser->readCell();
-			parse_ = true;
+			isParsed = true;
 			break;
 			// case 1a: 0000000009002100
 			// case 24: 0
@@ -366,12 +366,12 @@ bool WKS4Parser::readZone()
 		case 0x2d:
 		case 0x2e:
 			readChartDef();
-			parse_ = true;
+			isParsed = true;
 			break;
 			// case 31: 1-2
 		case 0x41:
 			readChartName();
-			parse_ = true;
+			isParsed = true;
 			break;
 		default:
 			break;
@@ -382,62 +382,62 @@ bool WKS4Parser::readZone()
 		{
 		case 0x2:
 			ok = m_spreadsheetParser->readDOSCellProperty();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x13:
 			ok = m_spreadsheetParser->readPageBreak();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x14:
 			readChartUnknown();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x15:
 			readChartList();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x23: // single page ?
 		case 0x37: // multiple page ?
 			ok = readPrnt();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x40:
 			readChartFont();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x56:
 			ok = readFont();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x5a:
 			ok = m_spreadsheetParser->readStyle();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x5b:
 			ok = m_spreadsheetParser->readCell();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x65:
 			ok = m_spreadsheetParser->readRowSize2();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x67: // single page ?
 		case 0x82: // multiple page ?
 			ok = readPrn2();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x6b:
 			ok = m_spreadsheetParser->readColumnSize2();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x80:
 		case 0x81:
 			readChartLimit();
-			parse_ = true;
+			isParsed = true;
 			break;
 		case 0x84:
 			readChart2Font();
-			parse_ = true;
+			isParsed = true;
 			break;
 		default:
 			break;
@@ -453,7 +453,7 @@ bool WKS4Parser::readZone()
 		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		return false;
 	}
-	if (parse_)
+	if (isParsed)
 	{
 		input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
 		return true;
@@ -506,6 +506,8 @@ bool WKS4Parser::readFont()
 	if (flags & 1) attributes |= WPS_BOLD_BIT;
 	if (flags & 2) attributes |= WPS_ITALICS_BIT;
 	if (flags & 4) attributes |= WPS_BOLD_BIT;
+	if (flags & 8) attributes |= WPS_STRIKEOUT_BIT;
+
 	font.m_attributes=attributes;
 	if (flags & 0xF0)
 	{
@@ -515,7 +517,6 @@ bool WKS4Parser::readFont()
 			f << "##color=" << (flags >> 4) << ",";
 		}
 	}
-	if (flags & 8) f << "flags[8],";
 
 	int val=(int)libwps::readU8(input);
 	if (val) f << "f0=" << std::hex << val << std::dec << ",";

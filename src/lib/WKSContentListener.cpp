@@ -23,7 +23,7 @@
  */
 
 #include <iomanip>
-#include <set>
+#include <map>
 #include <sstream>
 #include <stdio.h>
 
@@ -57,7 +57,8 @@ struct WKSDocumentParsingState
 
 	/** a formula id */
 	int m_formulaId;
-	std::set<int> m_numberingSendSet; /** list of numbering style send to interface */
+	/** a map cell's format to id */
+	std::map<WPSCellFormat,int,WPSCellFormat::CompareFormat> m_numberingIdMap;
 
 private:
 	WKSDocumentParsingState(const WKSDocumentParsingState &);
@@ -65,7 +66,7 @@ private:
 };
 
 WKSDocumentParsingState::WKSDocumentParsingState() :
-	m_metaData(), m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments(), m_formulaId(0), m_numberingSendSet()
+	m_metaData(), m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments(), m_formulaId(0), m_numberingIdMap()
 {
 }
 
@@ -709,22 +710,28 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 	}
 
 	librevenge::RVNGPropertyList propList(extras);
-	// numbering
-	int numberingId=cell.getUniqueIdForNumberingStyle();
 	cell.addTo(propList);
-	if (numberingId>=0)
+	if (!cell.hasBasicFormat())
 	{
+		int numberingId=-1;
 		std::stringstream name;
-		name << "Numbering" << numberingId;
-		if (m_ds->m_numberingSendSet.find(numberingId) == m_ds->m_numberingSendSet.end())
+		if (m_ds->m_numberingIdMap.find(cell)!=m_ds->m_numberingIdMap.end())
 		{
+			numberingId=m_ds->m_numberingIdMap.find(cell)->second;
+			name << "Numbering" << numberingId;
+		}
+		else
+		{
+			numberingId=(int) m_ds->m_numberingIdMap.size();
+			name << "Numbering" << numberingId;
+
 			librevenge::RVNGPropertyList numList;
 			librevenge::RVNGPropertyListVector numVect;
 			if (cell.getNumberingProperties(numList, numVect))
 			{
 				numList.insert("librevenge:name", name.str().c_str());
 				m_documentInterface->defineSheetNumberingStyle(numList,numVect);
-				m_ds->m_numberingSendSet.insert(numberingId);
+				m_ds->m_numberingIdMap[cell]=numberingId;
 			}
 			else
 				numberingId=-1;
@@ -756,12 +763,16 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 		{
 		case WPSCellFormat::F_TEXT:
 			if (!hasValue) break;
-			propList.insert("librevenge:value-type", "float");
+			propList.insert("librevenge:value-type", cell.getValueType().c_str());
 			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
 			break;
 		case WPSCellFormat::F_NUMBER:
-			propList.insert("librevenge:value-type", "float");
+			propList.insert("librevenge:value-type", cell.getValueType().c_str());
 			if (!hasValue) break;
+			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
+			break;
+		case WPSCellFormat::F_BOOLEAN:
+			propList.insert("librevenge:value-type", "boolean");
 			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
 			break;
 		case WPSCellFormat::F_DATE:
@@ -788,6 +799,10 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 			break;
 		}
 		case WPSCellFormat::F_UNKNOWN:
+			if (!content.m_formula.empty() || !hasValue) break;
+			propList.insert("librevenge:value-type", cell.getValueType().c_str());
+			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
+			break;
 		default:
 			break;
 		}

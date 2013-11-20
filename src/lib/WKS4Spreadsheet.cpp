@@ -47,21 +47,6 @@ namespace WKS4SpreadsheetInternal
 //! a class used to store a style of a WKS4 cell
 struct Style : public WPSCellFormat
 {
-	/** the different types of cell's field */
-	enum FormatType { F_TEXT, F_NUMBER, F_DATE, F_TIME, F_UNKNOWN };
-
-	/*   subformat:
-	          NUMBER             DATE                 TIME       TEXT
-	  0 :    default           default               default    default
-	  1 :    decimal            3/2/00             10:03:00 AM  -------
-	  2 :   exponential      3 Feb, 2000            10:03 AM    -------
-	  3 :   percent             3, Feb              10:03:00    -------
-	  4 :    money             Feb, 2000              10:03     -------
-	  5 :    thousand       Thu, 3 Feb, 2000         -------    -------
-	  6 :  percent/thou     3 February 2000          -------    -------
-	  7 :   money/thou  Thursday, February 3, 2000   -------    -------
-
-	 */
 	//! construtor
 	Style() : WPSCellFormat(), m_font(), m_fontType(libwps_tools_win::Font::DOS_850), m_extra("")
 	{
@@ -100,7 +85,7 @@ std::ostream &operator<<(std::ostream &o, Style const &style)
 		o << "unkn=[" << std::hex;
 		for (int i = 0; i < 10; i++)
 		{
-			if (style.m_unknFlags[i]) o << "fS" << i << "=" << style.m_unknFlags[i] << ",";
+			if (style.m_unknFlags[i]) o << "fS" << i << "=" << std::hex << style.m_unknFlags[i] << std::dec << ",";
 		}
 		o << std::dec << "]";
 	}
@@ -552,6 +537,7 @@ bool WKS4Spreadsheet::readStyle()
 		return false;
 	}
 	long sz = libwps::readU16(m_input);
+	long endPos=pos+4+sz;
 	if (sz < 8)
 	{
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::readStyle: style property is too short\n"));
@@ -559,16 +545,16 @@ bool WKS4Spreadsheet::readStyle()
 	}
 
 	// win3 has 8 bytes while last version is at least 10 bytes
-	int numRead = sz > 10 ? 10 : int(sz);
-	int fl[10];
-	for (int i = 0; i < 10; i++) fl[i] = 0;
-	for (int i = 0; i < numRead; i++) fl[i] = libwps::readU8(m_input);
+	int fl[6];
+	for (int i=0; i<2; ++i) fl[i] = libwps::readU8(m_input);
+	for (int i=0; i<3; ++i) fl[2+i] = libwps::readU16(m_input);
+	fl[5]= sz>=10 ? libwps::readU16(m_input) : 0;
 
 	WKS4SpreadsheetInternal::Style style;
-	if (!m_mainParser.getFont(256*fl[5] + fl[4], style.m_font, style.m_fontType))
+	if (!m_mainParser.getFont(fl[3], style.m_font, style.m_fontType))
 	{
 		style.m_fontType=version()<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
-		f << ",#fontId = " << 256*fl[5] + fl[4];
+		f << ",#fontId = " << fl[3];
 
 		static bool first = true;
 		if (first)
@@ -577,64 +563,31 @@ bool WKS4Spreadsheet::readStyle()
 			first = false;
 		}
 	}
-	fl[4] = fl[5] = 0;
+	fl[3]=0;
 
-	// Border
-	if (fl[8] || fl[9])
+
+	if (fl[1] & 0x1C)
 	{
-		// fl[8],fl[9] : width when defined ? fl[2],fl[3] : type
-		for (int i = 0; i < 2; i++)
+		switch ((fl[1] & 0x1C) >> 2)
 		{
-			bool setL2 = (fl[2+i]&0xF)!=0;
-			bool setL8 = (fl[8+i]&0xF)!=0;
-			if (setL2==setL8) fl[8+i] &= 0xF0;
-			bool setH2 = (fl[2+i]&0xF0)!=0;
-			bool setH8 = (fl[8+i]&0xF0)!=0;
-			if (setH2==setH8) fl[8+i] &= 0x0F;
-		}
-	}
-
-	int border = 0;
-	if (fl[2] & 0xF)
-	{
-		border |= WPSBorder::LeftBit;
-		if ((fl[2] & 0xF) != 1) f << ",bType(lef)=" << int(fl[2] & 0xF);
-	}
-	if (fl[2] & 0xF0)
-	{
-		border |= WPSBorder::TopBit;
-		if ((fl[2] >> 4) != 1) f << ",bType(top)=" << int(fl[2] >> 4);
-	}
-	if (fl[3] & 0xF)
-	{
-		border |= WPSBorder::RightBit;
-		if ((fl[3] & 0xF) != 1) f << ",bType(rig)=" << int(fl[3] & 0xF);
-	}
-	if (fl[3] & 0xF0)
-	{
-		border |= WPSBorder::BottomBit;
-		if ((fl[3] >> 4) != 1) f << ",bType(bot)=" << int(fl[3] >> 4);
-	}
-	style.setBorders(border, WPSBorder());
-	fl[3] = fl[2] = 0;
-
-	if (fl[1] & 0xC)
-	{
-		switch ((fl[1] & 0xC) >> 2)
-		{
+		case 0:
+			break;
 		case 1:
+		case 4: // left rellenar
 			style.setHAlignement(WPSCell::HALIGN_LEFT);
 			break;
 		case 2:
+		case 5: // center in selection
 			style.setHAlignement(WPSCell::HALIGN_CENTER);
 			break;
 		case 3:
 			style.setHAlignement(WPSCell::HALIGN_RIGHT);
 			break;
 		default:
+			f << ",#align=" << ((fl[1] & 0x1C) >> 2);
 			break;
 		}
-		fl[1] &= 0xF3;
+		fl[1] &= 0xE3;
 	}
 	switch ((fl[0]&0x7))
 	{
@@ -658,11 +611,11 @@ bool WKS4Spreadsheet::readStyle()
 		fl[0] &= 0xF8;
 		break;
 	case 6:
-		style.setFormat(WPSCell::F_DATE);
-		fl[0] &= 0xF8;
-		if (fl[1] & 2) fl[1] &= 0x1;
-		else f << ", #dateWithoutFl1&2";
+	{
+		style.setFormat(WPSCell::F_DATE, (fl[0]>>5));
+		fl[0] &= 0x18;
 		break;
+	}
 	case 5: // this is case seem complex, checkMe
 		if (fl[0] == 5)
 		{
@@ -679,7 +632,7 @@ bool WKS4Spreadsheet::readStyle()
 		// find also fl[0] = 0xc5 with text = "%" ....
 		break;
 	default:
-		f << ", ##type=" << std::hex << int(fl[0]&0xF) << std::dec;
+		f << ", ##type=" << std::hex << fl[0] << std::dec << ",";
 		break;
 	}
 	if (style.format() == WPSCell::F_NUMBER)
@@ -696,15 +649,82 @@ bool WKS4Spreadsheet::readStyle()
 	}
 	fl[2] = (fl[1] & 3);  // 0 or 2
 	fl[1] &= 0xF0; // 10, 20, 40, 50, 60, 80, 90 : related to text field ?
-	for (int i = 0; i < 10; i++) style.m_unknFlags[i] = fl[i];
-	uint32_t color;
-	if ((fl[6]>>4) && m_mainParser.getColor((fl[6]>>4),color))   // CHECKME
+	//
+	// the color
+	//
+
+	uint32_t frontColor=0;
+	int colorId=(fl[4]>>5)&0xF;
+	if (colorId && m_mainParser.getColor(colorId,frontColor))   // primary color
+		f << "primColor=" << std::hex << frontColor << std::dec << ",";
+
+	uint32_t backColor=0xFFFFFF;
+	colorId=(fl[4]>>9)&0xF;
+	if (colorId && m_mainParser.getColor(colorId,backColor))   // secondary color
+		f << "secColor=" << std::hex << backColor << std::dec << ",";
+
+	int pat= (fl[4]&0xf);
+	if (pat==15) f << "###pat15,";
+	else if (pat)
 	{
-		fl[6] &= 0xF;
-		style.setBackgroundColor(color);
+		static float const patternPercent[]= {0, 1.f, 0.5f, 0.25f, 0.2f, 0.2f, 0.2f, 0.5f, 0.5f, 0.5f, 0.5f, 0.8f, 0.2f, 0.8f, 0.2f};
+		float percent=patternPercent[pat];
+		f << "patPercent=" << percent << ",";
+		uint32_t fCol = 0;
+		int decal = 0;
+		for (int i = 0; i < 3; i++)
+		{
+			uint32_t col = uint32_t(percent*float((frontColor>>decal)&0xFF)+
+			                        (1.0f-percent)*float((backColor>>decal)&0xFF));
+			fCol = uint32_t(fCol | (col<<decal));
+			decal+=8;
+		}
+		style.setBackgroundColor(fCol);
 	}
-	// CHECKME: (fl[6]&0xf) or (fl[6]>>8) is probably the background color...
-	// fl[7] : seem a number increasing with row?
+	fl[4]&=0xE010;
+
+	//
+	// Border
+	//
+	for (int b=0, decal=0; b<4; b++, decal+=4)
+	{
+		int const wh[]= {WPSBorder::LeftBit, WPSBorder::TopBit, WPSBorder::RightBit, WPSBorder::BottomBit};
+		int bType=(fl[2]>>decal)&0xf;
+		if (bType==0) continue;
+		WPSBorder border;
+		switch (bType&0x7)
+		{
+		case 1:
+			break;
+		case 2:
+			border.m_width=2;
+			break;
+		case 3:
+			border.m_style = WPSBorder::LargeDot;
+			break;
+		case 4:
+			border.m_style = WPSBorder::Dash;
+			break;
+		case 5:
+			border.m_style = WPSBorder::Double;
+			break;
+		case 6:
+			border.m_style = WPSBorder::Dot;
+			break;
+		case 7:
+			border.m_width=3;
+			break;
+		default:
+			break;
+		}
+		if ((fl[5]>>decal)&0xf)
+			m_mainParser.getColor(((fl[5]>>decal)&0xf), border.m_color);
+		style.setBorders(wh[b], border);
+		if (bType&0x8) f << "bType[" << b << "]&8,";
+	}
+	fl[2] = fl[5] = 0;
+
+	for (int i = 0; i < 6; i++) style.m_unknFlags[i] = fl[i];
 	style.m_extra = f.str();
 
 	/* end of parsing */
@@ -714,7 +734,7 @@ bool WKS4Spreadsheet::readStyle()
 	m_state->m_styleManager.add(style, false);
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
-	if (sz != numRead) ascii().addDelimiter(m_input->tell(),'#');
+	if (m_input->tell()!=endPos) ascii().addDelimiter(m_input->tell(),'#');
 	return true;
 }
 
@@ -769,38 +789,33 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	case 0:
 		newForm = WPSCell::F_NUMBER;
 		subForm=1;
-		fl[0] &= 0x1F;
 		break;
 	case 1:
 		newForm = WPSCell::F_NUMBER;
 		subForm=2;
-		fl[0] &= 0x1F;
 		break;
 	case 2:
 		newForm = WPSCell::F_NUMBER;
 		subForm=4;
-		fl[0] &= 0x1F;
 		break;
 	case 3:
 		newForm = WPSCell::F_NUMBER;
 		subForm=3;
-		fl[0] &= 0x1F;
 		break;
 	case 4:
 		newForm = WPSCell::F_NUMBER;
 		subForm=5;
-		fl[0] &= 0x1F;
 		break;
 	case 5: // normal (or time)
-		fl[0] &= 0x1F;
 		break;
 	case 6:
 		newForm = WPSCell::F_DATE;
-		fl[0] &= 0x1F;
 		break;
 	default:
+		f << "fl0[high]=" << (fl[0]>>5) << ",";
 		break;
 	}
+	fl[0] &= 0x1F;
 	if (newForm != WPSCell::F_UNKNOWN &&
 	        (newForm != style.format() || subForm != style.subformat()))
 	{
@@ -811,7 +826,7 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 		style.setFormat(newForm, subForm);
 	}
 
-	uint32_t fflags = 0;
+	uint32_t fflags = 0; // checkme
 	if (fl[0] & 0x10)
 	{
 		fflags |= WPS_ITALICS_BIT;
@@ -828,7 +843,7 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 		fl[1] &= 0xBF;
 	}
 	style.m_font.m_attributes=fflags;
-	switch(fl[1]&3)   // CHECKME
+	switch(fl[1]&3)
 	{
 	case 1:
 		style.setHAlignement(WPSCell::HALIGN_LEFT);
@@ -840,6 +855,7 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 		style.setHAlignement(WPSCell::HALIGN_RIGHT);
 		break;
 	case 0:
+	default:
 		break;
 	}
 	fl[1] &= 0xFC;

@@ -45,11 +45,11 @@ public:
 	                           HALIGN_FULL, HALIGN_DEFAULT
 	                         };
 	/** the different types of cell's field */
-	enum FormatType { F_TEXT, F_NUMBER, F_DATE, F_TIME, F_UNKNOWN };
+	enum FormatType { F_TEXT, F_BOOLEAN, F_NUMBER, F_DATE, F_TIME, F_UNKNOWN };
 
 	/*   subformat:
 	          NUMBER             DATE                 TIME       TEXT
-	  0 :    default           default               default    default
+	  0 :    default           default[3/2/2000]     default    default
 	  1 :    decimal            3/2/00             10:03:00 AM  -------
 	  2 :   exponential      3 Feb, 2000            10:03 AM    -------
 	  3 :   percent             3, Feb              10:03:00    -------
@@ -57,7 +57,10 @@ public:
 	  5 :    thousand       Thu, 3 Feb, 2000         -------    -------
 	  6 :  percent/thou     3 February 2000          -------    -------
 	  7 :   money/thou  Thursday, February 3, 2000   -------    -------
-
+	  8 :                       3/2
+	  9 :                       2/2000
+	  10:                       3 february
+	  11:                       february 2000
 	 */
 
 	//! constructor
@@ -65,12 +68,16 @@ public:
 		m_hAlign(HALIGN_DEFAULT), m_bordersList(), m_format(F_UNKNOWN), m_subFormat(0), m_digits(-1000), m_protected(false), m_backgroundColor(0xFFFFFF) { }
 	//! destructor
 	virtual ~WPSCellFormat() {}
-
+	//! returns true if this is a basic format style
+	bool hasBasicFormat() const
+	{
+		return m_format==F_TEXT || m_format==F_UNKNOWN;
+	}
+	//! returns a value type
+	std::string getValueType() const;
 	//! add to the propList
 	void addTo(librevenge::RVNGPropertyList &propList) const;
 
-	//! returns an unique id corresponding to a numbering style
-	int getUniqueIdForNumberingStyle() const;
 	//! get the number style
 	bool getNumberingProperties(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &propListVector) const;
 
@@ -97,15 +104,15 @@ public:
 		return m_subFormat;
 	}
 	//! sets the format type
-	void setFormat(FormatType format_, int subformat_=0)
+	void setFormat(FormatType form, int subForm=0)
 	{
-		m_format = format_;
-		m_subFormat = subformat_;
+		m_format = form;
+		m_subFormat = subForm;
 	}
 	//! sets the subformat
-	void setSubformat(int subFormat)
+	void setSubformat(int subForm)
 	{
-		m_subFormat = subFormat;
+		m_subFormat = subForm;
 	}
 
 	//! returns the number of digits ( for a number)
@@ -164,10 +171,22 @@ public:
 	}
 
 	//! a comparison  function
-	int compare(WPSCellFormat const &cell) const;
+	int compare(WPSCellFormat const &cell, bool onlyNumbering=false) const;
 
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell);
+
+	//! a comparaison structure used to store data
+	struct CompareFormat
+	{
+		//! constructor
+		CompareFormat() {}
+		//! comparaison function
+		bool operator()(WPSCellFormat const &c1, WPSCellFormat const &c2) const
+		{
+			return c1.compare(c2, true) < 0;
+		}
+	};
 
 protected:
 	//! the cell alignement : by default nothing
