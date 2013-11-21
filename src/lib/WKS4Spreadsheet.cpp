@@ -647,6 +647,7 @@ bool WKS4Spreadsheet::readStyle()
 		break;
 	case 0xd:
 		style.setFormat(WPSCell::F_NUMBER, 4);
+		f << "negative[inRed],";
 		break;
 	default:
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::readStyle: find unknown format %d\n", (fl[0]&0xF)));
@@ -1297,7 +1298,7 @@ bool WKS4Spreadsheet::readNumber(long endPos, double &res)
 	}
 	if (exp == 0x7FF)
 	{
-		if (mantisse == 1.)
+		if (mantisse >= 1.-1e-5)
 		{
 			res=std::numeric_limits<double>::quiet_NaN();
 			return true; // ok 0x7FF and 0xFFF are nan
@@ -1340,20 +1341,34 @@ static Functions const s_listFunctions[] =
 
 	{ "Choose", -1},{ "IsNa", 1},{ "IsError", 1},{ "False", 0},
 	{ "True", 0},{ "Rand", 0},{ "Date", 3},{ "Now", 0},
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "If", 3},
+	{ "UNKN38", 3} /*UNKN*/,{ "UNKN39", 3} /*UNKN*/,{ "UNKN3A", 3} /*UNKN*/,{ "If", 3},
 	{ "Day", 1},{ "Month", 1},{ "Year", 1},{ "Round", 2},
 
 	{ "Time", 3},{ "Hour", 1},{ "Minute", 1},{ "Second", 1},
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "UNKN46", 1} /*UNKN*/,{ "UNKN47", 1} /*UNKN*/,
+	{ "Text", 2}, { "UNKN49", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "UNKN4C", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
 	{ "Sum", -1},{ "Average", -1},{ "Count", -1},{ "Min", -1},
-	{ "Max", -1},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Var", -1},
-	{ "StDev", -1},{ "", -2} /*UNKN*/, { "HLookup", 3},{ "", -2} /*UNKN*/,
+	{ "Max", -1},{ "UNKN55", 3} /*UNKN*/,{ "UNKN56", 2} /*UNKN*/,{ "Var", -1},
+	{ "StDev", -1},{ "UNKN59", 2} /*UNKN*/, { "HLookup", 3},{ "", -2} /*UNKN*/,
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Index", 3} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Index", 3}, { "UNKN63", 1} /*UNKN*/,
+	{ "UNKN64", 1} /*UNKN*/,{ "Rept", 2},{ "Upper", 1},{ "Lower", 1},
+	{ "Left", 2},{ "", -2} /*UNKN*/,{ "Replace", 4}, { "Proper", 1} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "Trim", 1},{ "", -2} /*UNKN*/,{ "T", 1},
+
+	{ "UNKN70", 1} /*UNKN*/,{ "UNKN71", 2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", 3} /*UNKN*/,
+	{ "UNKN74", 3} /*UNKN*/,{ "UNKN75", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "UNKN77", 3} /*UNKN*/,
+	{ "UNKN78", 4} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/, { "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "UNKN8D", -1} /*UNKN*/,{ "UNKN8E", -1} /*UNKN*/,{ "UNKN8F", 1} /*UNKN*/,
+
 };
 }
 
@@ -1433,8 +1448,22 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 			instr.m_type=WKSContentListener::FormulaInstruction::F_Long;
 			instr.m_longValue=(long) libwps::read16(m_input);
 			break;
+		case 0x6:
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Text;
+			while (!m_input->isEnd())
+			{
+				if (m_input->tell() >= endPos)
+				{
+					ok=false;
+					break;
+				}
+				char c = (char) libwps::readU8(m_input);
+				if (c==0) break;
+				instr.m_content += c;
+			}
+			break;
 		default:
-			if (wh > 0x63 || WKS4SpreadsheetInternal::s_listFunctions[wh].m_arity == -2)
+			if (wh >= 0x90 || WKS4SpreadsheetInternal::s_listFunctions[wh].m_arity == -2)
 			{
 				f.str("");
 				f << "##Funct" << std::hex << wh;
@@ -1618,7 +1647,20 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 
 	WKS4SpreadsheetInternal::Cell finalCell(cell);
 	finalCell.WPSCellFormat::operator=(cellStyle);
-	m_listener->openSheetCell(finalCell, cell.m_content, propList);
+
+	WKSContentListener::CellContent content(cell.m_content);
+	for (size_t f=0; f < content.m_formula.size(); ++f)
+	{
+		if (content.m_formula[f].m_type!=WKSContentListener::FormulaInstruction::F_Text)
+			continue;
+		std::string &text=content.m_formula[f].m_content;
+		librevenge::RVNGString finalString("");
+		for (size_t c=0; c < text.length(); ++c)
+			WPSListener::appendUnicode
+			((uint32_t)libwps_tools_win::Font::unicode((unsigned char)text[c],fontType), finalString);
+		text=finalString.cstr();
+	}
+	m_listener->openSheetCell(finalCell, content, propList);
 
 	if (cell.m_content.m_textEntry.valid())
 	{
