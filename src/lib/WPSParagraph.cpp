@@ -175,8 +175,7 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 	return o;
 }
 
-void WPSParagraph::addTo(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &tabStops,
-                         bool inTable) const
+void WPSParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) const
 {
 	switch (m_justify)
 	{
@@ -239,7 +238,10 @@ void WPSParagraph::addTo(librevenge::RVNGPropertyList &propList, librevenge::RVN
 	propList.insert("fo:margin-top", (10.*m_spacings[1])/72., librevenge::RVNG_INCH);
 	propList.insert("fo:margin-bottom", (10.*m_spacings[2])/72., librevenge::RVNG_INCH);
 	propList.insert("fo:line-height", m_spacings[0] <= 0 ? 1.0 : m_spacings[0], librevenge::RVNG_PERCENT);
+    librevenge::RVNGPropertyListVector tabStops;
 	for (size_t i=0; i< m_tabs.size(); i++)
 		m_tabs[i].addTo(tabStops, 0);
+	if (tabStops.count())
+		propList.insert("style:tab-stops", tabStops);
 }
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

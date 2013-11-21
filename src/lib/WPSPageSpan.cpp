@@ -331,7 +331,7 @@ void WPSPageSpan::_insertPageNumberParagraph(librevenge::RVNGTextInterface *docu
 		break;
 	}
 
-	documentInterface->openParagraph(propList, librevenge::RVNGPropertyListVector());
+	documentInterface->openParagraph(propList);
 
 	propList.clear();
 	propList.insert("style:font-name", m_pageNumberingFontName.cstr());

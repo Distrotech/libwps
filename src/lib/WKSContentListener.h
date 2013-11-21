@@ -201,7 +201,7 @@ protected:
 
 	void _openParagraph();
 	void _closeParagraph();
-	void _appendParagraphProperties(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &tabStops, const bool isListElement=false);
+	void _appendParagraphProperties(librevenge::RVNGPropertyList &propList, const bool isListElement=false);
 	void _resetParagraphState(const bool isListElement=false);
 
 	void _openSpan();

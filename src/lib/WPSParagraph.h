@@ -67,7 +67,7 @@ struct WPSParagraph
 	// destructor
 	virtual ~WPSParagraph() {}
 	//! add to the propList
-	void addTo(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &tabStops, bool inTable) const;
+	void addTo(librevenge::RVNGPropertyList &propList, bool inTable) const;
 	//! operator <<
 	friend std::ostream &operator<<(std::ostream &o, WPSParagraph const &ft);
 

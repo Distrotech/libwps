@@ -394,11 +394,10 @@ void WKSContentListener::_openParagraph()
 		return;
 	}
 	librevenge::RVNGPropertyList propList;
-	librevenge::RVNGPropertyListVector tabStops;
-	_appendParagraphProperties(propList, tabStops);
+	_appendParagraphProperties(propList);
 
 	if (!m_ps->m_isParagraphOpened)
-		m_documentInterface->openParagraph(propList, tabStops);
+		m_documentInterface->openParagraph(propList);
 
 	_resetParagraphState();
 }
@@ -424,10 +423,9 @@ void WKSContentListener::_resetParagraphState(const bool /*isListElement*/)
 	m_ps->m_isParagraphOpened = true;
 }
 
-void WKSContentListener::_appendParagraphProperties
-(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &tabStops, const bool /*isListElement*/)
+void WKSContentListener::_appendParagraphProperties(librevenge::RVNGPropertyList &propList, const bool /*isListElement*/)
 {
-	m_ps->m_paragraph.addTo(propList, tabStops, m_ps->m_isSheetOpened);
+	m_ps->m_paragraph.addTo(propList, m_ps->m_isSheetOpened);
 
 	_insertBreakIfNecessary(propList);
 }
