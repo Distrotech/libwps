@@ -1573,7 +1573,8 @@ void WPSContentListener::openTable(std::vector<float> const &colWidth, libreveng
 		tableWidth += colWidth[c];
 	}
 	propList.insert("style:width", tableWidth, unit);
-	m_documentInterface->openTable(propList, columns);
+	propList.insert("librevenge:table-columns", columns);
+	m_documentInterface->openTable(propList);
 	m_ps->m_isTableOpened = true;
 }
 
