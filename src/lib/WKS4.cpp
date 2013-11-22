@@ -227,7 +227,7 @@ shared_ptr<WKSContentListener> WKS4Parser::createListener(librevenge::RVNGSpread
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool WKS4Parser::checkHeader(WPSHeader *header, bool /*strict*/)
+bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 {
 	*m_state = WKS4ParserInternal::State();
 	libwps::DebugStream f;
@@ -244,7 +244,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool /*strict*/)
 	f << "FileHeader(";
 	if (firstOffset == 0)
 	{
-		m_state->m_version=1;
+		m_state->m_version=2;
 		f << "DOS";
 	}
 	else if (firstOffset == 0xff)
@@ -254,16 +254,21 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool /*strict*/)
 	}
 
 	if ((firstOffset != 0 && firstOffset != 0xFF) || libwps::read16(input) != 2
-	        || libwps::read16(input) != 0x0404 || libwps::read16(input) != 0x5405
-	        || libwps::read16(input) != 2)
+	        || libwps::read16(input) != 0x0404)
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: header contain unknown data\n"));
 		return false;
 	}
-	f << "):unkn=" << std::hex << libwps::readU16(input) << std::dec;
+	if (strict)
+	{
+		for (int i=0; i < 3; ++i)
+		{
+			if (!readZone()) return false;
+		}
+	}
 	ascii().addPos(0);
 	ascii().addNote(f.str().c_str());
-	ascii().addPos(12);
+	ascii().addPos(6);
 	if (header)
 	{
 		header->setMajorVersion((uint8_t) m_state->m_version);
@@ -275,7 +280,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool /*strict*/)
 bool WKS4Parser::readZones()
 {
 	RVNGInputStreamPtr input = getInput();
-	input->seek(12, librevenge::RVNG_SEEK_SET);
+	input->seek(6, librevenge::RVNG_SEEK_SET);
 
 	while(readZone()) ;
 
@@ -368,6 +373,16 @@ bool WKS4Parser::readZone()
 			readChartDef();
 			isParsed = true;
 			break;
+		case 0x2f: // first microsoft works file ?
+			if (sz!=1) break;
+			WPS_DEBUG_MSG(("WKS4Parser::readZone: argh probably a very old file\n"));
+			f << "Entries(PreVersion):vers=" << (int) libwps::readU8(input);
+			if (m_state->m_version==2)
+				m_state->m_version=1;
+			ascii().addPos(pos);
+			ascii().addNote(f.str().c_str());
+			isParsed = true;
+			break;
 			// case 31: 1-2
 		case 0x41:
 			readChartName();
@@ -382,6 +397,13 @@ bool WKS4Parser::readZone()
 		{
 		case 0x2:
 			ok = m_spreadsheetParser->readDOSCellProperty();
+			isParsed = true;
+			break;
+		case 0x5:
+			if (sz!=2) break;
+			f << "Entries(Version):vers=" << std::hex << libwps::readU16(input) << std::dec;
+			ascii().addPos(pos);
+			ascii().addNote(f.str().c_str());
 			isParsed = true;
 			break;
 		case 0x13:
@@ -726,7 +748,7 @@ bool WKS4Parser::readChartDef()
 		// some cell zone ?? : f0,f1,f2,f3 -> main zone, f14:f15 ?
 		int val1 = (int) libwps::read16(input);
 		int val2 = (int) libwps::read16(input);
-		if (val1 != -1 || val2)
+		if (val1 != -1 || (val2 && val2 != -1))
 		{
 			WKSContentListener::FormulaInstruction instr;
 			input->seek(-4, librevenge::RVNG_SEEK_CUR);

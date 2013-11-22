@@ -82,7 +82,12 @@ WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip
 		default:
 			break;
 		}
-
+		if (kind==WPS_SPREADSHEET)
+		{
+			WKS4Parser parser(header->getInput(), header);
+			if (!parser.checkHeader(header.get(), true))
+				return WPS_CONFIDENCE_NONE;
+		}
 		return confidence;
 	}
 	catch (libwps::FileException)

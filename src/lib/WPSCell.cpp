@@ -258,9 +258,9 @@ std::string WPSCellFormat::getValueType() const
 	return "float";
 }
 
-bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &pVect) const
+bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propList) const
 {
-	pVect=librevenge::RVNGPropertyListVector();
+	librevenge::RVNGPropertyListVector pVect;
 	switch(m_format)
 	{
 	case F_BOOLEAN:
@@ -317,21 +317,26 @@ bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propLis
 		default:
 			return false;
 		}
-		return true;
+		break;
 	case F_DATE:
 		propList.insert("librevenge:value-type", "date");
 		propList.insert("number:automatic-order", "true");
-		return convertDTFormat(m_DTFormat.empty() ? "%m/%d/%Y" : m_DTFormat, pVect);
+		if (!convertDTFormat(m_DTFormat.empty() ? "%m/%d/%Y" : m_DTFormat, pVect))
+			return false;
+		break;
 	case F_TIME:
 		propList.insert("librevenge:value-type", "time");
 		propList.insert("number:automatic-order", "true");
-		return convertDTFormat(m_DTFormat.empty() ? "%H:%M:%S" : m_DTFormat, pVect);
+		if (!convertDTFormat(m_DTFormat.empty() ? "%H:%M:%S" : m_DTFormat, pVect))
+			return false;
+		break;
 	case F_TEXT:
 	case F_UNKNOWN:
 	default:
-		break;
+		return false;
 	}
-	return false;
+	propList.insert("librevenge:format", pVect);
+	return true;
 }
 
 int WPSCellFormat::compare(WPSCellFormat const &cell, bool onlyNumbering) const

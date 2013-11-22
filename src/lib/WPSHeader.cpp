@@ -59,14 +59,11 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 			WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
 			return new WPSHeader(input, input, 2);
 		}
-		if ((firstOffset == 0xFF || firstOffset == 00) && secondOffset == 0x0)
+		if ((firstOffset == 0xFF || firstOffset == 00) && secondOffset == 0x0 &&
+		        libwps::readU16(input) == 2 && libwps::readU16(input) == 0x0404)
 		{
-			if (libwps::readU16(input) == 2 && libwps::readU16(input) == 0x0404 &&
-			        libwps::readU16(input) == 0x5405 && libwps::readU16(input) == 2)
-			{
-				WPS_DEBUG_MSG(("Microsoft Works wks detected\n"));
-				return new WPSHeader(input, input, 2, WPS_SPREADSHEET);
-			}
+			WPS_DEBUG_MSG(("Microsoft Works wks detected\n"));
+			return new WPSHeader(input, input, 2, WPS_SPREADSHEET);
 		}
 
 		return 0;

@@ -168,7 +168,7 @@ class Cell : public WPSCell
 {
 public:
 	/// constructor
-	Cell() : m_styleId(-1), m_content() { }
+	Cell() : m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content() { }
 
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
@@ -189,6 +189,8 @@ public:
 
 	//! the style
 	int m_styleId;
+	//! the horizontal align (in dos file)
+	WPSCellFormat::HorizontalAlignment m_hAlign;
 	//! the content
 	WKSContentListener::CellContent m_content;
 };
@@ -198,6 +200,24 @@ std::ostream &operator<<(std::ostream &o, Cell const &cell)
 {
 	o << reinterpret_cast<WPSCell const &>(cell)
 	  << cell.m_content << ",style=" << cell.m_styleId << ",";
+	switch(cell.m_hAlign)
+	{
+	case WPSCellFormat::HALIGN_LEFT:
+		o << "left,";
+		break;
+	case WPSCellFormat::HALIGN_CENTER:
+		o << "centered,";
+		break;
+	case WPSCellFormat::HALIGN_RIGHT:
+		o << "right,";
+		break;
+	case WPSCellFormat::HALIGN_FULL:
+		o << "full,";
+		break;
+	case WPSCellFormat::HALIGN_DEFAULT:
+	default:
+		break; // default
+	}
 	return o;
 }
 
@@ -1024,9 +1044,16 @@ bool WKS4Spreadsheet::readCell()
 			s += c;
 		}
 		f << s;
-		// CHECKME: dosFile string begins alway? by an extra character " or '
-		if (dosFile && s.length() && (s[0]=='\"' || s[0]=='\''))
+		if (dosFile && s.length())
+		{
+			if (s[0]=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT;
+			else if (s[0]=='\\') cell.m_hAlign=WPSCellFormat::HALIGN_LEFT;
+			else if (s[0]=='^') cell.m_hAlign=WPSCellFormat::HALIGN_CENTER;
+			else if (s[0]=='\"') cell.m_hAlign=WPSCellFormat::HALIGN_RIGHT;
+			else
+				--begText;
 			++begText;
+		}
 		cell.m_content.m_textEntry.setBegin(begText);
 		cell.m_content.m_textEntry.setEnd(endText);
 		break;
@@ -1186,8 +1213,18 @@ bool WKS4Spreadsheet::readCell(Vec2i actPos, WKSContentListener::FormulaInstruct
 		if ((val & 0xF000) == 0); // absolue value ?
 		else if ((val & 0xc000) == 0x8000)   // relative ?
 		{
-			val &= 0x3FFF;
-			if (val & 0x2000) val = val - 0x4000;
+			if (version()==1)
+			{
+				val &= 0xFF;
+				if ((val & 0x80) && val+actPos[dim] > 0x100)
+					// sometimes this value is odd, so do not generate errors here
+					val = val - 0x100;
+			}
+			else
+			{
+				val &= 0x3FFF;
+				if (val & 0x2000) val = val - 0x4000;
+			}
 			val += actPos[dim];
 			absolute[dim] = false;
 		}
@@ -1327,7 +1364,7 @@ static Functions const s_listFunctions[] =
 	{ "", 0} /*SPEC: number*/, {"", 0}/*SPEC: cell*/, {"", 0}/*SPEC: cells*/, {"=", 1} /*=*/,
 	{ "(", 1} /* SPEC: () */, {"", 0}/*SPEC: number*/, { "", -2} /*UNKN*/, {"", -2}/*UNKN*/,
 	{ "-", 1}, {"+", 2}, {"-", 2}, {"*", 2},
-	{ "/", 2}, { "", -2} /*UNKN*/, {"=", 2}, {"<>", 2},
+	{ "/", 2}, { "^", 2}, {"=", 2}, {"<>", 2},
 
 	{ "<=", 2},{ ">=", 2},{ "<", 2},{ ">", 2},
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/, { "Not", 1}, { "+", 1},
@@ -1341,33 +1378,33 @@ static Functions const s_listFunctions[] =
 
 	{ "Choose", -1},{ "IsNa", 1},{ "IsError", 1},{ "False", 0},
 	{ "True", 0},{ "Rand", 0},{ "Date", 3},{ "Now", 0},
-	{ "UNKN38", 3} /*UNKN*/,{ "UNKN39", 3} /*UNKN*/,{ "UNKN3A", 3} /*UNKN*/,{ "If", 3},
+	{ "UNKN38", 3} /*PAGO?*/,{ "UNKN39", 3} /*previous value*/,{ "UNKN3A", 3} /*futur value*/,{ "If", 3},
 	{ "Day", 1},{ "Month", 1},{ "Year", 1},{ "Round", 2},
 
 	{ "Time", 3},{ "Hour", 1},{ "Minute", 1},{ "Second", 1},
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "UNKN46", 1} /*UNKN*/,{ "UNKN47", 1} /*UNKN*/,
-	{ "Text", 2}, { "UNKN49", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
-	{ "UNKN4C", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Len", 1},{ "Value", 1},
+	{ "Text", 2}, { "Mid", 3}, { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "Find", 3},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
 	{ "Sum", -1},{ "Average", -1},{ "Count", -1},{ "Min", -1},
-	{ "Max", -1},{ "UNKN55", 3} /*UNKN*/,{ "UNKN56", 2} /*UNKN*/,{ "Var", -1},
-	{ "StDev", -1},{ "UNKN59", 2} /*UNKN*/, { "HLookup", 3},{ "", -2} /*UNKN*/,
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "Max", -1},{ "Find", 3} /*UNKN*/,{ "UNKN56", 2} /*VPN?*/,{ "Var", -1},
+	{ "StDev", -1},{ "UNKN59", 2} /*Tir?*/, { "HLookup", 3},{ "UNKN5B", 3} /*UNKN*/,
+	{ "UNKN5C", 3} /*UNKN*/,{ "UNKN5D", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Index", 3}, { "UNKN63", 1} /*UNKN*/,
-	{ "UNKN64", 1} /*UNKN*/,{ "Rept", 2},{ "Upper", 1},{ "Lower", 1},
-	{ "Left", 2},{ "", -2} /*UNKN*/,{ "Replace", 4}, { "Proper", 1} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Index", 3}, { "Columns", 1},
+	{ "Rows", 1},{ "Rept", 2},{ "Upper", 1},{ "Lower", 1},
+	{ "Left", 2},{ "", -2} /*UNKN*/,{ "Replace", 4}, { "Proper", 1},
 	{ "", -2} /*UNKN*/,{ "Trim", 1},{ "", -2} /*UNKN*/,{ "T", 1},
 
-	{ "UNKN70", 1} /*UNKN*/,{ "UNKN71", 2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", 3} /*UNKN*/,
-	{ "UNKN74", 3} /*UNKN*/,{ "UNKN75", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "UNKN77", 3} /*UNKN*/,
-	{ "UNKN78", 4} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "IsNonText", 1},{ "Exact", 2},{ "", -2} /*UNKN*/,{ "", 3} /*UNKN*/,
+	{ "UNKN74", 3} /*Tasa?*/,{ "UNKN75", 3} /*Termino*/,{ "", -2} /*UNKN*/,{ "SLN", 3},
+	{ "SYD", 4},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/, { "", -2} /*UNKN*/,
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
-	{ "", -2} /*UNKN*/,{ "UNKN8D", -1} /*UNKN*/,{ "UNKN8E", -1} /*UNKN*/,{ "UNKN8F", 1} /*UNKN*/,
+	{ "", -2} /*UNKN*/,{ "And", -1},{ "Or", -1},{ "Not", 1},
 
 };
 }
@@ -1375,6 +1412,7 @@ static Functions const s_listFunctions[] =
 bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
                                   std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error)
 {
+	int const vers=version();
 	formula.resize(0);
 	error = "";
 	long pos = m_input->tell();
@@ -1422,7 +1460,7 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 		}
 		case 0x2:
 		{
-			if (endPos-pos<9 || !readCell(position, instr))
+			if (endPos-pos< (vers<=1 ? 7 : 9) || !readCell(position, instr))
 			{
 				f.str("");
 				f << "###list cell short";
@@ -1433,10 +1471,10 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 			WKSContentListener::FormulaInstruction instr2;
 			if (!readCell(position, instr2))
 			{
+				ok = false;
 				f.str("");
 				f << "###list cell short";
 				error=f.str();
-				ok = false;
 				break;
 			}
 			instr.m_type=WKSContentListener::FormulaInstruction::F_CellList;
@@ -1640,6 +1678,8 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::sendCellContent: I can not find the cell style\n"));
 		if (version()>=3) cellStyle.m_fontType=libwps_tools_win::Font::WIN3_WEUROPE;
 	}
+	if (version()<=2 && cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
+		cellStyle.setHAlignement(cell.m_hAlign);
 
 	librevenge::RVNGPropertyList propList;
 	libwps_tools_win::Font::Type fontType = cellStyle.m_fontType;

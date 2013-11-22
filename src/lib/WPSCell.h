@@ -78,7 +78,7 @@ public:
 	void addTo(librevenge::RVNGPropertyList &propList) const;
 
 	//! get the number style
-	bool getNumberingProperties(librevenge::RVNGPropertyList &propList, librevenge::RVNGPropertyListVector &propListVector) const;
+	bool getNumberingProperties(librevenge::RVNGPropertyList &propList) const;
 
 	//! returns the horizontal alignement
 	HorizontalAlignment hAlignement() const

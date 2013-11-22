@@ -640,8 +640,9 @@ void WKSContentListener::openSheet(std::vector<float> const &colWidth, libreveng
 
 		sheetWidth += colWidth[c];
 	}
+	propList.insert("librevenge:columns", columns);
 	propList.insert("style:width", sheetWidth, unit);
-	m_documentInterface->openSheet(propList, columns);
+	m_documentInterface->openSheet(propList);
 	m_ps->m_isSheetOpened = true;
 }
 
@@ -724,11 +725,10 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 			name << "Numbering" << numberingId;
 
 			librevenge::RVNGPropertyList numList;
-			librevenge::RVNGPropertyListVector numVect;
-			if (cell.getNumberingProperties(numList, numVect))
+			if (cell.getNumberingProperties(numList))
 			{
 				numList.insert("librevenge:name", name.str().c_str());
-				m_documentInterface->defineSheetNumberingStyle(numList,numVect);
+				m_documentInterface->defineSheetNumberingStyle(numList);
 				m_ds->m_numberingIdMap[cell]=numberingId;
 			}
 			else
@@ -909,8 +909,8 @@ std::ostream &operator<<(std::ostream &o, WKSContentListener::FormulaInstruction
 	else if (inst.m_type==WKSContentListener::FormulaInstruction::F_Cell)
 	{
 		if (!inst.m_positionRelative[0][0]) o << "$";
-		if (inst.m_position[0][0]>=27) o << (char) (inst.m_position[0][0]/27 + 'A');
-		o << (char) (inst.m_position[0][0]%27+'A');
+		if (inst.m_position[0][0]>=26) o << (char) (inst.m_position[0][0]/26-1 + 'A');
+		o << (char) (inst.m_position[0][0]%26+'A');
 		if (!inst.m_positionRelative[0][1]) o << "$";
 		o << inst.m_position[0][1];
 	}
@@ -919,8 +919,8 @@ std::ostream &operator<<(std::ostream &o, WKSContentListener::FormulaInstruction
 		for (int l=0; l<2; ++l)
 		{
 			if (!inst.m_positionRelative[l][0]) o << "$";
-			if (inst.m_position[l][0]>=27) o << (char) (inst.m_position[l][0]/27 + 'A');
-			o << (char) (inst.m_position[l][0]%27+'A');
+			if (inst.m_position[l][0]>=26) o << (char) (inst.m_position[l][0]/26-1 + 'A');
+			o << (char) (inst.m_position[l][0]%26+'A');
 			if (!inst.m_positionRelative[l][1]) o << "$";
 			o << inst.m_position[l][1];
 			if (l==0) o << ":";
