@@ -341,7 +341,8 @@ void WPSPageSpan::_insertPageNumberParagraph(librevenge::RVNGTextInterface *docu
 
 	propList.clear();
 	propList.insert("style:num-format", libwps::numberingTypeToString(m_pageNumberingType).c_str());
-	documentInterface->insertField("text:page-number", propList);
+	propList.insert("librevenge:field-format", "text:page-number");
+	documentInterface->insertField(propList);
 
 	propList.clear();
 	documentInterface->closeSpan();
