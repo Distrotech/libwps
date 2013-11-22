@@ -700,7 +700,9 @@ void WPSContentListener::_openSection()
 		column.insert("fo:end-indent", col.m_rightGutter);
 		columns.append(column);
 	}
-	m_documentInterface->openSection(propList, columns);
+	if (columns.count())
+		propList.insert("style:columns", columns);
+	m_documentInterface->openSection(propList);
 
 	m_ps->m_sectionAttributesChanged = false;
 	m_ps->m_isSectionOpened = true;
