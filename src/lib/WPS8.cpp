@@ -1085,8 +1085,8 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 		case 0x29: // 1 ou 2
 			f2 <<  "f" << dt.id() << "=" << dt.m_value << ",";
 			break;
-			// 0x2a: an integer = 4|6|b
-			// 0x2b: an integer = 0|8|c
+		// 0x2a: an integer = 4|6|b
+		// 0x2b: an integer = 0|8|c
 		case 0x2c:
 		{
 			if (dt.isRead() || !dt.isArray())
@@ -1356,27 +1356,27 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			case 1:
 				switch(dt.m_value)
 				{
-					// associated with 0x13=22:[0|96], 0x18,1b=0x41,0x2e, rarely with 0x1a
+				// associated with 0x13=22:[0|96], 0x18,1b=0x41,0x2e, rarely with 0x1a
 				case 6:
 					frame.m_type = Frame::Header;
 					break;
-					// associated with 0x13=22:[0|96],0x18,1b=0x41,0x2e, rarely with 0x1a
+				// associated with 0x13=22:[0|96],0x18,1b=0x41,0x2e, rarely with 0x1a
 				case 7:
 					frame.m_type = Frame::Footer;
 					break;
 
-					// does the following correspond to page, column, char position ?
+				// does the following correspond to page, column, char position ?
 
-					// associated with 0x11=(m_idOle,0,1), 0x2e=?
+				// associated with 0x11=(m_idOle,0,1), 0x2e=?
 				case 8:
 					frame.m_type = Frame::Object;
 					break;
-					// associated with 0x18=?, 0x46=? and often with a BDR entry
-					// CHECKME: seems also associated to a MCLD, how ?
+				// associated with 0x18=?, 0x46=? and often with a BDR entry
+				// CHECKME: seems also associated to a MCLD, how ?
 				case 9:
 					frame.m_type = Frame::Text;
 					break;
-					// associated with f3 and 0x11=(table_id,0,0) and 0x2a=?
+				// associated with f3 and 0x11=(table_id,0,0) and 0x2a=?
 				case 12:
 					frame.m_type = Frame::Table;
 					break;
@@ -1475,9 +1475,9 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			case 0x26: // rotation in degree from center ( CCW)
 				f2 << "rot=" << float(dt.m_value)/10. << "deg,";
 				break;
-				//
-				// Table specific field ?
-				//
+			//
+			// Table specific field ?
+			//
 			case 0x2a:   // link to the m_idTable(ids) number for a table
 			{
 				int id = (int16_t) dt.m_value;
@@ -1506,7 +1506,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				f2 << "f" << dt.id() << "=" << (int16_t) dt.m_value << ",";
 				break;
 
-				// UNKNOWN
+			// UNKNOWN
 			case 0x1a: // appear 2 time (in a header and in a footer) with value 16
 				f2 << "f" << dt.id() << "=" << (int) (int8_t) dt.m_value << ",";
 				break;

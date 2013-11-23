@@ -699,7 +699,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		bool ok = true;
 		switch(data.id())
 		{
-			/* case 0x2: what?=data.m_value/914400.; */
+		/* case 0x2: what?=data.m_value/914400.; */
 		case 0x3:
 			switch (data.m_value)
 			{
@@ -755,7 +755,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		case 0x13: // after line spacing 152400 -> 1 line
 			para.m_spacings[2] = float(data.m_value)/152400.f;
 			break;
-			// case 0x15(type22): one time with value 0x29
+		// case 0x15(type22): one time with value 0x29
 		case 0x14:
 		{
 			// link to bullet or numbering
@@ -843,7 +843,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		case 0x18:
 			f << "modTabs,";
 			break;
-			// case 0x19(type1a): number between 1 and 6 : stylesheet index ?
+		// case 0x19(type1a): number between 1 and 6 : stylesheet index ?
 		case 0x1b:
 			if (data.m_value == 1) f << "bColType=rgb?,";
 			else f << "#bColType=" << std::hex << data.m_value << std::dec << ",";
@@ -907,8 +907,8 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		case 0x2a: // exists with f29(1d) in style sheet, find 0|1|3
 			f << "##f42=" << data.m_value << ",";
 			break;
-			// case 0x31(typ12) : always 1 ?
-			// case 0x33(typ12) : always 2 ?
+		// case 0x31(typ12) : always 1 ?
+		// case 0x33(typ12) : always 2 ?
 		case 0x32:
 		{
 			if (!data.isRead() && !data.readArrayBlock() && data.m_recursData.size() == 0)

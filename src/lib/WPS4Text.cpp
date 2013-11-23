@@ -869,7 +869,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 					case 'F':
 						m_listener->insertField(WPSContentListener::Title);
 						break;
-						// case '&': check me does '&&'->'&' ?
+					// case '&': check me does '&&'->'&' ?
 					default:
 						done = false;
 						break;
