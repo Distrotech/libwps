@@ -426,7 +426,7 @@ bool WKS4Spreadsheet::readColumnSize()
 			if (first)
 			{
 				first = false;
-				WPS_DEBUG_MSG(("WKS4Spreadsheet::readColumnSize: I must increase the number of columbs\n"));
+				WPS_DEBUG_MSG(("WKS4Spreadsheet::readColumnSize: I must increase the number of columns\n"));
 			}
 			f << "###";
 		}
@@ -813,8 +813,16 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 
 	f << "Entries(CellDosProperty):";
 	WKS4SpreadsheetInternal::Cell *cell = m_state->m_spreadsheet.getLastCell();
+	if (!cell)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSCellProperty: can not find the cell\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
 	WKS4SpreadsheetInternal::Style style;
-	if (cell && cell->m_styleId>=0)
+	if (cell->m_styleId>=0)
 	{
 		if (!m_state->m_styleManager.get(cell->m_styleId, style))
 			f << ",###style";
@@ -827,13 +835,13 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	switch((fl[0] & 0x7))
 	{
 	case 0x5:
-		if (cell && cell->m_content.m_contentType == WKSContentListener::CellContent::C_TEXT) fl[0] &= 0xF8;
+		if (cell->m_content.m_contentType == WKSContentListener::CellContent::C_TEXT) fl[0] &= 0xF8;
 		break;
 	case 0x6:
-		if (cell && cell->m_content.m_contentType == WKSContentListener::CellContent::C_NUMBER) fl[0] &= 0xF8;
+		if (cell->m_content.m_contentType == WKSContentListener::CellContent::C_NUMBER) fl[0] &= 0xF8;
 		break;
 	case 0x7:
-		if (cell && cell->m_content.m_contentType == WKSContentListener::CellContent::C_FORMULA) fl[0] &= 0xF8;
+		if (cell->m_content.m_contentType == WKSContentListener::CellContent::C_FORMULA) fl[0] &= 0xF8;
 		break;
 	default:
 		break;
@@ -862,10 +870,21 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 		newForm = WPSCell::F_NUMBER;
 		subForm=5;
 		break;
-	case 5: // normal (or time)
+	case 5:   // normal (or time)
+	{
+		int wh=(fl[1]>>2)&0x7;
+		if (wh>=2 && wh <=5)
+		{
+			newForm = WPSCell::F_TIME;
+			subForm=wh-2;
+			fl[1]&=0xE3;
+		}
 		break;
+	}
 	case 6:
 		newForm = WPSCell::F_DATE;
+		subForm=(fl[1]>>2)&0x7;
+		fl[1]&=0xE3;
 		break;
 	default:
 		f << "fl0[high]=" << (fl[0]>>5) << ",";
@@ -875,11 +894,24 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	if (newForm != WPSCell::F_UNKNOWN &&
 	        (newForm != style.getFormat() || subForm != style.getSubFormat()))
 	{
-		if (newForm != style.getFormat())
+		if (style.getFormat() == WPSCell::F_UNKNOWN)
+			;
+		else if (newForm != style.getFormat())
 			f << "#prevForm = " << int(style.getFormat());
 		else
 			f << "#prevSubForm = " << style.getSubFormat();
-		style.setFormat(newForm, subForm);
+		if (newForm==WPSCell::F_DATE && subForm>=0 && subForm<=7)
+		{
+			char const *(wh[])= { "%m/%d/%y", "%B %d, %Y", "%m/%y", "%B %Y", "%m/%d", "%B %d", "%m", "%B"};
+			style.setDTFormat(newForm, wh[subForm]);
+		}
+		else if (newForm==WPSCell::F_TIME && subForm>=0 && subForm<=3)
+		{
+			char const *(wh[])= { "%I:%M%p", "%I:%M:%S%p", "%H:%M", "%H:%M:%S"};
+			style.setDTFormat(newForm, wh[subForm]);
+		}
+		else
+			style.setFormat(newForm, subForm);
 	}
 
 	uint32_t fflags = 0; // checkme
@@ -918,10 +950,10 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	style.m_unknFlags[0] = fl[0];
 	style.m_unknFlags[1] = fl[1];
 	int id = m_state->m_styleManager.add(style, true);
-	if (cell) cell->m_styleId=id;
+	cell->m_styleId=id;
 
 #ifdef DEBUG_WITH_FILES
-	if (cell) f << *cell;
+	f << *cell;
 	m_state->m_styleManager.print(id, f);
 #endif
 	if (sz > 2) ascii().addDelimiter(pos+6, '#');
@@ -930,6 +962,80 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	ascii().addNote(f.str().c_str());
 	return true;
 
+}
+
+bool WKS4Spreadsheet::readDOSCellExtraProperty()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x541c)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSCellExtraProperty: not a cell property\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz < 8)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSCellExtraProperty: cell property is too short\n"));
+		return false;
+	}
+
+	f << "Entries(CellDosExtra):";
+	WKS4SpreadsheetInternal::Cell *cell = m_state->m_spreadsheet.getLastCell();
+	if (!cell)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSCellExtraProperty: can not find the cell\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	WKS4SpreadsheetInternal::Style style;
+	if (cell->m_styleId>=0)
+	{
+		if (!m_state->m_styleManager.get(cell->m_styleId, style))
+			f << ",###style";
+	}
+	int values[8];  // f0: [02468ac][0157], f1=0..9, f2=0..a, f3=[0-6a][0156], f4=0|9|d|40|80|c0, f5=0|ed
+	for (int i=0; i < 8; ++i)
+		values[i]=(int) libwps::readU8(m_input);
+	if (style.getFormat()==WPSCell::F_NUMBER)   // not sure
+	{
+		if (values[2]==5)
+		{
+			style.setFormat(WPSCell::F_NUMBER,7);
+			values[2]=0;
+		}
+		else if (values[2]==0xa)
+		{
+			style.setFormat(WPSCell::F_NUMBER,6);
+			style.setDigits(((values[3]>>3)&0x7)+1);
+			values[2]=0;
+			values[3]&=0xC7;
+		}
+	}
+	uint32_t color;
+	if ((values[6]&0xE0) && m_mainParser.getColor(values[6]>>5,color))
+	{
+		style.m_font.m_color=color;
+		f << "fontColor=" << std::hex << color << std::dec << ",";
+		values[6] &= 0x1F;
+	}
+	for (int i=0; i < 8; ++i)
+	{
+		if (values[i])
+			f << "f" << i << "=" << std::hex << values[i] << std::dec << ",";
+	}
+
+	int id = m_state->m_styleManager.add(style, true);
+	cell->m_styleId=id;
+
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	if (m_input->tell()!=pos+4+sz) ascii().addDelimiter(m_input->tell(),'#');
+
+	return false;
 }
 
 bool WKS4Spreadsheet::readCell()
@@ -956,10 +1062,7 @@ bool WKS4Spreadsheet::readCell()
 	bool dosFile = version() < 3;
 	int unkn1 = 0;
 	if (dosFile)
-	{
 		unkn1 = (int) libwps::readU8(m_input);
-		if (unkn1) f << "unkn1=" << std::hex << unkn1 << std::dec << ",";
-	}
 	int cellPos[2];
 	for (int i=0; i<2; i++)
 		cellPos[i]=(int) libwps::read16(m_input);
@@ -1043,7 +1146,7 @@ bool WKS4Spreadsheet::readCell()
 			}
 			s += c;
 		}
-		f << s;
+		f << s << ",";
 		if (dosFile && s.length())
 		{
 			if (s[0]=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT;
@@ -1065,7 +1168,6 @@ bool WKS4Spreadsheet::readCell()
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_FORMULA;
 			cell.m_content.setValue(val);
-			std::vector<WKSContentListener::FormulaInstruction> formula;
 			std::string error;
 			if (!readFormula(endPos, cell.position(), cell.m_content.m_formula, error))
 				ascii().addDelimiter(m_input->tell()-1, '#');
@@ -1112,72 +1214,27 @@ bool WKS4Spreadsheet::readCell()
 			break;
 		}
 
-		bool canHaveDigits = false;
-		switch(unkn1 & 0xF0)
+		int styleID = (unkn1>>4) & 0x7;
+		switch(styleID)
 		{
 		case 0:
-		case 0x10:
-		case 0x20:
-		case 0x30:
-		case 0x40:
-			if (style.getFormat() != WPSCell::F_TEXT)
-			{
-				canHaveDigits = true;
-				int styleID = (unkn1>>8);
-				if (styleID == 2) styleID = 3;
-				else if (styleID == 3) styleID = 2;
-				style.setFormat(WPSCell::F_NUMBER,1+styleID);
-			}
-			break;
-		case 0x70:
-			switch(unkn1)
-			{
-			case 0x70:
-				if (style.getFormat() == WPSCell::F_TEXT) unkn1 = 0;
-				break;
-			case 0x71:
-				if (style.getFormat() == WPSCell::F_NUMBER) unkn1 = 0;
-				break;
-			case 0x72:
-			case 0x73:
-			case 0x74: // CHECKME: probably date for all field between 0x72 <-> 0x7a
-			case 0x79:
-			case 0x7a:
-				// note: text cell seems to have random flag, so we can ignore
-				if (style.getFormat() != WPSCell::F_TEXT) style.setFormat(WPSCell::F_DATE);
-				unkn1 = 0;
-				break;
-			case 0x7b:
-			case 0x7c:
-				// note: text cell seems to have random flag, so we can ignore
-				if (style.getFormat() != WPSCell::F_TEXT) style.setFormat(WPSCell::F_TIME);
-				unkn1 = 0;
-				break;
-			default:
-				break;
-			}
-			break;
-		case 0xF0:
-			if (unkn1 == 0xF1)
-			{
-				unkn1=0;  // default ?
-				break;
-			}
-			if (unkn1 == 0xF2)
-			{
-				style.setFormat(WPSCell::F_DATE);
-				unkn1=0;
-				break;
-			}
-			break;
-		}
-		if (canHaveDigits)
+		case 1:
+		case 2:
+		case 3:
+		case 4:
 		{
-			style.setDigits(unkn1 & 0xF);
-			unkn1= 0;
-			// note: CellDosProperty (fl[1]>>3)&7 seems also to code digits
+			if (styleID == 2) styleID = 3;
+			else if (styleID == 3) styleID = 2;
+			style.setFormat(WPSCell::F_NUMBER,1+styleID);
+			break;
 		}
-
+		case 0x7:
+			break;
+		default:
+			f << "type=" << styleID << ",";
+		}
+		if ((unkn1&0x80)==0) f << "style80=0,";
+		style.setDigits(unkn1 & 0xF);
 		cell.m_styleId=m_state->m_styleManager.add(style, true);
 	}
 	m_state->m_spreadsheet.m_cellsList.push_back(cell);
@@ -1378,7 +1435,7 @@ static Functions const s_listFunctions[] =
 
 	{ "Choose", -1},{ "IsNa", 1},{ "IsError", 1},{ "False", 0},
 	{ "True", 0},{ "Rand", 0},{ "Date", 3},{ "Now", 0},
-	{ "UNKN38", 3} /*PAGO?*/,{ "UNKN39", 3} /*previous value*/,{ "UNKN3A", 3} /*futur value*/,{ "If", 3},
+	{ "PMT", 3} /*BAD*/,{ "PV", 3} /*BAD*/,{ "FV", 3} /*BAD*/,{ "If", 3},
 	{ "Day", 1},{ "Month", 1},{ "Year", 1},{ "Round", 2},
 
 	{ "Time", 3},{ "Hour", 1},{ "Minute", 1},{ "Second", 1},
@@ -1387,8 +1444,8 @@ static Functions const s_listFunctions[] =
 	{ "Find", 3},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
 	{ "Sum", -1},{ "Average", -1},{ "Count", -1},{ "Min", -1},
-	{ "Max", -1},{ "Find", 3} /*UNKN*/,{ "UNKN56", 2} /*VPN?*/,{ "Var", -1},
-	{ "StDev", -1},{ "UNKN59", 2} /*Tir?*/, { "HLookup", 3},{ "UNKN5B", 3} /*UNKN*/,
+	{ "Max", -1},{ "Find", 3} /*UNKN*/,{ "NPV", 2}, { "Var", -1},
+	{ "StDev", -1},{ "IRR", 2} /*BAD*/, { "HLookup", 3},{ "UNKN5B", 3} /*UNKN*/,
 	{ "UNKN5C", 3} /*UNKN*/,{ "UNKN5D", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Index", 3}, { "Columns", 1},
@@ -1397,8 +1454,8 @@ static Functions const s_listFunctions[] =
 	{ "", -2} /*UNKN*/,{ "Trim", 1},{ "", -2} /*UNKN*/,{ "T", 1},
 
 	{ "IsNonText", 1},{ "Exact", 2},{ "", -2} /*UNKN*/,{ "", 3} /*UNKN*/,
-	{ "UNKN74", 3} /*Tasa?*/,{ "UNKN75", 3} /*Termino*/,{ "", -2} /*UNKN*/,{ "SLN", 3},
-	{ "SYD", 4},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "Rate", 3} /*BAD*/,{ "UNKN75", 3} /*Termino*/,{ "CTERM", 3} /*UNKN*/,{ "SLN", 3},
+	{ "SYD", 4},{ "DDB", 4} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/, { "", -2} /*UNKN*/,
@@ -1618,7 +1675,7 @@ void WKS4Spreadsheet::sendSpreadsheet()
 	WKS4SpreadsheetInternal::Spreadsheet &sheet = m_state->m_spreadsheet;
 	size_t numCell = sheet.m_cellsList.size();
 
-	int prevRow = -1, prevCell = -1;
+	int prevRow = -1;
 	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthCols,76), librevenge::RVNG_POINT);
 	std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
 	WKSContentListener::CellContent emptyContent;
@@ -1631,32 +1688,13 @@ void WKS4Spreadsheet::sendSpreadsheet()
 			while (cell.position()[1] > prevRow)
 			{
 				if (prevRow != -1)
-				{
-					if (prevCell == -1)
-					{
-						WKS4SpreadsheetInternal::Cell lCell;
-						lCell.setPosition(Vec2i(0, prevRow));
-						m_listener->openSheetCell(lCell, emptyContent);
-						m_listener->insertCharacter(' ');
-						m_listener->closeSheetCell();
-					}
 					m_listener->closeSheetRow();
-				}
 				prevRow++;
 				if (prevRow < int(rowHeight.size()))
 					m_listener->openSheetRow(rowHeight[size_t(prevRow)], librevenge::RVNG_POINT);
 				else
 					m_listener->openSheetRow(16, librevenge::RVNG_POINT);
-				prevCell = -1;
 			}
-		}
-		while (cell.position()[0] > ++prevCell)
-		{
-			WKS4SpreadsheetInternal::Cell lCell;
-			lCell.setPosition(Vec2i(prevCell, cell.position()[1]));
-			m_listener->openSheetCell(lCell, emptyContent);
-			m_listener->insertCharacter(' ');
-			m_listener->closeSheetCell();
 		}
 		sendCellContent(cell);
 	}

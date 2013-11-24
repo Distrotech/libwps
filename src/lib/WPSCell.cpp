@@ -274,6 +274,8 @@ bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propLis
 		case 5: // thousand
 			propList.insert("number:grouping", true);
 		case 0: // default
+			if (m_subFormat==0)
+				propList.remove("number:decimal-places");
 		case 1: // decimal
 			propList.insert("librevenge:value-type", "number");
 			break;

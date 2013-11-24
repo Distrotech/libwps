@@ -531,9 +531,9 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 					if (dt.id() == 4) cell->m_size.setX(float(dt.m_value)/914400.f);
 					else cell->m_size.setY(float(dt.m_value)/914400.f);
 					break;
-				// border size : unknown dim
-				// [ 1, 3, 1, 3, ]
-				// [ 0.666667, 1.33333, 0.666667, 1.33333, ]/30
+					// border size : unknown dim
+					// [ 1, 3, 1, 3, ]
+					// [ 0.666667, 1.33333, 0.666667, 1.33333, ]/30
 				case 6:
 				case 7:
 				case 8:
@@ -622,7 +622,7 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 						break;
 					}
 					break;
-				// always 0,excepted 0x15 and 0x18 which can be 0 or 1 ?
+					// always 0,excepted 0x15 and 0x18 which can be 0 or 1 ?
 				case 0xa:
 				case 0xb:
 				case 0xd:

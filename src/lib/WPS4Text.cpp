@@ -869,7 +869,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 					case 'F':
 						m_listener->insertField(WPSContentListener::Title);
 						break;
-					// case '&': check me does '&&'->'&' ?
+						// case '&': check me does '&&'->'&' ?
 					default:
 						done = false;
 						break;
@@ -1354,8 +1354,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 				f << "##oddC=" << (unsigned int) val << ", ";
 			}
 		}
-		libwps_tools_win::Font::Type fType=libwps_tools_win::Font::UNKNOWN;
-		fType=libwps_tools_win::Font::getFontType(s);
+		libwps_tools_win::Font::Type fType=libwps_tools_win::Font::getFontType(s);
 		if (fType==libwps_tools_win::Font::UNKNOWN)
 			fType=docType;
 		WPS4TextInternal::FontName font;

@@ -228,7 +228,7 @@ std::ostream &operator<<(std::ostream &o, Object const &obj)
 	case Object::Table:
 		o << "Table";
 		break;
-	// an object store in another Ole: id-> gives a pointer
+		// an object store in another Ole: id-> gives a pointer
 	case Object::Image:
 		o << "Object";
 		break;
@@ -1700,8 +1700,8 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 				case -5:
 					tokn.m_type = WPSContentListener::PageNumber;
 					break;
-				// CHECKME: case -6-> strings = SPC, text character = 0xb7
-				// an insecable character or space ?
+					// CHECKME: case -6-> strings = SPC, text character = 0xb7
+					// an insecable character or space ?
 				default:
 					WPS_DEBUG_MSG(("WPS8Text::tokenEndDataParser: unknown type=%d\n", int(dt.m_value)));
 					f << "###type=" << dt.m_value << ",";

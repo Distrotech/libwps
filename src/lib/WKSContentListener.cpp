@@ -55,8 +55,6 @@ struct WKSDocumentParsingState
 	bool m_isDocumentStarted, m_isHeaderFooterStarted;
 	std::vector<WKSSubDocumentPtr> m_subDocuments; /** list of document actually open */
 
-	/** a formula id */
-	int m_formulaId;
 	/** a map cell's format to id */
 	std::map<WPSCellFormat,int,WPSCellFormat::CompareFormat> m_numberingIdMap;
 
@@ -66,7 +64,7 @@ private:
 };
 
 WKSDocumentParsingState::WKSDocumentParsingState() :
-	m_metaData(), m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments(), m_formulaId(0), m_numberingIdMap()
+	m_metaData(), m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments(), m_numberingIdMap()
 {
 }
 
@@ -741,10 +739,6 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 	// formula
 	if (content.m_formula.size())
 	{
-		std::stringstream s;
-		s << "Formula" << ++m_ds->m_formulaId;
-		std::string formulaName=s.str();
-
 		librevenge::RVNGPropertyListVector formulaVect;
 		for (size_t i=0; i < content.m_formula.size(); ++i)
 			formulaVect.append(content.m_formula[i].getPropertyList());

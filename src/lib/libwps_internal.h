@@ -417,23 +417,19 @@ public:
 	//! a comparison function: which first compares x then y
 	int cmp(Vec2<T> const &p) const
 	{
-		T diff  = m_x-p.m_x;
-		if (diff < 0) return -1;
-		if (diff > 0) return 1;
-		diff = m_y-p.m_y;
-		if (diff < 0) return -1;
-		if (diff > 0) return 1;
+		if (m_x<p.m_x) return -1;
+		if (m_x>p.m_x) return 1;
+		if (m_y<p.m_y) return -1;
+		if (m_y>p.m_y) return 1;
 		return 0;
 	}
 	//! a comparison function: which first compares y then x
 	int cmpY(Vec2<T> const &p) const
 	{
-		T diff  = m_y-p.m_y;
-		if (diff < 0) return -1;
-		if (diff > 0) return 1;
-		diff = m_x-p.m_x;
-		if (diff < 0) return -1;
-		if (diff > 0) return 1;
+		if (m_y<p.m_y) return -1;
+		if (m_y>p.m_y) return 1;
+		if (m_x<p.m_x) return -1;
+		if (m_x>p.m_x) return 1;
 		return 0;
 	}
 

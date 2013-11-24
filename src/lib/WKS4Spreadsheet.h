@@ -83,8 +83,11 @@ protected:
 	//! reads a style
 	bool readStyle();
 
-	//!reads actualCell properties
+	//! reads actualCell properties
 	bool readDOSCellProperty();
+
+	//! reads the actual cell addendum properties ( contains at least the color)
+	bool readDOSCellExtraProperty();
 
 	//! reads sheet size
 	bool readSheetSize();
