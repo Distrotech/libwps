@@ -182,7 +182,7 @@ void WKS4Parser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 	if (!input)
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::parse: does not find main ole\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 
 	if (!checkHeader(0L, true)) throw(libwps::ParseException());
@@ -209,7 +209,7 @@ void WKS4Parser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 	catch (...)
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::parse: exception catched when parsing MN0\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 
 	ascii().reset();
@@ -339,20 +339,20 @@ bool WKS4Parser::readZone()
 		case 0x1:
 			ok = false;
 			break;
-			// case 2: ff
-			// case 3: 0 and one time 00000000000075656269726420626f786573207468617420776572652000
-			// case 4: 0|ff
-			// case 5: ff
+		// case 2: ff
+		// case 3: 0 and one time 00000000000075656269726420626f786573207468617420776572652000
+		// case 4: 0|ff
+		// case 5: ff
 		case 0x6:
 			ok = m_spreadsheetParser->readSheetSize();
 			isParsed = true;
 			break;
-			// case 7|9: 0a00010001000a000f00270000000000000000000000000004000400960000 or similar
+		// case 7|9: 0a00010001000a000f00270000000000000000000000000004000400960000 or similar
 		case 0x8:
 			ok = m_spreadsheetParser->readColumnSize();
 			isParsed = true;
 			break;
-			// case a: id + small id
+		// case a: id + small id
 		case 0xb:
 			ok = readZoneB();
 			isParsed=true;
@@ -365,9 +365,9 @@ bool WKS4Parser::readZone()
 			ok = m_spreadsheetParser->readCell();
 			isParsed = true;
 			break;
-			// case 1a: 0000000009002100
-			// case 24: 0
-			// case 25|26: 0 [ repeated 0xF2 times]
+		// case 1a: 0000000009002100
+		// case 24: 0
+		// case 25|26: 0 [ repeated 0xF2 times]
 		case 0x2d:
 		case 0x2e:
 			readChartDef();
@@ -383,7 +383,7 @@ bool WKS4Parser::readZone()
 			ascii().addNote(f.str().c_str());
 			isParsed = true;
 			break;
-			// case 31: 1-2
+		// case 31: 1-2
 		case 0x41:
 			readChartName();
 			isParsed = true;

@@ -368,7 +368,7 @@ void WPS4Parser::parse(librevenge::RVNGTextInterface *documentInterface)
 	if (!input)
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::parse: does not find main ole\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 
 	try
@@ -389,14 +389,14 @@ void WPS4Parser::parse(librevenge::RVNGTextInterface *documentInterface)
 	catch (...)
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::parse: exception catched when parsing MN0\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 
 	setListener(createListener(documentInterface));
 	if (!m_listener)
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::parse: can not create the listener\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 	m_listener->startDocument();
 	WPSEntry ent = m_textParser->getMainTextEntry();
@@ -405,7 +405,7 @@ void WPS4Parser::parse(librevenge::RVNGTextInterface *documentInterface)
 	else
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::parse: can not find main text entry\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 #ifdef DEBUG
 	m_textParser->flushExtra();
