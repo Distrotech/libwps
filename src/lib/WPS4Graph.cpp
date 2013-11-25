@@ -203,7 +203,7 @@ int WPS4Graph::readObject(RVNGInputStreamPtr input, WPSEntry const &entry)
 	int oleId = -1;
 	bool replace = false;
 
-	while(1)
+	while (1)
 	{
 		WPSPosition actPictPos;
 		lastPos = input->tell();

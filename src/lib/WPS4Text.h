@@ -89,12 +89,12 @@ protected:
 	//! return the main parser
 	WPS4Parser &mainParser()
 	{
-		return reinterpret_cast<WPS4Parser &> (m_mainParser);
+		return reinterpret_cast<WPS4Parser &>(m_mainParser);
 	}
 	//! return the main parser
 	WPS4Parser const &mainParser() const
 	{
-		return reinterpret_cast<WPS4Parser const &> (m_mainParser);
+		return reinterpret_cast<WPS4Parser const &>(m_mainParser);
 	}
 
 	//! returns the default codepage to use for the document
@@ -154,7 +154,7 @@ protected:
 	             DataParser parser = 0L);
 
 	//! default plc reader
-	bool defDataParser (long bot, long eot, int id, long endPos, std::string &mess);
+	bool defDataParser(long bot, long eot, int id, long endPos, std::string &mess);
 
 	//! reads the font names
 	bool readFontNames(WPSEntry const &entry);
@@ -169,20 +169,20 @@ protected:
 	bool readDosLink(WPSEntry const &entry);
 
 	//! reads a object properties ( position in text, size and definition in file)
-	bool objectDataParser (long bot, long eot, int id,
-	                       long endPos, std::string &mess);
+	bool objectDataParser(long bot, long eot, int id,
+	                      long endPos, std::string &mess);
 
 	//! reads the footnotes positions and definitions ( zones FTNd and FTNp)
 	bool readFootNotes(WPSEntry const &ftnD, WPSEntry const &ftnP);
 
 	//! reads a book mark property ( string)
-	bool footNotesDataParser (long bot, long eot, int id, long endPos, std::string &mess);
+	bool footNotesDataParser(long bot, long eot, int id, long endPos, std::string &mess);
 
 	//! reads a book mark property ( string)
-	bool bkmkDataParser (long bot, long eot, int id, long endPos, std::string &mess);
+	bool bkmkDataParser(long bot, long eot, int id, long endPos, std::string &mess);
 
 	//! reads a date time property
-	bool dttmDataParser (long bot, long eot, int id, long endPos, std::string &mess);
+	bool dttmDataParser(long bot, long eot, int id, long endPos, std::string &mess);
 
 protected:
 	//! the listener

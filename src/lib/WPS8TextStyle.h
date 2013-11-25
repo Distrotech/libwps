@@ -100,7 +100,7 @@ protected:
 
 private:
 	//! private copy constructor: forbidden
-	WPS8TextStyle(WPS8TextStyle const &orig );
+	WPS8TextStyle(WPS8TextStyle const &orig);
 	//! private copy operator: forbidden
 	WPS8TextStyle &operator=(WPS8TextStyle const &orig);
 

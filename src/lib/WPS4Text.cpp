@@ -277,7 +277,7 @@ struct DosLink
 //! operator<< for an object
 std::ostream &operator<<(std::ostream &o, DosLink const &dlink)
 {
-	switch(dlink.m_type)
+	switch (dlink.m_type)
 	{
 	case -1:
 		break;
@@ -320,7 +320,7 @@ struct DateTime
 
 std::string DateTime::format() const
 {
-	switch(m_type)
+	switch (m_type)
 	{
 	case 0:
 		return "%m/%d/%Y";
@@ -353,7 +353,7 @@ std::string DateTime::format() const
 //! operator<< for an object
 std::ostream &operator<<(std::ostream &o, DateTime const &dtime)
 {
-	switch(dtime.m_type)
+	switch (dtime.m_type)
 	{
 	case -1:
 		break;
@@ -603,7 +603,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 		simpleString = true;
 	}
 
-	for ( ; FODs_iter!= m_FODList.end(); ++FODs_iter)
+	for (; FODs_iter!= m_FODList.end(); ++FODs_iter)
 	{
 		DataFOD const &fod = *(FODs_iter);
 		if (fod.m_pos >= zone.begin()) break;
@@ -635,7 +635,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 	}
 	bool first = true;
 	int actPage = 1;
-	for ( ; simpleString || FODs_iter!= m_FODList.end(); ++FODs_iter)
+	for (; simpleString || FODs_iter!= m_FODList.end(); ++FODs_iter)
 	{
 		long actPos;
 		long lastPos;
@@ -665,7 +665,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				lastPos = zone.end();
 			--FODs_iter;
 			int fId = fod.m_id;
-			switch(fod.m_type)
+			switch (fod.m_type)
 			{
 			case DataFOD::ATTR_TEXT:
 				if (fId >= 0)
@@ -1277,7 +1277,7 @@ bool WPS4Text::defDataParser(long , long , int , long endPos, std::string &mess)
 	while (m_input->tell() <= endPos+1-sz)
 	{
 		long val = 0;
-		switch(sz)
+		switch (sz)
 		{
 		case 1:
 			val = libwps::readU8(m_input);
@@ -1427,7 +1427,7 @@ bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 		else
 		{
 			WPS_DEBUG_MSG(("WPS4Text: error: encountered font %i which is not indexed\n",
-			               font_n ));
+			               font_n));
 		}
 
 		if (font.m_name.empty()) f << "###nameId=" << int(font_n) << ",";
@@ -1552,7 +1552,7 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 		val = libwps::readU8(m_input);
 		if (val) // find 0x18 for a spreadsheet
 			f << "unk4=" << std::hex << val << std::dec << ",";
-		switch(link.m_type)
+		switch (link.m_type)
 		{
 		case 0x81: // picture ?
 		{
@@ -1628,7 +1628,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 		long pos = m_input->tell();
 		bool ok = true, done = true;
 		int arg = -1;
-		switch(v)
+		switch (v)
 		{
 		case 0x2:
 		{
@@ -1649,7 +1649,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				break;
 			}
 			arg = libwps::readU8(m_input);
-			switch(arg)
+			switch (arg)
 			{
 			case 0:
 				pp.m_justify = libwps::JustificationLeft;
@@ -1696,7 +1696,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			pp.m_borderStyle.m_style = WPSBorder::Single;
 			pp.m_borderStyle.m_width = 1;
 			int style = (arg&0xf);
-			switch(style)
+			switch (style)
 			{
 			case 0:
 				break;
@@ -1741,7 +1741,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			}
 			else
 			{
-				switch(high)
+				switch (high)
 				{
 				case 0:
 					break;
@@ -1773,7 +1773,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			if (arg == 0) break;
 			if (arg == 1)
 			{
-				switch(v)
+				switch (v)
 				{
 				case 0xa:
 					pp.m_border |= WPSBorder::TopBit;
@@ -1901,7 +1901,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			{
 				enum WPSTabStop::Alignment align = WPSTabStop::LEFT;
 				int val = libwps::readU8(m_input);
-				switch((val & 0x3))
+				switch ((val & 0x3))
 				{
 				case 0:
 					align = WPSTabStop::LEFT;
@@ -1923,7 +1923,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				if (val&4) f << "#Tabbits3";
 				val = (val>>3);
 
-				switch(val)
+				switch (val)
 				{
 				case 0:
 					break;
@@ -1961,7 +1961,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			}
 
 			arg = libwps::read16(m_input);
-			switch(v)
+			switch (v)
 			{
 			case 0x11:
 				pp.m_margins[2] = arg/1440.;
@@ -2118,8 +2118,8 @@ bool WPS4Text::readFootNotes(WPSEntry const &ftnD, WPSEntry const &ftnP)
 	return true;
 }
 
-bool WPS4Text::footNotesDataParser (long /*bot*/, long /*eot*/, int id,
-                                    long endPos, std::string &mess)
+bool WPS4Text::footNotesDataParser(long /*bot*/, long /*eot*/, int id,
+                                   long endPos, std::string &mess)
 {
 	mess = "";
 
@@ -2204,8 +2204,8 @@ bool WPS4Text::bkmkDataParser(long bot, long /*eot*/, int /*id*/,
 ////////////////////////////////////////////////////////////
 // the object properties:
 ////////////////////////////////////////////////////////////
-bool WPS4Text::objectDataParser (long bot, long /*eot*/, int id,
-                                 long endPos, std::string &mess)
+bool WPS4Text::objectDataParser(long bot, long /*eot*/, int id,
+                                long endPos, std::string &mess)
 {
 	mess = "";
 	if (m_state->m_objectMap.find(bot) != m_state->m_objectMap.end())
@@ -2284,8 +2284,8 @@ bool WPS4Text::objectDataParser (long bot, long /*eot*/, int id,
 ////////////////////////////////////////////////////////////
 // the dttm properties:
 ////////////////////////////////////////////////////////////
-bool WPS4Text::dttmDataParser (long bot, long /*eot*/, int /*id*/,
-                               long endPos, std::string &mess)
+bool WPS4Text::dttmDataParser(long bot, long /*eot*/, int /*id*/,
+                              long endPos, std::string &mess)
 {
 	mess = "";
 	if (m_state->m_dateTimeMap.find(bot) != m_state->m_dateTimeMap.end())
@@ -2512,7 +2512,7 @@ bool WPS4Text::readPLC
 
 		if (!pars && dataSize <= 4)
 		{
-			switch(dataSize)
+			switch (dataSize)
 			{
 			case 1:
 				plc.m_value = libwps::readU8(m_input);

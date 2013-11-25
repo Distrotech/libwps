@@ -108,7 +108,7 @@ Font::Type Font::getFontType(std::string &fName)
 
 Font::Type Font::getTypeForOEM(int oem)
 {
-	switch(oem)
+	switch (oem)
 	{
 	case 437:
 		return CP_437;
@@ -157,7 +157,7 @@ Font::Type Font::getTypeForOEM(int oem)
 
 std::string Font::getTypeName(Type type)
 {
-	switch(type)
+	switch (type)
 	{
 	case WIN3_CYRILLIC:
 		return "Cyr";
@@ -846,7 +846,7 @@ static unsigned long unicodeFromCP1258(unsigned char c)
 
 unsigned long Font::unicode(unsigned char c, Font::Type type)
 {
-	switch(type)
+	switch (type)
 	{
 	case CP_424:
 		return unicodeFromCP424(c);
@@ -924,7 +924,7 @@ long Language::getDefault()
 
 std::string Language::name(long id)
 {
-	switch(id)
+	switch (id)
 	{
 	case 0x400:
 		return "none";
@@ -1015,7 +1015,7 @@ std::string Language::name(long id)
 
 std::string Language::localeName(long id)
 {
-	switch(id)
+	switch (id)
 	{
 	case 0x400:
 		return "";

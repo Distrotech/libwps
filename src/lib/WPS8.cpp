@@ -53,14 +53,14 @@ public:
 	enum Type { Unknown, TEXT };
 	//! constructor for a text entry
 	SubDocument(RVNGInputStreamPtr input, WPS8Parser &pars, WPSEntry const &entry) :
-		WPSSubDocument (input, &pars), m_entry(entry) {}
+		WPSSubDocument(input, &pars), m_entry(entry) {}
 	//! destructor
 	~SubDocument() {}
 
 	//! operator==
 	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const
 	{
-		if ( !doc || !WPSSubDocument::operator==(doc))
+		if (!doc || !WPSSubDocument::operator==(doc))
 			return false;
 		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
 		if (!sDoc) return false;
@@ -172,7 +172,7 @@ struct Frame
 //! operator<< for a Frame
 std::ostream &operator<<(std::ostream &o, Frame const &ft)
 {
-	switch(ft.m_type)
+	switch (ft.m_type)
 	{
 	case Frame::Header:
 		o<< "header";
@@ -201,7 +201,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
 	o << "),";
 
 	o << ft.m_pos << ",";
-	switch(ft.m_pos.page())
+	switch (ft.m_pos.page())
 	{
 	case -1:
 		o << "allpages,";
@@ -299,7 +299,7 @@ WPS8Parser::WPS8Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
 	m_textParser.reset(new WPS8Text(*this));
 }
 
-WPS8Parser::~WPS8Parser ()
+WPS8Parser::~WPS8Parser()
 {
 }
 
@@ -1040,7 +1040,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 			f2 << "numCols=" << dt.m_value+1 << ",";
 			break;
 		case 0x18:
-			switch(dt.m_value)
+			switch (dt.m_value)
 			{
 			case 1:
 				break; // portrait
@@ -1315,7 +1315,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			}
 			if (dt.id() >= 4 && dt.id() < 11)
 			{
-				switch(dt.id())
+				switch (dt.id())
 				{
 				case 4:
 					minP.setX(float(dt.m_value)/914400.f);
@@ -1354,7 +1354,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				break;
 			}
 			case 1:
-				switch(dt.m_value)
+				switch (dt.m_value)
 				{
 					// associated with 0x13=22:[0|96], 0x18,1b=0x41,0x2e, rarely with 0x1a
 				case 6:
@@ -1394,7 +1394,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			case 0x3: // seem to exist iff type=12
 				if ((frame.m_type == Frame::Table) != dt.isTrue())
 					f2 <<  "isTable?["
-					   <<  (dt.isTrue() ? "true" : "false") << "],";
+					   << (dt.isTrue() ? "true" : "false") << "],";
 				break;
 			case 0x10:   // an entry index always a BDR ?
 				frame.m_idBorder.setName(dt.m_text);
@@ -1508,11 +1508,11 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 
 				// UNKNOWN
 			case 0x1a: // appear 2 time (in a header and in a footer) with value 16
-				f2 << "f" << dt.id() << "=" << (int) (int8_t) dt.m_value << ",";
+				f2 << "f" << dt.id() << "=" << (int)(int8_t) dt.m_value << ",";
 				break;
 
 			case 0x2e: // in a table: objectId+1, in textbox: m_idTable ?, other = i ?
-				f2 << "id" << dt.id() << "=" << (int16_t) (dt.m_value-1) << ",";
+				f2 << "id" << dt.id() << "=" << (int16_t)(dt.m_value-1) << ",";
 				break;
 			case 0x13:
 				// table 0x6-??,
@@ -1828,7 +1828,7 @@ bool WPS8Parser::readSPELLING(RVNGInputStreamPtr input, std::string const &oleNa
 
 	libwps::DebugStream f;
 	int num = 0;
-	while(!input->isEnd())
+	while (!input->isEnd())
 	{
 		long pos = input->tell();
 		int numVal = (int) libwps::read32(input);

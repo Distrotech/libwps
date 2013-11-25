@@ -215,7 +215,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 
 		int id;
 		std::string mess;
-		if (parser &&(this->*parser) (endPos, id, mess) )
+		if (parser &&(this->*parser)(endPos, id, mess))
 		{
 			(*fods_iter).m_id = mapPtr[pos] = id;
 

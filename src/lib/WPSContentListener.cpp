@@ -210,7 +210,7 @@ void WPSContentListener::insertCharacter(uint8_t character)
 		insertUnicode(character);
 		return;
 	}
-	_flushDeferredTabs ();
+	_flushDeferredTabs();
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	m_ps->m_textBuffer.append(char(character));
 }
@@ -219,14 +219,14 @@ void WPSContentListener::insertUnicode(uint32_t val)
 {
 	// undef character, we skip it
 	if (val == 0xfffd) return;
-	_flushDeferredTabs ();
+	_flushDeferredTabs();
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	appendUnicode(val, m_ps->m_textBuffer);
 }
 
 void WPSContentListener::insertUnicodeString(librevenge::RVNGString const &str)
 {
-	_flushDeferredTabs ();
+	_flushDeferredTabs();
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	m_ps->m_textBuffer.append(str);
 }
@@ -406,7 +406,7 @@ shared_ptr<WPSList> WPSContentListener::getCurrentList() const
 #include <time.h>
 void WPSContentListener::insertField(WPSContentListener::FieldType type)
 {
-	switch(type)
+	switch (type)
 	{
 	case None:
 		break;
@@ -452,7 +452,7 @@ void WPSContentListener::insertDateTimeField(char const *format)
 		WPS_DEBUG_MSG(("WPSContentListener::insertDateTimeField: oops, can not find the format\n"));
 		return;
 	}
-	time_t now = time ( 0L );
+	time_t now = time(0L);
 	struct tm timeinfo;
 	if (localtime_r(&now, &timeinfo))
 	{
@@ -495,7 +495,7 @@ bool WPSContentListener::openSection(std::vector<int> colsWidth, librevenge::RVN
 	else
 	{
 		float factor = 1.0;
-		switch(unit)
+		switch (unit)
 		{
 		case librevenge::RVNG_POINT:
 		case librevenge::RVNG_TWIP:
@@ -612,7 +612,7 @@ void WPSContentListener::_openPageSpan()
 	}
 	unsigned actPage = 0;
 	std::vector<WPSPageSpan>::iterator it = m_ds->m_pageList.begin();
-	while(actPage < m_ps->m_currentPage)
+	while (actPage < m_ps->m_currentPage)
 	{
 		actPage+=(unsigned) it++->getPageSpan();
 		if (it == m_ds->m_pageList.end())
@@ -807,7 +807,7 @@ void WPSContentListener::_appendParagraphProperties
 	{
 		unsigned actPage = 1;
 		std::vector<WPSPageSpan>::const_iterator it = m_ds->m_pageList.begin();
-		while(actPage < m_ps->m_currentPage)
+		while (actPage < m_ps->m_currentPage)
 		{
 			if (it == m_ds->m_pageList.end())
 				break;
@@ -1180,7 +1180,7 @@ bool WPSContentListener::_openFrame(WPSPosition const &pos, librevenge::RVNGProp
 		return false;
 	}
 
-	switch(pos.m_anchorTo)
+	switch (pos.m_anchorTo)
 	{
 	case WPSPosition::Page:
 		break;
@@ -1222,7 +1222,7 @@ void WPSContentListener::_closeFrame()
 }
 
 void WPSContentListener::_handleFrameParameters
-( librevenge::RVNGPropertyList &propList, WPSPosition const &pos)
+(librevenge::RVNGPropertyList &propList, WPSPosition const &pos)
 {
 	Vec2f origin = pos.origin();
 	librevenge::RVNGUnit unit = pos.unit();
@@ -1237,32 +1237,32 @@ void WPSContentListener::_handleFrameParameters
 		propList.insert("librevenge:naturalHeight", pos.naturalSize().y(), pos.unit());
 	}
 
-	if ( pos.m_wrapping ==  WPSPosition::WDynamic)
-		propList.insert( "style:wrap", "dynamic" );
-	else if ( pos.m_wrapping ==  WPSPosition::WRunThrough)
+	if (pos.m_wrapping ==  WPSPosition::WDynamic)
+		propList.insert("style:wrap", "dynamic");
+	else if (pos.m_wrapping ==  WPSPosition::WRunThrough)
 	{
-		propList.insert( "style:wrap", "run-through" );
-		propList.insert( "style:run-through", "background" );
+		propList.insert("style:wrap", "run-through");
+		propList.insert("style:run-through", "background");
 	}
 	else
-		propList.insert( "style:wrap", "none" );
+		propList.insert("style:wrap", "none");
 
 	if (pos.m_anchorTo == WPSPosition::Paragraph)
 	{
 		propList.insert("text:anchor-type", "paragraph");
-		propList.insert("style:vertical-rel", "paragraph" );
+		propList.insert("style:vertical-rel", "paragraph");
 		propList.insert("style:horizontal-rel", "paragraph");
 		double w = m_ps->m_pageFormWidth - m_ps->m_pageMarginLeft
 		           - m_ps->m_pageMarginRight - m_ps->m_paragraph.m_margins[1]
 		           - m_ps->m_paragraph.m_margins[2];
 		w *= inchFactor;
-		switch ( pos.m_xPos)
+		switch (pos.m_xPos)
 		{
 		case WPSPosition::XRight:
 			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
-				propList.insert( "style:horizontal-pos", "from-left");
-				propList.insert( "svg:x", double(origin[0] - pos.size()[0] + w), unit);
+				propList.insert("style:horizontal-pos", "from-left");
+				propList.insert("svg:x", double(origin[0] - pos.size()[0] + w), unit);
 			}
 			else
 				propList.insert("style:horizontal-pos", "right");
@@ -1270,8 +1270,8 @@ void WPSContentListener::_handleFrameParameters
 		case WPSPosition::XCenter:
 			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
-				propList.insert( "style:horizontal-pos", "from-left");
-				propList.insert( "svg:x", double(origin[0] - pos.size()[0]/2.0 + w/2.0), unit);
+				propList.insert("style:horizontal-pos", "from-left");
+				propList.insert("svg:x", double(origin[0] - pos.size()[0]/2.0 + w/2.0), unit);
 			}
 			else
 				propList.insert("style:horizontal-pos", "center");
@@ -1281,8 +1281,8 @@ void WPSContentListener::_handleFrameParameters
 		default:
 			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
-				propList.insert( "style:horizontal-pos", "from-left");
-				propList.insert( "svg:x", double(origin[0]), unit);
+				propList.insert("style:horizontal-pos", "from-left");
+				propList.insert("svg:x", double(origin[0]), unit);
 			}
 			else
 				propList.insert("style:horizontal-pos", "left");
@@ -1291,15 +1291,15 @@ void WPSContentListener::_handleFrameParameters
 
 		if (origin[1] < 0.0 || origin[1] > 0.0)
 		{
-			propList.insert( "style:vertical-pos", "from-top" );
-			propList.insert( "svg:y", double(origin[1]), unit);
+			propList.insert("style:vertical-pos", "from-top");
+			propList.insert("svg:y", double(origin[1]), unit);
 		}
 		else
-			propList.insert( "style:vertical-pos", "top" );
+			propList.insert("style:vertical-pos", "top");
 
 		return;
 	}
-	if ( pos.m_anchorTo == WPSPosition::Page )
+	if (pos.m_anchorTo == WPSPosition::Page)
 	{
 		// Page position seems to do not use the page margin...
 		propList.insert("text:anchor-type", "page");
@@ -1309,126 +1309,126 @@ void WPSContentListener::_handleFrameParameters
 		w *= inchFactor;
 		h *= inchFactor;
 
-		propList.insert("style:vertical-rel", "page" );
-		propList.insert("style:horizontal-rel", "page" );
+		propList.insert("style:vertical-rel", "page");
+		propList.insert("style:horizontal-rel", "page");
 
 		double newPosition;
-		switch ( pos.m_yPos)
+		switch (pos.m_yPos)
 		{
 		case WPSPosition::YFull:
 			propList.insert("svg:height", double(h), unit);
 		case WPSPosition::YTop:
 			if (origin[1] < 0.0 || origin[1] > 0.0)
 			{
-				propList.insert("style:vertical-pos", "from-top" );
+				propList.insert("style:vertical-pos", "from-top");
 				newPosition = origin[1];
 				if (newPosition > h -pos.size()[1])
 					newPosition = h - pos.size()[1];
 				propList.insert("svg:y", double(newPosition), unit);
 			}
 			else
-				propList.insert("style:vertical-pos", "top" );
+				propList.insert("style:vertical-pos", "top");
 			break;
 		case WPSPosition::YCenter:
 			if (origin[1] < 0.0 || origin[1] > 0.0)
 			{
-				propList.insert("style:vertical-pos", "from-top" );
+				propList.insert("style:vertical-pos", "from-top");
 				newPosition = (h - pos.size()[1])/2.0;
 				if (newPosition > h -pos.size()[1]) newPosition = h - pos.size()[1];
 				propList.insert("svg:y", double(newPosition), unit);
 			}
 			else
-				propList.insert("style:vertical-pos", "middle" );
+				propList.insert("style:vertical-pos", "middle");
 			break;
 		case WPSPosition::YBottom:
 			if (origin[1] < 0.0 || origin[1] > 0.0)
 			{
-				propList.insert("style:vertical-pos", "from-top" );
+				propList.insert("style:vertical-pos", "from-top");
 				newPosition = h - pos.size()[1]-origin[1];
 				if (newPosition > h -pos.size()[1]) newPosition = h -pos.size()[1];
 				else if (newPosition < 0) newPosition = 0;
 				propList.insert("svg:y", double(newPosition), unit);
 			}
 			else
-				propList.insert("style:vertical-pos", "bottom" );
+				propList.insert("style:vertical-pos", "bottom");
 			break;
 		default:
 			break;
 		}
 
-		switch ( pos.m_xPos )
+		switch (pos.m_xPos)
 		{
 		case WPSPosition::XFull:
 			propList.insert("svg:width", double(w), unit);
 		case WPSPosition::XLeft:
 			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
-				propList.insert( "style:horizontal-pos", "from-left");
-				propList.insert( "svg:x", double(origin[0]), unit);
+				propList.insert("style:horizontal-pos", "from-left");
+				propList.insert("svg:x", double(origin[0]), unit);
 			}
 			else
-				propList.insert( "style:horizontal-pos", "left");
+				propList.insert("style:horizontal-pos", "left");
 			break;
 		case WPSPosition::XRight:
 			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
-				propList.insert( "style:horizontal-pos", "from-left");
-				propList.insert( "svg:x",double( w - pos.size()[0] + origin[0]), unit);
+				propList.insert("style:horizontal-pos", "from-left");
+				propList.insert("svg:x",double(w - pos.size()[0] + origin[0]), unit);
 			}
 			else
-				propList.insert( "style:horizontal-pos", "right");
+				propList.insert("style:horizontal-pos", "right");
 			break;
 		case WPSPosition::XCenter:
 		default:
 			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
-				propList.insert( "style:horizontal-pos", "from-left");
-				propList.insert( "svg:x", double((w - pos.size()[0])/2. + origin[0]), unit);
+				propList.insert("style:horizontal-pos", "from-left");
+				propList.insert("svg:x", double((w - pos.size()[0])/2. + origin[0]), unit);
 			}
 			else
-				propList.insert( "style:horizontal-pos", "center" );
+				propList.insert("style:horizontal-pos", "center");
 			break;
 		}
 		return;
 	}
-	if ( pos.m_anchorTo != WPSPosition::Char &&
+	if (pos.m_anchorTo != WPSPosition::Char &&
 	        pos.m_anchorTo != WPSPosition::CharBaseLine) return;
 
 	propList.insert("text:anchor-type", "as-char");
-	if ( pos.m_anchorTo == WPSPosition::CharBaseLine)
-		propList.insert( "style:vertical-rel", "baseline" );
+	if (pos.m_anchorTo == WPSPosition::CharBaseLine)
+		propList.insert("style:vertical-rel", "baseline");
 	else
-		propList.insert( "style:vertical-rel", "line" );
-	switch ( pos.m_yPos )
+		propList.insert("style:vertical-rel", "line");
+	switch (pos.m_yPos)
 	{
 	case WPSPosition::YFull:
 	case WPSPosition::YTop:
 		if (origin[1] < 0.0 || origin[1] > 0.0)
 		{
-			propList.insert( "style:vertical-pos", "from-top" );
-			propList.insert( "svg:y", double(origin[1]), unit);
+			propList.insert("style:vertical-pos", "from-top");
+			propList.insert("svg:y", double(origin[1]), unit);
 		}
 		else
-			propList.insert( "style:vertical-pos", "top" );
+			propList.insert("style:vertical-pos", "top");
 		break;
 	case WPSPosition::YCenter:
 		if (origin[1] < 0.0 || origin[1] > 0.0)
 		{
-			propList.insert( "style:vertical-pos", "from-top" );
-			propList.insert( "svg:y", double(origin[1] - pos.size()[1]/2.0), unit);
+			propList.insert("style:vertical-pos", "from-top");
+			propList.insert("svg:y", double(origin[1] - pos.size()[1]/2.0), unit);
 		}
 		else
-			propList.insert( "style:vertical-pos", "middle" );
+			propList.insert("style:vertical-pos", "middle");
 		break;
 	case WPSPosition::YBottom:
 	default:
 		if (origin[1] < 0.0 || origin[1] > 0.0)
 		{
-			propList.insert( "style:vertical-pos", "from-top" );
-			propList.insert( "svg:y", double(origin[1] - pos.size()[1]), unit);
+			propList.insert("style:vertical-pos", "from-top");
+			propList.insert("svg:y", double(origin[1] - pos.size()[1]), unit);
 		}
 		else
-			propList.insert( "style:vertical-pos", "bottom" );
+			propList.insert("style:vertical-pos", "bottom");
 		break;
 	}
 }
@@ -1445,7 +1445,7 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 	m_ps->m_isPageSpanOpened = true;
 	m_ps->m_list.reset();
 
-	switch(subDocumentType)
+	switch (subDocumentType)
 	{
 	case libwps::DOC_TEXT_BOX:
 		m_ps->m_pageMarginLeft = m_ps->m_pageMarginRight =
@@ -1487,7 +1487,7 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 			{
 				subDocument->parse(listen, subDocumentType);
 			}
-			catch(...)
+			catch (...)
 			{
 				WPS_DEBUG_MSG(("Works: WPSContentListener::handleSubDocument exception catched \n"));
 			}

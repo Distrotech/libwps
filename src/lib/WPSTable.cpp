@@ -83,7 +83,7 @@ bool WPSTable::buildStructures()
 		    WPSCell::Compare>::iterator it = set.begin();
 		float maxPosiblePos=0;
 		int actCell = -1;
-		for ( ; it != set.end(); ++it)
+		for (; it != set.end(); ++it)
 		{
 			float pos = it->getPos(dim);
 			if (actCell < 0 || pos > maxPosiblePos)

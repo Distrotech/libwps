@@ -60,7 +60,7 @@ bool WPSCellFormat::convertDTFormat(std::string const &dtFormat, librevenge::RVN
 			text.clear();
 		}
 		list.clear();
-		switch(ch)
+		switch (ch)
 		{
 		case 'Y':
 			list.insert("number:style", "long");
@@ -154,7 +154,7 @@ void WPSCellFormat::setBorders(int wh, WPSBorder const &border)
 void WPSCellFormat::addTo(librevenge::RVNGPropertyList &propList) const
 {
 
-	switch(m_hAlign)
+	switch (m_hAlign)
 	{
 	case HALIGN_LEFT:
 		propList.insert("fo:text-align", "first");
@@ -173,7 +173,7 @@ void WPSCellFormat::addTo(librevenge::RVNGPropertyList &propList) const
 	default:
 		break;
 	}
-	switch(vAlignement())
+	switch (vAlignement())
 	{
 	case VALIGN_TOP:
 		propList.insert("style:vertical-align", "top");
@@ -194,7 +194,7 @@ void WPSCellFormat::addTo(librevenge::RVNGPropertyList &propList) const
 	{
 		std::string property = m_bordersList[c].getPropertyValue();
 		if (property.length() == 0) continue;
-		switch(c)
+		switch (c)
 		{
 		case WPSBorder::Left:
 			propList.insert("fo:border-left", property.c_str());
@@ -225,10 +225,10 @@ void WPSCellFormat::addTo(librevenge::RVNGPropertyList &propList) const
 
 std::string WPSCellFormat::getValueType() const
 {
-	switch(m_format)
+	switch (m_format)
 	{
 	case F_NUMBER:
-		switch(m_subFormat)
+		switch (m_subFormat)
 		{
 		case 0: // default
 		case 1: // decimal
@@ -261,7 +261,7 @@ std::string WPSCellFormat::getValueType() const
 bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propList) const
 {
 	librevenge::RVNGPropertyListVector pVect;
-	switch(m_format)
+	switch (m_format)
 	{
 	case F_BOOLEAN:
 		propList.insert("librevenge:value-type", "boolean");
@@ -269,7 +269,7 @@ bool WPSCellFormat::getNumberingProperties(librevenge::RVNGPropertyList &propLis
 	case F_NUMBER:
 		if (m_digits>-1000)
 			propList.insert("number:decimal-places", m_digits);
-		switch(m_subFormat)
+		switch (m_subFormat)
 		{
 		case 5: // thousand
 			propList.insert("number:grouping", true);
@@ -371,7 +371,7 @@ int WPSCellFormat::compare(WPSCellFormat const &cell, bool onlyNumbering) const
 
 std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 {
-	switch(cell.m_hAlign)
+	switch (cell.m_hAlign)
 	{
 	case WPSCellFormat::HALIGN_LEFT:
 		o << "left,";
@@ -389,7 +389,7 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 	default:
 		break; // default
 	}
-	switch(cell.m_vAlign)
+	switch (cell.m_vAlign)
 	{
 	case WPSCellFormat::VALIGN_TOP:
 		o << "yTop,";
@@ -405,7 +405,7 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 		break; // default
 	}
 	int subForm = cell.m_subFormat;
-	switch(cell.m_format)
+	switch (cell.m_format)
 	{
 	case WPSCellFormat::F_BOOLEAN:
 		o << "boolean";
@@ -420,7 +420,7 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 		break;
 	case WPSCellFormat::F_NUMBER:
 		o << "number";
-		switch(subForm)
+		switch (subForm)
 		{
 		case 1:
 			o << "[decimal]";

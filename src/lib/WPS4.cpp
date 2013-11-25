@@ -49,14 +49,14 @@ public:
 	enum Type { Unknown, MN };
 	//! constructor for a text entry
 	SubDocument(RVNGInputStreamPtr input, WPS4Parser &pars, WPSEntry const &entry) :
-		WPSSubDocument (input, &pars), m_entry(entry) {}
+		WPSSubDocument(input, &pars), m_entry(entry) {}
 	//! destructor
 	~SubDocument() {}
 
 	//! operator==
 	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const
 	{
-		if ( !doc || !WPSSubDocument::operator==(doc))
+		if (!doc || !WPSSubDocument::operator==(doc))
 			return false;
 		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
 		if (!sDoc) return false;
@@ -157,7 +157,7 @@ WPS4Parser::WPS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
 	m_textParser.reset(new WPS4Text(*this, input));
 }
 
-WPS4Parser::~WPS4Parser ()
+WPS4Parser::~WPS4Parser()
 {
 }
 
@@ -337,7 +337,7 @@ void WPS4Parser::createDocument(WPSEntry const &entry, libwps::SubDocumentType t
 	if (m_listener.get() == 0L) return;
 	WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
 	                         (getInput(), *this, entry));
-	if(type == libwps::DOC_COMMENT_ANNOTATION)
+	if (type == libwps::DOC_COMMENT_ANNOTATION)
 		m_listener->insertComment(subdoc);
 	else
 	{
@@ -534,11 +534,11 @@ bool WPS4Parser::findZones()
 	long val = libwps::read8(input); // always 0xfe?
 	int apCreator = libwps::readU16(input);
 	int worksVersion = 0;
-	switch(vers)
+	switch (vers)
 	{
 	case 1:
 		m_state->m_isDosFile = true;
-		switch(apCreator)
+		switch (apCreator)
 		{
 		case 0xda1:
 			apCreator = 2;

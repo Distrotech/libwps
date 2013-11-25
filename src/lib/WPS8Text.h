@@ -97,12 +97,12 @@ protected:
 	//! return the main parser
 	WPS8Parser &mainParser()
 	{
-		return reinterpret_cast<WPS8Parser &> (m_mainParser);
+		return reinterpret_cast<WPS8Parser &>(m_mainParser);
 	}
 	//! return the main parser
 	WPS8Parser const &mainParser() const
 	{
-		return reinterpret_cast<WPS8Parser const &> (m_mainParser);
+		return reinterpret_cast<WPS8Parser const &>(m_mainParser);
 	}
 
 	//

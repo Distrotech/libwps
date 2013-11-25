@@ -153,7 +153,7 @@ protected:
 	void _startSubDocument();
 	void _endSubDocument();
 
-	void _handleFrameParameters( librevenge::RVNGPropertyList &propList, WPSPosition const &pos);
+	void _handleFrameParameters(librevenge::RVNGPropertyList &propList, WPSPosition const &pos);
 	bool _openFrame(WPSPosition const &pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
 	void _closeFrame();
 

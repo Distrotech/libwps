@@ -206,13 +206,13 @@ public:
 		return true;
 	}
 
-	static void addPos(long ) {}
+	static void addPos(long) {}
 	static void addNote(char const *) {}
 	static void addDelimiter(long, char) {}
 
 	static void reset() { }
 
-	static void skipZone(long , long ) {}
+	static void skipZone(long , long) {}
 };
 }
 #  endif

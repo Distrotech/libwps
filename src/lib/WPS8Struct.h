@@ -82,7 +82,7 @@ struct FileData
 	//! returns a rgb color by converting the integer value field
 	uint32_t getRGBColor() const
 	{
-		uint32_t col = (uint32_t) (m_value&0xFFFFFF);
+		uint32_t col = (uint32_t)(m_value&0xFFFFFF);
 		return (((col>>16)&0xFF) |(col&0xFF00)|((col&0xFF)<<16));
 	}
 	//! returns the border style using the integer value field

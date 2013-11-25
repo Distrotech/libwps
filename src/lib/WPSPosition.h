@@ -60,7 +60,7 @@ public:
 	{
 		Vec2f dest(pos.m_orig+pos.m_size);
 		o << "Pos=" << pos.m_orig << "x" << dest;
-		switch(pos.m_unit)
+		switch (pos.m_unit)
 		{
 		case librevenge::RVNG_INCH:
 			o << "(inch)";
@@ -125,7 +125,7 @@ public:
 	static float getScaleFactor(librevenge::RVNGUnit orig, librevenge::RVNGUnit dest)
 	{
 		float actSc = 1.0, newSc = 1.0;
-		switch(orig)
+		switch (orig)
 		{
 		case librevenge::RVNG_TWIP:
 			break;
@@ -141,7 +141,7 @@ public:
 		default:
 			WPS_DEBUG_MSG(("WPSPosition::getScaleFactor %d unit must not appear\n", int(orig)));
 		}
-		switch(dest)
+		switch (dest)
 		{
 		case librevenge::RVNG_TWIP:
 			break;

@@ -200,7 +200,7 @@ std::ostream &operator<<(std::ostream &o, Cell const &cell)
 {
 	o << reinterpret_cast<WPSCell const &>(cell)
 	  << cell.m_content << ",style=" << cell.m_styleId << ",";
-	switch(cell.m_hAlign)
+	switch (cell.m_hAlign)
 	{
 	case WPSCellFormat::HALIGN_LEFT:
 		o << "left,";
@@ -236,20 +236,20 @@ public:
 		return 0;
 	}
 	//! set the columns size
-	void setColumnWidth(int col, int w)
+	void setColumnWidth(int col, int w=-1)
 	{
 		if (col < 0) return;
 		if (col >= int(m_widthCols.size())) m_widthCols.resize(size_t(col)+1, -1);
 		m_widthCols[size_t(col)] = w;
-		if (col >= m_numCols) m_numCols++;
+		if (col >= m_numCols) m_numCols=col+1;
 	}
 	//! set the rows size
-	void setRowHeight(int row, int h)
+	void setRowHeight(int row, int h=-1)
 	{
 		if (row < 0) return;
 		if (row >= int(m_heightRows.size())) m_heightRows.resize(size_t(row)+1, -1);
 		m_heightRows[size_t(row)] = h;
-		if (row >= m_numRows) m_numRows++;
+		if (row >= m_numRows) m_numRows=row+1;
 	}
 
 	//! convert the m_widthCols, m_heightRows in a vector of of point size
@@ -326,7 +326,7 @@ WKS4Spreadsheet::WKS4Spreadsheet(WKS4Parser &parser) :
 	m_state.reset(new WKS4SpreadsheetInternal::State);
 }
 
-WKS4Spreadsheet::~WKS4Spreadsheet ()
+WKS4Spreadsheet::~WKS4Spreadsheet()
 {
 }
 
@@ -387,8 +387,8 @@ bool WKS4Spreadsheet::readSheetSize()
 	ascii().addNote(f.str().c_str());
 	if (nRow <= 0 || nCol <= 0) return false;
 
-	m_state->m_spreadsheet.m_numRows = nRow;
-	m_state->m_spreadsheet.m_numCols = nCol;
+	m_state->m_spreadsheet.setRowHeight(nRow-1);
+	m_state->m_spreadsheet.setColumnWidth(nCol-1);
 	return true;
 
 }
@@ -629,7 +629,7 @@ bool WKS4Spreadsheet::readStyle()
 	case 5:
 	{
 		int wh=(fl[0]>>5);
-		switch(wh)
+		switch (wh)
 		{
 		case 0:
 			style.setFormat(WPSCell::F_TEXT);
@@ -689,7 +689,7 @@ bool WKS4Spreadsheet::readStyle()
 		style.setDigits(digits);
 	}
 	if (fl[1]&0x20) f << "ajust[text],";
-	switch(fl[1]>>6)
+	switch (fl[1]>>6)
 	{
 	case 0:
 		style.setVAlignement(WPSCellFormat::VALIGN_BOTTOM);
@@ -832,7 +832,7 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	for (int i = 0; i < 2; i++)
 		fl[i] = libwps::readU8(m_input);
 
-	switch((fl[0] & 0x7))
+	switch ((fl[0] & 0x7))
 	{
 	case 0x5:
 		if (cell->m_content.m_contentType == WKSContentListener::CellContent::C_TEXT) fl[0] &= 0xF8;
@@ -848,7 +848,7 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	}
 	WPSCell::FormatType newForm = WPSCell::F_UNKNOWN;
 	int subForm = 0;
-	switch(fl[0]>>5)
+	switch (fl[0]>>5)
 	{
 	case 0:
 		newForm = WPSCell::F_NUMBER;
@@ -931,7 +931,7 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 		fl[1] &= 0xBF;
 	}
 	style.m_font.m_attributes=fflags;
-	switch(fl[1]&3)
+	switch (fl[1]&3)
 	{
 	case 1:
 		style.setHAlignement(WPSCell::HALIGN_LEFT);
@@ -1066,6 +1066,7 @@ bool WKS4Spreadsheet::readCell()
 	int cellPos[2];
 	for (int i=0; i<2; i++)
 		cellPos[i]=(int) libwps::read16(m_input);
+
 	cell.setPosition(Vec2i(cellPos[0],cellPos[1]));
 	if (!dosFile) cell.m_styleId = (int) libwps::read16(m_input);
 	if (cellPos[0] < 0 || cellPos[1] < 0)
@@ -1093,7 +1094,7 @@ bool WKS4Spreadsheet::readCell()
 	int dataSz = int(endPos-dataPos);
 
 	bool ok = true;
-	switch(type)
+	switch (type)
 	{
 	case 12:
 	{
@@ -1164,7 +1165,7 @@ bool WKS4Spreadsheet::readCell()
 	case 16:
 	{
 		double val;
-		if (dataSz >= 8 && readNumber( dataPos+8, val))
+		if (dataSz >= 8 && readNumber(dataPos+8, val))
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_FORMULA;
 			cell.m_content.setValue(val);
@@ -1215,7 +1216,7 @@ bool WKS4Spreadsheet::readCell()
 		}
 
 		int styleID = (unkn1>>4) & 0x7;
-		switch(styleID)
+		switch (styleID)
 		{
 		case 0:
 		case 1:
@@ -1480,7 +1481,7 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 	std::stringstream f;
 	std::vector<std::vector<WKSContentListener::FormulaInstruction> > stack;
 	bool ok = true;
-	while(long(m_input->tell()) != endPos)
+	while (long(m_input->tell()) != endPos)
 	{
 		double val;
 		pos = m_input->tell();
@@ -1488,7 +1489,7 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 		int wh = (int) libwps::readU8(m_input);
 		int arity = 0;
 		WKSContentListener::FormulaInstruction instr;
-		switch(wh)
+		switch (wh)
 		{
 		case 0x0:
 			if (endPos-pos<9 || !readNumber(pos+9, val))

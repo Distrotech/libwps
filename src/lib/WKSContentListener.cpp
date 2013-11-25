@@ -149,7 +149,7 @@ void WKSContentListener::insertCharacter(uint8_t character)
 		insertUnicode(character);
 		return;
 	}
-	_flushDeferredTabs ();
+	_flushDeferredTabs();
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	m_ps->m_textBuffer.append(char(character));
 }
@@ -158,14 +158,14 @@ void WKSContentListener::insertUnicode(uint32_t val)
 {
 	// undef character, we skip it
 	if (val == 0xfffd) return;
-	_flushDeferredTabs ();
+	_flushDeferredTabs();
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	appendUnicode(val, m_ps->m_textBuffer);
 }
 
 void WKSContentListener::insertUnicodeString(librevenge::RVNGString const &str)
 {
-	_flushDeferredTabs ();
+	_flushDeferredTabs();
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	m_ps->m_textBuffer.append(str);
 }
@@ -278,7 +278,7 @@ void WKSContentListener::setParagraph(const WPSParagraph &para)
 #include <time.h>
 void WKSContentListener::insertField(WKSContentListener::FieldType type)
 {
-	switch(type)
+	switch (type)
 	{
 	case None:
 		break;
@@ -324,7 +324,7 @@ void WKSContentListener::insertDateTimeField(char const *format)
 		WPS_DEBUG_MSG(("WKSContentListener::insertDateTimeField: oops, can not find the format\n"));
 		return;
 	}
-	time_t now = time ( 0L );
+	time_t now = time(0L);
 	struct tm timeinfo;
 	if (localtime_r(&now, &timeinfo))
 	{
@@ -579,7 +579,7 @@ void WKSContentListener::handleSubDocument(WKSSubDocumentPtr &subDocument, libwp
 			{
 				subDocument->parse(listen, subDocumentType);
 			}
-			catch(...)
+			catch (...)
 			{
 				WPS_DEBUG_MSG(("Works: WKSContentListener::handleSubDocument exception catched \n"));
 			}
@@ -759,18 +759,18 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 			break;
 		case WPSCellFormat::F_NUMBER:
 			propList.insert("librevenge:value-type", cell.getValueType().c_str());
-			if (hasFormula) break;
+			if (!hasValue) break;
 			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
 			break;
 		case WPSCellFormat::F_BOOLEAN:
 			propList.insert("librevenge:value-type", "boolean");
-			if (hasFormula) break;
+			if (!hasValue) break;
 			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
 			break;
 		case WPSCellFormat::F_DATE:
 		{
 			propList.insert("librevenge:value-type", "date");
-			if (hasFormula) break;
+			if (!hasValue) break;
 			int Y=0, M=0, D=0;
 			if (!CellContent::double2Date(content.m_value, Y, M, D)) break;
 			propList.insert("librevenge:year", Y);
@@ -781,7 +781,7 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 		case WPSCellFormat::F_TIME:
 		{
 			propList.insert("librevenge:value-type", "time");
-			if (hasFormula) break;
+			if (!hasValue) break;
 			int H=0, M=0, S=0;
 			if (!CellContent::double2Time(content.m_value,H,M,S))
 				break;
@@ -791,7 +791,7 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 			break;
 		}
 		case WPSCellFormat::F_UNKNOWN:
-			if (hasFormula || !hasValue) break;
+			if (!hasValue) break;
 			propList.insert("librevenge:value-type", cell.getValueType().c_str());
 			propList.insert("librevenge:value", content.m_value, librevenge::RVNG_GENERIC);
 			break;
@@ -849,7 +849,7 @@ void WKSContentListener::_popParsingState()
 librevenge::RVNGPropertyList WKSContentListener::FormulaInstruction::getPropertyList() const
 {
 	librevenge::RVNGPropertyList pList;
-	switch(m_type)
+	switch (m_type)
 	{
 	case F_Operator:
 		pList.insert("librevenge:type","librevenge-operator");
@@ -904,8 +904,8 @@ std::ostream &operator<<(std::ostream &o, WKSContentListener::FormulaInstruction
 	else if (inst.m_type==WKSContentListener::FormulaInstruction::F_Cell)
 	{
 		if (!inst.m_positionRelative[0][0]) o << "$";
-		if (inst.m_position[0][0]>=26) o << (char) (inst.m_position[0][0]/26-1 + 'A');
-		o << (char) (inst.m_position[0][0]%26+'A');
+		if (inst.m_position[0][0]>=26) o << (char)(inst.m_position[0][0]/26-1 + 'A');
+		o << (char)(inst.m_position[0][0]%26+'A');
 		if (!inst.m_positionRelative[0][1]) o << "$";
 		o << inst.m_position[0][1];
 	}
@@ -914,8 +914,8 @@ std::ostream &operator<<(std::ostream &o, WKSContentListener::FormulaInstruction
 		for (int l=0; l<2; ++l)
 		{
 			if (!inst.m_positionRelative[l][0]) o << "$";
-			if (inst.m_position[l][0]>=26) o << (char) (inst.m_position[l][0]/26-1 + 'A');
-			o << (char) (inst.m_position[l][0]%26+'A');
+			if (inst.m_position[l][0]>=26) o << (char)(inst.m_position[l][0]/26-1 + 'A');
+			o << (char)(inst.m_position[l][0]%26+'A');
 			if (!inst.m_positionRelative[l][1]) o << "$";
 			o << inst.m_position[l][1];
 			if (l==0) o << ":";
@@ -957,7 +957,7 @@ bool WKSContentListener::CellContent::double2Time(double val, int &H, int &M, in
 std::ostream &operator<<(std::ostream &o, WKSContentListener::CellContent const &cell)
 {
 
-	switch(cell.m_contentType)
+	switch (cell.m_contentType)
 	{
 	case WKSContentListener::CellContent::C_NONE:
 		break;

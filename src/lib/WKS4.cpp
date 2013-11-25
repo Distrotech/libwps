@@ -132,7 +132,7 @@ WKS4Parser::WKS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
 	m_spreadsheetParser.reset(new WKS4Spreadsheet(*this));
 }
 
-WKS4Parser::~WKS4Parser ()
+WKS4Parser::~WKS4Parser()
 {
 }
 
@@ -282,7 +282,7 @@ bool WKS4Parser::readZones()
 	RVNGInputStreamPtr input = getInput();
 	input->seek(6, librevenge::RVNG_SEEK_SET);
 
-	while(readZone()) ;
+	while (readZone()) ;
 
 	//
 	// look for ending
@@ -320,8 +320,8 @@ bool WKS4Parser::readZone()
 	RVNGInputStreamPtr input = getInput();
 	long pos = input->tell();
 	int id = (int) libwps::readU8(input);
-	int type =  (int) libwps::read8(input);
-	long sz =  (long) libwps::readU16(input);
+	int type = (int) libwps::read8(input);
+	long sz = (long) libwps::readU16(input);
 	if (sz<0 || !checkFilePosition(pos+4+sz))
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readZone: size is bad\n"));
@@ -331,10 +331,10 @@ bool WKS4Parser::readZone()
 
 	bool ok = true, isParsed = false;
 	input->seek(pos, librevenge::RVNG_SEEK_SET);
-	switch(type)
+	switch (type)
 	{
 	case 0:
-		switch(id)
+		switch (id)
 		{
 		case 0x1:
 			ok = false;
@@ -393,7 +393,7 @@ bool WKS4Parser::readZone()
 		}
 		break;
 	case 0x54:
-		switch(id)
+		switch (id)
 		{
 		case 0x2:
 			ok = m_spreadsheetParser->readDOSCellProperty();

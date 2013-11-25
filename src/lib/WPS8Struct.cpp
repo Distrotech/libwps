@@ -57,7 +57,7 @@ WPSBorder::Style FileData::getBorderStyle(std::string &mess) const
 {
 	WPSBorder::Style style = WPSBorder::Single;
 	libwps::DebugStream f;
-	switch(m_value)
+	switch (m_value)
 	{
 	case 0:
 		style  = WPSBorder::None;
@@ -126,7 +126,7 @@ std::ostream &operator<< (std::ostream &o, FileData const &dt)
 		if (val) o << "unkn=" << val <<",";
 		for (int i = 0; i < numElt; i++)
 		{
-			switch(sz)
+			switch (sz)
 			{
 			case 1:
 				o << libwps::readU8(DT.m_input) << ",";
@@ -237,7 +237,7 @@ bool readData(RVNGInputStreamPtr input, long endPos,
 	//           0x1/0x4 -> never seem
 	//           0x2 -> set for the main child ?
 	//           0x8 -> signed/unsigned ? set/unset for bool ?
-	switch(dt.m_type>>4)
+	switch (dt.m_type>>4)
 	{
 	case 0:
 		return true;
