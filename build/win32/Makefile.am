@@ -4,6 +4,7 @@ EXTRA_DIST = \
 	\
 	libwps.dsw \
 	libwps.dsp \
+	wks2csv.dsp \
 	wks2raw.dsp \
 	wps2html.dsp \
 	wps2raw.dsp \
@@ -11,6 +12,7 @@ EXTRA_DIST = \
 	\
 	libwps.vcproj.sln \
 	libwps.vcproj \
+	wks2csv.vcproj \
 	wks2raw.vcproj \
 	wps2html.vcproj \
 	wps2raw.vcproj \
@@ -18,6 +20,7 @@ EXTRA_DIST = \
 	\
 	libwps.vcxproj.sln \
 	libwps.vcxproj \
+	wks2csv.vcxproj \
 	wks2raw.vcxproj \
 	wps2html.vcxproj \
 	wps2raw.vcxproj \

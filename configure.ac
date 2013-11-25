@@ -59,6 +59,7 @@ AS_CASE([$host],
 		native_win32=yes
 		LIBWPS_WIN32_RESOURCE=libwps-win32res.lo
 		LIBWPS_STREAM_WIN32_RESOURCE=libwps-stream-win32res.lo
+		WKS2CSV_WIN32_RESOURCE=wks2csv-win32res.lo
 		WKS2RAW_WIN32_RESOURCE=wks2raw-win32res.lo
 		WPS2HTML_WIN32_RESOURCE=wps2html-win32res.lo
 		WPS2RAW_WIN32_RESOURCE=wps2raw-win32res.lo
@@ -67,6 +68,7 @@ AS_CASE([$host],
 		native_win32=no
 		LIBWPS_WIN32_RESOURCE=
 		LIBWPS_STREAM_WIN32_RESOURCE=
+		WKS2CSV_WIN32_RESOURCE=
 		WKS2RAW_WIN32_RESOURCE=
 		WPS2HTML_WIN32_RESOURCE=
 		WPS2RAW_WIN32_RESOURCE=
@@ -76,6 +78,7 @@ AS_CASE([$host],
 AM_CONDITIONAL(OS_WIN32, [test "x$native_win32" = "xyes"])
 AC_SUBST(LIBWPS_WIN32_RESOURCE)
 AC_SUBST(LIBWPS_STREAM_WIN32_RESOURCE)
+AC_SUBST(WKS2CSV_WIN32_RESOURCE)
 AC_SUBST(WKS2RAW_WIN32_RESOURCE)
 AC_SUBST(WPS2HTML_WIN32_RESOURCE)
 AC_SUBST(WPS2RAW_WIN32_RESOURCE)
@@ -337,6 +340,8 @@ src/conv/raw/Makefile
 src/conv/raw/wps2raw.rc
 src/conv/text/Makefile
 src/conv/text/wps2text.rc
+src/conv/wks2csv/Makefile
+src/conv/wks2csv/wks2csv.rc
 src/conv/wks2raw/Makefile
 src/conv/wks2raw/wks2raw.rc
 src/lib/Makefile
