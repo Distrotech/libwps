@@ -1337,16 +1337,24 @@ bool WKS4Spreadsheet::readFloat4(long endPos, double &res)
 
 	if (exp == 0)
 	{
-		if (mantisse <= 1. && mantisse>=1.)  return true; // ok zero
+		if ((double) mantisse > 1.-1e-4)  return true; // ok zero
 		// fixme find Nan representation
 		return false;
 	}
 	if (exp == 0x7FF)
 	{
-		if (mantisse == 1.)
+		if ((double) mantisse > 1.-1e-4)
 		{
 			res=std::numeric_limits<double>::quiet_NaN();
-			return true; // ok 0x7FF and 0xFFF are nan
+			/* 0x7FFFF.. are nan(infinite, ...):ok
+
+			   0xFFFFF.. are nan(in the sense, not a number but
+			   text...). In this case wps2csv and wps2text will
+			   display a nan. Not good, but difficult to retrieve the
+			   cell's content without excuting the formula associated
+			   to this cell :-~
+			 */
+			return true;
 		}
 		return false;
 	}
