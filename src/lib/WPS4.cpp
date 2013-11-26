@@ -32,7 +32,7 @@
 #include "WPSHeader.h"
 #include "WPSOLEParser.h"
 #include "WPSPageSpan.h"
-#include "WPSSubDocument.h"
+#include "WPSTextSubDocument.h"
 
 #include "WPS4Graph.h"
 #include "WPS4Text.h"
@@ -42,21 +42,21 @@
 namespace WPS4ParserInternal
 {
 //! Internal: the subdocument of a WPS4Parser
-class SubDocument : public WPSSubDocument
+class SubDocument : public WPSTextSubDocument
 {
 public:
 	//! type of an entry stored in textId
 	enum Type { Unknown, MN };
 	//! constructor for a text entry
 	SubDocument(RVNGInputStreamPtr input, WPS4Parser &pars, WPSEntry const &entry) :
-		WPSSubDocument(input, &pars), m_entry(entry) {}
+		WPSTextSubDocument(input, &pars), m_entry(entry) {}
 	//! destructor
 	~SubDocument() {}
 
 	//! operator==
-	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const
+	virtual bool operator==(shared_ptr<WPSTextSubDocument> const &doc) const
 	{
-		if (!doc || !WPSSubDocument::operator==(doc))
+		if (!doc || !WPSTextSubDocument::operator==(doc))
 			return false;
 		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
 		if (!sDoc) return false;

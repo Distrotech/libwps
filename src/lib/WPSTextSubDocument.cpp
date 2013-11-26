@@ -8,6 +8,7 @@
  *
  * Major Contributor(s):
  * Copyright (C) 2006, 2007 Andrew Ziem
+ * Copyright (C) 2005 Fridrich Strba (fridrich.strba@bluewin.ch)
  * Copyright (C) 2003-2005 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2003 Marc Maurer (uwog@uwog.net)
  *
@@ -21,54 +22,24 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#ifndef WPSSUBDOCUMENT_H
-#define WPSSUBDOCUMENT_H
+#include "WPSTextSubDocument.h"
 
-#include "libwps_internal.h"
-
-class WPSContentListener;
-class WPSParser;
-
-/** virtual class to define a sub document */
-class WPSSubDocument
+WPSTextSubDocument::WPSTextSubDocument(RVNGInputStreamPtr &input, WPSParser *p, int i)  : WPSSubDocument(input, i), m_parser(p)
 {
-public:
-	/// constructor
-	WPSSubDocument(RVNGInputStreamPtr &input, int id=0);
-	/// destructor
-	virtual ~WPSSubDocument();
+}
 
-	/// returns the input
-	RVNGInputStreamPtr &getInput()
-	{
-		return m_input;
-	}
-	/// get the identificator
-	int id() const
-	{
-		return m_id;
-	}
-	/// set the identificator
-	void setId(int i)
-	{
-		m_id = i;
-	}
+WPSTextSubDocument::~WPSTextSubDocument()
+{
+}
 
-	/// an operator =
-	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const;
-	bool operator!=(shared_ptr<WPSSubDocument> const &doc) const
-	{
-		return !operator==(doc);
-	}
+bool WPSTextSubDocument::operator==(shared_ptr<WPSTextSubDocument> const &doc) const
+{
+	if (!WPSSubDocument::operator==(doc)) return false;
+	WPSTextSubDocument const *docu=dynamic_cast<WPSTextSubDocument *>(doc.get());
+	if (!docu) return false;
+	if (m_parser != docu->m_parser) return false;
+	return true;
+}
 
-protected:
-	RVNGInputStreamPtr m_input;
-	int m_id;
-private:
-	WPSSubDocument(const WPSSubDocument &);
-	WPSSubDocument &operator=(const WPSSubDocument &);
-
-};
-#endif
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
 

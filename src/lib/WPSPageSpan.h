@@ -26,6 +26,7 @@
 #include <vector>
 #include "libwps_internal.h"
 
+class WKSContentListener;
 class WPSContentListener;
 
 namespace WPSPageSpanInternal
@@ -36,7 +37,6 @@ typedef shared_ptr<HeaderFooter> HeaderFooterPtr;
 
 class WPSPageSpan
 {
-	friend class WPSContentListener;
 public:
 	enum FormOrientation { PORTRAIT, LANDSCAPE };
 
@@ -167,11 +167,11 @@ public:
 	{
 		return !operator==(pageSpan);
 	}
-protected:
-	// interface with WPSContentListener
+
+	// interface with the listeners
 	void getPageProperty(librevenge::RVNGPropertyList &pList) const;
-	void sendHeaderFooters(WPSContentListener *listener,
-	                       librevenge::RVNGTextInterface *documentInterface);
+	void sendHeaderFooters(WPSContentListener *listener, librevenge::RVNGTextInterface *documentInterface);
+	void sendHeaderFooters(WKSContentListener *listener, librevenge::RVNGSpreadsheetInterface *documentInterface);
 
 protected:
 

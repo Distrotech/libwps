@@ -29,8 +29,10 @@
 class WKSContentListener;
 class WKSParser;
 
+#include "WPSSubDocument.h"
+
 /** Basic class used to store a spreadsheet sub document */
-class WKSSubDocument
+class WKSSubDocument : public WPSSubDocument
 {
 public:
 	/// constructor
@@ -38,33 +40,14 @@ public:
 	/// destructor
 	virtual ~WKSSubDocument();
 
-	/// returns the input
-	RVNGInputStreamPtr &getInput()
-	{
-		return m_input;
-	}
 	/// returns the parser
 	WKSParser *parser() const
 	{
 		return m_parser;
 	}
-	/// get the identificator
-	int id() const
-	{
-		return m_id;
-	}
-	/// set the identificator
-	void setId(int i)
-	{
-		m_id = i;
-	}
 
 	/// an operator =
-	virtual bool operator==(shared_ptr<WKSSubDocument> const &doc) const;
-	bool operator!=(shared_ptr<WKSSubDocument> const &doc) const
-	{
-		return !operator==(doc);
-	}
+	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const;
 
 	/** virtual parse function
 	 *
@@ -72,9 +55,7 @@ public:
 	virtual void parse(shared_ptr<WKSContentListener> &listener, libwps::SubDocumentType subDocumentType) = 0;
 
 protected:
-	RVNGInputStreamPtr m_input;
 	WKSParser *m_parser;
-	int m_id;
 private:
 	WKSSubDocument(const WKSSubDocument &);
 	WKSSubDocument &operator=(const WKSSubDocument &);

@@ -30,7 +30,7 @@
 #include "WPSEntry.h"
 #include "WPSList.h"
 #include "WPSParagraph.h"
-#include "WPSSubDocument.h"
+#include "WPSTextSubDocument.h"
 
 #include "WPS8.h"
 #include "WPS8Struct.h"
@@ -427,15 +427,15 @@ void State::initTypeMaps()
 }
 
 //! Internal: the subdocument of a WPS8Text
-class SubDocument : public WPSSubDocument
+class SubDocument : public WPSTextSubDocument
 {
 public:
 	//! constructor for a note/endnote entry
 	SubDocument(RVNGInputStreamPtr input, WPS8Text &pars, WPSEntry const &entry) :
-		WPSSubDocument(input, 0), m_textParser(&pars), m_entry(entry), m_text("") {}
+		WPSTextSubDocument(input, 0), m_textParser(&pars), m_entry(entry), m_text("") {}
 	//! constructor for a comment entry
 	SubDocument(RVNGInputStreamPtr input, librevenge::RVNGString const &text) :
-		WPSSubDocument(input, 0), m_textParser(0), m_entry(), m_text(text) {}
+		WPSTextSubDocument(input, 0), m_textParser(0), m_entry(), m_text(text) {}
 
 	//! destructor
 	~SubDocument() {}

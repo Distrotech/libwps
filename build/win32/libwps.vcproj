@@ -772,6 +772,26 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath="..\..\src\lib\WPSTextSubDocument.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -907,6 +927,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\WPSTextParser.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WPSTextSubDocument.h"
 				>
 			</File>
 		</Filter>

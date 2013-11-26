@@ -24,6 +24,7 @@
 #include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
+#include "WKSContentListener.h"
 #include "WPSContentListener.h"
 #include "WPSSubDocument.h"
 
@@ -147,8 +148,7 @@ void WPSPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFoote
 	}
 }
 
-void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
-                                    librevenge::RVNGTextInterface *documentInterface)
+void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener, librevenge::RVNGTextInterface *documentInterface)
 {
 	if (!listener || !documentInterface)
 	{
@@ -223,6 +223,51 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener,
 			_insertPageNumberParagraph(documentInterface);
 			documentInterface->closeFooter();
 		}
+	}
+}
+
+void WPSPageSpan::sendHeaderFooters(WKSContentListener *listener, librevenge::RVNGSpreadsheetInterface *documentInterface)
+{
+	if (!listener || !documentInterface)
+	{
+		WPS_DEBUG_MSG(("WPSPageSpan::sendHeaderFooters: no listener or document interface\n"));
+		return;
+	}
+
+	for (size_t i = 0; i < m_headerFooterList.size(); i++)
+	{
+		WPSPageSpanInternal::HeaderFooterPtr &hf = m_headerFooterList[i];
+		if (!hf) continue;
+
+		librevenge::RVNGPropertyList propList;
+		switch (hf->getOccurence())
+		{
+		case WPSPageSpan::ODD:
+			propList.insert("librevenge:occurence", "odd");
+			break;
+		case WPSPageSpan::EVEN:
+			propList.insert("librevenge:occurence", "even");
+			break;
+		case WPSPageSpan::ALL:
+			propList.insert("librevenge:occurence", "all");
+			break;
+		case WPSPageSpan::NEVER:
+		default:
+			break;
+		}
+		bool isHeader = hf->getType() == WPSPageSpan::HEADER;
+		if (isHeader)
+			documentInterface->openHeader(propList);
+		else
+			documentInterface->openFooter(propList);
+		listener->handleSubDocument(hf->getSubDocument(), libwps::DOC_HEADER_FOOTER);
+		if (isHeader)
+			documentInterface->closeHeader();
+		else
+			documentInterface->closeFooter();
+
+		WPS_DEBUG_MSG(("Header Footer Element: type: %i occurence: %i\n",
+		               hf->getType(), hf->getOccurence()));
 	}
 }
 

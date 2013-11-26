@@ -157,7 +157,7 @@ void WPSCellFormat::addTo(librevenge::RVNGPropertyList &propList) const
 	switch (m_hAlign)
 	{
 	case HALIGN_LEFT:
-		propList.insert("fo:text-align", "first");
+		propList.insert("fo:text-align", "start");
 		propList.insert("style:text-align-source", "fix");
 		break;
 	case HALIGN_CENTER:

@@ -130,14 +130,14 @@ public:
 		std::vector<FormulaInstruction> m_formula;
 	};
 
-	WKSContentListener(librevenge::RVNGSpreadsheetInterface *documentInterface);
+	WKSContentListener(std::vector<WPSPageSpan> const &pageList, librevenge::RVNGSpreadsheetInterface *documentInterface);
 	virtual ~WKSContentListener();
 
 	void setDocumentLanguage(int lcid);
 
 	void startDocument();
 	void endDocument();
-	void handleSubDocument(WKSSubDocumentPtr &subDocument, libwps::SubDocumentType subDocumentType);
+	void handleSubDocument(WPSSubDocumentPtr &subDocument, libwps::SubDocumentType subDocumentType);
 
 	// ------ text data -----------
 
@@ -176,7 +176,7 @@ public:
 
 	// ------- subdocument -----------------
 	/** adds comment */
-	void insertComment(WKSSubDocumentPtr &subDocument);
+	void insertComment(WPSSubDocumentPtr &subDocument);
 
 	// ------- sheet -----------------
 	/** open a sheet*/
@@ -196,6 +196,9 @@ public:
 	void closeSheetCell();
 
 protected:
+	void _openPageSpan();
+	void _closePageSpan();
+
 	void _startSubDocument();
 	void _endSubDocument();
 

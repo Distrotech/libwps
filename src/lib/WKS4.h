@@ -32,6 +32,7 @@
 
 namespace WKS4ParserInternal
 {
+class SubDocument;
 struct State;
 }
 
@@ -43,6 +44,7 @@ class WKS4Spreadsheet;
  */
 class WKS4Parser : public WKSParser
 {
+	friend class WKS4ParserInternal::SubDocument;
 	friend class WKS4Spreadsheet;
 public:
 	//! constructor
@@ -72,6 +74,8 @@ protected:
 
 	/** creates the main listener */
 	shared_ptr<WKSContentListener> createListener(librevenge::RVNGSpreadsheetInterface *interface);
+	//! send the header/footer
+	void sendHeaderFooter(bool header);
 
 	//
 	// low level
@@ -92,6 +96,9 @@ protected:
 
 	//! reads another printer data. Seem simillar to ZZPrnt
 	bool readPrn2();
+
+	//! reads the header/footer
+	bool readHeaderFooter(bool header);
 
 	//! read zone 0xb ( some strings )
 	bool readZoneB();

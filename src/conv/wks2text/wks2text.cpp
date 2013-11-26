@@ -35,7 +35,7 @@
 
 static int printUsage()
 {
-	printf("Usage: wks2cvs [-h] [-o file.txt] <Works Spreadsheet Document>\n");
+	printf("Usage: wks2text [-h] [-o file.txt] <Works Spreadsheet Document>\n");
 	printf("\t-h:                 Shows this help message\n");
 	printf("\t-o file.text:       Defines the ouput file\n");
 	return -1;

@@ -39,7 +39,7 @@
 #include "WPSPageSpan.h"
 #include "WPSParagraph.h"
 #include "WPSPosition.h"
-#include "WPSSubDocument.h"
+#include "WPSTextSubDocument.h"
 
 ////////////////////////////////////////////////////////////
 //! the document state
@@ -1485,7 +1485,13 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 			shared_ptr<WPSContentListener> listen(this, WPS_shared_ptr_noop_deleter<WPSContentListener>());
 			try
 			{
-				subDocument->parse(listen, subDocumentType);
+				WPSTextSubDocument *docu=dynamic_cast<WPSTextSubDocument *>(subDocument.get());
+				if (docu)
+					docu->parse(listen, subDocumentType);
+				else
+				{
+					WPS_DEBUG_MSG(("Works: WPSContentListener::handleSubDocument bad sub document\n"));
+				}
 			}
 			catch (...)
 			{

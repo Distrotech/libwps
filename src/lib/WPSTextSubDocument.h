@@ -21,53 +21,48 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#ifndef WPSSUBDOCUMENT_H
-#define WPSSUBDOCUMENT_H
+#ifndef WPSTEXTSUBDOCUMENT_H
+#define WPSTEXTSUBDOCUMENT_H
 
 #include "libwps_internal.h"
+
+#include "WPSSubDocument.h"
 
 class WPSContentListener;
 class WPSParser;
 
-/** virtual class to define a sub document */
-class WPSSubDocument
+/** Basic class used to store a sub document */
+class WPSTextSubDocument : public WPSSubDocument
 {
 public:
 	/// constructor
-	WPSSubDocument(RVNGInputStreamPtr &input, int id=0);
+	WPSTextSubDocument(RVNGInputStreamPtr &input, WPSParser *parser, int id=0);
 	/// destructor
-	virtual ~WPSSubDocument();
+	virtual ~WPSTextSubDocument();
 
 	/// returns the input
 	RVNGInputStreamPtr &getInput()
 	{
 		return m_input;
 	}
-	/// get the identificator
-	int id() const
+	/// returns the parser
+	WPSParser *parser() const
 	{
-		return m_id;
+		return m_parser;
 	}
-	/// set the identificator
-	void setId(int i)
-	{
-		m_id = i;
-	}
-
 	/// an operator =
-	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const;
-	bool operator!=(shared_ptr<WPSSubDocument> const &doc) const
-	{
-		return !operator==(doc);
-	}
+	virtual bool operator==(shared_ptr<WPSTextSubDocument> const &doc) const;
+
+	/** virtual parse function
+	 *
+	 * this function is called to parse the subdocument */
+	virtual void parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType) = 0;
 
 protected:
-	RVNGInputStreamPtr m_input;
-	int m_id;
+	WPSParser *m_parser;
 private:
-	WPSSubDocument(const WPSSubDocument &);
-	WPSSubDocument &operator=(const WPSSubDocument &);
-
+	WPSTextSubDocument(const WPSTextSubDocument &);
+	WPSTextSubDocument &operator=(const WPSTextSubDocument &);
 };
 #endif
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

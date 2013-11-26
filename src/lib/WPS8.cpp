@@ -34,7 +34,7 @@
 #include "WPSOLEParser.h"
 #include "WPSPageSpan.h"
 #include "WPSPosition.h"
-#include "WPSSubDocument.h"
+#include "WPSTextSubDocument.h"
 
 #include "WPS8Graph.h"
 #include "WPS8Struct.h"
@@ -46,21 +46,21 @@
 namespace WPS8ParserInternal
 {
 //! Internal: the subdocument of a WPS8Parser
-class SubDocument : public WPSSubDocument
+class SubDocument : public WPSTextSubDocument
 {
 public:
 	//! type of an entry
 	enum Type { Unknown, TEXT };
 	//! constructor for a text entry
 	SubDocument(RVNGInputStreamPtr input, WPS8Parser &pars, WPSEntry const &entry) :
-		WPSSubDocument(input, &pars), m_entry(entry) {}
+		WPSTextSubDocument(input, &pars), m_entry(entry) {}
 	//! destructor
 	~SubDocument() {}
 
 	//! operator==
-	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const
+	virtual bool operator==(shared_ptr<WPSTextSubDocument> const &doc) const
 	{
-		if (!doc || !WPSSubDocument::operator==(doc))
+		if (!doc || !WPSTextSubDocument::operator==(doc))
 			return false;
 		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
 		if (!sDoc) return false;

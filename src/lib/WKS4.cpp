@@ -30,8 +30,10 @@
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
 
-#include "WPSCell.h"
 #include "WKSContentListener.h"
+#include "WKSSubDocument.h"
+
+#include "WPSCell.h"
 #include "WPSEntry.h"
 #include "WPSFont.h"
 #include "WPSHeader.h"
@@ -54,16 +56,66 @@ struct Font : public WPSFont
 	libwps_tools_win::Font::Type m_type;
 };
 
+//! Internal: the subdocument of a WPS4Parser
+class SubDocument : public WKSSubDocument
+{
+public:
+	//! constructor for a text entry
+	SubDocument(RVNGInputStreamPtr input, WKS4Parser &pars, bool header) :
+		WKSSubDocument(input, &pars), m_header(header) {}
+	//! destructor
+	~SubDocument() {}
+
+	//! operator==
+	virtual bool operator==(shared_ptr<WKSSubDocument> const &doc) const
+	{
+		if (!doc || !WKSSubDocument::operator==(doc))
+			return false;
+		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
+		if (!sDoc) return false;
+		return m_header == sDoc->m_header;
+	}
+
+	//! the parser function
+	void parse(shared_ptr<WKSContentListener> &listener, libwps::SubDocumentType subDocumentType);
+	//! a flag to known if we need to send the header or the footer
+	bool m_header;
+};
+
+void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDocumentType)
+{
+	if (!listener.get())
+	{
+		WPS_DEBUG_MSG(("WKS4ParserInternal::SubDocument::parse: no listener\n"));
+		return;
+	}
+	if (!dynamic_cast<WKSContentListener *>(listener.get()))
+	{
+		WPS_DEBUG_MSG(("WKS4ParserInternal::SubDocument::parse: bad listener\n"));
+		return;
+	}
+
+	WKS4Parser *parser = m_parser ? dynamic_cast<WKS4Parser *>(m_parser) : 0;
+	if (!parser)
+	{
+		listener->insertCharacter(' ');
+		WPS_DEBUG_MSG(("WKS4ParserInternal::SubDocument::parse: bad parser\n"));
+		return;
+	}
+	parser->sendHeaderFooter(m_header);
+}
+
 //! the state of WKS4
 struct State
 {
-	State() :  m_eof(-1), m_version(-1), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0)
+	State() :  m_eof(-1), m_version(-1), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
+		m_headerString(""), m_footerString("")
 	{
 	}
 	//! returns a color corresponding to an id
 	bool getColor(int id, uint32_t &color) const;
 	//! returns a default font (Courier12) with file's version to define the default encoding */
-	WPSFont getDefaulFont() const
+	WPSFont getDefaultFont() const
 	{
 		WPSFont res;
 		if (m_version <= 2)
@@ -83,6 +135,10 @@ struct State
 	//! the actual document size
 	WPSPageSpan m_pageSpan;
 	int m_actPage /** the actual page*/, m_numPages /* the number of pages */;
+	//! the header string
+	std::string m_headerString;
+	//! the footer string
+	std::string m_footerString;
 };
 
 bool State::getColor(int id, uint32_t &color) const
@@ -219,7 +275,22 @@ void WKS4Parser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 
 shared_ptr<WKSContentListener> WKS4Parser::createListener(librevenge::RVNGSpreadsheetInterface *interface)
 {
-	return shared_ptr<WKSContentListener>(new WKSContentListener(interface));
+	std::vector<WPSPageSpan> pageList;
+	WPSPageSpan ps(m_state->m_pageSpan);
+	if (!m_state->m_headerString.empty())
+	{
+		WPSSubDocumentPtr subdoc(new WKS4ParserInternal::SubDocument
+		                         (getInput(), *this, true));
+		ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::ALL, subdoc);
+	}
+	if (!m_state->m_footerString.empty())
+	{
+		WPSSubDocumentPtr subdoc(new WKS4ParserInternal::SubDocument
+		                         (getInput(), *this, false));
+		ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::ALL, subdoc);
+	}
+	pageList.push_back(ps);
+	return shared_ptr<WKSContentListener>(new WKSContentListener(pageList, interface));
 }
 
 ////////////////////////////////////////////////////////////
@@ -367,7 +438,11 @@ bool WKS4Parser::readZone()
 			break;
 		// case 1a: 0000000009002100
 		// case 24: 0
-		// case 25|26: 0 [ repeated 0xF2 times]
+		case 0x25:
+		case 0x26:
+			readHeaderFooter(id==0x26);
+			isParsed = true;
+			break;
 		case 0x2d:
 		case 0x2e:
 			readChartDef();
@@ -486,7 +561,6 @@ bool WKS4Parser::readZone()
 	}
 
 	/*
-
 	   StructA25: size=0
 	   StructA26: size=2 content 0
 	   StructA50: size=12
@@ -575,6 +649,75 @@ bool WKS4Parser::readFont()
 	if (fSize == 0 && fSize > 50)
 		f << "###fSize=" << fSize;
 	if (name.length() <= 0) f << "###";
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	return true;
+}
+
+// ----------------------------------------------------------------------
+// Header/Footer
+// ----------------------------------------------------------------------
+void WKS4Parser::sendHeaderFooter(bool header)
+{
+	if (!m_listener)
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::sendHeaderFooter: can not find the listener\n"));
+		return;
+	}
+
+	m_listener->setFont(m_state->getDefaultFont());
+	libwps_tools_win::Font::Type fontType=version()<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
+
+	std::string const &text=header ? m_state->m_headerString : m_state->m_footerString;
+	for (size_t i=0; i < text.size(); ++i)
+	{
+		unsigned char c=(unsigned char) text[i];
+		if (c==0xd)
+			m_listener->insertEOL();
+		else if (c!=0xa)
+			m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType));
+	}
+
+}
+
+bool WKS4Parser::readHeaderFooter(bool header)
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+	long pos = input->tell();
+	int type = (int) libwps::read16(input);
+	if (type != 0x0026 && type != 0x0025)
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::readHeaderFooter: not a header/footer\n"));
+		return false;
+	}
+	long sz = (long)libwps::readU16(input);
+	long endPos = pos+4+sz;
+
+	f << "Entries(" << (header ? "HeaderText" : "FooterText") << "):";
+	if (sz < 0xF2)
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::readHeaderFooter: the header/footer size seeem odds\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return false;
+	}
+	std::string text("");
+	for (long i=0; i < sz; i++)
+	{
+		char c=(char) libwps::read8(input);
+		if (c=='\0') break;
+		text+=c;
+	}
+	if (header)
+		m_state->m_headerString=text;
+	else
+		m_state->m_footerString=text;
+	f << text;
+	if (input->tell()!=endPos)
+		ascii().addDelimiter(input->tell(), '|');
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
 

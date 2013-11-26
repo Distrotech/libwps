@@ -46,14 +46,15 @@
 struct WKSDocumentParsingState
 {
 	//! constructor
-	WKSDocumentParsingState();
+	WKSDocumentParsingState(std::vector<WPSPageSpan> const &pageList);
 	//! destructor
 	~WKSDocumentParsingState();
 
+	std::vector<WPSPageSpan> m_pageList;
 	librevenge::RVNGPropertyList m_metaData;
 
 	bool m_isDocumentStarted, m_isHeaderFooterStarted;
-	std::vector<WKSSubDocumentPtr> m_subDocuments; /** list of document actually open */
+	std::vector<WPSSubDocumentPtr> m_subDocuments; /** list of document actually open */
 
 	/** a map cell's format to id */
 	std::map<WPSCellFormat,int,WPSCellFormat::CompareFormat> m_numberingIdMap;
@@ -63,8 +64,8 @@ private:
 	WKSDocumentParsingState &operator=(const WKSDocumentParsingState &);
 };
 
-WKSDocumentParsingState::WKSDocumentParsingState() :
-	m_metaData(), m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments(), m_numberingIdMap()
+WKSDocumentParsingState::WKSDocumentParsingState(std::vector<WPSPageSpan> const &pageList) :
+	m_pageList(pageList), m_metaData(), m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_subDocuments(), m_numberingIdMap()
 {
 }
 
@@ -78,6 +79,20 @@ struct WKSContentParsingState
 {
 	WKSContentParsingState();
 	~WKSContentParsingState();
+
+	bool m_isPageSpanOpened;
+	unsigned m_currentPage;
+	int m_numPagesRemainingInSpan;
+	int m_currentPageNumber;
+
+	double m_pageFormLength;
+	double m_pageFormWidth;
+	bool m_pageFormOrientationIsPortrait;
+
+	double m_pageMarginLeft;
+	double m_pageMarginRight;
+	double m_pageMarginTop;
+	double m_pageMarginBottom;
 
 	librevenge::RVNGString m_textBuffer;
 	int m_numDeferredTabs;
@@ -107,9 +122,14 @@ private:
 };
 
 WKSContentParsingState::WKSContentParsingState() :
+	m_isPageSpanOpened(false), m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
+	m_pageFormLength(11.0),	m_pageFormWidth(8.5f), m_pageFormOrientationIsPortrait(true),
+	m_pageMarginLeft(1.0), m_pageMarginRight(1.0), m_pageMarginTop(1.0), m_pageMarginBottom(1.0),
+
 	m_textBuffer(""), m_numDeferredTabs(0),
 
 	m_font(), m_paragraph(),
+
 	m_isParagraphColumnBreak(false), m_isParagraphPageBreak(false),
 
 	m_isSpanOpened(false), m_isParagraphOpened(false),
@@ -129,8 +149,8 @@ WKSContentParsingState::~WKSContentParsingState()
 {
 }
 
-WKSContentListener::WKSContentListener(librevenge::RVNGSpreadsheetInterface *documentInterface) :
-	m_ds(new WKSDocumentParsingState), m_ps(new WKSContentParsingState), m_psStack(),
+WKSContentListener::WKSContentListener(std::vector<WPSPageSpan> const &pageList, librevenge::RVNGSpreadsheetInterface *documentInterface) :
+	m_ds(new WKSDocumentParsingState(pageList)), m_ps(new WKSContentParsingState), m_psStack(),
 	m_documentInterface(documentInterface)
 {
 }
@@ -375,6 +395,7 @@ void WKSContentListener::endDocument()
 		_closeParagraph();
 
 	// close the document nice and tight
+	_closePageSpan();
 	m_documentInterface->endDocument();
 	m_ds->m_isDocumentStarted = false;
 }
@@ -386,6 +407,9 @@ void WKSContentListener::_openParagraph()
 {
 	if (m_ps->m_isSheetOpened && !m_ps->m_isSheetCellOpened)
 		return;
+
+	if (!m_ps->m_isPageSpanOpened)
+		_openPageSpan();
 
 	if (m_ps->m_isParagraphOpened)
 	{
@@ -521,7 +545,7 @@ void WKSContentListener::_flushText()
 ///////////////////
 // Comment
 ///////////////////
-void WKSContentListener::insertComment(WKSSubDocumentPtr &subDocument)
+void WKSContentListener::insertComment(WPSSubDocumentPtr &subDocument)
 {
 	if (m_ps->m_isNote)
 	{
@@ -550,11 +574,13 @@ void WKSContentListener::insertComment(WKSSubDocumentPtr &subDocument)
 ///////////////////
 // subdocument
 ///////////////////
-void WKSContentListener::handleSubDocument(WKSSubDocumentPtr &subDocument, libwps::SubDocumentType subDocumentType)
+void WKSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwps::SubDocumentType subDocumentType)
 {
 	_pushParsingState();
 	_startSubDocument();
+
 	m_ps->m_subDocumentType = subDocumentType;
+	m_ps->m_isPageSpanOpened = true;
 
 	// Check whether the document is calling itself
 	bool sendDoc = true;
@@ -577,7 +603,13 @@ void WKSContentListener::handleSubDocument(WKSSubDocumentPtr &subDocument, libwp
 			shared_ptr<WKSContentListener> listen(this, WPS_shared_ptr_noop_deleter<WKSContentListener>());
 			try
 			{
-				subDocument->parse(listen, subDocumentType);
+				WKSSubDocument *subDoc=dynamic_cast<WKSSubDocument *>(subDocument.get());
+				if (subDoc)
+					subDoc->parse(listen, subDocumentType);
+				else
+				{
+					WPS_DEBUG_MSG(("Works: WKSContentListener::handleSubDocument bad subdocument\n"));
+				}
 			}
 			catch (...)
 			{
@@ -615,17 +647,17 @@ void WKSContentListener::openSheet(std::vector<float> const &colWidth, libreveng
 		WPS_DEBUG_MSG(("WKSContentListener::openSheet: called with m_isSheetOpened=true\n"));
 		return;
 	}
-
+	if (!m_ps->m_isPageSpanOpened)
+		_openPageSpan();
 	if (m_ps->m_isParagraphOpened)
 		_closeParagraph();
 
 	_pushParsingState();
 	_startSubDocument();
 	m_ps->m_subDocumentType = libwps::DOC_TABLE;
+	m_ps->m_isPageSpanOpened = true;
 
 	librevenge::RVNGPropertyList propList;
-	propList.insert("sheet:align", "left");
-	propList.insert("fo:margin-left", 0.0);
 
 	float sheetWidth = 0;
 	librevenge::RVNGPropertyListVector columns;
@@ -640,7 +672,6 @@ void WKSContentListener::openSheet(std::vector<float> const &colWidth, libreveng
 		sheetWidth += colWidth[c];
 	}
 	propList.insert("librevenge:columns", columns);
-	propList.insert("style:width", sheetWidth, unit);
 	m_documentInterface->openSheet(propList);
 	m_ps->m_isSheetOpened = true;
 }
@@ -819,6 +850,73 @@ void WKSContentListener::closeSheetCell()
 }
 
 ///////////////////
+// page
+///////////////////
+void WKSContentListener::_openPageSpan()
+{
+	if (m_ps->m_isPageSpanOpened)
+		return;
+
+	if (!m_ds->m_isDocumentStarted)
+		startDocument();
+
+	if (m_ds->m_pageList.size()==0)
+	{
+		WPS_DEBUG_MSG(("WKSContentListener::_openPageSpan: can not find any page\n"));
+		throw libwps::ParseException();
+	}
+	unsigned actPage = 0;
+	std::vector<WPSPageSpan>::iterator it = m_ds->m_pageList.begin();
+	while (actPage < m_ps->m_currentPage)
+	{
+		actPage+=(unsigned) it++->getPageSpan();
+		if (it == m_ds->m_pageList.end())
+		{
+			WPS_DEBUG_MSG(("WKSContentListener::_openPageSpan: can not find current page\n"));
+			throw libwps::ParseException();
+		}
+	}
+	WPSPageSpan &currentPage = *it;
+
+	librevenge::RVNGPropertyList propList;
+	currentPage.getPageProperty(propList);
+	propList.insert("librevenge:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
+
+	if (!m_ps->m_isPageSpanOpened)
+		m_documentInterface->openPageSpan(propList);
+
+	m_ps->m_isPageSpanOpened = true;
+
+	m_ps->m_pageFormLength = currentPage.getFormLength();
+	m_ps->m_pageFormWidth = currentPage.getFormWidth();
+	m_ps->m_pageMarginLeft = currentPage.getMarginLeft();
+	m_ps->m_pageMarginRight = currentPage.getMarginRight();
+	m_ps->m_pageFormOrientationIsPortrait =
+	    currentPage.getFormOrientation() == WPSPageSpan::PORTRAIT;
+	m_ps->m_pageMarginTop = currentPage.getMarginTop();
+	m_ps->m_pageMarginBottom = currentPage.getMarginBottom();
+
+	// we insert the header footer
+	currentPage.sendHeaderFooters(this, m_documentInterface);
+
+	// first paragraph in span (necessary for resetting page number)
+	m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
+	m_ps->m_currentPage++;
+}
+
+void WKSContentListener::_closePageSpan()
+{
+	if (!m_ps->m_isPageSpanOpened)
+		return;
+
+	if (m_ps->m_isParagraphOpened)
+		_closeParagraph();
+
+	m_documentInterface->closePageSpan();
+	m_ps->m_isPageSpanOpened = false;
+}
+
+///////////////////
 // others
 ///////////////////
 
@@ -828,6 +926,15 @@ shared_ptr<WKSContentParsingState> WKSContentListener::_pushParsingState()
 	shared_ptr<WKSContentParsingState> actual = m_ps;
 	m_psStack.push_back(actual);
 	m_ps.reset(new WKSContentParsingState);
+
+	// BEGIN: copy page properties into the new parsing state
+	m_ps->m_pageFormLength = actual->m_pageFormLength;
+	m_ps->m_pageFormWidth = actual->m_pageFormWidth;
+	m_ps->m_pageFormOrientationIsPortrait =	actual->m_pageFormOrientationIsPortrait;
+	m_ps->m_pageMarginLeft = actual->m_pageMarginLeft;
+	m_ps->m_pageMarginRight = actual->m_pageMarginRight;
+	m_ps->m_pageMarginTop = actual->m_pageMarginTop;
+	m_ps->m_pageMarginBottom = actual->m_pageMarginBottom;
 
 	m_ps->m_isNote = actual->m_isNote;
 

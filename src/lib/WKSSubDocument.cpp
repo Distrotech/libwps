@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Version: MPL 2.0 / LGPLv2.1+
  *
@@ -23,7 +24,7 @@
 
 #include "WKSSubDocument.h"
 
-WKSSubDocument::WKSSubDocument(RVNGInputStreamPtr &input, WKSParser *p, int i)  : m_input(input), m_parser(p), m_id(i)
+WKSSubDocument::WKSSubDocument(RVNGInputStreamPtr &input, WKSParser *p, int i)  : WPSSubDocument(input,i), m_parser(p)
 {
 }
 
@@ -31,13 +32,12 @@ WKSSubDocument::~WKSSubDocument()
 {
 }
 
-bool WKSSubDocument::operator==(shared_ptr<WKSSubDocument> const &doc) const
+bool WKSSubDocument::operator==(shared_ptr<WPSSubDocument> const &doc) const
 {
-	if (!doc) return false;
-	if (doc.get() == this) return true;
-	if (m_input.get() != doc.get()->m_input.get()) return false;
-	if (m_parser != doc.get()->m_parser) return false;
-	if (m_id != doc.get()->m_id) return false;
+	if (!WPSSubDocument::operator==(doc)) return false;
+	WKSSubDocument const *docu=dynamic_cast<WKSSubDocument const *>(doc.get());
+	if (docu==0) return false;
+	if (m_parser != docu->m_parser) return false;
 	return true;
 }
 

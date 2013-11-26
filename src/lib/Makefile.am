@@ -77,7 +77,9 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSTable.cpp		\
 	WPSTable.h		\
 	WPSTextParser.h		\
-	WPSTextParser.cpp
+	WPSTextParser.cpp	\
+	WPSTextSubDocument.cpp	\
+	WPSTextSubDocument.h
 
 if OS_WIN32
 
