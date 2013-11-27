@@ -308,7 +308,7 @@ void WKSContentListener::insertField(WKSContentListener::FieldType type)
 		_openSpan();
 		librevenge::RVNGPropertyList propList;
 		propList.insert("style:num-format", libwps::numberingTypeToString(libwps::ARABIC).c_str());
-		propList.insert("librevenge:field-format", "text:page-number");
+		propList.insert("librevenge:field-type", "text:page-number");
 		m_documentInterface->insertField(propList);
 		break;
 	}
