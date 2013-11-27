@@ -95,14 +95,14 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 		return;
 	}
 
-	WKS4Parser *parser = m_parser ? dynamic_cast<WKS4Parser *>(m_parser) : 0;
-	if (!parser)
+	WKS4Parser *pser = m_parser ? dynamic_cast<WKS4Parser *>(m_parser) : 0;
+	if (!pser)
 	{
 		listener->insertCharacter(' ');
 		WPS_DEBUG_MSG(("WKS4ParserInternal::SubDocument::parse: bad parser\n"));
 		return;
 	}
-	parser->sendHeaderFooter(m_header);
+	pser->sendHeaderFooter(m_header);
 }
 
 //! the state of WKS4
