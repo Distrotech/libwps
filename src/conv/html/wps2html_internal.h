@@ -48,7 +48,7 @@ using boost::shared_ptr;
 template <class T>
 struct WPS_shared_ptr_noop_deleter
 {
-	void operator() (T *) {}
+	void operator()(T *) {}
 };
 /* ---------- debug  --------------- */
 #ifdef DEBUG

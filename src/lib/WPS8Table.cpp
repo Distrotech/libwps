@@ -106,7 +106,7 @@ std::ostream &operator<<(std::ostream &o, Cell const &cell)
 	{
 		o << "borderSep?=[";
 		for (int i = 0; i < 4; i++)
-			if (cell.m_bordersSep[i] > 0 ) o << cell.m_bordersSep[i] << ",";
+			if (cell.m_bordersSep[i] > 0) o << cell.m_bordersSep[i] << ",";
 			else o << "_,";
 		o << "],";
 	}
@@ -362,9 +362,9 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 	bool ok = true;
 
 	static char const *(borderNames[]) = { "T", "L", "R", "B" };
-	static int const (borderPos[]) =
+	static int const(borderPos[]) =
 	{ WPSBorder::Top, WPSBorder::Left, WPSBorder::Right, WPSBorder::Bottom};
-	static int const (borderBit[]) =
+	static int const(borderBit[]) =
 	{
 		WPSBorder::TopBit, WPSBorder::LeftBit,
 		WPSBorder::RightBit, WPSBorder::BottomBit
@@ -526,9 +526,9 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 					if (dt.id() == 4) cell->m_size.setX(float(dt.m_value)/914400.f);
 					else cell->m_size.setY(float(dt.m_value)/914400.f);
 					break;
-					// border size : unknown dim
-					// [ 1, 3, 1, 3, ]
-					// [ 0.666667, 1.33333, 0.666667, 1.33333, ]/30
+				// border size : unknown dim
+				// [ 1, 3, 1, 3, ]
+				// [ 0.666667, 1.33333, 0.666667, 1.33333, ]/30
 				case 6:
 				case 7:
 				case 8:
@@ -543,7 +543,7 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 					f2 << "f" << dt.id() << "=" << std::hex << dt.m_value << std::dec << ",";
 					break;
 				case 0x13:   //find -1|6 here
-					f2 << "f" << dt.id() << "=" <<  (int) (int8_t) (dt.m_value) << ",";
+					f2 << "f" << dt.id() << "=" << (int)(int8_t)(dt.m_value) << ",";
 					break;
 				case 0x1d: // first color
 				case 0x1e: // second color
@@ -603,7 +603,7 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 					f2 << "unknBord" << borderNames[(dt.id()-0x22)/3] << "=" << dt.m_value << ",";
 					break;
 				case 0x2c: // 1, 0, -1
-					switch(dt.m_value)
+					switch (dt.m_value)
 					{
 					case 0:
 						break; // normal
@@ -617,7 +617,7 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 						break;
 					}
 					break;
-					// always 0,excepted 0x15 and 0x18 which can be 0 or 1 ?
+				// always 0,excepted 0x15 and 0x18 which can be 0 or 1 ?
 				case 0xa:
 				case 0xb:
 				case 0xd:

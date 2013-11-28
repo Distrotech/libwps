@@ -53,14 +53,14 @@ public:
 	enum Type { Unknown, TEXT };
 	//! constructor for a text entry
 	SubDocument(WPXInputStreamPtr input, WPS8Parser &pars, WPSEntry const &entry) :
-		WPSSubDocument (input, &pars), m_entry(entry) {}
+		WPSSubDocument(input, &pars), m_entry(entry) {}
 	//! destructor
 	~SubDocument() {}
 
 	//! operator==
 	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const
 	{
-		if ( !doc || !WPSSubDocument::operator==(doc))
+		if (!doc || !WPSSubDocument::operator==(doc))
 			return false;
 		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
 		if (!sDoc) return false;
@@ -172,7 +172,7 @@ struct Frame
 //! operator<< for a Frame
 std::ostream &operator<<(std::ostream &o, Frame const &ft)
 {
-	switch(ft.m_type)
+	switch (ft.m_type)
 	{
 	case Frame::Header:
 		o<< "header";
@@ -201,7 +201,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
 	o << "),";
 
 	o << ft.m_pos << ",";
-	switch(ft.m_pos.page())
+	switch (ft.m_pos.page())
 	{
 	case -1:
 		o << "allpages,";
@@ -299,7 +299,7 @@ WPS8Parser::WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 	m_textParser.reset(new WPS8Text(*this));
 }
 
-WPS8Parser::~WPS8Parser ()
+WPS8Parser::~WPS8Parser()
 {
 }
 
@@ -500,7 +500,7 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 	if (!input)
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parse: does not find main ole\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 
 	try
@@ -521,13 +521,13 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 	catch (...)
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parse: exception catched when parsing MN0\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 	setListener(createListener(documentInterface));
 	if (!m_listener)
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parse: can not create the listener\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 	m_listener->startDocument();
 	sendPageFrames();
@@ -537,7 +537,7 @@ void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
 	else
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parse: can not find main text entry\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 
 #ifdef DEBUG
@@ -1041,7 +1041,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 			f2 << "numCols=" << dt.m_value+1 << ",";
 			break;
 		case 0x18:
-			switch(dt.m_value)
+			switch (dt.m_value)
 			{
 			case 1:
 				break; // portrait
@@ -1086,8 +1086,8 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 		case 0x29: // 1 ou 2
 			f2 <<  "f" << dt.id() << "=" << dt.m_value << ",";
 			break;
-			// 0x2a: an integer = 4|6|b
-			// 0x2b: an integer = 0|8|c
+		// 0x2a: an integer = 4|6|b
+		// 0x2b: an integer = 0|8|c
 		case 0x2c:
 		{
 			if (dt.isRead() || !dt.isArray())
@@ -1316,7 +1316,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			}
 			if (dt.id() >= 4 && dt.id() < 11)
 			{
-				switch(dt.id())
+				switch (dt.id())
 				{
 				case 4:
 					minP.setX(float(dt.m_value)/914400.f);
@@ -1355,29 +1355,29 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				break;
 			}
 			case 1:
-				switch(dt.m_value)
+				switch (dt.m_value)
 				{
-					// associated with 0x13=22:[0|96], 0x18,1b=0x41,0x2e, rarely with 0x1a
+				// associated with 0x13=22:[0|96], 0x18,1b=0x41,0x2e, rarely with 0x1a
 				case 6:
 					frame.m_type = Frame::Header;
 					break;
-					// associated with 0x13=22:[0|96],0x18,1b=0x41,0x2e, rarely with 0x1a
+				// associated with 0x13=22:[0|96],0x18,1b=0x41,0x2e, rarely with 0x1a
 				case 7:
 					frame.m_type = Frame::Footer;
 					break;
 
-					// does the following correspond to page, column, char position ?
+				// does the following correspond to page, column, char position ?
 
-					// associated with 0x11=(m_idOle,0,1), 0x2e=?
+				// associated with 0x11=(m_idOle,0,1), 0x2e=?
 				case 8:
 					frame.m_type = Frame::Object;
 					break;
-					// associated with 0x18=?, 0x46=? and often with a BDR entry
-					// CHECKME: seems also associated to a MCLD, how ?
+				// associated with 0x18=?, 0x46=? and often with a BDR entry
+				// CHECKME: seems also associated to a MCLD, how ?
 				case 9:
 					frame.m_type = Frame::Text;
 					break;
-					// associated with f3 and 0x11=(table_id,0,0) and 0x2a=?
+				// associated with f3 and 0x11=(table_id,0,0) and 0x2a=?
 				case 12:
 					frame.m_type = Frame::Table;
 					break;
@@ -1395,7 +1395,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			case 0x3: // seem to exist iff type=12
 				if ((frame.m_type == Frame::Table) != dt.isTrue())
 					f2 <<  "isTable?["
-					   <<  (dt.isTrue() ? "true" : "false") << "],";
+					   << (dt.isTrue() ? "true" : "false") << "],";
 				break;
 			case 0x10:   // an entry index always a BDR ?
 				frame.m_idBorder.setName(dt.m_text);
@@ -1476,9 +1476,9 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 			case 0x26: // rotation in degree from center ( CCW)
 				f2 << "rot=" << float(dt.m_value)/10. << "deg,";
 				break;
-				//
-				// Table specific field ?
-				//
+			//
+			// Table specific field ?
+			//
 			case 0x2a:   // link to the m_idTable(ids) number for a table
 			{
 				int id = (int16_t) dt.m_value;
@@ -1507,13 +1507,13 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				f2 << "f" << dt.id() << "=" << (int16_t) dt.m_value << ",";
 				break;
 
-				// UNKNOWN
+			// UNKNOWN
 			case 0x1a: // appear 2 time (in a header and in a footer) with value 16
-				f2 << "f" << dt.id() << "=" << (int) (int8_t) dt.m_value << ",";
+				f2 << "f" << dt.id() << "=" << (int)(int8_t) dt.m_value << ",";
 				break;
 
 			case 0x2e: // in a table: objectId+1, in textbox: m_idTable ?, other = i ?
-				f2 << "id" << dt.id() << "=" << (int16_t) (dt.m_value-1) << ",";
+				f2 << "id" << dt.id() << "=" << (int16_t)(dt.m_value-1) << ",";
 				break;
 			case 0x13:
 				// table 0x6-??,
@@ -1829,7 +1829,7 @@ bool WPS8Parser::readSPELLING(WPXInputStreamPtr input, std::string const &oleNam
 
 	libwps::DebugStream f;
 	int num = 0;
-	while(!input->atEOS())
+	while (!input->atEOS())
 	{
 		long pos = input->tell();
 		int numVal = (int) libwps::read32(input);

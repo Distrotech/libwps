@@ -39,7 +39,7 @@ void TextDocumentGenerator::setDocumentMetaData(const WPXPropertyList &propList)
 	if (!m_isInfo)
 		return;
 	WPXPropertyList::Iter propIter(propList);
-	for (propIter.rewind(); propIter.next(); )
+	for (propIter.rewind(); propIter.next();)
 	{
 		printf("%s %s\n", propIter.key(), propIter()->getStr().cstr());
 	}

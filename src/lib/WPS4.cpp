@@ -50,14 +50,14 @@ public:
 	enum Type { Unknown, MN };
 	//! constructor for a text entry
 	SubDocument(WPXInputStreamPtr input, WPS4Parser &pars, WPSEntry const &entry) :
-		WPSSubDocument (input, &pars), m_entry(entry) {}
+		WPSSubDocument(input, &pars), m_entry(entry) {}
 	//! destructor
 	~SubDocument() {}
 
 	//! operator==
 	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const
 	{
-		if ( !doc || !WPSSubDocument::operator==(doc))
+		if (!doc || !WPSSubDocument::operator==(doc))
 			return false;
 		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
 		if (!sDoc) return false;
@@ -158,7 +158,7 @@ WPS4Parser::WPS4Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
 	m_textParser.reset(new WPS4Text(*this, input));
 }
 
-WPS4Parser::~WPS4Parser ()
+WPS4Parser::~WPS4Parser()
 {
 }
 
@@ -338,7 +338,7 @@ void WPS4Parser::createDocument(WPSEntry const &entry, libwps::SubDocumentType t
 	if (m_listener.get() == 0L) return;
 	WPSSubDocumentPtr subdoc(new WPS4ParserInternal::SubDocument
 	                         (getInput(), *this, entry));
-	if(type == libwps::DOC_COMMENT_ANNOTATION)
+	if (type == libwps::DOC_COMMENT_ANNOTATION)
 		m_listener->insertComment(subdoc);
 	else
 	{
@@ -369,7 +369,7 @@ void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
 	if (!input)
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::parse: does not find main ole\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 
 	try
@@ -390,14 +390,14 @@ void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
 	catch (...)
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::parse: exception catched when parsing MN0\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 
 	setListener(createListener(documentInterface));
 	if (!m_listener)
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::parse: can not create the listener\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 	m_listener->startDocument();
 	WPSEntry ent = m_textParser->getMainTextEntry();
@@ -406,7 +406,7 @@ void WPS4Parser::parse(WPXDocumentInterface *documentInterface)
 	else
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::parse: can not find main text entry\n"));
-		throw(libwps::ParseException());
+		throw (libwps::ParseException());
 	}
 #ifdef DEBUG
 	m_textParser->flushExtra();
@@ -536,11 +536,11 @@ bool WPS4Parser::findZones()
 	long val = libwps::read8(input); // always 0xfe?
 	int apCreator = libwps::readU16(input);
 	int worksVersion = 0;
-	switch(vers)
+	switch (vers)
 	{
 	case 1:
 		m_state->m_isDosFile = true;
-		switch(apCreator)
+		switch (apCreator)
 		{
 		case 0xda1:
 			apCreator = 2;

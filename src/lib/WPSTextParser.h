@@ -96,7 +96,7 @@ protected:
 	 * \param input, endPos: defined the zone in the file
 	 * \return true and filled id if this attribute can be parsed
 	 * \note mess can be filled to add a message in debugFile */
-	typedef bool (WPSTextParser::* FDPParser) (long endPos,
+	typedef bool (WPSTextParser::* FDPParser)(long endPos,
 	        int &id, std::string &mess);
 
 	/** parses a FDPP or a FDPC entry (which contains a list of ATTR_TEXT/ATTR_PARAG
@@ -113,7 +113,7 @@ protected:
 
 private:
 	//! private copy constructor: forbidden
-	WPSTextParser(WPSTextParser const &parser );
+	WPSTextParser(WPSTextParser const &parser);
 	//! private copy operator: forbidden
 	WPSTextParser &operator=(WPSTextParser const &parser);
 

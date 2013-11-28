@@ -377,7 +377,7 @@ bool WPSPageSpan::_containsHeaderFooter(HeaderFooterType type, HeaderFooterOccur
 int WPSPageSpan::_getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOccurence occurence)
 {
 	int typePos = 0, occurencePos = 0;
-	switch(type)
+	switch (type)
 	{
 	case HEADER:
 		typePos = 0;
@@ -389,7 +389,7 @@ int WPSPageSpan::_getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOcc
 		WPS_DEBUG_MSG(("WPSPageSpan::getVectorPosition: unknown type\n"));
 		return -1;
 	}
-	switch(occurence)
+	switch (occurence)
 	{
 	case ALL:
 		occurencePos = 0;

@@ -150,7 +150,7 @@ struct Zone
 	bool isEmpty() const
 	{
 		for (size_t i = 0; i < m_stringList.size(); i++)
-			if(m_stringList[i].size())
+			if (m_stringList[i].size())
 				return false;
 		return true;
 	}
@@ -256,7 +256,7 @@ shared_ptr<Stream> Zone::getNewStream()
 std::string Zone::label(int id) const
 {
 	char c=0;
-	switch(m_type)
+	switch (m_type)
 	{
 	case Z_Comment:
 		c='C';

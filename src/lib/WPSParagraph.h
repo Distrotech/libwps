@@ -63,7 +63,7 @@ struct WPSParagraph
 		m_breakStatus(0), m_listLevelIndex(0), m_listLevel(), m_backgroundColor(0xFFFFFF),
 		m_border(0), m_borderStyle(), m_extra("")
 	{
-		for(int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
+		for (int i = 0; i < 3; i++) m_margins[i] = m_spacings[i] = 0.0;
 		m_spacings[0] = 1.0; // interline normal
 	}
 	// destructor

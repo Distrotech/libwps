@@ -160,7 +160,7 @@ protected:
 	void _startSubDocument();
 	void _endSubDocument();
 
-	void _handleFrameParameters( WPXPropertyList &propList, WPSPosition const &pos);
+	void _handleFrameParameters(WPXPropertyList &propList, WPSPosition const &pos);
 	bool _openFrame(WPSPosition const &pos, WPXPropertyList extras=WPXPropertyList());
 	void _closeFrame();
 

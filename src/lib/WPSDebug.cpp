@@ -115,7 +115,7 @@ void DebugFile::write()
 	std::vector<NotePos>::const_iterator noteIter = m_notes.begin();
 
 	//! write the notes which does not have any position
-	while(noteIter != m_notes.end() && noteIter->m_pos < 0)
+	while (noteIter != m_notes.end() && noteIter->m_pos < 0)
 	{
 		if (!noteIter->m_text.empty())
 			std::cerr << "DebugFile::write: skipped: " << noteIter->m_text << std::endl;
@@ -145,7 +145,7 @@ void DebugFile::write()
 			actualSkipEndPos = (actSkip < numSkip) ? m_skipZones[size_t(actSkip)].x() : -1;
 		}
 		if (stop) break;
-		while(noteIter != m_notes.end() && noteIter->m_pos < actualPos)
+		while (noteIter != m_notes.end() && noteIter->m_pos < actualPos)
 		{
 			if (!noteIter->m_text.empty())
 				m_file << "Skipped: " << noteIter->m_text << std::endl;
@@ -154,7 +154,7 @@ void DebugFile::write()
 		bool printNote = noteIter != m_notes.end() && noteIter->m_pos == actualPos;
 		if (printAdr || (printNote && noteIter->m_breaking))
 			m_file << "\n" << std::setw(6) << actualPos << " ";
-		while(noteIter != m_notes.end() && noteIter->m_pos == actualPos)
+		while (noteIter != m_notes.end() && noteIter->m_pos == actualPos)
 		{
 			if (noteIter->m_text.empty())
 			{
@@ -212,7 +212,7 @@ std::string flattenFileName(std::string const &name)
 	for (size_t i = 0; i < name.length(); i++)
 	{
 		char c = name[i];
-		switch(c)
+		switch (c)
 		{
 		case '\0':
 		case '/':

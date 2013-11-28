@@ -421,7 +421,7 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 			continue;
 		}
 
-		switch(data.id())
+		switch (data.id())
 		{
 		case 0x0:
 			font.special().m_type = int(data.m_value);
@@ -501,7 +501,7 @@ bool WPS8TextStyle::readFont(long endPos, int &id, std::string &mess)
 		case 0x1e:
 		{
 			bool single = true;
-			switch(data.m_value)
+			switch (data.m_value)
 			{
 			case 1:
 				break; // normal
@@ -697,9 +697,9 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 			continue;
 		}
 		bool ok = true;
-		switch(data.id())
+		switch (data.id())
 		{
-			/* case 0x2: what?=data.m_value/914400.; */
+		/* case 0x2: what?=data.m_value/914400.; */
 		case 0x3:
 			switch (data.m_value)
 			{
@@ -717,7 +717,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 			}
 			break;
 		case 0x4:
-			switch(data.m_value)
+			switch (data.m_value)
 			{
 			case 0:
 				para.m_justify = libwps::JustificationLeft;
@@ -755,7 +755,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		case 0x13: // after line spacing 152400 -> 1 line
 			para.m_spacings[2] = float(data.m_value)/152400.f;
 			break;
-			// case 0x15(type22): one time with value 0x29
+		// case 0x15(type22): one time with value 0x29
 		case 0x14:
 		{
 			// link to bullet or numbering
@@ -771,7 +771,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 				if (para.m_listLevel.m_type == libwps::BULLET)
 					para.m_listLevel.m_startValue=1;
 
-				switch(type)
+				switch (type)
 				{
 				case 0:
 					para.m_listLevel.m_type = libwps::NONE;
@@ -794,7 +794,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 					para.m_listLevel.m_type = libwps::ARABIC;
 					break;
 				}
-				switch(suffixId)
+				switch (suffixId)
 				{
 				case 0:
 					para.m_listLevel.m_suffix = ")";
@@ -843,7 +843,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		case 0x18:
 			f << "modTabs,";
 			break;
-			// case 0x19(type1a): number between 1 and 6 : stylesheet index ?
+		// case 0x19(type1a): number between 1 and 6 : stylesheet index ?
 		case 0x1b:
 			if (data.m_value == 1) f << "bColType=rgb?,";
 			else f << "#bColType=" << std::hex << data.m_value << std::dec << ",";
@@ -907,8 +907,8 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		case 0x2a: // exists with f29(1d) in style sheet, find 0|1|3
 			f << "##f42=" << data.m_value << ",";
 			break;
-			// case 0x31(typ12) : always 1 ?
-			// case 0x33(typ12) : always 2 ?
+		// case 0x31(typ12) : always 1 ?
+		// case 0x33(typ12) : always 2 ?
 		case 0x32:
 		{
 			if (!data.isRead() && !data.readArrayBlock() && data.m_recursData.size() == 0)
@@ -975,7 +975,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 					if (mData.m_recursData[i].isNumber() && wTab == actTab-1 && what == 1)
 					{
 						int actVal = int(mData.m_recursData[i].m_value);
-						switch((actVal & 0x3))
+						switch ((actVal & 0x3))
 						{
 						case 0:
 							para.m_tabs[size_t(actTab-1)].m_alignment = WPSTabStop::LEFT;
@@ -1001,7 +1001,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 						{
 							f << ", fl" << actTab<<":high="  << std::hex
 							  << actVal << std::dec;
-							switch(para.m_tabs[size_t(actTab-1)].m_alignment)
+							switch (para.m_tabs[size_t(actTab-1)].m_alignment)
 							{
 							case WPSTabStop::LEFT:
 								break;
@@ -1178,7 +1178,7 @@ bool WPS8TextStyle::readSTSH(WPSEntry const &entry)
 		if (2*size + 2 + type != length) correct = false;
 		else
 		{
-			switch(type)
+			switch (type)
 			{
 			case 4:
 			{
@@ -1339,7 +1339,7 @@ bool WPS8TextStyle::findFDPStructuresByHand(int which, std::vector<WPSEntry> &zo
 ////////////////////////////////////////////////////////////
 std::ostream &operator<<(std::ostream &o, WPS8TextStyle::FontData const &fData)
 {
-	switch(fData.m_type)
+	switch (fData.m_type)
 	{
 	case WPS8TextStyle::FontData::T_None:
 		break;
@@ -1362,7 +1362,7 @@ std::ostream &operator<<(std::ostream &o, WPS8TextStyle::FontData const &fData)
 		o << "#type=" << fData.m_type << ",";
 		break;
 	}
-	switch(fData.m_fieldType)
+	switch (fData.m_fieldType)
 	{
 	case WPS8TextStyle::FontData::F_None:
 		break;
@@ -1385,7 +1385,7 @@ std::ostream &operator<<(std::ostream &o, WPS8TextStyle::FontData const &fData)
 
 std::string WPS8TextStyle::FontData::format() const
 {
-	switch(m_fieldFormat)
+	switch (m_fieldFormat)
 	{
 	case 0x75: // 13/8/12
 		return "%m/%d/%y";

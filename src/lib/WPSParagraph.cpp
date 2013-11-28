@@ -126,7 +126,7 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 	if (pp.m_breakStatus & libwps::NoBreakBit) o << "dontbreak,";
 	if (pp.m_breakStatus & libwps::NoBreakWithNextBit) o << "dontbreakafter,";
 
-	switch(pp.m_justify)
+	switch (pp.m_justify)
 	{
 	case libwps::JustificationLeft:
 		break;

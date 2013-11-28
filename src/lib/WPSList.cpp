@@ -34,7 +34,7 @@ void WPSList::Level::addTo(WPXPropertyList &propList, int startVal) const
 {
 	propList.insert("text:min-label-width", m_labelWidth);
 	propList.insert("text:space-before", m_labelIndent);
-	switch(m_type)
+	switch (m_type)
 	{
 	case libwps::BULLET:
 		if (m_bullet.len())
@@ -95,7 +95,7 @@ int WPSList::Level::cmp(WPSList::Level const &levl) const
 std::ostream &operator<<(std::ostream &o, WPSList::Level const &ft)
 {
 	o << "ListLevel[";
-	switch(ft.m_type)
+	switch (ft.m_type)
 	{
 	case libwps::BULLET:
 		o << "bullet='" << ft.m_bullet.cstr() <<"'";

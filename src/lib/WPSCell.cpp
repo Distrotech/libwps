@@ -69,7 +69,7 @@ int WPSCellFormat::compare(WPSCellFormat const &cell) const
 
 std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 {
-	switch(cell.m_hAlign)
+	switch (cell.m_hAlign)
 	{
 	case WPSCellFormat::HALIGN_LEFT:
 		o << ",left";

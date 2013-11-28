@@ -103,7 +103,7 @@ public:
 
 	/** default constructor */
 	WPSList() : m_levels(), m_actLevel(-1), m_actualIndices(), m_nextIndices(),
-		m_id(-1), m_previousId (-1) {}
+		m_id(-1), m_previousId(-1) {}
 
 	/** returns the list id */
 	int getId() const

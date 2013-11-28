@@ -59,7 +59,7 @@ uint16_t readU16(WPXInputStream *input)
 {
 	uint8_t p0 = readU8(input);
 	uint8_t p1 = readU8(input);
-	return (uint16_t) (p0|(p1<<8));
+	return (uint16_t)(p0|(p1<<8));
 }
 
 int16_t read16(WPXInputStream *input)
@@ -73,7 +73,7 @@ uint32_t readU32(WPXInputStream *input)
 	uint8_t p1 = readU8(input);
 	uint8_t p2 = readU8(input);
 	uint8_t p3 = readU8(input);
-	return (uint32_t) ((p0<<0)|(p1<<8)|(p2<<16)|(p3<<24));
+	return (uint32_t)((p0<<0)|(p1<<8)|(p2<<16)|(p3<<24));
 }
 
 int32_t read32(WPXInputStream *input)

@@ -57,7 +57,7 @@ public:
 	/**
 	 * Constructs a storage with data.
 	 **/
-	Storage( shared_ptr<WPXInputStream> is );
+	Storage(shared_ptr<WPXInputStream> is);
 
 	/**
 	 * Destroys the storage.
@@ -99,8 +99,8 @@ private:
 	IStorage *m_io;
 
 	// no copy or assign
-	Storage( const Storage & );
-	Storage &operator=( const Storage & );
+	Storage(const Storage &);
+	Storage &operator=(const Storage &);
 
 };
 

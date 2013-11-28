@@ -228,7 +228,7 @@ std::ostream &operator<<(std::ostream &o, Object const &obj)
 	case Object::Table:
 		o << "Table";
 		break;
-		// an object store in another Ole: id-> gives a pointer
+	// an object store in another Ole: id-> gives a pointer
 	case Object::Image:
 		o << "Object";
 		break;
@@ -518,7 +518,7 @@ WPS8Text::WPS8Text(WPS8Parser &parser) : WPSTextParser(parser, parser.getInput()
 	m_styleParser.reset(new WPS8TextStyle(*this));
 }
 
-WPS8Text::~WPS8Text ()
+WPS8Text::~WPS8Text()
 {
 }
 
@@ -687,7 +687,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 					finalPos = plc.m_pos;
 				break;
 			}
-			switch(plc.m_type)
+			switch (plc.m_type)
 			{
 			case DataFOD::ATTR_TEXT:
 			{
@@ -1083,7 +1083,7 @@ long WPS8Text::readUTF16LE(WPXInputStreamPtr input, long endPos, uint16_t firstC
 		}
 	}
 	/** CHECKME: for Symbol font, we must probably convert 0xF0xx and 0x00xx in a 0x03yy symbol :-~ */
-	if (firstC>=28 ) return firstC;
+	if (firstC>=28) return firstC;
 	WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: character = %i (0x%X)\n", firstC, firstC));
 	return 0xfffd;
 }
@@ -1195,7 +1195,7 @@ bool WPS8Text::readNotes(WPSEntry const &entry)
 		f.str("");
 		f << entry.name() << i << ":";
 		int type = (int) libwps::read16(input);
-		switch(type)
+		switch (type)
 		{
 		case 0:
 			f << "alpha,";
@@ -1469,7 +1469,7 @@ bool WPS8Text::bmktEndDataParser(long endPage, std::vector<long> const &textPtrs
 	f << "BMKT(##unkn):";
 	f << libwps::read32(input) <<",";
 	f << "dim?=" << float(libwps::read32(input))/914400.f <<"," << std::hex;
-	while(input->tell() < endPage-sz1 && !input->atEOS())
+	while (input->tell() < endPage-sz1 && !input->atEOS())
 		f << libwps::read16(input) << ",";
 	f << std::dec;
 	ascii().addNote(f.str().c_str());
@@ -1683,7 +1683,7 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 				f << "###" << dt << ",";
 				continue;
 			}
-			switch(dt.id())
+			switch (dt.id())
 			{
 			case 0: // some unknown flags ? link=0x140, pageNumber=0, unknown(6)=0x400
 				tokn.m_unknown=int(dt.m_value);
@@ -1692,7 +1692,7 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 				tokn.m_textLength=int(dt.m_value);
 				break;
 			case 2: // -2=link, -5=page number, -6=?
-				switch(dt.m_value)
+				switch (dt.m_value)
 				{
 				case -2:
 					tokn.m_type = WPSContentListener::Link;
@@ -1700,8 +1700,8 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 				case -5:
 					tokn.m_type = WPSContentListener::PageNumber;
 					break;
-					// CHECKME: case -6-> strings = SPC, text character = 0xb7
-					// an insecable character or space ?
+				// CHECKME: case -6-> strings = SPC, text character = 0xb7
+				// an insecable character or space ?
 				default:
 					WPS_DEBUG_MSG(("WPS8Text::tokenEndDataParser: unknown type=%d\n", int(dt.m_value)));
 					f << "###type=" << dt.m_value << ",";
@@ -2093,7 +2093,7 @@ bool WPS8Text::readPLC
 		plc.m_type = plcType.m_type;
 		plc.m_name = entry.name();
 		bool printPLC = true;
-		switch(plcType.m_contentType)
+		switch (plcType.m_contentType)
 		{
 		case WPS8PLCInternal::PLC::T_CST :
 		{
@@ -2188,7 +2188,7 @@ bool WPS8Text::readPLC
 	if (ok && endParser)
 	{
 		input->seek(pos, WPX_SEEK_SET);
-		ok = (this->*endParser) (endPage, textPtrs);
+		ok = (this->*endParser)(endPage, textPtrs);
 		pos = input->tell();
 		if (pos == endPage) return ok;
 	}

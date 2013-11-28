@@ -94,7 +94,7 @@ public:
 	/** return the CLS Name corresponding to an identifier */
 	char const *getCLSName(unsigned long v)
 	{
-		if (m_mapCls.find(v) == m_mapCls.end() ) return 0L;
+		if (m_mapCls.find(v) == m_mapCls.end()) return 0L;
 		return m_mapCls[v];
 	}
 
@@ -552,7 +552,7 @@ bool WPSOLEParser::readMM(WPXInputStreamPtr &input, std::string const &oleName,
 	for (int i = 0; i < 6; i++)
 		val[i] = libwps::read16(input);
 
-	switch(val[5])
+	switch (val[5])
 	{
 	case 0:
 		f << "conversion,";
