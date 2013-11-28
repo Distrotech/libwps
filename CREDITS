@@ -9,6 +9,7 @@ Laurent Alonso <alonso@loria.fr>                        Main Author
 Urmas <davian818@gmail.com> Many improvements to the 4 and 8 versions
 of file-format.
 Tomas 'scarabeus' Chvatal <tomas.chvatal@gmail.com>		Build system rewrite
+David Tardon <dtardon@redhat.com>
 
 
 Current maintainers and principal authors of librevenge
