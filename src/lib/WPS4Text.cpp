@@ -1075,9 +1075,9 @@ bool WPS4Text::readStructures()
 	// update the footnote
 	WPSEntry ftnD, ftnP;
 	pos = nameMultiMap.find("FTNd");
-	if (pos != getNameEntryMap().end()) ftnD = pos->second;
+	if (pos != nameMultiMap.end()) ftnD = pos->second;
 	pos = nameMultiMap.find("FTNp");
-	if (pos != getNameEntryMap().end()) ftnP = pos->second;
+	if (pos != nameMultiMap.end()) ftnP = pos->second;
 	readFootNotes(ftnD, ftnP);
 
 	// bookmark
