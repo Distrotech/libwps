@@ -2525,6 +2525,7 @@ bool WPS4Text::readPLC
 				break;
 			default:
 				WPS_DEBUG_MSG(("WPS4Text:readPLC: unexpected PLC size\n"));
+			// fallthrough intended
 			case 0:
 				plc.m_value = 0;
 			}

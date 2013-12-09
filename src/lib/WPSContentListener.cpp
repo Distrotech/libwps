@@ -1360,6 +1360,7 @@ void WPSContentListener::_handleFrameParameters
 		{
 		case WPSPosition::XFull:
 			propList.insert("svg:width", double(w), unit);
+		// fallthrough intended
 		case WPSPosition::XLeft:
 			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
