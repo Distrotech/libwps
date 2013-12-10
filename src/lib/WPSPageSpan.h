@@ -41,7 +41,7 @@ public:
 	enum FormOrientation { PORTRAIT, LANDSCAPE };
 
 	enum HeaderFooterType { HEADER, FOOTER };
-	enum HeaderFooterOccurence { ODD, EVEN, ALL, NEVER };
+	enum HeaderFooterOccurrence { ODD, EVEN, ALL, NEVER };
 
 	enum PageNumberPosition { None = 0, TopLeft, TopCenter, TopRight, TopLeftAndRight, TopInsideLeftAndRight,
 	                          BottomLeft, BottomCenter, BottomRight, BottomLeftAndRight, BottomInsideLeftAndRight
@@ -107,7 +107,7 @@ public:
 		return m_headerFooterList;
 	}
 
-	void setHeaderFooter(const HeaderFooterType type, const HeaderFooterOccurence occurence,
+	void setHeaderFooter(const HeaderFooterType type, const HeaderFooterOccurrence occurrence,
 	                     WPSSubDocumentPtr &subDocument);
 	void setFormLength(const double formLength)
 	{
@@ -175,10 +175,10 @@ public:
 
 protected:
 
-	int _getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOccurence occurence);
-	void _setHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence, WPSSubDocumentPtr &doc);
-	void _removeHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence);
-	bool _containsHeaderFooter(HeaderFooterType type, HeaderFooterOccurence occurence);
+	int _getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOccurrence occurrence);
+	void _setHeaderFooter(HeaderFooterType type, HeaderFooterOccurrence occurrence, WPSSubDocumentPtr &doc);
+	void _removeHeaderFooter(HeaderFooterType type, HeaderFooterOccurrence occurrence);
+	bool _containsHeaderFooter(HeaderFooterType type, HeaderFooterOccurrence occurrence);
 
 	void _insertPageNumberParagraph(librevenge::RVNGTextInterface *documentInterface);
 private:
