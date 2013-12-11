@@ -173,7 +173,7 @@ void WPSList::sendTo(librevenge::RVNGTextInterface &docInterface, int level) con
 	if (m_levels[size_t(level-1)].isSendToInterface()) return;
 
 	librevenge::RVNGPropertyList propList;
-	propList.insert("librevenge:id", m_id);
+	propList.insert("librevenge:list-id", m_id);
 	propList.insert("librevenge:level", level);
 	m_levels[size_t(level-1)].addTo(propList,m_actualIndices[size_t(level-1)]);
 	if (!m_levels[size_t(level-1)].isNumeric())

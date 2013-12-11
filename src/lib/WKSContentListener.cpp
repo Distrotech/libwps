@@ -659,7 +659,6 @@ void WKSContentListener::openSheet(std::vector<float> const &colWidth, libreveng
 
 	librevenge::RVNGPropertyList propList;
 
-	float sheetWidth = 0;
 	librevenge::RVNGPropertyListVector columns;
 
 	size_t nCols = colWidth.size();
@@ -668,8 +667,6 @@ void WKSContentListener::openSheet(std::vector<float> const &colWidth, libreveng
 		librevenge::RVNGPropertyList column;
 		column.insert("style:column-width", colWidth[c], unit);
 		columns.append(column);
-
-		sheetWidth += colWidth[c];
 	}
 	propList.insert("librevenge:columns", columns);
 	m_documentInterface->openSheet(propList);

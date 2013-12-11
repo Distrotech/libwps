@@ -922,7 +922,7 @@ void WPSContentListener::_changeList()
 			m_ps->m_list->sendTo(*m_documentInterface, m_ps->m_paragraph.m_listLevelIndex);
 		}
 
-		propList2.insert("librevenge:id", m_ps->m_list->getId());
+		propList2.insert("librevenge:list-id", m_ps->m_list->getId());
 		m_ps->m_list->closeElement();
 	}
 
