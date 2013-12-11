@@ -97,7 +97,7 @@ protected:
 	 * \return true and filled id if this attribute can be parsed
 	 * \note mess can be filled to add a message in debugFile */
 	typedef bool (WPSTextParser::* FDPParser)(long endPos,
-	        int &id, std::string &mess);
+	                                          int &id, std::string &mess);
 
 	/** parses a FDPP or a FDPC entry (which contains a list of ATTR_TEXT/ATTR_PARAG
 	 * with their definition ) and adds found data in listFODs */

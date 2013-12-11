@@ -254,7 +254,7 @@ public:
 
 	//! convert the m_widthCols, m_heightRows in a vector of of point size
 	static std::vector<float> convertInPoint(std::vector<int> const &list,
-	        float defSize)
+	                                         float defSize)
 	{
 		size_t numElt = list.size();
 		std::vector<float> res;
