@@ -373,12 +373,12 @@ void WKSContentListener::startDocument()
 		return;
 	}
 
+	m_documentInterface->startDocument(librevenge::RVNGPropertyList());
+	m_ds->m_isDocumentStarted = true;
+
 	// FIXME: this is stupid, we should store a property list filled with the relevant metadata
 	// and then pass that directly..
 	m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
-
-	m_documentInterface->startDocument();
-	m_ds->m_isDocumentStarted = true;
 }
 
 void WKSContentListener::endDocument()
@@ -855,7 +855,7 @@ void WKSContentListener::_openPageSpan()
 		return;
 
 	if (!m_ds->m_isDocumentStarted)
-		startDocument(librevenge::RVNGPropertyList());
+		startDocument();
 
 	if (m_ds->m_pageList.size()==0)
 	{
