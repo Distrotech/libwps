@@ -564,7 +564,7 @@ void WPSContentListener::startDocument()
 	// and then pass that directly..
 	m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
 
-	m_documentInterface->startDocument();
+	m_documentInterface->startDocument(librevenge::RVNGPropertyList());
 	m_ds->m_isDocumentStarted = true;
 }
 

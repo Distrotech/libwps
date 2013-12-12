@@ -855,7 +855,7 @@ void WKSContentListener::_openPageSpan()
 		return;
 
 	if (!m_ds->m_isDocumentStarted)
-		startDocument();
+		startDocument(librevenge::RVNGPropertyList());
 
 	if (m_ds->m_pageList.size()==0)
 	{
