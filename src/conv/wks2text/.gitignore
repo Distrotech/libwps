@@ -7,3 +7,4 @@ Makefile
 Makefile.in
 wks2text
 *.rc
+*.exe

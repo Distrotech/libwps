@@ -26,9 +26,9 @@
 
 #ifdef DLL_EXPORT
 #ifdef BUILD_WPS
-#define WPSLIB _declspec(dllexport)
+#define WPSLIB __declspec(dllexport)
 #else
-#define WPSLIB _declspec(dllimport)
+#define WPSLIB __declspec(dllimport)
 #endif
 #else
 #define WPSLIB

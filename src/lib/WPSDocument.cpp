@@ -53,7 +53,7 @@ Analyzes the content of an input stream to see if it can be parsed
 \return A confidence value which represents the likelyhood that the content from
 the input stream can be parsed
 */
-WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip, WPSKind &kind)
+WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip, WPSKind &kind)
 {
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
 	kind=WPS_TEXT;
@@ -114,7 +114,7 @@ librevenge::RVNGTextInterface class implementation when needed. This is often co
 \param ip The input stream
 \param documentInterface A WPSListener implementation
 */
-WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGTextInterface *documentInterface)
+WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGTextInterface *documentInterface)
 {
 	WPSResult error = WPS_OK;
 
@@ -181,7 +181,7 @@ librevenge::RVNGSpreadsheetInterface class implementation when needed. This is o
 \param ip The input stream
 \param documentInterface A SpreadsheetInterface implementation
 */
-WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGSpreadsheetInterface *documentInterface)
+WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGSpreadsheetInterface *documentInterface)
 {
 	WPSResult error = WPS_OK;
 
