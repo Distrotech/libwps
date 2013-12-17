@@ -335,7 +335,11 @@ protected:
 			if (diffF < 0) return true;
 			if (diffF > 0) return false;
 			if (c1.m_cell->m_verticalSet != c2.m_cell->m_verticalSet) return c1.m_cell->m_verticalSet;
+#ifdef _WIN64
+			return ((__int64)c1.m_cell < (__int64)c2.m_cell);
+#else
 			return long(c1.m_cell) < long(c2.m_cell);
+#endif
 		}
 
 		//! the coord to compare
