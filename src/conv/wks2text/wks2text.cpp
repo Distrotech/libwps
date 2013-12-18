@@ -33,6 +33,8 @@
 
 #include <libwps/libwps.h>
 
+using namespace libwps;
+
 static int printUsage()
 {
 	printf("Usage: wks2text [-h] [-o file.txt] <Works Spreadsheet Document>\n");

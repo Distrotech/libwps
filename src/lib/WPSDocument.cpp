@@ -30,6 +30,8 @@
 #include "WPSParser.h"
 #include "libwps_internal.h"
 
+using namespace libwps;
+
 /**
 \mainpage libwps documentation
 This document contains both the libwps API specification and the normal libwps

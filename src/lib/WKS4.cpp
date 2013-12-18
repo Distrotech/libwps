@@ -43,6 +43,8 @@
 
 #include "WKS4.h"
 
+using namespace libwps;
+
 namespace WKS4ParserInternal
 {
 //! the font of a WKS4Parser

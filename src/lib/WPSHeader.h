@@ -31,7 +31,7 @@
 class WPSHeader
 {
 public:
-	WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, WPSKind kind=WPS_TEXT);
+	WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, libwps::WPSKind kind=libwps::WPS_TEXT);
 	virtual ~WPSHeader();
 
 	static WPSHeader *constructHeader(RVNGInputStreamPtr &input);
@@ -46,12 +46,12 @@ public:
 		return m_fileInput;
 	}
 
-	WPSKind getKind() const
+	libwps::WPSKind getKind() const
 	{
 		return m_kind;
 	}
 
-	void setKind(WPSKind kind)
+	void setKind(libwps::WPSKind kind)
 	{
 		m_kind=kind;
 	}
@@ -72,7 +72,7 @@ private:
 	RVNGInputStreamPtr m_input;
 	RVNGInputStreamPtr m_fileInput;
 	uint8_t m_majorVersion;
-	WPSKind m_kind;
+	libwps::WPSKind m_kind;
 };
 
 #endif /* WPSHEADER_H */

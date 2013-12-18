@@ -33,6 +33,8 @@
 
 #include <libwps/libwps.h>
 
+using namespace libwps;
+
 static int printUsage()
 {
 	printf("Usage: wks2cvs [-h] [-dc][-fc][-tc] [-Dformat][-F][-Tformat] [-o file.csv] <Works Spreadsheet Document>\n");

@@ -26,6 +26,8 @@
 
 #include "WPSHeader.h"
 
+using namespace libwps;
+
 WPSHeader::WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, WPSKind kind) :
 	m_input(input), m_fileInput(fileInput), m_majorVersion(majorVersion), m_kind(kind)
 {

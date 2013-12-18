@@ -24,6 +24,8 @@
 #ifndef WPSDOCUMENT_H
 #define WPSDOCUMENT_H
 
+#include <librevenge/librevenge.h>
+
 #ifdef DLL_EXPORT
 #ifdef BUILD_WPS
 #define WPSLIB __declspec(dllexport)
@@ -34,16 +36,13 @@
 #define WPSLIB
 #endif
 
+
+namespace libwps
+{
+
 enum WPSConfidence { WPS_CONFIDENCE_NONE=0, WPS_CONFIDENCE_EXCELLENT };
 enum WPSKind { WPS_TEXT=0, WPS_SPREADSHEET, WPS_DATABASE };
 enum WPSResult { WPS_OK, WPS_FILE_ACCESS_ERROR, WPS_PARSE_ERROR, WPS_OLE_ERROR, WPS_UNKNOWN_ERROR };
-
-namespace librevenge
-{
-class RVNGInputStream;
-class RVNGTextInterface;
-class RVNGSpreadsheetInterface;
-}
 
 /**
 This class provides all the functions an application would need to parse
@@ -57,6 +56,8 @@ public:
 	static WPSLIB WPSResult parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface);
 	static WPSLIB WPSResult parse(librevenge::RVNGInputStream *input, librevenge::RVNGSpreadsheetInterface *documentInterface);
 };
+
+} // namespace libwps
 
 #endif /* WPSDOCUMENT_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
