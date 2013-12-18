@@ -889,7 +889,6 @@ void WPSContentListener::_changeList()
 			m_documentInterface->closeUnorderedListLevel();
 	}
 
-	librevenge::RVNGPropertyList propList2;
 	if (m_ps->m_paragraph.m_listLevelIndex)
 	{
 		if (!m_ps->m_list.get())
@@ -919,10 +918,8 @@ void WPSContentListener::_changeList()
 				else
 					m_ps->m_list->setId(++m_ds->m_newListId);
 			}
-			m_ps->m_list->sendTo(*m_documentInterface, m_ps->m_paragraph.m_listLevelIndex);
 		}
 
-		propList2.insert("librevenge:list-id", m_ps->m_list->getId());
 		m_ps->m_list->closeElement();
 	}
 
@@ -931,15 +928,17 @@ void WPSContentListener::_changeList()
 	m_ps->m_listOrderedLevels.resize((size_t)m_ps->m_paragraph.m_listLevelIndex, false);
 	for (size_t i=actualListLevel+1; i<= (size_t)m_ps->m_paragraph.m_listLevelIndex; i++)
 	{
+		librevenge::RVNGPropertyList propList;
+		m_ps->m_list->addLevelTo(int(i), propList);
 		if (m_ps->m_list->isNumeric(int(i)))
 		{
 			m_ps->m_listOrderedLevels[i-1] = true;
-			m_documentInterface->openOrderedListLevel(propList2);
+			m_documentInterface->openOrderedListLevel(propList);
 		}
 		else
 		{
 			m_ps->m_listOrderedLevels[i-1] = false;
-			m_documentInterface->openUnorderedListLevel(propList2);
+			m_documentInterface->openUnorderedListLevel(propList);
 		}
 	}
 }

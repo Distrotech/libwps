@@ -141,8 +141,8 @@ public:
 	/** returns true of the level must be send to the document interface */
 	bool mustSendLevel(int level) const;
 
-	/** send the list information to the document interface */
-	void sendTo(librevenge::RVNGTextInterface &docInterface, int level) const;
+	/** add level definition to propList */
+	void addLevelTo(int level, librevenge::RVNGPropertyList &propList) const;
 
 protected:
 	std::vector<Level> m_levels;

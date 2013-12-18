@@ -153,33 +153,24 @@ bool WPSList::mustSendLevel(int level) const
 	return false;
 }
 
-
-void WPSList::sendTo(librevenge::RVNGTextInterface &docInterface, int level) const
+void WPSList::addLevelTo(int level, librevenge::RVNGPropertyList &propList) const
 {
 	if (level <= 0 || level > int(m_levels.size()) ||
 	        m_levels[size_t(level-1)].isDefault())
 	{
-		WPS_DEBUG_MSG(("WPSList::sendTo: level %d is not defined\n",level));
+		WPS_DEBUG_MSG(("WPSList::addLevelTo: level %d is not defined\n",level));
 		return;
 	}
 
 	if (m_id==-1)
 	{
-		WPS_DEBUG_MSG(("WPSList::sendTo: the list id is not set\n"));
+		WPS_DEBUG_MSG(("WPSList::addLevelTo: the list id is not set\n"));
 		static int falseId = 1000;
 		m_id = falseId++;
 	}
-
-	if (m_levels[size_t(level-1)].isSendToInterface()) return;
-
-	librevenge::RVNGPropertyList propList;
 	propList.insert("librevenge:list-id", m_id);
 	propList.insert("librevenge:level", level);
 	m_levels[size_t(level-1)].addTo(propList,m_actualIndices[size_t(level-1)]);
-	if (!m_levels[size_t(level-1)].isNumeric())
-		docInterface.defineUnorderedListLevel(propList);
-	else
-		docInterface.defineOrderedListLevel(propList);
 }
 
 void WPSList::set(int levl, Level const &level)
