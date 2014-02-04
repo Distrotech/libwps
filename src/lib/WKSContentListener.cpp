@@ -737,6 +737,7 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 
 	librevenge::RVNGPropertyList propList(extras);
 	cell.addTo(propList);
+	cell.getFont().addTo(propList);
 	if (!cell.hasBasicFormat())
 	{
 		int numberingId=-1;

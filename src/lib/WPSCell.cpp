@@ -371,6 +371,7 @@ int WPSCellFormat::compare(WPSCellFormat const &cell, bool onlyNumbering) const
 
 std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 {
+	o << "font=[" << cell.m_font << "],";
 	switch (cell.m_hAlign)
 	{
 	case WPSCellFormat::HALIGN_LEFT:

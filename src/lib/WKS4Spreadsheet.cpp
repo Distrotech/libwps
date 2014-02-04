@@ -1734,7 +1734,7 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 
 	WKS4SpreadsheetInternal::Cell finalCell(cell);
 	finalCell.WPSCellFormat::operator=(cellStyle);
-
+	finalCell.setFont(cellStyle.m_font);
 	WKSContentListener::CellContent content(cell.m_content);
 	for (size_t f=0; f < content.m_formula.size(); ++f)
 	{

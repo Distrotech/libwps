@@ -34,6 +34,8 @@
 
 #include "libwps_internal.h"
 
+#include "WPSFont.h"
+
 /** a structure used to defined the cell format */
 class WPSCellFormat
 {
@@ -64,7 +66,7 @@ public:
 
 	//! constructor
 	WPSCellFormat() :
-		m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(), m_format(F_UNKNOWN), m_subFormat(0), m_DTFormat(""), m_digits(-1000), m_protected(false), m_backgroundColor(0xFFFFFF) { }
+		m_font(), m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(), m_format(F_UNKNOWN), m_subFormat(0), m_DTFormat(""), m_digits(-1000), m_protected(false), m_backgroundColor(0xFFFFFF) { }
 	//! destructor
 	virtual ~WPSCellFormat() {}
 	//! returns true if this is a basic format style
@@ -76,10 +78,19 @@ public:
 	std::string getValueType() const;
 	//! add to the propList
 	void addTo(librevenge::RVNGPropertyList &propList) const;
-
 	//! get the number style
 	bool getNumberingProperties(librevenge::RVNGPropertyList &propList) const;
 
+	//! returns the font
+	WPSFont const &getFont() const
+	{
+		return m_font;
+	}
+	//! sets the font
+	void setFont(WPSFont const &font)
+	{
+		m_font=font;
+	}
 	//! returns the horizontal alignement
 	HorizontalAlignment hAlignement() const
 	{
@@ -207,7 +218,8 @@ public:
 protected:
 	//! convert a DTFormat in a propertyList
 	static bool convertDTFormat(std::string const &dtFormat, librevenge::RVNGPropertyListVector &propListVector);
-
+	//! the cell font ( used in spreadsheet code )
+	WPSFont m_font;
 	//! the cell alignement : by default nothing
 	HorizontalAlignment m_hAlign;
 	//! the cell vertical alignement : by default nothing
