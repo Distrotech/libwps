@@ -1,21 +1,30 @@
 EXTRA_DIST = \
-	compile-resource \
-	lt-compile-resource \
-	\
-	libwps.dsw \
-	libwps.dsp \
-	wps2html.dsp \
-	wps2raw.dsp \
-	wps2text.dsp \
-	\
-	libwps.vcproj.sln \
-	libwps.vcproj \
-	wps2html.vcproj \
-	wps2raw.vcproj \
-	wps2text.vcproj \
-	\
-	libwps.vcxproj.sln \
-	libwps.vcxproj \
-	wps2html.vcxproj \
-	wps2raw.vcxproj \
+	compile-resource 	\
+	lt-compile-resource	\
+				\
+	libwps.dsw		\
+	libwps.dsp		\
+	wks2csv.dsp		\
+	wks2raw.dsp		\
+	wks2text.dsp		\
+	wps2html.dsp		\
+	wps2raw.dsp		\
+	wps2text.dsp		\
+				\
+	libwps.vcproj.sln	\
+	libwps.vcproj		\
+	wks2csv.vcproj		\
+	wks2raw.vcproj		\
+	wks2text.vcproj		\
+	wps2html.vcproj		\
+	wps2raw.vcproj		\
+	wps2text.vcproj		\
+				\
+	libwps.vcxproj.sln	\
+	libwps.vcxproj		\
+	wks2csv.vcxproj		\
+	wks2raw.vcxproj		\
+	wks2text.vcxproj	\
+	wps2html.vcxproj	\
+	wps2raw.vcxproj		\
 	wps2text.vcxproj

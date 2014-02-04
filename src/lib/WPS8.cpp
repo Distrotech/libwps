@@ -20,9 +20,10 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
-#include <libwpd-stream/WPXStream.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
@@ -31,10 +32,9 @@
 #include "WPSEntry.h"
 #include "WPSHeader.h"
 #include "WPSOLEParser.h"
-#include "WPSOLEStream.h"
 #include "WPSPageSpan.h"
 #include "WPSPosition.h"
-#include "WPSSubDocument.h"
+#include "WPSTextSubDocument.h"
 
 #include "WPS8Graph.h"
 #include "WPS8Struct.h"
@@ -46,21 +46,21 @@
 namespace WPS8ParserInternal
 {
 //! Internal: the subdocument of a WPS8Parser
-class SubDocument : public WPSSubDocument
+class SubDocument : public WPSTextSubDocument
 {
 public:
 	//! type of an entry
 	enum Type { Unknown, TEXT };
 	//! constructor for a text entry
-	SubDocument(WPXInputStreamPtr input, WPS8Parser &pars, WPSEntry const &entry) :
-		WPSSubDocument(input, &pars), m_entry(entry) {}
+	SubDocument(RVNGInputStreamPtr input, WPS8Parser &pars, WPSEntry const &entry) :
+		WPSTextSubDocument(input, &pars), m_entry(entry) {}
 	//! destructor
 	~SubDocument() {}
 
 	//! operator==
-	virtual bool operator==(shared_ptr<WPSSubDocument> const &doc) const
+	virtual bool operator==(shared_ptr<WPSTextSubDocument> const &doc) const
 	{
-		if (!doc || !WPSSubDocument::operator==(doc))
+		if (!doc || !WPSTextSubDocument::operator==(doc))
 			return false;
 		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
 		if (!sDoc) return false;
@@ -288,7 +288,7 @@ void State::initTypeMaps()
 }
 
 // constructor, destructor
-WPS8Parser::WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header) :
+WPS8Parser::WPS8Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
 	WPSParser(input, header),
 	m_listener(), m_graphParser(), m_tableParser(), m_textParser(), m_state()
 {
@@ -323,12 +323,12 @@ bool WPS8Parser::checkInFile(long pos)
 {
 	if (pos <= m_state->m_eof)
 		return true;
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	long actPos = input->tell();
-	input->seek(pos, WPX_SEEK_SET);
+	input->seek(pos, librevenge::RVNG_SEEK_SET);
 	bool ok = input->tell() == pos;
 	if (ok) m_state->m_eof = pos;
-	input->seek(actPos, WPX_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	return ok;
 }
 
@@ -341,7 +341,7 @@ void WPS8Parser::setListener(shared_ptr<WPSContentListener> listener)
 	m_textParser->setListener(m_listener);
 }
 
-shared_ptr<WPSContentListener> WPS8Parser::createListener(WPXDocumentInterface *interface)
+shared_ptr<WPSContentListener> WPS8Parser::createListener(librevenge::RVNGTextInterface *interface)
 {
 	std::vector<WPSPageSpan> pageList;
 	WPSPageSpan ps(m_state->m_pageSpan);
@@ -407,10 +407,10 @@ void WPS8Parser::newPage(int number)
 // interface with the graph/text parser
 void WPS8Parser::send(WPSEntry const &entry)
 {
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	long actPos = input->tell();
 	m_textParser->readText(entry);
-	input->seek(actPos, WPX_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 
 void WPS8Parser::send(int strsId)
@@ -420,13 +420,13 @@ void WPS8Parser::send(int strsId)
 
 void WPS8Parser::sendTextInCell(int strsId, int cellId)
 {
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	long actPos = input->tell();
 	m_textParser->readTextInCell(strsId,cellId);
-	input->seek(actPos, WPX_SEEK_SET);
+	input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 
-void WPS8Parser::sendTextBox(WPSPosition const &pos, int strsid, WPXPropertyList frameExtras)
+void WPS8Parser::sendTextBox(WPSPosition const &pos, int strsid, librevenge::RVNGPropertyList frameExtras)
 {
 	if (!m_listener)
 	{
@@ -494,9 +494,9 @@ int WPS8Parser::getTableSTRSId(int tableId) const
 
 ////////////////////////////////////////////////////////////
 // main function to parse the document
-void WPS8Parser::parse(WPXDocumentInterface *documentInterface)
+void WPS8Parser::parse(librevenge::RVNGTextInterface *documentInterface)
 {
-	WPXInputStreamPtr input=getInput();
+	RVNGInputStreamPtr input=getInput();
 	if (!input)
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parse: does not find main ole\n"));
@@ -559,7 +559,7 @@ bool WPS8Parser::createStructures()
 {
 	if (!getInput()) return false;
 
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	parseHeaderIndex();
 
 	// initialize the text, table, ..
@@ -607,11 +607,11 @@ bool WPS8Parser::createStructures()
 
 	// document title
 	pos = getNameEntryMap().find("TITL");
-	WPXString title;
+	librevenge::RVNGString title;
 	if (getNameEntryMap().end() != pos && pos->second.hasType("TITL"))
 	{
 		pos->second.setParsed(true);
-		input->seek(pos->second.begin(), WPX_SEEK_SET);
+		input->seek(pos->second.begin(), librevenge::RVNG_SEEK_SET);
 		m_textParser->readString(input, pos->second.length(), title);
 		ascii().addPos(pos->second.begin());
 		ascii().addNote(title.cstr());
@@ -645,15 +645,14 @@ bool WPS8Parser::createStructures()
 
 bool WPS8Parser::createOLEStructures()
 {
-	if (!getInput()) return false;
+	RVNGInputStreamPtr input=getFileInput();
+	if (!input) return false;
 
-	shared_ptr<libwpsOLE::Storage> storage = getHeader()->getOLEStorage();
-	if (!storage) return true;
+	if (!input->isStructured()) return true;
 	WPSOLEParser oleParser("CONTENTS");
-	if (!oleParser.parse(storage)) return false;
+	if (!oleParser.parse(input)) return false;
 
-	m_graphParser->storeObjects(oleParser.getObjects(),oleParser.getObjectsId(),
-	                            oleParser.getObjectsPosition());
+	m_graphParser->storeObjects(oleParser.getObjects(),oleParser.getObjectsId());
 #ifdef DEBUG
 	// there can remain some embedded Works subdocument ( WKS, ... )
 	// with name MN0 and some unknown picture ole
@@ -668,21 +667,21 @@ bool WPS8Parser::createOLEStructures()
 			continue;
 		if (name== "SPELLING")
 		{
-			WPXInputStreamPtr ole = storage->getSubStream(name.c_str());
+			RVNGInputStreamPtr ole(input->getSubStreamByName(name.c_str()));
 			if (ole && readSPELLING(ole, name))
 				continue;
 		}
 		WPS_DEBUG_MSG(("WPS8Parser::createOLEStructures:: Find unparsed ole: %s\n", name.c_str()));
 
 #ifdef DEBUG_WITH_FILES
-		WPXInputStreamPtr ole = storage->getSubStream(name.c_str());
+		RVNGInputStreamPtr ole(input->getSubStreamByName(name.c_str()));
 		if (!ole.get())
 		{
 			WPS_DEBUG_MSG(("WPS8Parser::createOLEStructures: error: can find OLE part: \"%s\"\n", name.c_str()));
 			continue;
 		}
 
-		WPXBinaryData data;
+		librevenge::RVNGBinaryData data;
 		if (libwps::readDataToEnd(ole,data))
 			libwps::Debug::dumpFile(data, name.c_str());
 #endif
@@ -699,7 +698,7 @@ void WPS8Parser::sendPageFrames()
 	if (!m_listener) return;
 
 	typedef WPS8ParserInternal::Frame Frame;
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	long actPos = input->tell();
 
 	size_t numFrames = m_state->m_frameList.size();
@@ -727,7 +726,7 @@ void WPS8Parser::sendPageFrames()
 			m_graphParser->sendObject(pos, frame.m_idOle, true);
 		else if (frame.m_type == Frame::Text)
 		{
-			WPXPropertyList frameExtras;
+			librevenge::RVNGPropertyList frameExtras;
 			if (frame.m_backgroundColor != 0xFFFFFF)
 			{
 				char color[20];
@@ -742,14 +741,14 @@ void WPS8Parser::sendPageFrames()
 		}
 	}
 
-	input->seek(actPos,WPX_SEEK_SET);
+	input->seek(actPos,librevenge::RVNG_SEEK_SET);
 }
 
 ////////////////////////////////////////////////////////////
 // read the index
 bool WPS8Parser::parseHeaderIndexEntry()
 {
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	long pos = input->tell();
 	ascii().addPos(pos);
 
@@ -758,20 +757,20 @@ bool WPS8Parser::parseHeaderIndexEntry()
 	uint16_t cch = libwps::readU16(input);
 
 	// check if the entry can be read
-	input->seek(pos + cch, WPX_SEEK_SET);
+	input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
 	if (input->tell() != pos+cch)
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parseHeaderIndexEntry: error: incomplete entry\n"));
 		ascii().addNote("###IndexEntry incomplete (ignored)");
 		return false;
 	}
-	input->seek(pos + 2, WPX_SEEK_SET);
+	input->seek(pos + 2, librevenge::RVNG_SEEK_SET);
 
 	if (0x18 != cch)
 	{
 		if (cch < 0x18)
 		{
-			input->seek(pos + cch, WPX_SEEK_SET);
+			input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
 			ascii().addNote("###IndexEntry too short(ignored)");
 			if (cch < 10) throw libwps::ParseException();
 			return true;
@@ -792,7 +791,7 @@ bool WPS8Parser::parseHeaderIndexEntry()
 			WPS_DEBUG_MSG(("WPS8Parser::parseHeaderIndexEntry: error: bad character=%u (0x%02x) in name in header index\n", c, c));
 			ascii().addNote("###IndexEntry bad name(ignored)");
 
-			input->seek(pos + cch, WPX_SEEK_SET);
+			input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
 			return true;
 		}
 	}
@@ -809,7 +808,7 @@ bool WPS8Parser::parseHeaderIndexEntry()
 
 	std::string name2;
 	for (i =0; i < 4; i++)
-		name2.append(1, (int) libwps::readU8(input));
+		name2.append(1, (char) libwps::readU8(input));
 	f << "), " << name2;
 
 	WPSEntry hie;
@@ -825,12 +824,12 @@ bool WPS8Parser::parseHeaderIndexEntry()
 	if (cch != 0x18 && parseHeaderIndexEntryEnd(pos+cch, hie, mess))
 		f << "," << mess;
 
-	input->seek(hie.end(), WPX_SEEK_SET);
+	input->seek(hie.end(), librevenge::RVNG_SEEK_SET);
 	if (input->tell() != hie.end())
 	{
 		f << ", ###ignored";
 		ascii().addNote(f.str().c_str());
-		input->seek(pos + cch, WPX_SEEK_SET);
+		input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
 		return true;
 	}
 
@@ -849,7 +848,7 @@ bool WPS8Parser::parseHeaderIndexEntry()
 	ascii().addPos(hie.end());
 	ascii().addNote("_");
 
-	input->seek(pos + cch, WPX_SEEK_SET);
+	input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
 	return true;
 }
 
@@ -858,14 +857,14 @@ bool WPS8Parser::parseHeaderIndexEntry()
 //
 bool WPS8Parser::parseHeaderIndexEntryEnd(long endPos, WPSEntry &hie, std::string &mess)
 {
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 
 	long pos = input->tell();
 	long len = endPos-pos;
 	libwps::DebugStream f;
 
 	int size = (int) libwps::read16(input);
-	WPXString str;
+	librevenge::RVNGString str;
 	if (2*(size+1) != len || !m_textParser->readString(input, 2*size, str))
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::parseHeaderIndexEntryEnd: unknown data\n"));
@@ -888,9 +887,9 @@ bool WPS8Parser::parseHeaderIndexEntryEnd(long endPos, WPSEntry &hie, std::strin
  */
 bool WPS8Parser::parseHeaderIndex()
 {
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	getNameEntryMap().clear();
-	input->seek(0x08, WPX_SEEK_SET);
+	input->seek(0x08, librevenge::RVNG_SEEK_SET);
 
 	long pos = input->tell();
 	int i0 = (int) libwps::read16(input);
@@ -909,11 +908,11 @@ bool WPS8Parser::parseHeaderIndex()
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
 
-	input->seek(0x18, WPX_SEEK_SET);
+	input->seek(0x18, librevenge::RVNG_SEEK_SET);
 	bool readSome = false;
 	do
 	{
-		if (input->atEOS()) return readSome;
+		if (input->isEnd()) return readSome;
 
 		pos = input->tell();
 		f.str("");
@@ -957,7 +956,7 @@ bool WPS8Parser::parseHeaderIndex()
 
 		if (0xFFFFFFFF == next_index_table)	break;
 
-		if (input->seek((long) next_index_table, WPX_SEEK_SET) != 0) return readSome;
+		if (input->seek((long) next_index_table, librevenge::RVNG_SEEK_SET) != 0) return readSome;
 	}
 	while (n_entries > 0);
 
@@ -977,7 +976,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 		return false;
 	}
 
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	page=WPSPageSpan();
 
 	long page_offset = entry.begin();
@@ -991,7 +990,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 	}
 
 	entry.setParsed();
-	input->seek(page_offset, WPX_SEEK_SET);
+	input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 
 	libwps::DebugStream f, f2;
 	if (libwps::read16(input) != length)
@@ -1104,7 +1103,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 			long actPos = input->tell();
 			int numElt = (size-2)/2;
 
-			input->seek(dt.begin()+2, WPX_SEEK_SET);
+			input->seek(dt.begin()+2, librevenge::RVNG_SEEK_SET);
 			std::string str;
 			int elt=0;
 			while (elt < numElt)
@@ -1112,7 +1111,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 				long val = libwps::read16(input);
 				if (val < 30 && val != '\t' && val != '\n')
 				{
-					input->seek(-2, WPX_SEEK_CUR);
+					input->seek(-2, librevenge::RVNG_SEEK_CUR);
 					break;
 				}
 				elt++;
@@ -1121,7 +1120,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 			if (!str.length())
 			{
 				ok = false;
-				input->seek(actPos, WPX_SEEK_SET);
+				input->seek(actPos, librevenge::RVNG_SEEK_SET);
 				break;
 			}
 			f2 << "filename?=["; // wkthmLET.fmt and wkthmSCH.fmt
@@ -1134,7 +1133,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 				if (val) f2 << "f" << elt << "=" << std::hex << val << std::dec << ",";
 			}
 			f2 << "],";
-			input->seek(actPos, WPX_SEEK_SET);
+			input->seek(actPos, librevenge::RVNG_SEEK_SET);
 			break;
 		}
 		case 0x2d:
@@ -1153,7 +1152,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 				break;
 			}
 			long actPos = input->tell();
-			input->seek(dt.begin(), WPX_SEEK_SET);
+			input->seek(dt.begin(), librevenge::RVNG_SEEK_SET);
 			f2 << "unk" << std::hex << dt.id() << "=" << "[";
 			for (int i = 0; i < 128; i++)
 			{
@@ -1161,7 +1160,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 				if (val) f2 << "f" << i << "=" << std::hex << val << std::dec << ",";
 			}
 			f2 << "]" << std::dec << ",";
-			input->seek(actPos, WPX_SEEK_SET);
+			input->seek(actPos, librevenge::RVNG_SEEK_SET);
 			break;
 		}
 
@@ -1239,7 +1238,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 		               entry.name().c_str(), entry.type().c_str()));
 		return false;
 	}
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 
 	long page_offset = entry.begin();
 	long length = entry.length();
@@ -1252,7 +1251,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 	}
 
 	entry.setParsed();
-	input->seek(page_offset, WPX_SEEK_SET);
+	input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 
 	int numFram = libwps::read16(input);
 	if (numFram < 0 || numFram*2 > length)
@@ -1417,7 +1416,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 				int numElt = (size-2)/4;
 				long actPos = input->tell();
 
-				input->seek(dt.begin()+2, WPX_SEEK_SET);
+				input->seek(dt.begin()+2, librevenge::RVNG_SEEK_SET);
 				std::vector<long> values;
 				for (int elt = 0; elt < numElt; elt++)
 				{
@@ -1438,7 +1437,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 					f2 << "),";
 				}
 
-				input->seek(actPos, WPX_SEEK_SET);
+				input->seek(actPos, librevenge::RVNG_SEEK_SET);
 				break;
 			}
 			// associated with a tex box and field 0x19
@@ -1605,7 +1604,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 // also related to the MCLD ?
 bool WPS8Parser::readSYID(WPSEntry const &entry, std::vector<int> &listId)
 {
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	listId.resize(0);
 	libwps::DebugStream f;
 	if (!entry.hasType(entry.name()))
@@ -1624,7 +1623,7 @@ bool WPS8Parser::readSYID(WPSEntry const &entry, std::vector<int> &listId)
 		return false;
 	}
 
-	input->seek(page_offset, WPX_SEEK_SET);
+	input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 
 	int unk = libwps::read32(input);
 	int numID = libwps::read32(input);
@@ -1660,7 +1659,7 @@ bool WPS8Parser::readWNPR(WPSEntry const &entry)
 		               entry.name().c_str(), entry.type().c_str()));
 		return false;
 	}
-	WPXInputStreamPtr input = getInput();
+	RVNGInputStreamPtr input = getInput();
 	long page_offset = entry.begin();
 	long length = entry.length();
 	long endPage = entry.end();
@@ -1672,7 +1671,7 @@ bool WPS8Parser::readWNPR(WPSEntry const &entry)
 	}
 
 	entry.setParsed();
-	input->seek(page_offset, WPX_SEEK_SET);
+	input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 
 	libwps::DebugStream f;
 
@@ -1807,17 +1806,17 @@ bool WPS8Parser::readWNPR(WPSEntry const &entry)
 //
 ////////////////////////////////////////////////////////////////
 #ifndef DEBUG
-bool WPS8Parser::readSPELLING(WPXInputStreamPtr, std::string const &)
+bool WPS8Parser::readSPELLING(RVNGInputStreamPtr, std::string const &)
 {
 	return true;
 }
 #else
-bool WPS8Parser::readSPELLING(WPXInputStreamPtr input, std::string const &oleName)
+bool WPS8Parser::readSPELLING(RVNGInputStreamPtr input, std::string const &oleName)
 {
 	// SPELLING
-	input->seek(0, WPX_SEEK_SET);
+	input->seek(0, librevenge::RVNG_SEEK_SET);
 	int vers = (int) libwps::read32(input); // always 6 ?
-	if (vers < 0 || input->atEOS()) return false;
+	if (vers < 0 || input->isEnd()) return false;
 
 	std::string fName = libwps::Debug::flattenFileName(oleName);
 	libwps::DebugFile asciiFile(input);
@@ -1829,20 +1828,20 @@ bool WPS8Parser::readSPELLING(WPXInputStreamPtr input, std::string const &oleNam
 
 	libwps::DebugStream f;
 	int num = 0;
-	while (!input->atEOS())
+	while (!input->isEnd())
 	{
 		long pos = input->tell();
 		int numVal = (int) libwps::read32(input);
 
-		if (numVal < 0 || input->seek(8*numVal, WPX_SEEK_CUR) || input->tell() != pos+4+8*numVal)
+		if (numVal < 0 || input->seek(8*numVal, librevenge::RVNG_SEEK_CUR) || input->tell() != pos+4+8*numVal)
 		{
-			input->seek(pos, WPX_SEEK_SET);
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			break;
 		}
 
 		f.str("");
 		f << "SPELLING" << num++ << ": "; // linked to STRSj by num = numSTRS-j?
-		input->seek(pos+4, WPX_SEEK_SET);
+		input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 		for (int j = 0; j < numVal; j++)
 		{
 			uint32_t ptr = libwps::readU32(input);
@@ -1877,7 +1876,7 @@ bool WPS8Parser::readSPELLING(WPXInputStreamPtr input, std::string const &oleNam
 	f << "]";
 	asciiFile.addPos(0);
 	asciiFile.addNote(f.str().c_str());
-	if (!input->atEOS())
+	if (!input->isEnd())
 	{
 		asciiFile.addPos(input->tell());
 		asciiFile.addNote("###SPELLING");

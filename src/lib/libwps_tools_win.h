@@ -78,7 +78,7 @@ std::string name(long id);
 //! returns the simplified locale name
 std::string localeName(long id);
 //! add locale name (ie. fo:language,fo:country ) to propList
-void addLocaleName(long id, WPXPropertyList &propList);
+void addLocaleName(long id, librevenge::RVNGPropertyList &propList);
 //! returns the default language: 0x409 : english(US)
 long getDefault();
 }

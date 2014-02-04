@@ -26,7 +26,7 @@
 #include <sstream>
 #include <stdio.h>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
@@ -39,7 +39,7 @@
 #include "WPSPageSpan.h"
 #include "WPSParagraph.h"
 #include "WPSPosition.h"
-#include "WPSSubDocument.h"
+#include "WPSTextSubDocument.h"
 
 ////////////////////////////////////////////////////////////
 //! the document state
@@ -51,7 +51,7 @@ struct WPSDocumentParsingState
 	~WPSDocumentParsingState();
 
 	std::vector<WPSPageSpan> m_pageList;
-	WPXPropertyList m_metaData;
+	librevenge::RVNGPropertyList m_metaData;
 
 	int m_footNoteNumber /** footnote number*/, m_endNoteNumber /** endnote number*/;
 	int m_newListId; // a new free id
@@ -83,7 +83,7 @@ struct WPSContentParsingState
 	WPSContentParsingState();
 	~WPSContentParsingState();
 
-	WPXString m_textBuffer;
+	librevenge::RVNGString m_textBuffer;
 	int m_numDeferredTabs;
 
 	WPSFont m_font;
@@ -189,7 +189,7 @@ WPSContentParsingState::~WPSContentParsingState()
 {
 }
 
-WPSContentListener::WPSContentListener(std::vector<WPSPageSpan> const &pageList, WPXDocumentInterface *documentInterface) :
+WPSContentListener::WPSContentListener(std::vector<WPSPageSpan> const &pageList, librevenge::RVNGTextInterface *documentInterface) :
 	m_ds(new WPSDocumentParsingState(pageList)), m_ps(new WPSContentParsingState), m_psStack(),
 	m_documentInterface(documentInterface)
 {
@@ -224,62 +224,11 @@ void WPSContentListener::insertUnicode(uint32_t val)
 	appendUnicode(val, m_ps->m_textBuffer);
 }
 
-void WPSContentListener::insertUnicodeString(WPXString const &str)
+void WPSContentListener::insertUnicodeString(librevenge::RVNGString const &str)
 {
 	_flushDeferredTabs();
 	if (!m_ps->m_isSpanOpened) _openSpan();
 	m_ps->m_textBuffer.append(str);
-}
-
-void WPSContentListener::appendUnicode(uint32_t val, WPXString &buffer)
-{
-	if (val < 0x20)
-	{
-		WPS_DEBUG_MSG(("WPSContentListener::appendUnicode: find an old char %x, skip it\n", val));
-		return;
-	}
-	uint8_t first;
-	int len;
-	if (val < 0x80)
-	{
-		first = 0;
-		len = 1;
-	}
-	else if (val < 0x800)
-	{
-		first = 0xc0;
-		len = 2;
-	}
-	else if (val < 0x10000)
-	{
-		first = 0xe0;
-		len = 3;
-	}
-	else if (val < 0x200000)
-	{
-		first = 0xf0;
-		len = 4;
-	}
-	else if (val < 0x4000000)
-	{
-		first = 0xf8;
-		len = 5;
-	}
-	else
-	{
-		first = 0xfc;
-		len = 6;
-	}
-
-	uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
-	int i;
-	for (i = len - 1; i > 0; --i)
-	{
-		outbuf[i] = uint8_t((val & 0x3f) | 0x80);
-		val >>= 6;
-	}
-	outbuf[0] = uint8_t(val | first);
-	for (i = 0; i < len; i++) buffer.append(char(outbuf[i]));
 }
 
 void WPSContentListener::insertEOL(bool soft)
@@ -361,7 +310,7 @@ void WPSContentListener::insertBreak(const uint8_t breakType)
 	}
 }
 
-void WPSContentListener::_insertBreakIfNecessary(WPXPropertyList &propList)
+void WPSContentListener::_insertBreakIfNecessary(librevenge::RVNGPropertyList &propList)
 {
 	if (m_ps->m_isParagraphPageBreak && !m_ps->m_inSubDocument)
 	{
@@ -465,20 +414,21 @@ void WPSContentListener::insertField(WPSContentListener::FieldType type)
 	{
 		_flushText();
 		_openSpan();
-		WPXPropertyList propList;
+		librevenge::RVNGPropertyList propList;
 		propList.insert("style:num-format", libwps::numberingTypeToString(libwps::ARABIC).c_str());
-		m_documentInterface->insertField(WPXString("text:page-number"), propList);
+		propList.insert("librevenge:field-type", "text:page-number");
+		m_documentInterface->insertField(propList);
 		break;
 	}
 	case Database:
 	{
-		WPXString tmp("#DATAFIELD#");
+		librevenge::RVNGString tmp("#DATAFIELD#");
 		insertUnicodeString(tmp);
 		break;
 	}
 	case Title:
 	{
-		WPXString tmp("#TITLE#");
+		librevenge::RVNGString tmp("#TITLE#");
 		insertUnicodeString(tmp);
 		break;
 	}
@@ -508,7 +458,7 @@ void WPSContentListener::insertDateTimeField(char const *format)
 	{
 		char buf[256];
 		strftime(buf, 256, format, &timeinfo);
-		insertUnicodeString(WPXString(buf));
+		insertUnicodeString(librevenge::RVNGString(buf));
 	}
 }
 
@@ -525,7 +475,7 @@ int WPSContentListener::getSectionNumColumns() const
 	return m_ps->m_numColumns;
 }
 
-bool WPSContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
+bool WPSContentListener::openSection(std::vector<int> colsWidth, librevenge::RVNGUnit unit)
 {
 	if (m_ps->m_isSectionOpened)
 	{
@@ -547,14 +497,15 @@ bool WPSContentListener::openSection(std::vector<int> colsWidth, WPXUnit unit)
 		float factor = 1.0;
 		switch (unit)
 		{
-		case WPX_POINT:
-		case WPX_TWIP:
-			factor = WPSPosition::getScaleFactor(unit, WPX_INCH);
+		case librevenge::RVNG_POINT:
+		case librevenge::RVNG_TWIP:
+			factor = WPSPosition::getScaleFactor(unit, librevenge::RVNG_INCH);
 			break;
-		case WPX_INCH:
+		case librevenge::RVNG_INCH:
 			break;
-		case WPX_PERCENT:
-		case WPX_GENERIC:
+		case librevenge::RVNG_PERCENT:
+		case librevenge::RVNG_GENERIC:
+		case librevenge::RVNG_UNIT_ERROR:
 		default:
 			WPS_DEBUG_MSG(("WPSContentListener::openSection: unknown unit\n"));
 			return false;
@@ -598,7 +549,7 @@ void WPSContentListener::setDocumentLanguage(int lcid)
 	if (lcid <= 0) return;
 	std::string lang = libwps_tools_win::Language::localeName(lcid);
 	if (!lang.length()) return;
-	m_ds->m_metaData.insert("libwpd:language", lang.c_str());
+	m_ds->m_metaData.insert("librevenge:language", lang.c_str());
 }
 
 void WPSContentListener::startDocument()
@@ -613,7 +564,7 @@ void WPSContentListener::startDocument()
 	// and then pass that directly..
 	m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
 
-	m_documentInterface->startDocument();
+	m_documentInterface->startDocument(librevenge::RVNGPropertyList());
 	m_ds->m_isDocumentStarted = true;
 }
 
@@ -672,9 +623,9 @@ void WPSContentListener::_openPageSpan()
 	}
 	WPSPageSpan &currentPage = *it;
 
-	WPXPropertyList propList;
+	librevenge::RVNGPropertyList propList;
 	currentPage.getPageProperty(propList);
-	propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
+	propList.insert("librevenge:is-last-page-span", ((m_ps->m_currentPage + 1 == m_ds->m_pageList.size()) ? true : false));
 
 	if (!m_ps->m_isPageSpanOpened)
 		m_documentInterface->openPageSpan(propList);
@@ -733,24 +684,26 @@ void WPSContentListener::_openSection()
 
 	m_ps->m_numColumns = int(m_ps->m_textColumns.size());
 
-	WPXPropertyList propList;
+	librevenge::RVNGPropertyList propList;
 	propList.insert("fo:margin-left", 0.);
 	propList.insert("fo:margin-right", 0.);
 	if (m_ps->m_numColumns > 1)
 		propList.insert("text:dont-balance-text-columns", false);
 
-	WPXPropertyListVector columns;
+	librevenge::RVNGPropertyListVector columns;
 	for (size_t i = 0; i < m_ps->m_textColumns.size(); i++)
 	{
 		WPSColumnDefinition const &col = m_ps->m_textColumns[i];
-		WPXPropertyList column;
+		librevenge::RVNGPropertyList column;
 		// The "style:rel-width" is expressed in twips (1440 twips per inch) and includes the left and right Gutter
-		column.insert("style:rel-width", col.m_width * 1440.0, WPX_TWIP);
+		column.insert("style:rel-width", col.m_width * 1440.0, librevenge::RVNG_TWIP);
 		column.insert("fo:start-indent", col.m_leftGutter);
 		column.insert("fo:end-indent", col.m_rightGutter);
 		columns.append(column);
 	}
-	m_documentInterface->openSection(propList, columns);
+	if (columns.count())
+		propList.insert("style:columns", columns);
+	m_documentInterface->openSection(propList);
 
 	m_ps->m_sectionAttributesChanged = false;
 	m_ps->m_isSectionOpened = true;
@@ -794,12 +747,11 @@ void WPSContentListener::_openParagraph()
 			_openSection();
 	}
 
-	WPXPropertyList propList;
-	WPXPropertyListVector tabStops;
-	_appendParagraphProperties(propList, tabStops);
+	librevenge::RVNGPropertyList propList;
+	_appendParagraphProperties(propList);
 
 	if (!m_ps->m_isParagraphOpened)
-		m_documentInterface->openParagraph(propList, tabStops);
+		m_documentInterface->openParagraph(propList);
 
 	_resetParagraphState();
 	m_ps->m_firstParagraphInPageSpan = false;
@@ -847,9 +799,9 @@ void WPSContentListener::_resetParagraphState(const bool isListElement)
 }
 
 void WPSContentListener::_appendParagraphProperties
-(WPXPropertyList &propList, WPXPropertyListVector &tabStops, const bool /*isListElement*/)
+(librevenge::RVNGPropertyList &propList, const bool /*isListElement*/)
 {
-	m_ps->m_paragraph.addTo(propList, tabStops, m_ps->m_isTableOpened);
+	m_ps->m_paragraph.addTo(propList, m_ps->m_isTableOpened);
 
 	if (!m_ps->m_inSubDocument && m_ps->m_firstParagraphInPageSpan)
 	{
@@ -892,12 +844,11 @@ void WPSContentListener::_openListElement()
 				_openSection();
 		}
 
-		WPXPropertyList propList;
-		WPXPropertyListVector tabStops;
-		_appendParagraphProperties(propList, tabStops, true);
+		librevenge::RVNGPropertyList propList;
+		_appendParagraphProperties(propList, true);
 
 		if (!m_ps->m_isListElementOpened)
-			m_documentInterface->openListElement(propList, tabStops);
+			m_documentInterface->openListElement(propList);
 		_resetParagraphState(true);
 	}
 }
@@ -938,7 +889,6 @@ void WPSContentListener::_changeList()
 			m_documentInterface->closeUnorderedListLevel();
 	}
 
-	WPXPropertyList propList2;
 	if (m_ps->m_paragraph.m_listLevelIndex)
 	{
 		if (!m_ps->m_list.get())
@@ -968,10 +918,8 @@ void WPSContentListener::_changeList()
 				else
 					m_ps->m_list->setId(++m_ds->m_newListId);
 			}
-			m_ps->m_list->sendTo(*m_documentInterface, m_ps->m_paragraph.m_listLevelIndex);
 		}
 
-		propList2.insert("libwpd:id", m_ps->m_list->getId());
 		m_ps->m_list->closeElement();
 	}
 
@@ -980,15 +928,17 @@ void WPSContentListener::_changeList()
 	m_ps->m_listOrderedLevels.resize((size_t)m_ps->m_paragraph.m_listLevelIndex, false);
 	for (size_t i=actualListLevel+1; i<= (size_t)m_ps->m_paragraph.m_listLevelIndex; i++)
 	{
+		librevenge::RVNGPropertyList propList;
+		m_ps->m_list->addLevelTo(int(i), propList);
 		if (m_ps->m_list->isNumeric(int(i)))
 		{
 			m_ps->m_listOrderedLevels[i-1] = true;
-			m_documentInterface->openOrderedListLevel(propList2);
+			m_documentInterface->openOrderedListLevel(propList);
 		}
 		else
 		{
 			m_ps->m_listOrderedLevels[i-1] = false;
-			m_documentInterface->openUnorderedListLevel(propList2);
+			m_documentInterface->openUnorderedListLevel(propList);
 		}
 	}
 }
@@ -1013,7 +963,7 @@ void WPSContentListener::_openSpan()
 			_openListElement();
 	}
 
-	WPXPropertyList propList;
+	librevenge::RVNGPropertyList propList;
 	m_ps->m_font.addTo(propList);
 
 	m_documentInterface->openSpan(propList);
@@ -1062,9 +1012,9 @@ void WPSContentListener::_flushText()
 	if (m_ps->m_textBuffer.len() == 0) return;
 
 	// when some many ' ' follows each other, call insertSpace
-	WPXString tmpText;
+	librevenge::RVNGString tmpText;
 	int numConsecutiveSpaces = 0;
-	WPXString::Iter i(m_ps->m_textBuffer);
+	librevenge::RVNGString::Iter i(m_ps->m_textBuffer);
 	for (i.rewind(); i.next();)
 	{
 		if (*(i()) == 0x20) // this test is compatible with unicode format
@@ -1098,11 +1048,11 @@ void WPSContentListener::insertNote(const NoteType noteType, WPSSubDocumentPtr &
 		WPS_DEBUG_MSG(("WPSContentListener::insertNote try to insert a note recursively (ingnored)\n"));
 		return;
 	}
-	WPXString label("");
+	librevenge::RVNGString label("");
 	insertLabelNote(noteType, label, subDocument);
 }
 
-void WPSContentListener::insertLabelNote(const NoteType noteType, WPXString const &label, WPSSubDocumentPtr &subDocument)
+void WPSContentListener::insertLabelNote(const NoteType noteType, librevenge::RVNGString const &label, WPSSubDocumentPtr &subDocument)
 {
 	if (m_ps->m_isNote)
 	{
@@ -1136,17 +1086,17 @@ void WPSContentListener::insertLabelNote(const NoteType noteType, WPXString cons
 			_closeSpan();
 		}
 
-		WPXPropertyList propList;
+		librevenge::RVNGPropertyList propList;
 		if (label.len())
 			propList.insert("text:label", label);
 		if (noteType == FOOTNOTE)
 		{
-			propList.insert("libwpd:number", ++(m_ds->m_footNoteNumber));
+			propList.insert("librevenge:number", ++(m_ds->m_footNoteNumber));
 			m_documentInterface->openFootnote(propList);
 		}
 		else
 		{
-			propList.insert("libwpd:number", ++(m_ds->m_endNoteNumber));
+			propList.insert("librevenge:number", ++(m_ds->m_endNoteNumber));
 			m_documentInterface->openEndnote(propList);
 		}
 
@@ -1176,7 +1126,7 @@ void WPSContentListener::insertComment(WPSSubDocumentPtr &subDocument)
 		_closeSpan();
 	}
 
-	WPXPropertyList propList;
+	librevenge::RVNGPropertyList propList;
 	m_documentInterface->openComment(propList);
 
 	m_ps->m_isNote = true;
@@ -1187,11 +1137,11 @@ void WPSContentListener::insertComment(WPSSubDocumentPtr &subDocument)
 }
 
 void WPSContentListener::insertTextBox
-(WPSPosition const &pos, WPSSubDocumentPtr subDocument, WPXPropertyList frameExtras)
+(WPSPosition const &pos, WPSSubDocumentPtr subDocument, librevenge::RVNGPropertyList frameExtras)
 {
 	if (!_openFrame(pos, frameExtras)) return;
 
-	WPXPropertyList propList;
+	librevenge::RVNGPropertyList propList;
 	m_documentInterface->openTextBox(propList);
 	handleSubDocument(subDocument, libwps::DOC_TEXT_BOX);
 	m_documentInterface->closeTextBox();
@@ -1200,14 +1150,15 @@ void WPSContentListener::insertTextBox
 }
 
 void WPSContentListener::insertPicture
-(WPSPosition const &pos, const WPXBinaryData &binaryData, std::string type,
- WPXPropertyList frameExtras)
+(WPSPosition const &pos, const librevenge::RVNGBinaryData &binaryData, std::string type,
+ librevenge::RVNGPropertyList frameExtras)
 {
 	if (!_openFrame(pos, frameExtras)) return;
 
-	WPXPropertyList propList;
-	propList.insert("libwpd:mimetype", type.c_str());
-	m_documentInterface->insertBinaryObject(propList, binaryData);
+	librevenge::RVNGPropertyList propList;
+	propList.insert("librevenge:mime-type", type.c_str());
+	propList.insert("office:binary-data", binaryData);
+	m_documentInterface->insertBinaryObject(propList);
 
 	_closeFrame();
 }
@@ -1215,7 +1166,7 @@ void WPSContentListener::insertPicture
 ///////////////////
 // frame
 ///////////////////
-bool WPSContentListener::_openFrame(WPSPosition const &pos, WPXPropertyList extras)
+bool WPSContentListener::_openFrame(WPSPosition const &pos, librevenge::RVNGPropertyList extras)
 {
 	if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
 	{
@@ -1250,7 +1201,7 @@ bool WPSContentListener::_openFrame(WPSPosition const &pos, WPXPropertyList extr
 		return false;
 	}
 
-	WPXPropertyList propList(extras);
+	librevenge::RVNGPropertyList propList(extras);
 	_handleFrameParameters(propList, pos);
 	m_documentInterface->openFrame(propList);
 
@@ -1270,19 +1221,19 @@ void WPSContentListener::_closeFrame()
 }
 
 void WPSContentListener::_handleFrameParameters
-(WPXPropertyList &propList, WPSPosition const &pos)
+(librevenge::RVNGPropertyList &propList, WPSPosition const &pos)
 {
 	Vec2f origin = pos.origin();
-	WPXUnit unit = pos.unit();
-	float inchFactor=pos.getInvUnitScale(WPX_INCH);
-	float pointFactor = pos.getInvUnitScale(WPX_POINT);
+	librevenge::RVNGUnit unit = pos.unit();
+	float inchFactor=pos.getInvUnitScale(librevenge::RVNG_INCH);
+	float pointFactor = pos.getInvUnitScale(librevenge::RVNG_POINT);
 
 	propList.insert("svg:width", double(pos.size()[0]), unit);
 	propList.insert("svg:height", double(pos.size()[1]), unit);
 	if (pos.naturalSize().x() > 4*pointFactor && pos.naturalSize().y() > 4*pointFactor)
 	{
-		propList.insert("libwpd:naturalWidth", pos.naturalSize().x(), pos.unit());
-		propList.insert("libwpd:naturalHeight", pos.naturalSize().y(), pos.unit());
+		propList.insert("librevenge:naturalWidth", pos.naturalSize().x(), pos.unit());
+		propList.insert("librevenge:naturalHeight", pos.naturalSize().y(), pos.unit());
 	}
 
 	if (pos.m_wrapping ==  WPSPosition::WDynamic)
@@ -1408,6 +1359,7 @@ void WPSContentListener::_handleFrameParameters
 		{
 		case WPSPosition::XFull:
 			propList.insert("svg:width", double(w), unit);
+		// fallthrough intended
 		case WPSPosition::XLeft:
 			if (origin[0] < 0.0 || origin[0] > 0.0)
 			{
@@ -1533,7 +1485,13 @@ void WPSContentListener::handleSubDocument(WPSSubDocumentPtr &subDocument, libwp
 			shared_ptr<WPSContentListener> listen(this, WPS_shared_ptr_noop_deleter<WPSContentListener>());
 			try
 			{
-				subDocument->parse(listen, subDocumentType);
+				WPSTextSubDocument *docu=dynamic_cast<WPSTextSubDocument *>(subDocument.get());
+				if (docu)
+					docu->parse(listen, subDocumentType);
+				else
+				{
+					WPS_DEBUG_MSG(("Works: WPSContentListener::handleSubDocument bad sub document\n"));
+				}
 			}
 			catch (...)
 			{
@@ -1589,7 +1547,7 @@ void WPSContentListener::_endSubDocument()
 ///////////////////
 // table
 ///////////////////
-void WPSContentListener::openTable(std::vector<float> const &colWidth, WPXUnit unit)
+void WPSContentListener::openTable(std::vector<float> const &colWidth, librevenge::RVNGUnit unit)
 {
 	if (m_ps->m_isTableOpened)
 	{
@@ -1604,24 +1562,25 @@ void WPSContentListener::openTable(std::vector<float> const &colWidth, WPXUnit u
 	_startSubDocument();
 	m_ps->m_subDocumentType = libwps::DOC_TABLE;
 
-	WPXPropertyList propList;
+	librevenge::RVNGPropertyList propList;
 	propList.insert("table:align", "left");
 	propList.insert("fo:margin-left", 0.0);
 
 	float tableWidth = 0;
-	WPXPropertyListVector columns;
+	librevenge::RVNGPropertyListVector columns;
 
 	size_t nCols = colWidth.size();
 	for (size_t c = 0; c < nCols; c++)
 	{
-		WPXPropertyList column;
+		librevenge::RVNGPropertyList column;
 		column.insert("style:column-width", colWidth[c], unit);
 		columns.append(column);
 
 		tableWidth += colWidth[c];
 	}
 	propList.insert("style:width", tableWidth, unit);
-	m_documentInterface->openTable(propList, columns);
+	propList.insert("librevenge:table-columns", columns);
+	m_documentInterface->openTable(propList);
 	m_ps->m_isTableOpened = true;
 }
 
@@ -1640,7 +1599,7 @@ void WPSContentListener::closeTable()
 	_popParsingState();
 }
 
-void WPSContentListener::openTableRow(float h, WPXUnit unit, bool headerRow)
+void WPSContentListener::openTableRow(float h, librevenge::RVNGUnit unit, bool headerRow)
 {
 	if (m_ps->m_isTableRowOpened)
 	{
@@ -1652,8 +1611,8 @@ void WPSContentListener::openTableRow(float h, WPXUnit unit, bool headerRow)
 		WPS_DEBUG_MSG(("WPSContentListener::openTableRow: called with m_isTableOpened=false\n"));
 		return;
 	}
-	WPXPropertyList propList;
-	propList.insert("libwpd:is-header-row", headerRow);
+	librevenge::RVNGPropertyList propList;
+	propList.insert("librevenge:is-header-row", headerRow);
 
 	if (h > 0)
 		propList.insert("style:row-height", h, unit);
@@ -1686,16 +1645,16 @@ void WPSContentListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
 		WPS_DEBUG_MSG(("WPSContentListener::addEmptyTableCell: called with m_isTableCellOpened=true\n"));
 		closeTableCell();
 	}
-	WPXPropertyList propList;
-	propList.insert("libwpd:column", pos[0]);
-	propList.insert("libwpd:row", pos[1]);
+	librevenge::RVNGPropertyList propList;
+	propList.insert("librevenge:column", pos[0]);
+	propList.insert("librevenge:row", pos[1]);
 	propList.insert("table:number-columns-spanned", span[0]);
 	propList.insert("table:number-rows-spanned", span[1]);
 	m_documentInterface->openTableCell(propList);
 	m_documentInterface->closeTableCell();
 }
 
-void WPSContentListener::openTableCell(WPSCell const &cell, WPXPropertyList const &extras)
+void WPSContentListener::openTableCell(WPSCell const &cell, librevenge::RVNGPropertyList const &extras)
 {
 	if (!m_ps->m_isTableRowOpened)
 	{
@@ -1708,43 +1667,8 @@ void WPSContentListener::openTableCell(WPSCell const &cell, WPXPropertyList cons
 		closeTableCell();
 	}
 
-	WPXPropertyList propList(extras);
-	propList.insert("libwpd:column", cell.position()[0]);
-	propList.insert("libwpd:row", cell.position()[1]);
-
-	propList.insert("table:number-columns-spanned", cell.numSpannedCells()[0]);
-	propList.insert("table:number-rows-spanned", cell.numSpannedCells()[1]);
-
-	std::vector<WPSBorder> const &borders = cell.borders();
-	for (size_t c = 0; c < borders.size(); c++)
-	{
-		std::string property = borders[c].getPropertyValue();
-		if (property.length() == 0) continue;
-		switch (c)
-		{
-		case WPSBorder::Left:
-			propList.insert("fo:border-left", property.c_str());
-			break;
-		case WPSBorder::Right:
-			propList.insert("fo:border-right", property.c_str());
-			break;
-		case WPSBorder::Top:
-			propList.insert("fo:border-top", property.c_str());
-			break;
-		case WPSBorder::Bottom:
-			propList.insert("fo:border-bottom", property.c_str());
-			break;
-		default:
-			WPS_DEBUG_MSG(("WPSContentListener::openTableCell: can not send %d border\n",int(c)));
-			break;
-		}
-	}
-	if (cell.backgroundColor() != 0xFFFFFF)
-	{
-		char color[20];
-		sprintf(color,"#%06x",cell.backgroundColor());
-		propList.insert("fo:background-color", color);
-	}
+	librevenge::RVNGPropertyList propList(extras);
+	cell.addTo(propList);
 
 	m_ps->m_isTableCellOpened = true;
 	m_documentInterface->openTableCell(propList);

@@ -6,8 +6,8 @@ AC_PREREQ([2.65])
 # Version informations
 # ====================
 m4_define([libwps_version_major],[0])
-m4_define([libwps_version_minor],[2])
-m4_define([libwps_version_micro],[9])
+m4_define([libwps_version_minor],[3])
+m4_define([libwps_version_micro],[0])
 m4_define([libwps_version],[libwps_version_major.libwps_version_minor.libwps_version_micro])
 
 # =============
@@ -35,16 +35,6 @@ AC_CANONICAL_HOST
 
 PKG_PROG_PKG_CONFIG([0.20])
 
-# ====================
-# Find additional apps
-# ====================
-PKG_CHECK_MODULES([WPD],[
-    libwpd-0.9 >= 0.9.5
-    libwpd-stream-0.9 >= 0.9.5
-])
-AC_SUBST(WPD_CFLAGS)
-AC_SUBST(WPD_LIBS)
-
 # =================================
 # Libtool/Version Makefile settings
 # =================================
@@ -56,7 +46,6 @@ AC_SUBST(WPS_VERSION, [libwps_version])
 LT_CURRENT=`expr 100 '*' libwps_version_major + libwps_version_minor`
 # For 1.0.0 comment the first line and uncomment the second
 LT_AGE=0
-# LT_AGE=libwpd_version_minor
 AC_SUBST(LT_CURRENT)
 AC_SUBST(LT_REVISION, [libwps_version_micro])
 AC_SUBST(LT_AGE)
@@ -70,24 +59,33 @@ AS_CASE([$host],
 		native_win32=yes
 		LIBWPS_WIN32_RESOURCE=libwps-win32res.lo
 		LIBWPS_STREAM_WIN32_RESOURCE=libwps-stream-win32res.lo
+		WKS2CSV_WIN32_RESOURCE=wks2csv-win32res.lo
+		WKS2RAW_WIN32_RESOURCE=wks2raw-win32res.lo
+		WKS2TEXT_WIN32_RESOURCE=wks2text-win32res.lo
 		WPS2HTML_WIN32_RESOURCE=wps2html-win32res.lo
-		WPS2TEXT_WIN32_RESOURCE=wps2text-win32res.lo
 		WPS2RAW_WIN32_RESOURCE=wps2raw-win32res.lo
+		WPS2TEXT_WIN32_RESOURCE=wps2text-win32res.lo
 	], [
 		native_win32=no
 		LIBWPS_WIN32_RESOURCE=
 		LIBWPS_STREAM_WIN32_RESOURCE=
+		WKS2CSV_WIN32_RESOURCE=
+		WKS2RAW_WIN32_RESOURCE=
+		WKS2TEXT_WIN32_RESOURCE=
 		WPS2HTML_WIN32_RESOURCE=
-		WPS2TEXT_WIN32_RESOURCE=
 		WPS2RAW_WIN32_RESOURCE=
+		WPS2TEXT_WIN32_RESOURCE=
 	]
 )
 AM_CONDITIONAL(OS_WIN32, [test "x$native_win32" = "xyes"])
 AC_SUBST(LIBWPS_WIN32_RESOURCE)
 AC_SUBST(LIBWPS_STREAM_WIN32_RESOURCE)
+AC_SUBST(WKS2CSV_WIN32_RESOURCE)
+AC_SUBST(WKS2RAW_WIN32_RESOURCE)
+AC_SUBST(WKS2TEXT_WIN32_RESOURCE)
 AC_SUBST(WPS2HTML_WIN32_RESOURCE)
-AC_SUBST(WPS2TEXT_WIN32_RESOURCE)
 AC_SUBST(WPS2RAW_WIN32_RESOURCE)
+AC_SUBST(WPS2TEXT_WIN32_RESOURCE)
 
 AC_MSG_CHECKING([for Win32 platform in general])
 AS_CASE([$host],
@@ -300,6 +298,36 @@ AS_IF([test "x$with_docs" != "xno"], [
 ], [build_docs=no])
 AM_CONDITIONAL([WITH_LIBWPS_DOCS], [test "x$build_docs" != "xno"])
 
+
+# ====================
+# Find librevenge
+# ====================
+PKG_CHECK_MODULES([REVENGE],[ librevenge-0.0 ])
+AC_SUBST(REVENGE_CFLAGS)
+AC_SUBST(REVENGE_LIBS)
+
+# =====
+# Tools
+# =====
+AC_ARG_ENABLE([tools],
+	[AS_HELP_STRING([--disable-tools], [Build conversion tools])],
+	[enable_tools="$enableval"],
+	[enable_tools=yes]
+)
+AS_IF([test "x$enable_tools" = "xyes"], [
+	PKG_CHECK_MODULES([REVENGE_GENERATORS],[
+		librevenge-generators-0.0
+	])
+	PKG_CHECK_MODULES([REVENGE_STREAM],[
+		librevenge-stream-0.0
+	])
+])
+AC_SUBST([REVENGE_GENERATORS_CFLAGS])
+AC_SUBST([REVENGE_GENERATORS_LIBS])
+AC_SUBST([REVENGE_STREAM_CFLAGS])
+AC_SUBST([REVENGE_STREAM_LIBS])
+AM_CONDITIONAL(BUILD_TOOLS, [test "x$enable_tools" = "xyes"])
+
 # =====================
 # Prepare all .in files
 # =====================
@@ -315,6 +343,12 @@ src/conv/raw/Makefile
 src/conv/raw/wps2raw.rc
 src/conv/text/Makefile
 src/conv/text/wps2text.rc
+src/conv/wks2csv/Makefile
+src/conv/wks2csv/wks2csv.rc
+src/conv/wks2raw/Makefile
+src/conv/wks2raw/wks2raw.rc
+src/conv/wks2text/Makefile
+src/conv/wks2text/wks2text.rc
 src/lib/Makefile
 src/lib/libwps.rc
 docs/Makefile

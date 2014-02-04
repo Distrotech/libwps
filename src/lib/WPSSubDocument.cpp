@@ -24,7 +24,7 @@
 
 #include "WPSSubDocument.h"
 
-WPSSubDocument::WPSSubDocument(WPXInputStreamPtr &input, WPSParser *p, int i)  : m_input(input), m_parser(p), m_id(i)
+WPSSubDocument::WPSSubDocument(RVNGInputStreamPtr &input, int i)  : m_input(input), m_id(i)
 {
 }
 
@@ -37,7 +37,6 @@ bool WPSSubDocument::operator==(shared_ptr<WPSSubDocument> const &doc) const
 	if (!doc) return false;
 	if (doc.get() == this) return true;
 	if (m_input.get() != doc.get()->m_input.get()) return false;
-	if (m_parser != doc.get()->m_parser) return false;
 	if (m_id != doc.get()->m_id) return false;
 	return true;
 }

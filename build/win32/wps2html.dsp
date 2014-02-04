@@ -44,16 +44,16 @@ RSC=rc.exe
 MTL=midl.exe
 # ADD BASE MTL /nologo /win32
 # ADD MTL /nologo /win32
-# ADD BASE CPP /nologo /MT /W3 /GX /Zi /I "..\..\src\lib" /I "libwpd-0.9" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /c
-# ADD CPP /nologo /MT /W3 /GX /I "..\..\src\lib" /I "libwpd-0.9" /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /c
+# ADD BASE CPP /nologo /MT /W3 /GX /Zi /I "..\..\src\lib" /I "librevenge-0.0" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /c
+# ADD CPP /nologo /MT /W3 /GX /I "..\..\src\lib" /I "librevenge-0.0" /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 libwpd-stream-0.9.lib libwps-0.2.lib libwpd-0.9.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2html.exe" /libpath:"Release\lib"
-# ADD LINK32 libwpd-stream-0.9.lib libwps-0.2.lib libwpd-0.9.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2html.exe" /libpath:"Release\lib"
+# ADD BASE LINK32 librevenge-stream-0.0.lib libwps-0.3.lib librevenge-0.0.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2html.exe" /libpath:"Release\lib"
+# ADD LINK32 librevenge-stream-0.0.lib libwps-0.3.lib librevenge-0.0.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2html.exe" /libpath:"Release\lib"
 # SUBTRACT LINK32 /nodefaultlib
 
 !ELSEIF  "$(CFG)" == "wps2html - Win32 Debug"
@@ -72,16 +72,16 @@ LINK32=link.exe
 MTL=midl.exe
 # ADD BASE MTL /nologo /win32
 # ADD MTL /nologo /win32
-# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\src\lib" /I "libwpd-0.9" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /GZ /c
-# ADD CPP /nologo /MTd /W3 /GX /ZI /Od /I "..\..\src\lib" /I "libwpd-0.9" /D "_DEBUG" /D "DEBUG" /D "WIN32" /D "_CONSOLE" /GZ /c
+# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\src\lib" /I "librevenge-0.0" /D "WIN32" /D "_DEBUG" /D "DEBUG" /D "_CONSOLE" /GZ /c
+# ADD CPP /nologo /MTd /W3 /GX /ZI /Od /I "..\..\src\lib" /I "librevenge-0.0" /D "_DEBUG" /D "DEBUG" /D "WIN32" /D "_CONSOLE" /GZ /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 libwpd-stream-0.9.lib libwps-0.2.lib libwpd-0.9.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2html.exe" /libpath:"Debug\lib"
-# ADD LINK32 libwps-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2html.exe" /libpath:"Debug\lib"
+# ADD BASE LINK32 librevenge-stream-0.0.lib libwps-0.3.lib librevenge-0.0.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2html.exe" /libpath:"Debug\lib"
+# ADD LINK32 libwps-0.3.lib librevenge-stream-0.0.lib librevenge-0.0.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2html.exe" /libpath:"Debug\lib"
 # SUBTRACT LINK32 /nodefaultlib
 
 !ENDIF 
@@ -95,44 +95,12 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 # Begin Source File
 
-SOURCE=..\..\src\conv\html\HtmlDocumentGenerator.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\conv\html\TableStyle.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\conv\html\TextRunStyle.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\conv\html\wps2html.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\conv\html\wps2html_internal.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl;inc;xsd"
-# Begin Source File
-
-SOURCE=..\..\src\conv\html\HtmlDocumentGenerator.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\conv\html\TableStyle.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\conv\html\TextRunStyle.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\conv\html\wps2html_internal.h
-# End Source File
 # End Group
 # End Target
 # End Project

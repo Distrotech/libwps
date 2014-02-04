@@ -108,7 +108,7 @@ protected:
 	//! the main parser
 	WPS8Text &m_mainParser;
 	//! the main input
-	WPXInputStreamPtr m_input;
+	RVNGInputStreamPtr m_input;
 	//! the listener
 	WPSContentListenerPtr m_listener;
 	//! the internal state

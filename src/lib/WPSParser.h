@@ -30,27 +30,25 @@
 
 #include "WPSDebug.h"
 
-class WPXDocumentInterface;
-
 class WPSTextParser;
 
 class WPSParser
 {
 	friend class WPSTextParser;
 public:
-	WPSParser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
-	virtual ~WPSParser();
-
-	virtual void parse(WPXDocumentInterface *documentInterface) = 0;
-
 	//! a map to retrieve a file entry by name
 	typedef std::multimap<std::string, WPSEntry> NameMultiMap;
 
+	WPSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
+	virtual ~WPSParser();
+	virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
+
 protected:
-	WPXInputStreamPtr &getInput()
+	RVNGInputStreamPtr &getInput()
 	{
 		return m_input;
 	}
+	RVNGInputStreamPtr getFileInput();
 	WPSHeaderPtr &getHeader()
 	{
 		return m_header;
@@ -63,6 +61,12 @@ protected:
 	{
 		m_version=vers;
 	}
+	//! a DebugFile used to write what we recognize when we parse the document
+	libwps::DebugFile &ascii()
+	{
+		return m_asciiFile;
+	}
+
 	NameMultiMap &getNameEntryMap()
 	{
 		return m_nameMultiMap;
@@ -71,26 +75,22 @@ protected:
 	{
 		return m_nameMultiMap;
 	}
-	//! a DebugFile used to write what we recognize when we parse the document
-	libwps::DebugFile &ascii()
-	{
-		return m_asciiFile;
-	}
 
 private:
 	WPSParser(const WPSParser &);
 	WPSParser &operator=(const WPSParser &);
 
 	// the main input
-	WPXInputStreamPtr m_input;
+	RVNGInputStreamPtr m_input;
 	// the header
 	WPSHeaderPtr m_header;
 	// the file version
 	int m_version;
-	//! a map to retrieve a file entry by name
-	NameMultiMap m_nameMultiMap;
 	//! the debug file
 	libwps::DebugFile m_asciiFile;
+
+	//! a map to retrieve a file entry by name
+	NameMultiMap m_nameMultiMap;
 };
 
 #endif /* WPSPARSER_H */

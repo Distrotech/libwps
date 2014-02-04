@@ -68,7 +68,7 @@ class WPS4Text : public WPSTextParser
 
 public:
 	//! contructor
-	WPS4Text(WPS4Parser &parser, WPXInputStreamPtr &input);
+	WPS4Text(WPS4Parser &parser, RVNGInputStreamPtr &input);
 
 	//! destructor
 	~WPS4Text();

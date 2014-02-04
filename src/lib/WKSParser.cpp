@@ -7,9 +7,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  * Major Contributor(s):
- * Copyright (C) 2002-2004 William Lachance (wrlach@gmail.com)
+ * Copyright (C) 2002 William Lachance (william.lachance@sympatico.ca)
  * Copyright (C) 2002 Marc Maurer (uwog@uwog.net)
- * Copyright (C) 2004 Fridrich Strba (fridrich.strba@bluewin.ch)
  *
  * For minor contributions see the git repository.
  *
@@ -21,31 +20,28 @@
  * For further information visit http://libwps.sourceforge.net
  */
 
-#include <string.h>
-#include <cstring>
+#include "libwps_internal.h"
 
-#include <libwpd/libwpd.h>
+#include "WPSEntry.h"
+#include "WPSHeader.h"
 
-#include "wps2html_internal.h"
+#include "WKSParser.h"
 
-namespace wps2html
+WKSParser::WKSParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
+	m_input(input), m_header(header), m_version(0), m_asciiFile()
 {
-bool getPointValue(WPXProperty const &prop, double &res)
+	if (header)
+		m_version = header->getMajorVersion();
+}
+
+WKSParser::~WKSParser()
 {
-	res = prop.getDouble();
-
-	// try to guess the type
-	WPXString str = prop.getStr();
-
-	// point->pt, twip->*, inch -> in
-	char c = str.len() ? str.cstr()[str.len()-1] : ' ';
-	if (c == '*') res /= 1440.;
-	else if (c == 't') res /= 72.;
-	else if (c == 'n') ;
-	else if (c == '%')
-		return false;
-	res *= 72.;
-	return true;
 }
+
+RVNGInputStreamPtr WKSParser::getFileInput()
+{
+	if (!m_header) return RVNGInputStreamPtr();
+	return m_header->getFileInput();
 }
+
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

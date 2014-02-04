@@ -27,14 +27,11 @@
 
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 
-class WPXBinaryData;
-class WPXDocumentInterface;
-class WPXString;
-class WPXPropertyListVector;
+#include "WPSListener.h"
 
 class WPSList;
 class WPSPageSpan;
@@ -44,10 +41,10 @@ struct WPSTabStop;
 struct WPSContentParsingState;
 struct WPSDocumentParsingState;
 
-class WPSContentListener
+class WPSContentListener : public WPSListener
 {
 public:
-	WPSContentListener(std::vector<WPSPageSpan> const &pageList, WPXDocumentInterface *documentInterface);
+	WPSContentListener(std::vector<WPSPageSpan> const &pageList, librevenge::RVNGTextInterface *documentInterface);
 	virtual ~WPSContentListener();
 
 	void setDocumentLanguage(int lcid);
@@ -66,9 +63,7 @@ public:
 	 * by convention if \a character=0xfffd(undef), no character is added */
 	void insertUnicode(uint32_t character);
 	//! adds a unicode string
-	void insertUnicodeString(WPXString const &str);
-	//! adds an unicode character to a string ( with correct encoding ).
-	static void appendUnicode(uint32_t val, WPXString &buffer);
+	void insertUnicodeString(librevenge::RVNGString const &str);
 
 	void insertTab();
 	void insertEOL(bool softBreak=false);
@@ -95,8 +90,6 @@ public:
 	shared_ptr<WPSList> getCurrentList() const;
 
 	// ------- fields ----------------
-	/** Defines some basic type for field */
-	enum FieldType { None, PageNumber, Date, Time, Title, Link, Database };
 	//! adds a field type
 	void insertField(FieldType type);
 	//! insert a date/time field with given format (see strftime)
@@ -108,32 +101,32 @@ public:
 	/** adds note */
 	void insertNote(const NoteType noteType, WPSSubDocumentPtr &subDocument);
 	/** adds a label note */
-	void insertLabelNote(const NoteType noteType, WPXString const &label, WPSSubDocumentPtr &subDocument);
+	void insertLabelNote(const NoteType noteType, librevenge::RVNGString const &label, WPSSubDocumentPtr &subDocument);
 	/** adds comment */
 	void insertComment(WPSSubDocumentPtr &subDocument);
 
 	/** adds a picture in given position */
-	void insertPicture(WPSPosition const &pos, const WPXBinaryData &binaryData,
+	void insertPicture(WPSPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
 	                   std::string type="image/pict",
-	                   WPXPropertyList frameExtras=WPXPropertyList());
+	                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
 	/** adds a textbox in given position */
 	void insertTextBox(WPSPosition const &pos, WPSSubDocumentPtr subDocument,
-	                   WPXPropertyList frameExtras=WPXPropertyList());
+	                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
 
 
 	// ------- table -----------------
 	/** open a table*/
-	void openTable(std::vector<float> const &colWidth, WPXUnit unit);
+	void openTable(std::vector<float> const &colWidth, librevenge::RVNGUnit unit);
 	/** closes this table */
 	void closeTable();
 	/** open a row with given height. If h<0, use min-row-heigth */
-	void openTableRow(float h, WPXUnit unit, bool headerRow=false);
+	void openTableRow(float h, librevenge::RVNGUnit unit, bool headerRow=false);
 	/** closes this row */
 	void closeTableRow();
 	/** low level function to define a cell.
 		\param cell the cell position, alignement, ...
 		\param extras to be used to pass extra data, for instance spreadsheet data*/
-	void openTableCell(WPSCell const &cell, WPXPropertyList const &extras);
+	void openTableCell(WPSCell const &cell, librevenge::RVNGPropertyList const &extras=librevenge::RVNGPropertyList());
 	/** close a cell */
 	void closeTableCell();
 	/** add empty cell */
@@ -145,7 +138,7 @@ public:
 	//! returns the actual number of columns ( or 1 if no section is opened )
 	int getSectionNumColumns() const;
 	//! open a section if possible
-	bool openSection(std::vector<int> colsWidth=std::vector<int>(), WPXUnit unit=WPX_INCH);
+	bool openSection(std::vector<int> colsWidth=std::vector<int>(), librevenge::RVNGUnit unit=librevenge::RVNG_INCH);
 	//! close a section
 	bool closeSection();
 
@@ -160,13 +153,13 @@ protected:
 	void _startSubDocument();
 	void _endSubDocument();
 
-	void _handleFrameParameters(WPXPropertyList &propList, WPSPosition const &pos);
-	bool _openFrame(WPSPosition const &pos, WPXPropertyList extras=WPXPropertyList());
+	void _handleFrameParameters(librevenge::RVNGPropertyList &propList, WPSPosition const &pos);
+	bool _openFrame(WPSPosition const &pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
 	void _closeFrame();
 
 	void _openParagraph();
 	void _closeParagraph();
-	void _appendParagraphProperties(WPXPropertyList &propList, WPXPropertyListVector &tabStops, const bool isListElement=false);
+	void _appendParagraphProperties(librevenge::RVNGPropertyList &propList, const bool isListElement=false);
 	void _resetParagraphState(const bool isListElement=false);
 
 	void _openListElement();
@@ -179,7 +172,7 @@ protected:
 	void _flushText();
 	void _flushDeferredTabs();
 
-	void _insertBreakIfNecessary(WPXPropertyList &propList);
+	void _insertBreakIfNecessary(librevenge::RVNGPropertyList &propList);
 
 	/** creates a new parsing state (copy of the actual state)
 	 *
@@ -192,7 +185,7 @@ protected:
 	shared_ptr<WPSDocumentParsingState> m_ds; // main parse state
 	shared_ptr<WPSContentParsingState> m_ps; // parse state
 	std::vector<shared_ptr<WPSContentParsingState> > m_psStack;
-	WPXDocumentInterface *m_documentInterface;
+	librevenge::RVNGTextInterface *m_documentInterface;
 
 private:
 	WPSContentListener(const WPSContentListener &);

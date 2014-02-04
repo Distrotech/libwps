@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR),$(BOOST_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBREVENGE_INCLUDE_DIR),$(BOOST_INCLUDE_DIR)"
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -69,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="Release\lib\libwps-0.2.lib"
+				OutputFile="Release\lib\libwps-0.3.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -116,7 +116,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR),$(BOOST_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBREVENGE_INCLUDE_DIR),$(BOOST_INCLUDE_DIR)"
 				PreprocessorDefinitions="_DEBUG;DEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -143,7 +143,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="Debug\lib\libwps-0.2.lib"
+				OutputFile="Debug\lib\libwps-0.3.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -194,6 +194,106 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\libwps_tools_win.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKS4.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKS4Spreadsheet.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKSContentListener.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKSParser.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKSSubDocument.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -553,26 +653,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WPSOLEStream.cpp"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\src\lib\WPSPageSpan.cpp"
 				>
 				<FileConfiguration
@@ -692,6 +772,26 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath="..\..\src\lib\WPSTextSubDocument.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -707,6 +807,26 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\libwps_tools_win.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKS4.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKS4Spreadsheet.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKSContentListener.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKSParser.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WKSSubDocument.h"
 				>
 			</File>
 			<File
@@ -782,10 +902,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WPSOLEStream.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\lib\WPSPageSpan.h"
 				>
 			</File>
@@ -811,6 +927,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\WPSTextParser.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WPSTextSubDocument.h"
 				>
 			</File>
 		</Filter>

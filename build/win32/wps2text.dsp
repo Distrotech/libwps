@@ -52,8 +52,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 libwpd-stream-0.9.lib libwps-0.2.lib libwpd-0.9.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2text.exe" /libpath:"Release\lib"
-# ADD LINK32 libwpd-stream-0.9.lib libwps-0.2.lib libwpd-0.9.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2text.exe" /libpath:"Release\lib"
+# ADD BASE LINK32 librevenge-stream-0.0.lib libwps-0.3.lib librevenge-0.0.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2text.exe" /libpath:"Release\lib"
+# ADD LINK32 librevenge-stream-0.0.lib libwps-0.3.lib librevenge-0.0.lib /nologo /subsystem:console /machine:IX86 /out:"Release\bin\wps2text.exe" /libpath:"Release\lib"
 # SUBTRACT LINK32 /nodefaultlib
 
 !ELSEIF  "$(CFG)" == "wps2text - Win32 Debug"
@@ -80,8 +80,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 libwps-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2text.exe" /libpath:"Debug\lib"
-# ADD LINK32 libwps-0.2.lib libwpd-stream-0.9.lib libwpd-0.9.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2text.exe" /libpath:"Debug\lib"
+# ADD BASE LINK32 libwps-0.3.lib librevenge-stream-0.0.lib librevenge-0.0.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2text.exe" /libpath:"Debug\lib"
+# ADD LINK32 libwps-0.3.lib librevenge-stream-0.0.lib librevenge-0.0.lib /nologo /subsystem:console /debug /machine:IX86 /out:"Debug\bin\wps2text.exe" /libpath:"Debug\lib"
 # SUBTRACT LINK32 /nodefaultlib
 
 !ENDIF 
@@ -95,20 +95,12 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 # Begin Source File
 
-SOURCE=..\..\src\conv\text\TextDocumentGenerator.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\conv\text\wps2text.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl;inc;xsd"
-# Begin Source File
-
-SOURCE=..\..\src\conv\text\TextDocumentGenerator.h
-# End Source File
 # End Group
 # End Target
 # End Project

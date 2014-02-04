@@ -38,7 +38,7 @@
 #include <map>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
@@ -217,7 +217,7 @@ struct Note : public WPSEntry
 		return o;
 	}
 	//! the label if not numeric
-	WPXString m_label;
+	librevenge::RVNGString m_label;
 	//! a string used to store the parsing errors
 	std::string m_error;
 };
@@ -471,7 +471,7 @@ struct State
 //////////////////////////////////////////////////////////////////////////////
 
 // constructor/destructor
-WPS4Text::WPS4Text(WPS4Parser &parser, WPXInputStreamPtr &input) :
+WPS4Text::WPS4Text(WPS4Parser &parser, RVNGInputStreamPtr &input) :
 	WPSTextParser(parser, input), m_listener(), m_state()
 {
 	m_state.reset(new WPS4TextInternal::State);
@@ -485,8 +485,8 @@ WPS4Text::~WPS4Text()
 int WPS4Text::numPages() const
 {
 	int numPage = 1;
-	m_input->seek(m_textPositions.begin(), WPX_SEEK_SET);
-	while (!m_input->atEOS() && m_input->tell() != m_textPositions.end())
+	m_input->seek(m_textPositions.begin(), librevenge::RVNG_SEEK_SET);
+	while (!m_input->isEnd() && m_input->tell() != m_textPositions.end())
 	{
 		if (libwps::readU8(m_input.get()) == 0x0C) numPage++;
 	}
@@ -549,7 +549,7 @@ void WPS4Text::flushExtra()
 	m_listener->setParagraph(WPS4TextInternal::Paragraph());
 	m_listener->insertEOL();
 #ifdef DEBUG
-	WPXString message = "--------- extra text zone -------- ";
+	librevenge::RVNGString message = "--------- extra text zone -------- ";
 	m_listener->insertUnicodeString(message);
 #endif
 	for (size_t i = 0; i < numExtra; ++i)
@@ -588,7 +588,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				int w = int(72.0*mainParser().pageWidth())/numCols;
 				std::vector<int> width;
 				width.resize(size_t(numCols), w);
-				m_listener->openSection(width,WPX_POINT);
+				m_listener->openSection(width,librevenge::RVNG_POINT);
 			}
 		}
 	}
@@ -722,7 +722,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				break;
 			}
 		}
-		m_input->seek(actPos, WPX_SEEK_SET);
+		m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 		std::string chaine("");
 		long len = lastPos-actPos;
 		for (long i = len; i>0; i--)
@@ -759,7 +759,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				WPSPosition pos_(Vec2f(),Vec2f(3.0f,0.2f));
 				pos_.setRelativePosition(WPSPosition::Paragraph, WPSPosition::XCenter);
 				pos_.m_wrapping = WPSPosition::WNone;
-				WPXPropertyList extras;
+				librevenge::RVNGPropertyList extras;
 				mainParser().createTextBox(ent, pos_, extras);
 				m_listener->insertEOL();
 				break;
@@ -879,7 +879,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 						i--;
 						break;
 					}
-					m_input->seek(-1, WPX_SEEK_CUR);
+					m_input->seek(-1, librevenge::RVNG_SEEK_CUR);
 				}
 			default:
 				if (version()<=2)
@@ -1006,7 +1006,7 @@ bool WPS4Text::readEntries()
 
 	// check if fPositions.offset_eos
 	long newPos = m_input->tell();
-	if (m_input->seek(eof-1, WPX_SEEK_SET) != 0 || m_input->tell() != eof-1)
+	if (m_input->seek(eof-1, librevenge::RVNG_SEEK_SET) != 0 || m_input->tell() != eof-1)
 	{
 		eof = m_input->tell();
 		WPS_DEBUG_MSG(("WPS4Text:readEntries: incomplete file\n"));
@@ -1018,7 +1018,7 @@ bool WPS4Text::readEntries()
 	ascii().addPos(actPos);
 	ascii().addNote(f.str().c_str());
 
-	m_input->seek(newPos, WPX_SEEK_SET);
+	m_input->seek(newPos, librevenge::RVNG_SEEK_SET);
 
 	static char const * (zName[]) =
 	{ "BTEC", "BTEP", "SHdr", "SFtr", "DLINK", "FTNp", "FTNd", "BKMK", "FONT" };
@@ -1075,9 +1075,9 @@ bool WPS4Text::readStructures()
 	// update the footnote
 	WPSEntry ftnD, ftnP;
 	pos = nameMultiMap.find("FTNd");
-	if (pos != getNameEntryMap().end()) ftnD = pos->second;
+	if (pos != nameMultiMap.end()) ftnD = pos->second;
 	pos = nameMultiMap.find("FTNp");
-	if (pos != getNameEntryMap().end()) ftnP = pos->second;
+	if (pos != nameMultiMap.end()) ftnP = pos->second;
 	readFootNotes(ftnD, ftnP);
 
 	// bookmark
@@ -1224,7 +1224,7 @@ bool WPS4Text::findFDPStructuresByHand(int which)
 	long lastPos = m_textPositions.begin();
 	while (1)
 	{
-		m_input->seek(debPos+0x7f, WPX_SEEK_SET);
+		m_input->seek(debPos+0x7f, librevenge::RVNG_SEEK_SET);
 		if (m_input->tell() != debPos+0x7f)
 		{
 			WPS_DEBUG_MSG(("WPS4Text: find EOF while parsing the %s\n", indexName));
@@ -1236,14 +1236,14 @@ bool WPS4Text::findFDPStructuresByHand(int which)
 			WPS_DEBUG_MSG(("WPS4Text: find too big number of data while parsing the %s\n", indexName));
 			return false;
 		}
-		m_input->seek(debPos, WPX_SEEK_SET);
+		m_input->seek(debPos, librevenge::RVNG_SEEK_SET);
 		if (long(libwps::readU32(m_input)) != lastPos)
 		{
 			WPS_DEBUG_MSG(("WPS4Text: find incorrect linking while parsing the %s\n", indexName));
 			return false;
 		}
 		if (nbElt != 1)
-			m_input->seek(4*nbElt-4, WPX_SEEK_CUR);
+			m_input->seek(4*nbElt-4, librevenge::RVNG_SEEK_CUR);
 
 		long newPos = (long) libwps::readU32(m_input);
 		if (newPos < lastPos || newPos > m_textPositions.end())
@@ -1304,7 +1304,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 {
 	if (!entry.valid()) return false;
 
-	m_input->seek(entry.begin(), WPX_SEEK_SET);
+	m_input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 
 	long endPos = entry.end();
 	int nFonts = 0;
@@ -1334,7 +1334,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 		uint8_t nChar = libwps::readU8(m_input);
 		for (uint8_t i = nChar; i>0; i--)
 		{
-			if (m_input->atEOS())
+			if (m_input->isEnd())
 			{
 				WPS_DEBUG_MSG(("WPS4Text::readFontNames: can not read the font number %i (end of file)\n",
 				               font_number));
@@ -1354,8 +1354,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 				f << "##oddC=" << (unsigned int) val << ", ";
 			}
 		}
-		libwps_tools_win::Font::Type fType=libwps_tools_win::Font::UNKNOWN;
-		fType=libwps_tools_win::Font::getFontType(s);
+		libwps_tools_win::Font::Type fType=libwps_tools_win::Font::getFontType(s);
 		if (fType==libwps_tools_win::Font::UNKNOWN)
 			fType=docType;
 		WPS4TextInternal::FontName font;
@@ -1528,7 +1527,7 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 		return false;
 	}
 
-	m_input->seek(entry.begin(), WPX_SEEK_SET);
+	m_input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 	libwps::DebugStream f;
 	long numElt = length/44;
 	long val;
@@ -1570,12 +1569,12 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 		{
 			std::string name("");
 			link.m_pos.setBegin(m_input->tell());
-			while (!m_input->atEOS() && long(m_input->tell()) < endPos)
+			while (!m_input->isEnd() && long(m_input->tell()) < endPos)
 			{
 				char c = char(libwps::readU8(m_input));
 				if (!c)
 				{
-					m_input->seek(-1, WPX_SEEK_CUR);
+					m_input->seek(-1, librevenge::RVNG_SEEK_CUR);
 					break;
 				}
 				name += c;
@@ -1596,7 +1595,7 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 			ascii().addDelimiter(m_input->tell(),'|');
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
-		m_input->seek(endPos, WPX_SEEK_SET);
+		m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
 	}
 	return true;
 }
@@ -2001,7 +2000,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 		}
 		if (!ok)
 		{
-			m_input->seek(pos, WPX_SEEK_SET);
+			m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 			f << "###v" << v<<"=" <<std::hex;
 			while (m_input->tell() < endPos)
 				f << (int) libwps::readU8(m_input) << ",";
@@ -2144,7 +2143,7 @@ bool WPS4Text::footNotesDataParser(long /*bot*/, long /*eot*/, int id,
 	else
 	{
 		int numC = type/2;
-		WPXString label("");
+		librevenge::RVNGString label("");
 		libwps_tools_win::Font::Type actType = getDefaultFontType();
 		for (int i=0; i < numC; ++i)
 		{
@@ -2162,7 +2161,7 @@ bool WPS4Text::footNotesDataParser(long /*bot*/, long /*eot*/, int id,
 	f.str("");
 	f << note;
 	mess = f.str();
-	m_input->seek(endPos+1, WPX_SEEK_SET);
+	m_input->seek(endPos+1, librevenge::RVNG_SEEK_SET);
 	return true;
 }
 
@@ -2198,7 +2197,7 @@ bool WPS4Text::bkmkDataParser(long bot, long /*eot*/, int /*id*/,
 	ent.setEnd(m_input->tell());
 	ent.setId(WPS4TextInternal::Z_String);
 	m_state->m_bookmarkMap[bot] = ent;
-	m_input->seek(endPos+1, WPX_SEEK_SET);
+	m_input->seek(endPos+1, librevenge::RVNG_SEEK_SET);
 	return true;
 }
 
@@ -2266,7 +2265,7 @@ bool WPS4Text::objectDataParser(long bot, long /*eot*/, int id,
 		WPS_DEBUG_MSG(("WPS4Text::objectDataParser: bad object position\n"));
 	}
 
-	m_input->seek(actPos, WPX_SEEK_SET);
+	m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 
 	for (int i = 0; i < 7; ++i)
 	{
@@ -2416,7 +2415,7 @@ bool WPS4Text::readPLC
 
 	libwps::DebugStream f;
 	ascii().addPos(zone.begin());
-	m_input->seek(zone.begin(), WPX_SEEK_SET);
+	m_input->seek(zone.begin(), librevenge::RVNG_SEEK_SET);
 
 	long lastPos = 0;
 	std::vector<DataFOD> fods;
@@ -2439,11 +2438,11 @@ bool WPS4Text::readPLC
 			else
 			{
 				long actPos = m_input->tell();
-				m_input->seek(newPos, WPX_SEEK_SET);
+				m_input->seek(newPos, librevenge::RVNG_SEEK_SET);
 				if (libwps::readU8(m_input) == plcType.m_textChar)
 					plcType.m_pos = WPS4PLCInternal::PLC::P_ABS;
 				else plcType.m_pos = WPS4PLCInternal::PLC::P_REL;
-				m_input->seek(actPos, WPX_SEEK_SET);
+				m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 			}
 		}
 
@@ -2526,6 +2525,7 @@ bool WPS4Text::readPLC
 				break;
 			default:
 				WPS_DEBUG_MSG(("WPS4Text:readPLC: unexpected PLC size\n"));
+			// fallthrough intended
 			case 0:
 				plc.m_value = 0;
 			}
@@ -2540,7 +2540,7 @@ bool WPS4Text::readPLC
 				break;
 			}
 			plc.m_extra = mess;
-			m_input->seek(pos+dataSize, WPX_SEEK_SET);
+			m_input->seek(pos+dataSize, librevenge::RVNG_SEEK_SET);
 		}
 
 		listValues.push_back(plc.m_value);

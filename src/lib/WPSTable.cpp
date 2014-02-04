@@ -225,10 +225,11 @@ bool WPSTable::sendTable(WPSContentListenerPtr listener)
 		}
 	}
 
-	listener->openTable(m_colsSize, WPX_POINT);
+	listener->openTable(m_colsSize, librevenge::RVNG_POINT);
+	WPSListenerPtr listen=listener;
 	for (size_t r = 0; r < numRows; r++)
 	{
-		listener->openTableRow(m_rowsSize[r], WPX_POINT);
+		listener->openTableRow(m_rowsSize[r], librevenge::RVNG_POINT);
 		for (size_t c = 0; c < numCols; c++)
 		{
 			size_t tablePos = r*numCols+c;
@@ -238,7 +239,7 @@ bool WPSTable::sendTable(WPSContentListenerPtr listener)
 			if (id < 0)
 				continue;
 
-			m_cellsList[size_t(id)]->send(listener);
+			m_cellsList[size_t(id)]->send(listen);
 		}
 		listener->closeTableRow();
 	}
@@ -255,10 +256,11 @@ bool WPSTable::sendAsText(WPSContentListenerPtr listener)
 	if (!listener) return true;
 
 	size_t nCells = m_cellsList.size();
+	WPSListenerPtr listen=listener;
 	for (size_t i = 0; i < nCells; i++)
 	{
 		if (!m_cellsList[i]) continue;
-		m_cellsList[i]->sendContent(listener);
+		m_cellsList[i]->sendContent(listen);
 		listener->insertEOL();
 	}
 	return true;

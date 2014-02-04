@@ -21,9 +21,14 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <libwpd-stream/libwpd-stream.h>
+
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
+#include <librevenge-stream/librevenge-stream.h>
+
 #include <libwps/libwps.h>
-#include "RawDocumentGenerator.h"
+
+using namespace libwps;
 
 int main(int argc, char *argv[])
 {
@@ -59,17 +64,27 @@ int main(int argc, char *argv[])
 	else
 		file = argv[1];
 
-	WPXFileStream input(file);
+	librevenge::RVNGFileStream input(file);
 
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input);
-	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)
+	WPSKind kind;
+	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind);
+	if (confidence == WPS_CONFIDENCE_NONE)
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
 	}
 
-	RawDocumentGenerator listenerImpl(printIndentLevel);
-	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
+	WPSResult error=WPS_OK;
+	if (kind == WPS_TEXT)
+	{
+		librevenge::RVNGRawTextGenerator listenerImpl(printIndentLevel);
+		error= WPSDocument::parse(&input, &listenerImpl);
+	}
+	else
+	{
+		printf("ERROR: Unsupported file format!\n");
+		return 1;
+	}
 
 	if (error == WPS_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");

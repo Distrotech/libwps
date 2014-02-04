@@ -23,13 +23,13 @@
 #include <string.h>
 
 #include "libwps_internal.h"
-#include "WPSOLEStream.h"
 
 #include "WPSHeader.h"
 
-WPSHeader::WPSHeader(WPXInputStreamPtr &input, shared_ptr<libwpsOLE::Storage> &storage, uint8_t majorVersion) :
-	m_input(input), m_oleStorage(storage),
-	m_majorVersion(majorVersion)
+using namespace libwps;
+
+WPSHeader::WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, WPSKind kind) :
+	m_input(input), m_fileInput(fileInput), m_majorVersion(majorVersion), m_kind(kind)
 {
 }
 
@@ -46,48 +46,54 @@ WPSHeader::~WPSHeader()
  * Works 3 without OLE, so those two types use the same parser.
  *
  */
-WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
+WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 {
 	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
 
-	shared_ptr<libwpsOLE::Storage> oleStorage(new libwpsOLE::Storage(input));
-	if (oleStorage && !oleStorage->isStructuredDocument())
-		oleStorage.reset();
-	if (!oleStorage)
+	if (!input->isStructured())
 	{
-		input->seek(0, WPX_SEEK_SET);
-		if (libwps::readU8(input.get()) < 6
-		        && 0xFE == libwps::readU8(input.get()))
+		input->seek(0, librevenge::RVNG_SEEK_SET);
+		uint8_t firstOffset = libwps::readU8(input);
+		uint8_t secondOffset = libwps::readU8(input);
+
+		if (firstOffset < 6 && secondOffset == 0xFE)
 		{
 			WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
-			return new WPSHeader(input, oleStorage, 2);
+			return new WPSHeader(input, input, 2);
 		}
+		if ((firstOffset == 0xFF || firstOffset == 00) && secondOffset == 0x0 &&
+		        libwps::readU16(input) == 2 && libwps::readU16(input) == 0x0404)
+		{
+			WPS_DEBUG_MSG(("Microsoft Works wks detected\n"));
+			return new WPSHeader(input, input, 2, WPS_SPREADSHEET);
+		}
+
 		return 0;
 	}
 
-	WPXInputStreamPtr document_mn0(oleStorage->getSubStream("MN0"));
+	RVNGInputStreamPtr document_mn0(input->getSubStreamByName("MN0"));
 	if (document_mn0)
 	{
 		// can be a mac or a pc document
 		// each must contains a MM Ole which begins by 0x444e: Mac or 0x4e44: PC
-		WPXInputStreamPtr document_mm(oleStorage->getSubStream("MM"));
+		RVNGInputStreamPtr document_mm(input->getSubStreamByName("MM"));
 		if (document_mm && libwps::readU16(document_mm) == 0x4e44)
 		{
 			WPS_DEBUG_MSG(("Microsoft Works Mac v4 format detected\n"));
 			return 0;
 		}
 		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));
-		return new WPSHeader(document_mn0, oleStorage, 4);
+		return new WPSHeader(document_mn0, input, 4);
 	}
 
-	WPXInputStreamPtr document_contents(oleStorage->getSubStream("CONTENTS"));
+	RVNGInputStreamPtr document_contents(input->getSubStreamByName("CONTENTS"));
 	if (document_contents)
 	{
 		/* check the Works 2000/7/8 format magic */
-		document_contents->seek(0, WPX_SEEK_SET);
+		document_contents->seek(0, librevenge::RVNG_SEEK_SET);
 
 		char fileMagic[8];
-		for (int i=0; i<7 && !document_contents->atEOS(); i++)
+		for (int i=0; i<7 && !document_contents->isEnd(); i++)
 			fileMagic[i] = char(libwps::readU8(document_contents.get()));
 		fileMagic[7] = '\0';
 
@@ -95,13 +101,13 @@ WPSHeader *WPSHeader::constructHeader(WPXInputStreamPtr &input)
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
 		{
 			WPS_DEBUG_MSG(("Microsoft Works v8 (maybe 7) format detected\n"));
-			return new WPSHeader(document_contents, oleStorage, 8);
+			return new WPSHeader(document_contents, input, 8);
 		}
 
 		/* Works 2000 */
 		if (0 == strcmp(fileMagic, "CHNKINK"))
 		{
-			return new WPSHeader(document_contents, oleStorage, 5);
+			return new WPSHeader(document_contents, input, 5);
 		}
 	}
 

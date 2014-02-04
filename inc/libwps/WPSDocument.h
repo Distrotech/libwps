@@ -24,22 +24,25 @@
 #ifndef WPSDOCUMENT_H
 #define WPSDOCUMENT_H
 
+#include <librevenge/librevenge.h>
+
 #ifdef DLL_EXPORT
 #ifdef BUILD_WPS
-#define WPSLIB _declspec(dllexport)
+#define WPSLIB __declspec(dllexport)
 #else
-#define WPSLIB _declspec(dllimport)
+#define WPSLIB __declspec(dllimport)
 #endif
 #else
 #define WPSLIB
 #endif
 
-#include <libwpd-stream/WPXStream.h>
 
-enum WPSConfidence { WPS_CONFIDENCE_NONE=0, WPS_CONFIDENCE_POOR, WPS_CONFIDENCE_LIKELY, WPS_CONFIDENCE_GOOD, WPS_CONFIDENCE_EXCELLENT };
+namespace libwps
+{
+
+enum WPSConfidence { WPS_CONFIDENCE_NONE=0, WPS_CONFIDENCE_EXCELLENT };
+enum WPSKind { WPS_TEXT=0, WPS_SPREADSHEET, WPS_DATABASE };
 enum WPSResult { WPS_OK, WPS_FILE_ACCESS_ERROR, WPS_PARSE_ERROR, WPS_OLE_ERROR, WPS_UNKNOWN_ERROR };
-
-class WPXDocumentInterface;
 
 /**
 This class provides all the functions an application would need to parse
@@ -49,9 +52,12 @@ Works documents.
 class WPSDocument
 {
 public:
-	static WPSLIB WPSConfidence isFileFormatSupported(WPXInputStream *input);
-	static WPSLIB WPSResult parse(WPXInputStream *input, WPXDocumentInterface *documentInterface);
+	static WPSLIB WPSConfidence isFileFormatSupported(librevenge::RVNGInputStream *input, WPSKind &kind);
+	static WPSLIB WPSResult parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface);
+	static WPSLIB WPSResult parse(librevenge::RVNGInputStream *input, librevenge::RVNGSpreadsheetInterface *documentInterface);
 };
+
+} // namespace libwps
 
 #endif /* WPSDOCUMENT_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

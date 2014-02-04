@@ -26,7 +26,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "WPSCell.h"
 #include "WPSContentListener.h"
@@ -60,18 +60,23 @@ struct Cell : public WPSCell
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
 	//! call when a cell must be send
-	virtual bool send(WPSContentListenerPtr &listener)
+	virtual bool send(WPSListenerPtr &listener)
 	{
 		if (!listener) return true;
-		WPXPropertyList propList;
-		listener->openTableCell(*this, propList);
+		WPSContentListener *listen=dynamic_cast<WPSContentListener *>(listener.get());
+		if (!listen)
+		{
+			WPS_DEBUG_MSG(("WPS8TableInternal::Cell::send: unexpected listener\n"));
+			return true;
+		}
+		listen->openTableCell(*this);
 		sendContent(listener);
-		listener->closeTableCell();
+		listen->closeTableCell();
 		return true;
 	}
 
 	//! call when the content of a cell must be send
-	virtual bool sendContent(WPSContentListenerPtr &)
+	virtual bool sendContent(WPSListenerPtr &)
 	{
 		m_tableParser.sendTextInCell(m_strsId, m_id);
 		return true;
@@ -290,7 +295,7 @@ bool WPS8Table::sendTable(Vec2f const &siz, int tableId, int strsid, bool inText
 ////////////////////////////////////////////////////////////
 // find all structures which correspond to the table
 ////////////////////////////////////////////////////////////
-bool WPS8Table::readStructures(WPXInputStreamPtr input)
+bool WPS8Table::readStructures(RVNGInputStreamPtr input)
 {
 	m_state->m_tableMap.clear();
 
@@ -312,7 +317,7 @@ bool WPS8Table::readStructures(WPXInputStreamPtr input)
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
-bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
+bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 {
 	typedef WPS8TableInternal::Cell Cell;
 	typedef WPS8TableInternal::Table Table;
@@ -336,7 +341,7 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 	}
 
 	entry.setParsed();
-	input->seek(page_offset, WPX_SEEK_SET);
+	input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 
 	libwps::DebugStream f;
 	int mZone = (int) libwps::read32(input);
@@ -659,7 +664,7 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 				f << ", unk=(" << f2.str() << ")";
 
 			if (!error.empty()) f << ",###err=" << error;
-			input->seek(lastPosOk+sz, WPX_SEEK_SET);
+			input->seek(lastPosOk+sz, librevenge::RVNG_SEEK_SET);
 
 			ascii().addPos(lastPosOk);
 			ascii().addNote(f.str().c_str());

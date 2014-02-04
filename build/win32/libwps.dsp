@@ -50,7 +50,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Release\lib\libwps-0.2.lib"
+# ADD LIB32 /nologo /out:"Release\lib\libwps-0.3.lib"
 
 !ELSEIF  "$(CFG)" == "libwps - Win32 Debug"
 
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Debug\lib\libwps-0.2.lib"
+# ADD LIB32 /nologo /out:"Debug\lib\libwps-0.3.lib"
 
 !ENDIF 
 
@@ -92,6 +92,26 @@ SOURCE=..\..\src\lib\libwps_internal.cpp
 # Begin Source File
 
 SOURCE=..\..\src\lib\libwps_tools_win.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKS4.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKS4Spreadsheet.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSContentListener.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSParser.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSSubDocument.cpp
 # End Source File
 # Begin Source File
 
@@ -163,10 +183,6 @@ SOURCE=..\..\src\lib\WPSOLEParser.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPSOLEStream.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\WPSPageSpan.cpp
 # End Source File
 # Begin Source File
@@ -189,6 +205,10 @@ SOURCE=..\..\src\lib\WPSTable.cpp
 
 SOURCE=..\..\src\lib\WPSTextParser.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSTextSubDocument.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -204,6 +224,26 @@ SOURCE=..\..\src\lib\libwps_internal.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\libwps_tools_win.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKS4.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKS4Spreadsheet.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSContentListener.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSParser.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKSSubDocument.h
 # End Source File
 # Begin Source File
 
@@ -279,10 +319,6 @@ SOURCE=..\..\src\lib\WPSOLEParser.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPSOLEStream.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\WPSPageSpan.h
 # End Source File
 # Begin Source File
@@ -308,6 +344,10 @@ SOURCE=..\..\src\lib\WPSTable.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSTextParser.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSTextSubDocument.h
 # End Source File
 # End Group
 # End Target

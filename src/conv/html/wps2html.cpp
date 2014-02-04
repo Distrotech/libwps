@@ -20,9 +20,14 @@
  */
 
 #include <stdio.h>
-#include <libwpd-stream/libwpd-stream.h>
+
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
+#include <librevenge-stream/librevenge-stream.h>
+
 #include <libwps/libwps.h>
-#include "HtmlDocumentGenerator.h"
+
+using namespace libwps;
 
 int main(int argc, char *argv[])
 {
@@ -32,16 +37,18 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	WPXFileStream input(argv[1]);
+	librevenge::RVNGFileStream input(argv[1]);
 
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input);
-	if (confidence == WPS_CONFIDENCE_NONE || confidence == WPS_CONFIDENCE_POOR)
+	WPSKind kind;
+	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind);
+	if (confidence == WPS_CONFIDENCE_NONE || kind != WPS_TEXT)
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
 	}
 
-	HtmlDocumentGenerator listenerImpl;
+	librevenge::RVNGString document;
+	librevenge::RVNGHTMLTextGenerator listenerImpl(document);
 	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
 
 	if (error == WPS_FILE_ACCESS_ERROR)
@@ -55,6 +62,8 @@ int main(int argc, char *argv[])
 
 	if (error != WPS_OK)
 		return 1;
+
+	printf("%s", document.cstr());
 
 	return 0;
 }

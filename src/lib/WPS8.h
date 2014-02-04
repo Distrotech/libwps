@@ -24,12 +24,10 @@
 
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libwps_internal.h"
 #include "WPSParser.h"
-
-class WPXString;
 
 class WPSPageSpan;
 
@@ -56,11 +54,11 @@ class WPS8Parser : public WPSParser
 
 public:
 	//! constructor
-	WPS8Parser(WPXInputStreamPtr &input, WPSHeaderPtr &header);
+	WPS8Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
 	//! destructor
 	~WPS8Parser();
 	//! called by WPSDocument to parse the file
-	void parse(WPXDocumentInterface *documentInterface);
+	void parse(librevenge::RVNGTextInterface *documentInterface);
 protected:
 	//! return true if the pos is in the file, update the file size if need
 	bool checkInFile(long pos);
@@ -70,7 +68,7 @@ protected:
 	//! set the listener
 	void setListener(shared_ptr<WPSContentListener> listener);
 	/** creates the main listener */
-	shared_ptr<WPSContentListener> createListener(WPXDocumentInterface *interface);
+	shared_ptr<WPSContentListener> createListener(librevenge::RVNGTextInterface *interface);
 
 	/** tries to parse the main zone, ... */
 	bool createStructures();
@@ -90,7 +88,7 @@ protected:
 
 	//! creates a subdocument to send a textbox which correspond to the strsid text zone
 	void sendTextBox(WPSPosition const &pos, int strsid,
-	                 WPXPropertyList frameExtras=WPXPropertyList());
+	                 librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
 
 	//! sends text corresponding to the entry to the listener (via WPS8Text)
 	void send(WPSEntry const &entry);
@@ -153,7 +151,7 @@ protected:
 	bool readWNPR(WPSEntry const &entry);
 
 	//! finds the structures of the Ole zone "SPELLING"
-	bool readSPELLING(WPXInputStreamPtr input, std::string const &oleName);
+	bool readSPELLING(RVNGInputStreamPtr input, std::string const &oleName);
 
 	shared_ptr<WPSContentListener> m_listener; /* the listener (if set)*/
 	//! the graph parser

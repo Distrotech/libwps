@@ -58,13 +58,12 @@
 #include <string>
 #include <vector>
 
-#include <libwpd-stream/WPXStream.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 #include "libwps_internal.h"
 
 #include "WPSDebug.h"
-
-class WPXBinaryData;
+#include "WPSPosition.h"
 
 namespace libwps
 {
@@ -75,6 +74,21 @@ namespace WPSOLEParserInternal
 {
 class CompObj;
 }
+
+/** small struct to store an object */
+struct WPSOLEParserObject
+{
+	/// constructor
+	WPSOLEParserObject() : m_position(), m_data(), m_mime("image/pict")
+	{
+	}
+	/// the position
+	WPSPosition m_position;
+	/// the data
+	librevenge::RVNGBinaryData m_data;
+	/// the mime type
+	std::string m_mime;
+};
 
 /** \brief a class used to parse some basic oles
     Tries to read the different ole parts and stores their contents in form of picture.
@@ -91,7 +105,7 @@ public:
 
 	/** tries to parse basic OLE (excepted mainName)
 	    \return false if fileInput is not an Ole file */
-	bool parse(shared_ptr<libwpsOLE::Storage> fileInput);
+	bool parse(RVNGInputStreamPtr fileInput);
 
 	//! returns the list of unknown ole
 	std::vector<std::string> const &getNotParse() const
@@ -105,64 +119,54 @@ public:
 		return m_objectsId;
 	}
 	//! returns the list of data positions which have been read
-	std::vector<WPSPosition> const &getObjectsPosition() const
-	{
-		return m_objectsPosition;
-	}
-	//! returns the list of data which have been read
-	std::vector<WPXBinaryData> const &getObjects() const
+	std::vector<WPSOLEParserObject> const &getObjects() const
 	{
 		return m_objects;
 	}
-
-	//! returns the picture corresponding to an id
-	bool getObject(int id, WPXBinaryData &obj, WPSPosition &pos) const;
-
-	/*! \brief sets an object
-	 * just in case, the external parsing find another representation
-	 */
-	void setObject(int id, WPXBinaryData const &obj, WPSPosition const &pos);
 protected:
 
 	//!  the "Ole" small structure : unknown contain
-	static bool readOle(WPXInputStreamPtr &ip, std::string const &oleName,
+	static bool readOle(RVNGInputStreamPtr &ip, std::string const &oleName,
 	                    libwps::DebugFile &ascii);
 	//!  the "MM" small structure : seems to contain the file versions
-	static bool readMM(WPXInputStreamPtr &input, std::string const &oleName,
+	static bool readMM(RVNGInputStreamPtr &input, std::string const &oleName,
 	                   libwps::DebugFile &ascii);
 	//!  the "ObjInfo" small structure : seems to contain 3 ints=0,3,4
-	static bool readObjInfo(WPXInputStreamPtr &input, std::string const &oleName,
+	static bool readObjInfo(RVNGInputStreamPtr &input, std::string const &oleName,
 	                        libwps::DebugFile &ascii);
 	//!  the "CompObj" contains : UserType,ClipName,ProgIdName
-	bool readCompObj(WPXInputStreamPtr &ip, std::string const &oleName,
+	bool readCompObj(RVNGInputStreamPtr &ip, std::string const &oleName,
 	                 libwps::DebugFile &ascii);
 
 	/** the OlePres001 seems to contain standart picture file and size */
-	static bool isOlePres(WPXInputStreamPtr &ip, std::string const &oleName);
+	static bool isOlePres(RVNGInputStreamPtr &ip, std::string const &oleName);
 	/** extracts the picture of OlePres001 if it is possible */
-	static bool readOlePres(WPXInputStreamPtr &ip, WPXBinaryData &data,
+	static bool readOlePres(RVNGInputStreamPtr &ip, librevenge::RVNGBinaryData &data,
 	                        WPSPosition &pos, libwps::DebugFile &ascii);
 
 	//! theOle10Native : basic Windows© picture, with no size
-	static bool isOle10Native(WPXInputStreamPtr &ip, std::string const &oleName);
+	static bool isOle10Native(RVNGInputStreamPtr &ip, std::string const &oleName);
 	/** extracts the picture if it is possible */
-	static bool readOle10Native(WPXInputStreamPtr &ip, WPXBinaryData &data,
+	static bool readOle10Native(RVNGInputStreamPtr &ip, librevenge::RVNGBinaryData &data,
 	                            libwps::DebugFile &ascii);
 
 	/** \brief the Contents : in general a picture : a PNG, an JPEG, a basic metafile,
 	 * I find also a Word art picture, which are not sucefully read
 	 */
-	static bool readContents(WPXInputStreamPtr &input, std::string const &oleName,
-	                         WPXBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
+	static bool readContents(RVNGInputStreamPtr &input, std::string const &oleName,
+	                         librevenge::RVNGBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
 
 	/** the CONTENTS : seems to store a header size, the header
 	 * and then a object in EMF (with the same header)...
 	 * \note I only find such lib in 2 files, so the parsing may be incomplete
 	 *  and many such Ole rejected
 	 */
-	static bool readCONTENTS(WPXInputStreamPtr &input, std::string const &oleName,
-	                         WPXBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
+	static bool readCONTENTS(RVNGInputStreamPtr &input, std::string const &oleName,
+	                         librevenge::RVNGBinaryData &pict, WPSPosition &pos, libwps::DebugFile &ascii);
 
+	//!  the "MN0" small structure : can contains a WKS file...
+	static bool readMN0AndCheckWKS(RVNGInputStreamPtr &input, std::string const &oleName,
+	                               librevenge::RVNGBinaryData &wksData,  libwps::DebugFile &ascii);
 
 	//! if filled, does not parse content with this name
 	std::string m_avoidOLE;
@@ -170,9 +174,7 @@ protected:
 	std::vector<std::string> m_unknownOLEs;
 
 	//! list of pictures read
-	std::vector<WPXBinaryData> m_objects;
-	//! list of picture size ( if known)
-	std::vector<WPSPosition> m_objectsPosition;
+	std::vector<WPSOLEParserObject> m_objects;
 	//! list of pictures id
 	std::vector<int> m_objectsId;
 

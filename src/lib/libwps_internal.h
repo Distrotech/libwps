@@ -32,10 +32,8 @@
 #include <map>
 #include <string>
 
-#include <libwpd-stream/libwpd-stream.h>
-#include <libwpd/libwpd.h>
-
-class WPXBinaryData;
+#include <librevenge-stream/librevenge-stream.h>
+#include <librevenge/librevenge.h>
 
 #if defined(_MSC_VER) || defined(__DJGPP__)
 typedef signed char int8_t;
@@ -56,6 +54,7 @@ typedef unsigned int uint32_t;
 // define localtime_r on Windows, so that can use
 // thread-safe functions on other environments
 #ifdef _WIN32
+#  define gmtime_r(tp,tmp) (gmtime(tp)?(*(tmp)=*gmtime(tp),(tmp)):0)
 #  define localtime_r(tp,tmp) (localtime(tp)?(*(tmp)=*localtime(tp),(tmp)):0)
 #endif
 
@@ -70,7 +69,7 @@ using std::shared_ptr;
 using boost::shared_ptr;
 #endif
 
-/** an noop deleter used to transform a libwpd pointer in a false shared_ptr */
+/** a noop deleter used to transform a librevenge pointer in a false shared_ptr */
 template <class T>
 struct WPS_shared_ptr_noop_deleter
 {
@@ -78,10 +77,11 @@ struct WPS_shared_ptr_noop_deleter
 };
 
 // basic classes and autoptr
-/** shared pointer to WPXInputStream */
-typedef shared_ptr<WPXInputStream> WPXInputStreamPtr;
+/** shared pointer to librevenge::RVNGInputStream */
+typedef shared_ptr<librevenge::RVNGInputStream> RVNGInputStreamPtr;
 
 class WPSCell;
+class WPSListener;
 class WPSContentListener;
 class WPSEntry;
 class WPSFont;
@@ -89,14 +89,24 @@ class WPSHeader;
 class WPSPosition;
 class WPSSubDocument;
 
+class WKSContentListener;
+class WKSSubDocument;
+
 /** shared pointer to WPSCell */
 typedef shared_ptr<WPSCell> WPSCellPtr;
+/** shared pointer to WPSListener */
+typedef shared_ptr<WPSListener> WPSListenerPtr;
 /** shared pointer to WPSContentListener */
 typedef shared_ptr<WPSContentListener> WPSContentListenerPtr;
 /** shared pointer to WPSHeader */
 typedef shared_ptr<WPSHeader> WPSHeaderPtr;
 /** shared pointer to WPSSubDocument */
 typedef shared_ptr<WPSSubDocument> WPSSubDocumentPtr;
+
+/** shared pointer to WKSContentListener */
+typedef shared_ptr<WKSContentListener> WKSContentListenerPtr;
+/** shared pointer to WKSSubDocument */
+typedef shared_ptr<WKSSubDocument> WKSSubDocumentPtr;
 
 /* ---------- debug  --------------- */
 #ifdef DEBUG
@@ -133,42 +143,42 @@ class GenericException
 /* ---------- input ----------------- */
 namespace libwps
 {
-uint8_t readU8(WPXInputStream *input);
-uint16_t readU16(WPXInputStream *input);
-uint32_t readU32(WPXInputStream *input);
+uint8_t readU8(librevenge::RVNGInputStream *input);
+uint16_t readU16(librevenge::RVNGInputStream *input);
+uint32_t readU32(librevenge::RVNGInputStream *input);
 
-int8_t read8(WPXInputStream *input);
-int16_t read16(WPXInputStream *input);
-int32_t read32(WPXInputStream *input);
+int8_t read8(librevenge::RVNGInputStream *input);
+int16_t read16(librevenge::RVNGInputStream *input);
+int32_t read32(librevenge::RVNGInputStream *input);
 
-inline uint8_t readU8(WPXInputStreamPtr &input)
+inline uint8_t readU8(RVNGInputStreamPtr &input)
 {
 	return readU8(input.get());
 }
-inline uint16_t readU16(WPXInputStreamPtr &input)
+inline uint16_t readU16(RVNGInputStreamPtr &input)
 {
 	return readU16(input.get());
 }
-inline uint32_t readU32(WPXInputStreamPtr &input)
+inline uint32_t readU32(RVNGInputStreamPtr &input)
 {
 	return readU32(input.get());
 }
 
-inline int8_t read8(WPXInputStreamPtr &input)
+inline int8_t read8(RVNGInputStreamPtr &input)
 {
 	return read8(input.get());
 }
-inline int16_t read16(WPXInputStreamPtr &input)
+inline int16_t read16(RVNGInputStreamPtr &input)
 {
 	return read16(input.get());
 }
-inline int32_t read32(WPXInputStreamPtr &input)
+inline int32_t read32(RVNGInputStreamPtr &input)
 {
 	return read32(input.get());
 }
 
-bool readData(WPXInputStreamPtr &input, unsigned long sz, WPXBinaryData &data);
-bool readDataToEnd(WPXInputStreamPtr &input, WPXBinaryData &data);
+bool readData(RVNGInputStreamPtr &input, unsigned long sz, librevenge::RVNGBinaryData &data);
+bool readDataToEnd(RVNGInputStreamPtr &input, librevenge::RVNGBinaryData &data);
 }
 
 #define WPS_LE_GET_GUINT16(p)				  \
@@ -182,7 +192,6 @@ bool readDataToEnd(WPXInputStreamPtr &input, WPXBinaryData &data);
 
 // Various helper structures for the parser..
 /* ---------- small enum/class ------------- */
-class WPXPropertyListVector;
 
 struct WPSColumnDefinition
 {
@@ -408,23 +417,19 @@ public:
 	//! a comparison function: which first compares x then y
 	int cmp(Vec2<T> const &p) const
 	{
-		T diff  = m_x-p.m_x;
-		if (diff < 0) return -1;
-		if (diff > 0) return 1;
-		diff = m_y-p.m_y;
-		if (diff < 0) return -1;
-		if (diff > 0) return 1;
+		if (m_x<p.m_x) return -1;
+		if (m_x>p.m_x) return 1;
+		if (m_y<p.m_y) return -1;
+		if (m_y>p.m_y) return 1;
 		return 0;
 	}
 	//! a comparison function: which first compares y then x
 	int cmpY(Vec2<T> const &p) const
 	{
-		T diff  = m_y-p.m_y;
-		if (diff < 0) return -1;
-		if (diff > 0) return 1;
-		diff = m_x-p.m_x;
-		if (diff < 0) return -1;
-		if (diff > 0) return 1;
+		if (m_y<p.m_y) return -1;
+		if (m_y>p.m_y) return 1;
+		if (m_x<p.m_x) return -1;
+		if (m_x>p.m_x) return 1;
 		return 0;
 	}
 

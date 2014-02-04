@@ -33,8 +33,7 @@
 
 #include "WPSDebug.h"
 
-class WPXBinaryData;
-
+struct WPSOLEParserObject;
 class WPS8Parser;
 
 namespace WPS8GraphInternal
@@ -105,33 +104,32 @@ protected:
 	void sendBorder(int borderId);
 
 	//! adds a list of objects with given ids in the ole lists
-	void storeObjects(std::vector<WPXBinaryData> const &objects,
-	                  std::vector<int> const &ids,
-	                  std::vector<WPSPosition> const &positions);
+	void storeObjects(std::vector<WPSOLEParserObject> const &objects,
+	                  std::vector<int> const &ids);
 
 	//! finds all entries which correspond to some pictures, parses them and stores data
-	bool readStructures(WPXInputStreamPtr input);
+	bool readStructures(RVNGInputStreamPtr input);
 
 	// low level
 
 	/** reads a PICT/MEF4 entry :  reads uncompressed picture of sx*sy of rgb
 	 *
 	 * This kind of entry seems mainly used to store a background picture */
-	bool readPICT(WPXInputStreamPtr input, WPSEntry const &entry);
+	bool readPICT(RVNGInputStreamPtr input, WPSEntry const &entry);
 
 	/** reads a IBGF zone: an entry to a background picture
 	 *
 	 * This small entry seems to contain only an identificator which pointed to a PICT Zone
 	 */
-	bool readIBGF(WPXInputStreamPtr input, WPSEntry const &entry);
+	bool readIBGF(RVNGInputStreamPtr input, WPSEntry const &entry);
 
 	//! parsed BDR/WBDR zone: a complex border formed with 8 pictures
-	bool readBDR(WPXInputStreamPtr input, WPSEntry const &entry);
+	bool readBDR(RVNGInputStreamPtr input, WPSEntry const &entry);
 
 	/** \brief reads METAFILE/CODE
 	 *
 	 * \warning we must probably also recognize the enhanced metafile format: EMF */
-	bool readMetaFile(WPXInputStreamPtr input, long endPos, WPXBinaryData &pict);
+	bool readMetaFile(RVNGInputStreamPtr input, long endPos, librevenge::RVNGBinaryData &pict);
 
 	//! returns the debug file
 	libwps::DebugFile &ascii()

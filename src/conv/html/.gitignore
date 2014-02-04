@@ -7,3 +7,4 @@ Makefile
 Makefile.in
 wps2html
 *.rc
+*.exe
