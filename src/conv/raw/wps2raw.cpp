@@ -21,12 +21,38 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <librevenge/librevenge.h>
 #include <librevenge-generators/librevenge-generators.h>
 #include <librevenge-stream/librevenge-stream.h>
 
 #include <libwps/libwps.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef VERSION
+#define VERSION "UNKNOWN VERSION"
+#endif
+
+static int printUsage()
+{
+	printf("Usage: wps2raw [OPTION] <Works Document>\n");
+	printf("\n");
+	printf("Options:\n");
+	printf("\t--callgraph:   Display the call graph nesting level\n");
+	printf("\t-h, --help:    Shows this help message\n");
+	printf("\t-v, --version:       Output wps2raw version \n");
+	return -1;
+}
+
+static int printVersion()
+{
+	printf("wps2raw %s\n", VERSION);
+	return 0;
+}
 
 using namespace libwps;
 
@@ -37,7 +63,7 @@ int main(int argc, char *argv[])
 
 	if (argc < 2)
 	{
-		printf("Usage: wps2raw [OPTION] <Works Document>\n");
+		printUsage();
 		return -1;
 	}
 
@@ -45,20 +71,21 @@ int main(int argc, char *argv[])
 	{
 		if (argc == 2)
 		{
-			printf("Usage: wps2raw [OPTION] <Works Document>\n");
+			printUsage();
 			return -1;
 		}
 
 		printIndentLevel = true;
 		file = argv[2];
 	}
-	else if (!strcmp(argv[1], "--help"))
+	else if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))
 	{
-		printf("Usage: wps2raw [OPTION] <Works Document>\n");
-		printf("\n");
-		printf("Options:\n");
-		printf("--callgraph		    Display the call graph nesting level\n");
-		printf("--help              Shows this help message\n");
+		printUsage();
+		return 0;
+	}
+	else if (!strcmp(argv[1], "-v") || !strcmp(argv[1], "--version"))
+	{
+		printVersion();
 		return 0;
 	}
 	else

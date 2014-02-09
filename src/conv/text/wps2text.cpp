@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <librevenge/librevenge.h>
 #include <librevenge-generators/librevenge-generators.h>
@@ -30,15 +31,55 @@
 
 using namespace libwps;
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef VERSION
+#define VERSION "UNKNOWN VERSION"
+#endif
+
+static int printUsage()
+{
+	printf("Usage: wps2text [OPTION] <Works Document>\n");
+	printf("\n");
+	printf("Options:\n");
+	printf("\t-h:                Shows this help message\n");
+	printf("\t-v:                Output wps2text version \n");
+	return -1;
+}
+
+static int printVersion()
+{
+	printf("wps2text %s\n", VERSION);
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
-	if (argc < 2)
+	bool printHelp=false;
+	int ch;
+
+	while ((ch = getopt(argc, argv, "hv")) != -1)
 	{
-		printf("Usage: wps2text <Works Document>\n");
+		switch (ch)
+		{
+		case 'v':
+			printVersion();
+			return 0;
+		default:
+		case 'h':
+			printHelp = true;
+			break;
+		}
+	}
+	if (argc != 1+optind || printHelp)
+	{
+		printUsage();
 		return -1;
 	}
 
-	librevenge::RVNGFileStream input(argv[1]);
+	librevenge::RVNGFileStream input(argv[optind]);
 
 	WPSKind kind;
 	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind);
