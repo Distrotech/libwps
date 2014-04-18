@@ -82,6 +82,13 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 			WPS_DEBUG_MSG(("Microsoft Works Mac v4 format detected\n"));
 			return 0;
 		}
+		// now, look if this is a database document
+		uint16_t fileMagic=libwps::readU16(document_mn0);
+		if (fileMagic == 0x54FF)
+		{
+			WPS_DEBUG_MSG(("Microsoft Works Database format detected\n"));
+			return new WPSHeader(document_mn0, input, 4, WPS_DATABASE);
+		}
 		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));
 		return new WPSHeader(document_mn0, input, 4);
 	}

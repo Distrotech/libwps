@@ -2246,7 +2246,7 @@ bool WPS4Text::objectDataParser(long bot, long /*eot*/, int id,
 	long pos = (long) libwps::readU32(m_input);
 
 	actPos = m_input->tell();
-	if (pos >= 0 && size > 0 && pos+size <= long(mainParser().getSizeFile()))
+	if (pos >= 0 && size > 0 && mainParser().checkFilePosition(pos+size))
 	{
 		obj.m_pos.setBegin(pos);
 		obj.m_pos.setLength(size);

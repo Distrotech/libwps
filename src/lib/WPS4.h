@@ -58,16 +58,16 @@ public:
 	~WPS4Parser();
 	//! called by WPSDocument to parse the file
 	void parse(librevenge::RVNGTextInterface *documentInterface);
+	//! checks if the document header is correct (or not)
+	bool checkHeader(WPSHeader *header, bool strict=false);
 protected:
 	//! color
 	bool getColor(int id, uint32_t &color) const;
 
-	//! returns the file size (or the ole zone size)
-	long getSizeFile() const;
 	//! sets the file size ( filled by WPS4Text )
 	void setSizeFile(long sz);
 	//! return true if the pos is in the file, update the file size if need
-	bool checkInFile(long pos);
+	bool checkFilePosition(long pos);
 
 	//! adds a new page
 	void newPage(int number);

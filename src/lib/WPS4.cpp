@@ -217,27 +217,24 @@ bool WPS4Parser::getColor(int id, uint32_t &color) const
 	color = colorMap[id];
 	return true;
 }
-long WPS4Parser::getSizeFile() const
-{
-	return m_state->m_eof;
-}
+
 void WPS4Parser::setSizeFile(long sz)
 {
 	if (sz > m_state->m_eof)
 		m_state->m_eof = sz;
 }
 
-bool WPS4Parser::checkInFile(long pos)
+bool WPS4Parser::checkFilePosition(long pos)
 {
-	if (pos <= m_state->m_eof)
-		return true;
-	RVNGInputStreamPtr input = getInput();
-	long actPos = input->tell();
-	input->seek(pos, librevenge::RVNG_SEEK_SET);
-	bool ok = input->tell() == pos;
-	if (ok) m_state->m_eof = pos;
-	input->seek(actPos, librevenge::RVNG_SEEK_SET);
-	return ok;
+	if (m_state->m_eof < 0)
+	{
+		RVNGInputStreamPtr input = getInput();
+		long actPos = input->tell();
+		input->seek(0, librevenge::RVNG_SEEK_END);
+		m_state->m_eof=input->tell();
+		input->seek(actPos, librevenge::RVNG_SEEK_SET);
+	}
+	return pos <= m_state->m_eof;
 }
 
 // listener, new page
@@ -361,6 +358,10 @@ void WPS4Parser::createTextBox(WPSEntry const &entry, WPSPosition const &pos, li
 	m_listener->insertTextBox(pos, subdoc, extras);
 }
 
+////////////////////////////////////////////////////////////
+// main funtions to parse a document, its OLE structures and its main input
+////////////////////////////////////////////////////////////
+
 // main function to parse the document
 void WPS4Parser::parse(librevenge::RVNGTextInterface *documentInterface)
 {
@@ -370,7 +371,8 @@ void WPS4Parser::parse(librevenge::RVNGTextInterface *documentInterface)
 		WPS_DEBUG_MSG(("WPS4Parser::parse: does not find main ole\n"));
 		throw (libwps::ParseException());
 	}
-
+	if (!checkHeader(0, true))
+		throw (libwps::ParseException());
 	try
 	{
 		createOLEStructures();
@@ -480,6 +482,10 @@ bool WPS4Parser::createOLEStructures()
 // low level
 ////////////////////////////////////////////////////////////
 
+// ------------------------------------------------------------
+// function to read/check the file header or to check that an entry is ok
+// ------------------------------------------------------------
+
 // parse a basic entry: ie offset + size and check if it is valid
 bool WPS4Parser::parseEntry(std::string const &name)
 {
@@ -490,7 +496,7 @@ bool WPS4Parser::parseEntry(std::string const &name)
 	zone.setLength(libwps::readU16(input));
 	zone.setType(name);
 
-	bool ok = zone.valid() && checkInFile(zone.end());
+	bool ok = zone.valid() && checkFilePosition(zone.end());
 
 	if (ok)
 	{
@@ -516,12 +522,32 @@ bool WPS4Parser::parseEntry(std::string const &name)
 	return ok;
 }
 
+// basic function to check if the header is ok
+bool WPS4Parser::checkHeader(WPSHeader *header, bool /*strict*/)
+{
+	RVNGInputStreamPtr input = getInput();
+	if (!input || !checkFilePosition(0x100))
+	{
+		WPS_DEBUG_MSG(("WPS4Parser::checkHeader: file is too short\n"));
+		return false;
+	}
+
+	/* let's do the strict minimum, we does not want to break old code */
+	input->seek(0x0, librevenge::RVNG_SEEK_SET);
+	uint8_t firstOffset = libwps::readU8(input);
+	uint8_t secondOffset = libwps::readU8(input);
+	if (secondOffset != 0xFE || firstOffset > 7) return false;
+	if (header)
+		header->setMajorVersion(firstOffset<4 ? 2 : firstOffset<6 ? 3 : 4);
+	return true;
+}
+
 // read the document structure ...
 bool WPS4Parser::findZones()
 {
 	RVNGInputStreamPtr input = getInput();
 
-	if (input->seek(0x100, librevenge::RVNG_SEEK_SET) != 0 || input->tell() != 0x100)
+	if (!checkFilePosition(0x100))
 	{
 		WPS_DEBUG_MSG(("WPS4Parser::findZones: error: incomplete header\n"));
 		throw libwps::ParseException();
@@ -685,7 +711,7 @@ bool WPS4Parser::findZones()
 	long begP = (long) libwps::readU32(input);
 	if (begP)
 	{
-		if (begP <= 0 || !checkInFile(begP)) f << "###";
+		if (begP <= 0 || !checkFilePosition(begP)) f << "###";
 		else
 		{
 			ascii().addPos(begP);
@@ -700,8 +726,8 @@ bool WPS4Parser::findZones()
 	begP = (long) libwps::readU32(input);
 	if (begP)
 	{
-		if (begP <= 0 || !checkInFile(begP)) f << "###";
-		else if (checkInFile(begP+num *sz))
+		if (begP <= 0 || !checkFilePosition(begP)) f << "###";
+		else if (checkFilePosition(begP+num *sz))
 		{
 			WPSEntry zone;
 			zone.setType("PRNT");
@@ -768,6 +794,10 @@ bool WPS4Parser::findZones()
 
 	return true;
 }
+
+// ------------------------------------------------------------
+// functions to read the document's dimension or printer structures
+// ------------------------------------------------------------
 
 // Read the page format from the file.
 bool WPS4Parser::readDocDim()
