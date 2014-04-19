@@ -154,7 +154,7 @@ bool State::getColor(int id, uint32_t &color) const
 		};
 		if (id < 0 || id >= 7)
 		{
-			WPS_DEBUG_MSG(("WPS4ParserInternal::StategetColor(): unknown Dos color id: %d\n",id));
+			WPS_DEBUG_MSG(("WKS4ParserInternal::State::getColor(): unknown Dos color id: %d\n",id));
 			return false;
 		}
 		color=colorDosMap[id];
@@ -172,7 +172,7 @@ bool State::getColor(int id, uint32_t &color) const
 	};
 	if (id < 0 || id >= 16)
 	{
-		WPS_DEBUG_MSG(("WPS4Parser::getColor(): unknown color id: %d\n",id));
+		WPS_DEBUG_MSG(("WKS4ParserInternal::State::getColor(): unknown color id: %d\n",id));
 		return false;
 	}
 	color = colorMap[id];
@@ -361,12 +361,11 @@ bool WKS4Parser::readZones()
 	// look for ending
 	//
 	long pos = input->tell();
-	if (input->seek(0x4, librevenge::RVNG_SEEK_CUR) != 0)
+	if (!checkFilePosition(pos+4))
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readZones: cell header is too short\n"));
 		return false;
 	}
-	input->seek(pos, librevenge::RVNG_SEEK_SET);
 	int type = (int) libwps::readU16(input); // 1
 	int length = (int) libwps::readU16(input);
 	if (length)

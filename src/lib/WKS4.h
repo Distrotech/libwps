@@ -63,7 +63,7 @@ protected:
 	int version() const;
 
 	//
-	// interface with WK4Spreadsheet
+	// interface with WKS4Spreadsheet
 	//
 
 	//! returns the color corresponding to an id
