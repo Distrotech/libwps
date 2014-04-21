@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 	}
 
 	librevenge::RVNGStringVector vec;
-	if (kind != WPS_SPREADSHEET)
+	if (kind != WPS_SPREADSHEET && kind != WPS_DATABASE)
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;

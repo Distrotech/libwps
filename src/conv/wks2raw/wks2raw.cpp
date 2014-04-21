@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 	}
 
 	WPSResult error=WPS_OK;
-	if (kind == WPS_SPREADSHEET)
+	if (kind == WPS_SPREADSHEET || kind == WPS_DATABASE)
 	{
 		librevenge::RVNGRawSpreadsheetGenerator listenerImpl(printIndentLevel);
 		error= WPSDocument::parse(&input, &listenerImpl);
