@@ -44,7 +44,7 @@ namespace WKS4SpreadsheetInternal
 {
 
 ///////////////////////////////////////////////////////////////////
-//! a class used to store a style of a WKS4 cell
+//! a class used to store a style of a cell in WKS4Spreadsheet
 struct Style : public WPSCellFormat
 {
 	//! construtor
@@ -385,7 +385,7 @@ bool WKS4Spreadsheet::readSheetSize()
 	f << "nRow=" << nRow << ",";
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
-	if (nRow <= 0 || nCol <= 0) return false;
+	if (nRow < 0 || nCol <= 0) return false;
 
 	m_state->m_spreadsheet.setRowHeight(nRow-1);
 	m_state->m_spreadsheet.setColumnWidth(nCol-1);
@@ -1087,7 +1087,7 @@ bool WKS4Spreadsheet::readCell()
 			}
 			f << "###";
 		}
-		f << "winVersion,";
+		f << "win[version],";
 	}
 
 	long dataPos = m_input->tell();

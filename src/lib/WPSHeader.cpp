@@ -62,7 +62,8 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 			return new WPSHeader(input, input, 2);
 		}
 		// works1 dos file begin by 2054
-		if ((firstOffset == 0xFF || firstOffset == 0x20) && secondOffset==0x54) {
+		if ((firstOffset == 0xFF || firstOffset == 0x20) && secondOffset==0x54)
+		{
 			WPS_DEBUG_MSG(("Microsoft Works wks database\n"));
 			return new WPSHeader(input, input, 1, WPS_DATABASE);
 		}

@@ -77,7 +77,7 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 				return WPS_CONFIDENCE_NONE;
 			return WPS_CONFIDENCE_EXCELLENT;
 		}
-		else if (kind==WPS_SPREADSHEET)
+		else if (kind==WPS_SPREADSHEET || kind==WPS_DATABASE)
 		{
 			WKS4Parser parser(header->getInput(), header);
 			if (!parser.checkHeader(header.get(), true))
@@ -199,7 +199,7 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 	{
 		header.reset(WPSHeader::constructHeader(input));
 
-		if (!header || header->getKind() != WPS_SPREADSHEET)
+		if (!header || (header->getKind() != WPS_SPREADSHEET && header->getKind() != WPS_DATABASE))
 			return WPS_UNKNOWN_ERROR;
 
 		switch (header->getMajorVersion())
@@ -207,8 +207,14 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 		case 4:
 		case 3:
 		case 2:
+		case 1:
 		{
+#ifndef DEBUG
+			if (header->getKind() == WPS_SPREADSHEET)
+				parser.reset(new WKS4Parser(header->getInput(), header));
+#else
 			parser.reset(new WKS4Parser(header->getInput(), header));
+#endif
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
 			break;

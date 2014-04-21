@@ -45,6 +45,7 @@
 
 using namespace libwps;
 
+//! Internal: namespace to define internal class of WKS4Parser
 namespace WKS4ParserInternal
 {
 //! the font of a WKS4Parser
@@ -107,10 +108,11 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 	pser->sendHeaderFooter(m_header);
 }
 
-//! the state of WKS4
+//! the state of WKS4Parser
 struct State
 {
-	State() :  m_eof(-1), m_version(-1), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
+	//! constructor
+	State() :  m_eof(-1), m_isSpreadsheet(true), m_version(-1), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
 		m_headerString(""), m_footerString("")
 	{
 	}
@@ -130,6 +132,8 @@ struct State
 
 	//! the last file position
 	long m_eof;
+	//! boolean to know if the file is a spreadsheet file or a database file
+	bool m_isSpreadsheet;
 	//! the file version
 	int m_version;
 	//! the fonts list
@@ -313,9 +317,11 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	}
 
 	input->seek(0,librevenge::RVNG_SEEK_SET);
-	int firstOffset = libwps::read16(input);
+	int firstOffset = (int) libwps::readU8(input);
+	int type = (int) libwps::read8(input);
 	f << "FileHeader(";
-	if (firstOffset == 0)
+	if ((firstOffset == 0 && type == 0) ||
+	        (firstOffset == 0x20 && type == 0x54))
 	{
 		m_state->m_version=2;
 		f << "DOS";
@@ -325,9 +331,30 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 		f << "Windows";
 		m_state->m_version=3;
 	}
-
-	if ((firstOffset != 0 && firstOffset != 0xFF) || libwps::read16(input) != 2
-	        || libwps::read16(input) != 0x0404)
+	else
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find unexpected first data\n"));
+		return false;
+	}
+	if (type == 0x54)
+	{
+		m_state->m_isSpreadsheet=false;
+		f << "database,";
+	}
+	else if (type == 0)
+		f << "spreadsheet,";
+	else
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find unexpected type file\n"));
+		return false;
+	}
+	if (libwps::read16(input) != 2)
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: header contain unexpected size field data\n"));
+		return false;
+	}
+	if ((m_state->m_isSpreadsheet && libwps::read16(input) != 0x0404) ||
+	        (!m_state->m_isSpreadsheet && libwps::read16(input) != 0))
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: header contain unknown data\n"));
 		return false;
@@ -345,7 +372,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	if (header)
 	{
 		header->setMajorVersion((uint8_t) m_state->m_version);
-		header->setKind(WPS_SPREADSHEET);
+		header->setKind(m_state->m_isSpreadsheet ? WPS_SPREADSHEET : WPS_DATABASE);
 	}
 	return true;
 }
@@ -451,6 +478,7 @@ bool WKS4Parser::readZone()
 			break;
 		case 0x2f: // first microsoft works file ?
 			if (sz!=1) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			WPS_DEBUG_MSG(("WKS4Parser::readZone: arggh a WKS1 file?\n"));
 			f << "Entries(PreVersion):vers=" << (int) libwps::readU8(input);
 			if (m_state->m_version==2)
@@ -519,6 +547,25 @@ bool WKS4Parser::readZone()
 			ok = m_spreadsheetParser->readCell();
 			isParsed = true;
 			break;
+		case 0x64: // present in database (seems to store some graphic?)
+		{
+			if (sz!=4) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			long dataSz=(long) libwps::readU32(input);
+			if (!checkFilePosition(pos+8+dataSz)) break;
+			f << "Entries(StructA64E):";
+			if (dataSz) f << "dSz=" << std::hex << dataSz << std::dec << ",";
+			ascii().addPos(pos);
+			ascii().addNote(f.str().c_str());
+			if (dataSz)
+			{
+				ascii().addPos(pos+8);
+				ascii().addNote("Entries(StructA64E)[data]:");
+				sz += dataSz;
+			}
+			isParsed = true;
+			break;
+		}
 		case 0x65:
 			ok = m_spreadsheetParser->readRowSize2();
 			isParsed = true;

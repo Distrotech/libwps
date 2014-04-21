@@ -39,7 +39,7 @@ struct State;
 class WKS4Spreadsheet;
 
 /**
- * This class parses Microsoft Works spreadsheet file
+ * This class parses Microsoft Works spreadsheet or a database file
  *
  */
 class WKS4Parser : public WKSParser
