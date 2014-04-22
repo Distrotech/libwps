@@ -446,14 +446,16 @@ bool WKS4Parser::readZone()
 			ok = m_spreadsheetParser->readSheetSize();
 			isParsed = true;
 			break;
-		// case 7|9: 0a00010001000a000f00270000000000000000000000000004000400960000 or similar
+		/* case 7: 0a00010001000a000f00270000000000000000000000000004000400960000
+		   case 9: similar (but seems to only exists in spreadsheet)
+		 */
 		case 0x8:
 			ok = m_spreadsheetParser->readColumnSize();
 			isParsed = true;
 			break;
 		// case a: id + small id
 		case 0xb:
-			ok = readZoneB();
+			ok = readFieldName();
 			isParsed=true;
 			break;
 		case 0xc:
@@ -464,8 +466,11 @@ bool WKS4Parser::readZone()
 			ok = m_spreadsheetParser->readCell();
 			isParsed = true;
 			break;
-		// case 1a: 0000000009002100
-		// case 24: 0
+		// case 1a: 0000000009002100 (spreasheet)
+		// case 1b: 0000ff7cff00ff7c (database, some selection?)
+		// case 1d: 0000000000000000ff (database, some flags?)
+		// case 23: 0000000000000000ff (database, similar to 1D? some flags?)
+		// case 24: 0|ff
 		case 0x25:
 		case 0x26:
 			readHeaderFooter(id==0x26);
@@ -499,6 +504,7 @@ bool WKS4Parser::readZone()
 	case 0x54:
 		switch (id)
 		{
+		// case 1: 000001007200020073000000 ( databse, some selection ?)
 		case 0x2:
 			ok = m_spreadsheetParser->readDOSCellProperty();
 			isParsed = true;
@@ -510,6 +516,15 @@ bool WKS4Parser::readZone()
 			ascii().addNote(f.str().c_str());
 			isParsed = true;
 			break;
+		// case 8: 020000000000000000000700260000011c00090000000000 ( database ?)
+		/* case 9: 000004002f001e000000bccf000005000f0008000000bccf0000060003000f007404bccf01000600
+		   1c0000001b000100010007001c0001001e00010000000900300016007404bccf00000b000f0000000000d6ce
+		   ( database, find one time)
+		*/
+		/* case a: (database)
+		   CHECKME: a long structure which seems to contain some text, a list of field?
+		 */
+		// case 10|11: one time empty (database)
 		case 0x13:
 			ok = m_spreadsheetParser->readPageBreak();
 			isParsed = true;
@@ -522,10 +537,20 @@ bool WKS4Parser::readZone()
 			readChartList();
 			isParsed = true;
 			break;
+		/* README: case 0x17: report header, case 0x18: report?, case 0x19: report list field,
+		   case 1a: report select, */
+		/* case 1b: 000000000000000000000000000000000000010000000000020000000000000000000000000000000000
+		   database v1 */
 		case 0x1c:
 			m_spreadsheetParser->readDOSCellExtraProperty();
 			isParsed = true;
 			break;
+		// case 1f: 05000000 (database v1)
+		// case 24: 00001800 (database v1)
+		// case 25/27: empty (database v1)
+		// case 26: 0000 (database)
+		// case 32: 00000000 (database)
+		// case 33: 00 (database)
 		case 0x23: // single page ?
 		case 0x37: // multiple page ?
 			ok = readPrnt();
@@ -535,10 +560,15 @@ bool WKS4Parser::readZone()
 			readChartFont();
 			isParsed = true;
 			break;
+		// case 47: big zone, begin by a font name (database)
+		// case 50: 010000000000000000000000000000000000 (database)
+		// case 53: CHECKME: looks like b013cc06d00764000000000001000000 ( database v1)
 		case 0x56:
 			ok = readFont();
 			isParsed = true;
 			break;
+		// case 57: a fontname + ??? (database)
+		// case 58: filter name (database)
 		case 0x5a:
 			ok = m_spreadsheetParser->readStyle();
 			isParsed = true;
@@ -547,7 +577,12 @@ bool WKS4Parser::readZone()
 			ok = m_spreadsheetParser->readCell();
 			isParsed = true;
 			break;
-		case 0x64: // present in database (seems to store some graphic?)
+		// case 5c: a small number 0-8 (database)
+		// case 5d: CHECKME: id + flags (database)
+		/* case 5f: CHECKME: big zone in database, look like
+			02000000f20d0000000000000000000000000000000000000000000000000000b4010500bc0264006b54
+			0200a0320000406500000000040000000000ec9e9205ec9eec9e00700000182c191900 */
+		case 0x64: // present in database (can to store some block: graphic?)
 		{
 			if (sz!=4) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
@@ -570,15 +605,19 @@ bool WKS4Parser::readZone()
 			ok = m_spreadsheetParser->readRowSize2();
 			isParsed = true;
 			break;
+		// case 66: ff|12c|13B|1d1, dim/flag? (database)
 		case 0x67: // single page ?
 		case 0x82: // multiple page ?
 			ok = readPrn2();
 			isParsed = true;
 			break;
+		// case 6a: one time with 0000 in database
 		case 0x6b:
 			ok = m_spreadsheetParser->readColumnSize2();
 			isParsed = true;
 			break;
+		// case 6f: 00 (database)
+		// case 70: id? (database)
 		case 0x80:
 		case 0x81:
 			readChartLimit();
@@ -862,7 +901,7 @@ bool WKS4Parser::readPrn2()
 	return true;
 }
 
-bool WKS4Parser::readZoneB()
+bool WKS4Parser::readFieldName()
 {
 	libwps::DebugStream f;
 	RVNGInputStreamPtr input = getInput();
@@ -871,31 +910,44 @@ bool WKS4Parser::readZoneB()
 	long type = (long) libwps::readU16(input);
 	if (type != 0xb)
 	{
-		WPS_DEBUG_MSG(("WKS4Parser::readZoneB: not a zoneB type\n"));
+		WPS_DEBUG_MSG(("WKS4Parser::readFieldName: not a zoneB type\n"));
 		return false;
 	}
 	long sz = (long) libwps::readU16(input);
 	if (sz != 0x18)
 	{
-		WPS_DEBUG_MSG(("WKS4Parser::readZoneB: size seems bad\n"));
+		WPS_DEBUG_MSG(("WKS4Parser::readFieldName: size seems bad\n"));
 		ascii().addPos(pos);
 		ascii().addNote("Entries(ZoneB):###");
 		return true;
 	}
-	f << "Entries(ZoneB):";
+	f << "Entries(FldNames):";
 	std::string name("");
-	for (int i=0; i < 24; ++i)
+	for (int i=0; i < 26; ++i)
 	{
 		char c=(char) libwps::read8(input);
 		if (c=='\0') break;
 		name+= c;
 	}
-	f << name;
+	f << name << ',';
 
+	input->seek(pos+20, librevenge::RVNG_SEEK_SET);
+	// the position
+	int dim[4];
+	for (int i=0; i<4; ++i) dim[i]=(int) libwps::read16(input);
+	// in a spreadsheet, the cell or the cells corresponding to the field
+	// in a database, col,0,col,0xFFF
+	if (m_state->m_isSpreadsheet || dim[1] || dim[0]!= dim[2] || dim[3]!=0xFFF)
+	{
+		f << "cell=" << dim[0] << "x" << dim[1];
+		if (dim[0]!=dim[2] || dim[1]!=dim[3])
+			f << "<->" << dim[2] << "x" << dim[3];
+		f << ",";
+	}
+	else
+		f << "col=" << dim[0] << ",";
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
-	if (input->tell()!=pos+4+sz)
-		ascii().addDelimiter(input->tell(),'|');
 	return true;
 }
 

@@ -100,8 +100,8 @@ protected:
 	//! reads the header/footer
 	bool readHeaderFooter(bool header);
 
-	//! read zone 0xb ( some strings )
-	bool readZoneB();
+	//! read a list of field name + ...
+	bool readFieldName();
 	//////////////////////// other //////////////////////////////
 
 	//! reads the chart name or title
