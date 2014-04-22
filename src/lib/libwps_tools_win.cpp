@@ -79,18 +79,18 @@ Font::Type Font::getFontType(std::string &fName)
 			return WIN3_BALTIC;
 		}
 	}
-	else if (len)
+	else if (len > 9)
 	{
-		if (len > 9 && (fName.find(" (HEBREW)", len-9) != std::string::npos ||
-		                fName.find(" (Hebrew)", len-9) != std::string::npos ||
-		                fName.find(" (Hebrew)", len-9) != std::string::npos))
+		if (fName.find(" (HEBREW)", len-9) != std::string::npos ||
+		        fName.find(" (Hebrew)", len-9) != std::string::npos ||
+		        fName.find(" (hebrew)", len-9) != std::string::npos)
 		{
 			fName.resize(len-9);
 			return WIN3_HEBREW;
 		}
-		if (len > 9 && (fName.find(" (ARABIC)", len-9) != std::string::npos ||
-		                fName.find(" (Arabic)", len-9) != std::string::npos ||
-		                fName.find(" (arabic)", len-9) != std::string::npos))
+		if (fName.find(" (ARABIC)", len-9) != std::string::npos ||
+		        fName.find(" (Arabic)", len-9) != std::string::npos ||
+		        fName.find(" (arabic)", len-9) != std::string::npos)
 		{
 			fName.resize(len-9);
 			return WIN3_ARABIC;

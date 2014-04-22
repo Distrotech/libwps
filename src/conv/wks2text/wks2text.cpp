@@ -33,14 +33,31 @@
 
 #include <libwps/libwps.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef VERSION
+#define VERSION "UNKNOWN VERSION"
+#endif
+
 using namespace libwps;
 
 static int printUsage()
 {
-	printf("Usage: wks2text [-h] [-o file.txt] <Works Spreadsheet Document>\n");
+	printf("Usage: wks2text [OPTION] <Works Spreadsheet Document>\n");
+	printf("\n");
+	printf("Options:\n");
 	printf("\t-h:                 Shows this help message\n");
 	printf("\t-o file.text:       Defines the ouput file\n");
+	printf("\t-v:                Output wks2text version \n");
 	return -1;
+}
+
+static int printVersion()
+{
+	printf("wks2text %s\n", VERSION);
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -49,13 +66,16 @@ int main(int argc, char *argv[])
 	char const *output = 0;
 	int ch;
 
-	while ((ch = getopt(argc, argv, "ho:")) != -1)
+	while ((ch = getopt(argc, argv, "hvo:")) != -1)
 	{
 		switch (ch)
 		{
 		case 'o':
 			output=optarg;
 			break;
+		case 'v':
+			printVersion();
+			return 0;
 		default:
 		case 'h':
 			printHelp = true;
