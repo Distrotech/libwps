@@ -72,22 +72,42 @@ protected:
 	//! send the cell data
 	void sendCellContent(WKS4SpreadsheetInternal::Cell const &cell);
 
+	//////////////////////// report //////////////////////////////
+
+	//! reads the report's header zone 17:54
+	bool readReportOpen();
+	//! reads the report's end zone 18:54
+	bool readReportClose();
+
+	//! reads the filter's header zone 10:54
+	bool readFilterOpen();
+	//! reads the filter's end zone 11:54
+	bool readFilterClose();
+
 	//
 	// low level
 	//
 	//////////////////////// spread sheet //////////////////////////////
 
-	//!reads a cell content data
+	//! reads a cell content data
 	bool readCell();
+	//! reads the result of a text formula
+	bool readCellFormulaResult();
 
 	//! reads a style
 	bool readStyle();
+
+	//! reads a field property
+	bool readDOSFieldProperty();
 
 	//! reads actualCell properties
 	bool readDOSCellProperty();
 
 	//! reads the actual cell addendum properties ( contains at least the color)
 	bool readDOSCellExtraProperty();
+
+	//! reads a page break (in a dos file)
+	bool readDOSPageBreak();
 
 	//! reads sheet size
 	bool readSheetSize();

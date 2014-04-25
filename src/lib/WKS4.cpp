@@ -319,16 +319,16 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	input->seek(0,librevenge::RVNG_SEEK_SET);
 	int firstOffset = (int) libwps::readU8(input);
 	int type = (int) libwps::read8(input);
-	f << "FileHeader(";
+	f << "FileHeader:";
 	if ((firstOffset == 0 && type == 0) ||
 	        (firstOffset == 0x20 && type == 0x54))
 	{
 		m_state->m_version=2;
-		f << "DOS";
+		f << "DOS,";
 	}
 	else if (firstOffset == 0xff)
 	{
-		f << "Windows";
+		f << "Windows,";
 		m_state->m_version=3;
 	}
 	else
@@ -428,7 +428,11 @@ bool WKS4Parser::readZone()
 		return false;
 	}
 
-	bool ok = true, isParsed = false;
+	f << "Entries(Struct";
+	if (type == 0x54) f << "A";
+	f << std::hex << id << std::dec << "E):";
+	bool ok = true, isParsed = false, needWriteInAscii = false;
+	int val;
 	input->seek(pos, librevenge::RVNG_SEEK_SET);
 	switch (type)
 	{
@@ -438,22 +442,54 @@ bool WKS4Parser::readZone()
 		case 0x1:
 			ok = false;
 			break;
-		// case 2: ff
-		// case 3: 0 and one time 00000000000075656269726420626f786573207468617420776572652000
-		// case 4: 0|ff
-		// case 5: ff
+		// boolean
+		case 0x2: // 0|FF and one time 1
+		case 0x3: // always 0
+		case 0x4:
+		case 0x5: // always true
+		case 0x29: // 22|27|5e (spreadsheet)
+		case 0x30: // 0|ff (spreadsheet)
+		case 0x31: // 1|2
+			f.str("");
+			f << "Entries(Byte" << std::hex << id << std::dec << "Z):";
+			if (sz!=1) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::readU8(input);
+			if (id==0x29)
+				f << "val=" << std::hex << val << std::dec << ",";
+			else if (id==0x31)
+			{
+				if (val!=1) f << val << ",";
+			}
+			else
+			{
+				if (val==0xFF) f << "true,";
+				else if (val) f << "#val=" << val << ",";
+			}
+			isParsed=needWriteInAscii=true;
+			break;
 		case 0x6:
 			ok = m_spreadsheetParser->readSheetSize();
 			isParsed = true;
 			break;
-		/* case 7: 0a00010001000a000f00270000000000000000000000000004000400960000
-		   case 9: similar (but seems to only exists in spreadsheet)
-		 */
+		case 0x7:
+		case 0x9:
+			ok = readUnknown0();
+			isParsed=true;
+			break;
 		case 0x8:
 			ok = m_spreadsheetParser->readColumnSize();
 			isParsed = true;
 			break;
-		// case a: id + small id
+		case 0xa: // find in a spreadsheet v1 ( duplicated )
+			if (sz!=3) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			// varies in this file from 0 to 5
+			f << "id=" << libwps::read16(input) << ",";
+			// small number 9-13: a dim?
+			f << "dim?=" << libwps::read8(input) << ",";
+			isParsed=needWriteInAscii=true;
+			break;
 		case 0xb:
 			ok = readFieldName();
 			isParsed=true;
@@ -466,15 +502,106 @@ bool WKS4Parser::readZone()
 			ok = m_spreadsheetParser->readCell();
 			isParsed = true;
 			break;
-		// case 1a: 0000000009002100 (spreasheet)
-		// case 1b: 0000ff7cff00ff7c (database, some selection?)
-		// case 1d: 0000000000000000ff (database, some flags?)
-		// case 23: 0000000000000000ff (database, similar to 1D? some flags?)
-		// case 24: 0|ff
+		case 0x33:
+			ok = m_spreadsheetParser->readCellFormulaResult();
+			isParsed = true;
+			break;
+		// some spreadsheet zone ( mainly flags )
+		case 0x18:
+		case 0x19:
+		case 0x20:
+		case 0x27:
+		case 0x2a:
+			ok = readUnknown1();
+			isParsed=true;
+			break;
+		case 0x1a:
+		case 0x1b:
+		case 0x1c:
+		case 0x1d:
+		case 0x23:
+		{
+			int expectedSz=8;
+			f.str("");
+			switch (id)
+			{
+			case 0x1a: // only in spreadsheet?
+				f << "Entries(Select0):";
+				break;
+			case 0x1b: // a dimension or also some big selection? 31999=infinity?, related to report?
+				f << "Entries(Dim0):";
+				break;
+			case 0x1c: // a dimension or also some big selection? only in spreadsheet
+				f << "Entries(Dim1):";
+				break;
+			case 0x1d:
+				f << "Entries(Select1):";
+				expectedSz=9;
+				break;
+			case 0x23:
+				f << "Entries(Sort)[function]:";
+				expectedSz=9;
+				break;
+			default:
+				break;
+			}
+			if (sz!=expectedSz) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			int dim[4];
+			for (int i=0; i<4; ++i) dim[i]=(int) libwps::read16(input);
+			// in a spreadsheet, the cell or the cells corresponding to the field
+			// in a database, col,0,col,0
+			if (dim[0]==-1 && dim[1]==dim[0] && dim[2]==dim[0] && dim[3]==dim[0])
+			{
+			}
+			else if (m_state->m_isSpreadsheet || dim[1] || dim[0]!= dim[2] || dim[3])
+			{
+				f << "cell=" << dim[0] << "x" << dim[1];
+				if (dim[0]!=dim[2] || dim[1]!=dim[3])
+					f << "<->" << dim[2] << "x" << dim[3];
+				f << ",";
+			}
+			else
+				f << "col=" << dim[0] << ",";
+			if (expectedSz==9)
+			{
+				val=(int) libwps::readU8(input); // 0|1|ff
+				if (val==0xFF) f << "true,";
+				else if (val) f << "val=" << val << ",";
+			}
+			isParsed=needWriteInAscii=true;
+			break;
+		}
+		case 0x24:
+			f.str("");
+			f << "Entries(Protection)[database]:";
+			if (sz!=1) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::readU8(input);
+			if (val==0)
+			{
+				f.str("");
+				f << "_";
+			}
+			else if (val==0xFF) f << "protected,";
+			else if (val) f << "#protected=" << val << ",";
+			isParsed=needWriteInAscii=true;
+			break;
 		case 0x25:
 		case 0x26:
 			readHeaderFooter(id==0x26);
 			isParsed = true;
+			break;
+		case 0x28: // only in spreadsheet ?
+			if (sz!=10) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			for (int i=0; i<5; ++i)   // f1=4c|96|ac|f0
+			{
+				static const int expected[]= {4, 0x4c, 0x42, 2, 2};
+				val=(int) libwps::read16(input);
+				if (val!=expected[i]) f << "f" << i << "=" << val << ",";
+			}
+			isParsed=needWriteInAscii=true;
 			break;
 		case 0x2d:
 		case 0x2e:
@@ -485,14 +612,25 @@ bool WKS4Parser::readZone()
 			if (sz!=1) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			WPS_DEBUG_MSG(("WKS4Parser::readZone: arggh a WKS1 file?\n"));
+			f.str("");
 			f << "Entries(PreVersion):vers=" << (int) libwps::readU8(input);
 			if (m_state->m_version==2)
 				m_state->m_version=1;
-			ascii().addPos(pos);
-			ascii().addNote(f.str().c_str());
-			isParsed = true;
+			isParsed = needWriteInAscii = true;
 			break;
-		// case 31: 1-2
+		case 0x36:   // find one time in a spreadsheet
+		{
+			if (sz!=0x1e) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			for (int i=0; i<3; ++i)   // always 0?
+			{
+				val=(int) libwps::read16(input);
+				if (val) f << "f" << i << "=" << val << ",";
+			}
+			// after find some junk, so..
+			isParsed = needWriteInAscii = true;
+			break;
+		}
 		case 0x41:
 			readChartName();
 			isParsed = true;
@@ -504,19 +642,133 @@ bool WKS4Parser::readZone()
 	case 0x54:
 		switch (id)
 		{
-		// case 1: 000001007200020073000000 ( databse, some selection ?)
+		// always empty ?
+		case 0x25:
+			if (sz)
+			{
+				f << "###";
+				WPS_DEBUG_MSG(("WKS4Parser::readZone: find a not empty %d zone\n", id));
+				break;
+			}
+			f.str("");
+			switch (id)
+			{
+			default:
+				f << "Entries(EndA" << std::hex << id << std::dec << "):";
+				break;
+			}
+			isParsed = needWriteInAscii = true;
+			break;
+		// boolean
+		case 0x6f: // always 0
+			f.str("");
+			f << "Entries(ByteA" << std::hex << id << std::dec << "Z):";
+			if (sz!=1) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::readU8(input);
+			if (val==0xFF) f << "true,";
+			else if (val) f << "#val=" << val << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		// small int zone ?
+		case 0x12: // sometimes in spreadsheet (with 0)
+		case 0x1a: // find at at the end the file, after the reports' definition
+			f.str("");
+			f << "Entries(IntSmallA" << std::hex << id << std::dec << "Z):";
+			if (sz!=1) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::readU8(input);
+			if (id==0x1a)
+			{
+				f.str("");
+				f << "Entries(Report):act=" << val << ",";
+			}
+			else
+			{
+				if (val) f << "#val=" << val << ",";
+			}
+			isParsed=needWriteInAscii=true;
+			break;
+		// int zone
+		case 0x26: // always with 0
+		case 0x6a: // filter definition?
+			f.str("");
+			if (id==0x6a)
+				f << "Entries(Filter)[data1]:";
+			else
+				f << "Entries(IntA" << std::hex << id << std::dec << "Z):";
+			if (sz!=2) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::read16(input);
+			if (val) f << "f0=" << val << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		//  zone with 2 ints
+		case 0x32: // find with 00000000 (database)
+			f.str("");
+			f << "Entries(Int2A" << std::hex << id << std::dec << "Z):";
+			if (sz!=4) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			for (int i=0; i<2; ++i)
+			{
+				val=(int) libwps::read16(input);
+				if (val) f << "f" << i << "=" << val << ",";
+			}
+			isParsed=needWriteInAscii=true;
+			break;
+		case 0x1:   // a selection field?
+		{
+			if (sz!=0xc) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val = (int) libwps::read16(input); // always 0?
+			if (val) f << "f0=" << val << ",";
+			int dim[4];
+			for (int i=0; i<4; ++i) dim[i] = (int) libwps::read16(input);
+			if (dim[2]==dim[0]+1 && dim[3]==dim[1]+1) // almost always true
+				f << "cell?=" << dim[0] << "x" << dim[1] << ",";
+			else
+				f << "cells?=" << dim[0] << "x" << dim[1] << "<->" << dim[2] << "x" << dim[3] << ",";
+			val = (int) libwps::read16(input); // always 0|2
+			if (val) f << "f1=" << val << ",";
+			isParsed = needWriteInAscii = true;
+			break;
+		}
 		case 0x2:
 			ok = m_spreadsheetParser->readDOSCellProperty();
 			isParsed = true;
 			break;
 		case 0x5:
 			if (sz!=2) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			f.str("");
 			f << "Entries(Version):vers=" << std::hex << libwps::readU16(input) << std::dec;
-			ascii().addPos(pos);
-			ascii().addNote(f.str().c_str());
+			isParsed = needWriteInAscii = true;
+			break;
+		case 0x6:
+			ok = m_spreadsheetParser->readDOSFieldProperty();
 			isParsed = true;
 			break;
-		// case 8: 020000000000000000000700260000011c00090000000000 ( database ?)
+		case 0x8: // only in database?, checkme: the structure may be different in dosfile
+			if (sz!=0x18) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			for (int i=0; i<6; ++i)   // f0=2|7, f2=0|1|2|4|5|7, f4=0|1|4|5|6|17|19|37|114, f5=3..40
+			{
+				val=(int) libwps::read16(input);
+				if (val) f << "f" << i << "=" << val << ",";
+			}
+			for (int i=0; i<4; ++i)   // g0=0|12|38|59|71, g1=0|1, g3=1|2|3
+			{
+				int const expected[]= {0,1,0,2};
+				val=(int) libwps::read8(input);
+				if (val!=expected[i]) f << "g" << i << "=" << val << ",";
+			}
+			for (int i=0; i<4; ++i)   // h0=0|28, h1=0|9
+			{
+				val=(int) libwps::read16(input);
+				if (val) f << "h" << i << "=" << val << ",";
+			}
+			isParsed = needWriteInAscii = true;
+			break;
 		/* case 9: 000004002f001e000000bccf000005000f0008000000bccf0000060003000f007404bccf01000600
 		   1c0000001b000100010007001c0001001e00010000000900300016007404bccf00000b000f0000000000d6ce
 		   ( database, find one time)
@@ -524,7 +776,14 @@ bool WKS4Parser::readZone()
 		/* case a: (database)
 		   CHECKME: a long structure which seems to contain some text, a list of field?
 		 */
-		// case 10|11: one time empty (database)
+		case 0x10:
+			ok = m_spreadsheetParser->readFilterOpen();
+			isParsed = true;
+			break;
+		case 0x11:
+			ok = m_spreadsheetParser->readFilterClose();
+			isParsed = true;
+			break;
 		case 0x13:
 			ok = m_spreadsheetParser->readPageBreak();
 			isParsed = true;
@@ -537,38 +796,165 @@ bool WKS4Parser::readZone()
 			readChartList();
 			isParsed = true;
 			break;
-		/* README: case 0x17: report header, case 0x18: report?, case 0x19: report list field,
-		   case 1a: report select, */
+		case 0x16: // in spreadsheet, find with 1 or 2 data
+			if ((sz%6)!=0) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			for (int i=0; i<sz/6; ++i)
+			{
+				f << "[";
+				val=(int) libwps::readU16(input);
+				if (val!=i) f << "id=" << i << ",";
+				for (int j=0; j<4; ++j)   // f1=0|1, f3=5|7
+				{
+					int const expected[]= {0,0,0,7};
+					val=(int) libwps::readU8(input);
+					if (val!=expected[j]) f << "f" << j << "=" << val << ",";
+				}
+				f << "],";
+			}
+			isParsed = needWriteInAscii = true;
+			break;
+		case 0x17:
+			ok=m_spreadsheetParser->readReportOpen();
+			isParsed = true;
+			break;
+		case 0x18:
+			ok=m_spreadsheetParser->readReportClose();
+			isParsed = true;
+			break;
+		case 0x19: // list id<->unkn, found after the column definition and Struct 66:54 in report, with f0=0|5|8|9
+		case 0x5e: // some time in can be repeated a spreadsheet often with f0=9000
+			if (id==0x19)
+			{
+				f.str("");
+				f << "Report[data1]:";
+			}
+			if (sz!=4) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			f << "id=" << libwps::read16(input) << ",";
+			val=(int) libwps::readU16(input);
+			if (val) f << "f0=" << std::hex << val << std::dec << ",";
+			isParsed=needWriteInAscii=true;
+			break;
 		/* case 1b: 000000000000000000000000000000000000010000000000020000000000000000000000000000000000
 		   database v1 */
 		case 0x1c:
 			m_spreadsheetParser->readDOSCellExtraProperty();
 			isParsed = true;
 			break;
-		// case 1f: 05000000 (database v1)
-		// case 24: 00001800 (database v1)
-		// case 25/27: empty (database v1)
-		// case 26: 0000 (database)
-		// case 32: 00000000 (database)
-		// case 33: 00 (database)
+		case 0x1f:
+		{
+			// frequent field, near the beginning of the file
+			// find with 050300000005|05000000, so maybe:
+			if (sz<4) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::readU8(input); // always 5?
+			if (val!=5) f << "unkn=" << val << ",";
+			int dSz=(int) libwps::readU16(input);
+			if (dSz+3 != sz && dSz+4!= sz)
+			{
+				WPS_DEBUG_MSG(("WKS4Parser::readZone: find unexpected data size for field A1f\n"));
+				f << "###";
+				break;
+			}
+			for (int i=0; i<dSz; ++i)
+			{
+				val=(int) libwps::read8(input);
+				if (val) f << "f" << i << "=" << val << ",";
+			}
+			isParsed=needWriteInAscii=true;
+			break;
+		}
 		case 0x23: // single page ?
 		case 0x37: // multiple page ?
 			ok = readPrnt();
 			isParsed = true;
+			break;
+		case 0x24: // font (default)
+			f.str("");
+			f << "Entries(FontDef):";
+			if (sz!=4) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::read16(input);
+			if (val) f << "fId=" << val << ",";
+			f << "fSz=" << libwps::read16(input)/2 << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		case 0x27:
+			ok = m_spreadsheetParser->readDOSPageBreak();
+			isParsed = true;
+			break;
+		case 0x33:
+			f.str("");
+			f << "Entries(Protection)[form]:";
+			if (sz!=1) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::readU8(input);
+			if (val==0)
+			{
+				f.str("");
+				f << "_";
+			}
+			else if (val==0xFF) f << "protected,";
+			else if (val) f << "#protected=" << val << ",";
+			isParsed=needWriteInAscii=true;
 			break;
 		case 0x40:
 			readChartFont();
 			isParsed = true;
 			break;
 		// case 47: big zone, begin by a font name (database)
-		// case 50: 010000000000000000000000000000000000 (database)
+		// case 50: 010000000000000000000000000000000000
 		// case 53: CHECKME: looks like b013cc06d00764000000000001000000 ( database v1)
 		case 0x56:
 			ok = readFont();
 			isParsed = true;
 			break;
-		// case 57: a fontname + ??? (database)
-		// case 58: filter name (database)
+		case 0x48: // a fontname + 2 ints? (find one time in a spreadsheet file)
+		case 0x57:   // int + a fontname + 2 ints? (in database a little after the field name zone)
+		{
+			int const headerSize= id==0x57 ? 2 : 0;
+			f.str("");
+			f << "Entries(Prefs)[" << std::hex << id << std::dec << "]:";
+			if (sz!=0x24+headerSize) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			if (id==0x57)
+			{
+				val=(int) libwps::read16(input); // always 0?
+				if (val) f << "f0=" << val << ",";
+			}
+			std::string name("");
+			for (int i=0; i<32; ++i)
+			{
+				char c=(char) libwps::readU8(input);
+				if (c=='\0') break;
+				name += c;
+			}
+			f << name << ",";
+			input->seek(pos+36+headerSize, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::read16(input); // 10|20|30|50: some flags?
+			if (val!=0x10) f << "f1=" << std::hex << val << std::dec << ",";
+			val=(int) libwps::read16(input); // 14|18
+			if (val!=0x18) f << "f2=" << std::hex << val << std::dec << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		}
+		case 0x58:
+		{
+			f.str("");
+			f << "Entries(Filter)[name]:";
+			if (sz!=16) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			std::string name("");
+			for (int i=0; i<16; ++i)
+			{
+				char c=(char) libwps::readU8(input);
+				name += c;
+			}
+			f << name << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		}
 		case 0x5a:
 			ok = m_spreadsheetParser->readStyle();
 			isParsed = true;
@@ -588,7 +974,6 @@ bool WKS4Parser::readZone()
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			long dataSz=(long) libwps::readU32(input);
 			if (!checkFilePosition(pos+8+dataSz)) break;
-			f << "Entries(StructA64E):";
 			if (dataSz) f << "dSz=" << std::hex << dataSz << std::dec << ",";
 			ascii().addPos(pos);
 			ascii().addNote(f.str().c_str());
@@ -611,12 +996,10 @@ bool WKS4Parser::readZone()
 			ok = readPrn2();
 			isParsed = true;
 			break;
-		// case 6a: one time with 0000 in database
 		case 0x6b:
 			ok = m_spreadsheetParser->readColumnSize2();
 			isParsed = true;
 			break;
-		// case 6f: 00 (database)
 		// case 70: id? (database)
 		case 0x80:
 		case 0x81:
@@ -643,18 +1026,15 @@ bool WKS4Parser::readZone()
 	}
 	if (isParsed)
 	{
+		if (needWriteInAscii)
+		{
+			ascii().addPos(pos);
+			ascii().addNote(f.str().c_str());
+		}
 		input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
 		return true;
 	}
 
-	/*
-	   StructA25: size=0
-	   StructA26: size=2 content 0
-	   StructA50: size=12
-	 */
-	f << "Entries(Struct";
-	if (type == 0x54) f << "A";
-	f << std::hex << id << std::dec << "E):";
 	if (sz) ascii().addDelimiter(pos+4,'|');
 	input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
 	ascii().addPos(pos);
@@ -842,11 +1222,13 @@ bool WKS4Parser::readPrnt()
 		m_state->m_pageSpan.setMarginRight(dim[3]);
 		m_state->m_pageSpan.setMarginBottom(dim[1]);
 	}
+	int val = libwps::read16(input);
+	if (val!=1) f << "first[pageNumber]=" << val <<",";
 	long numElt = (endPos-input->tell())/2;
 	for (int i = 0; i < numElt; i++)
 	{
-		// f0=1 (numSheet ?), f3/4=0x2d0 (dim in inches ? )
-		int val = libwps::read16(input);
+		// f2/3=0x2d0 (dim in inches ? )
+		val = libwps::read16(input);
 		if (!val) continue;
 		f << "f" << i << "=" << std::hex << val << std::dec << ",";
 	}
@@ -1325,4 +1707,121 @@ bool WKS4Parser::readChartList()
 
 	return true;
 }
+
+////////////////////////////////////////////////////////////
+//   Unknown
+////////////////////////////////////////////////////////////
+
+
+/* the zone 0:7 and 0:9 */
+bool WKS4Parser::readUnknown0()
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+
+	long pos = input->tell();
+	long type = (long) libwps::read16(input);
+	if (type != 7 && type != 9)
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::readUnknown0: unknown type\n"));
+		return false;
+	}
+	long sz = (long) libwps::readU16(input);
+
+	// normally size=0x1f but one time 0x1e
+	if (sz < 0x1e)
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::readUnknown0: zone seems too short\n"));
+		ascii().addPos(pos);
+		ascii().addNote("Entries(Unknown0):###");
+		return true;
+	}
+
+	f << "Entries(Unknown0)[" << type << "]:";
+	// f0=0-a|1f|21, f1=1-3c|1da, f2=0-6|71|7f|f1, f3=4|9|a|c(size?),
+	// f4=0|4|6-11, f5=5-2c, f6=0|3|6|10|1f|20, f7=0-3c|1ca (related to f1?)
+	// f8=0|1, f9=0|2, f10=f11=0
+	for (int i=0; i<12; ++i)
+	{
+		int val=(int) libwps::read16(input);
+		if (val) f << "f" << i << "=" << val << ",";
+	}
+	for (int i=0; i<2; ++i)   // g0=4, g1=4|a|b|10
+	{
+		int val=(int) libwps::read16(input);
+		if (val!=4) f << "g" << i << "=" << val << ",";
+	}
+	int val=(int) libwps::read16(input); // number between -5 and ad
+	f << "g2=" << val << ",";
+
+	if (sz!=0x1e)
+		ascii().addDelimiter(input->tell(),'|');
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	return true;
+}
+
+/* some spreadsheet zones 0:18, 0:19, 0:20, 0:27, 0:2a */
+bool WKS4Parser::readUnknown1()
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+
+	long pos = input->tell();
+	long type = (long) libwps::read16(input);
+	int expectedSize=0, extraSize=0;
+	switch (type)
+	{
+	case 0x18:
+	case 0x19:
+		expectedSize=0x19;
+		break;
+	case 0x20:
+	case 0x2a:
+		expectedSize=0x10;
+		break;
+	case 0x27:
+		expectedSize=0x19;
+		extraSize=15;
+		break;
+	default:
+		WPS_DEBUG_MSG(("WKS4Parser::readUnknown1: unexpected type ???\n"));
+		return false;
+	}
+	long sz = (long) libwps::readU16(input);
+
+	f << "Entries(Flags" << std::hex << type << std::dec << ")]:";
+	if (sz != expectedSize+extraSize)
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::readUnknown1: the zone size seems too bad\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+
+	// find always 0xff, excepted for zone 18(f0=0), zone 19(f24=0|3), zone 27(f0=..=f23=0|ff, f24=0|3)
+	for (int i=0; i<expectedSize; ++i)
+	{
+		int val=(int) libwps::read8(input);
+		if (val!=-1) f << "f" << i << "=" << val << ",";
+	}
+
+	if (type==0x27)
+	{
+		int val=(int) libwps::read8(input); // always 0
+		if (val) f << "g0=" << val << ",";
+		for (int i=0; i<7; ++i)   // g1=0|4, g2=0|72, g4=0|20, g5=0|1|4, g6=0|1, g7=0|-1|205|80d8|e9f
+		{
+			val=(int) libwps::read16(input);
+			if (val) f << "g" << i+1 << "=" << val << ",";
+		}
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	return true;
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

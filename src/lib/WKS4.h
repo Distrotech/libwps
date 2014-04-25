@@ -102,7 +102,8 @@ protected:
 
 	//! read a list of field name + ...
 	bool readFieldName();
-	//////////////////////// other //////////////////////////////
+
+	//////////////////////// chart zone //////////////////////////////
 
 	//! reads the chart name or title
 	bool readChartName();
@@ -124,6 +125,16 @@ protected:
 
 	//! reads an unknown structure which seems relative to a chart : CHECKME
 	bool readChartUnknown();
+
+	//////////////////////// unknown zone //////////////////////////////
+
+	//! reads some unknown zones 0:7|0:9
+	bool readUnknown0();
+	/** reads some unknown spreadsheet zones 0:18|0:19|0:20|0:27|0:2a
+
+	 \note this zones seems to consist of a list of flags potentially
+	 followed by other data*/
+	bool readUnknown1();
 
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the internal state

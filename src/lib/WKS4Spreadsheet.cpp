@@ -25,6 +25,7 @@
 #include <cmath>
 #include <sstream>
 #include <limits>
+#include <stack>
 
 #include <librevenge-stream/librevenge-stream.h>
 
@@ -79,7 +80,12 @@ std::ostream &operator<<(std::ostream &o, Style const &style)
 	o << static_cast<WPSCellFormat const &>(style) << ",";
 
 	bool hasUnkn = false;
-	for (int i = 0; i < 10; i++) if (style.m_unknFlags[i])hasUnkn=true;
+	for (int i = 0; i < 10; i++)
+	{
+		if (!style.m_unknFlags[i]) continue;
+		hasUnkn=true;
+		break;
+	}
 	if (hasUnkn)
 	{
 		o << "unkn=[" << std::hex;
@@ -300,11 +306,52 @@ public:
 	}
 };
 
-//! the state of WKS4
+//! the state of WKS4Spreadsheet
 struct State
 {
-	State() :  m_eof(-1), m_version(-1),  m_styleManager(), m_spreadsheet()
+	//! constructor
+	State() :  m_eof(-1), m_version(-1), m_styleManager(), m_spreadsheetList(), m_spreadsheetStack()
 	{
+		pushNewSheet();
+	}
+	//! returns the number of spreadsheet
+	int getNumSheet() const
+	{
+		return int(m_spreadsheetList.size());
+	}
+	//! returns the ith spreadsheet
+	Spreadsheet &getSheet(int id)
+	{
+		if (id<0||id>=int(m_spreadsheetList.size()))
+		{
+			WPS_DEBUG_MSG(("WKS4SpreadsheetInternal::State::getSheet: can find spreadsheet %d\n", id));
+			static Spreadsheet empty;
+			return empty;
+		}
+		return m_spreadsheetList[size_t(id)];
+	}
+	//! returns the actual sheet
+	Spreadsheet &getActualSheet()
+	{
+		return m_spreadsheetList[m_spreadsheetStack.top()];
+	}
+	//! create a new sheet and stack id
+	void pushNewSheet()
+	{
+		size_t id=m_spreadsheetList.size();
+		m_spreadsheetStack.push(id);
+		m_spreadsheetList.resize(id+1);
+	}
+	//! try to pop the actual sheet
+	bool popSheet()
+	{
+		if (m_spreadsheetStack.size()<=1)
+		{
+			WPS_DEBUG_MSG(("WKS4SpreadsheetInternal::State::popSheet: can pop the main sheet\n"));
+			return false;
+		}
+		m_spreadsheetStack.pop();
+		return true;
 	}
 	//! the last file position
 	long m_eof;
@@ -312,8 +359,12 @@ struct State
 	int m_version;
 	//! the style manager
 	StyleManager m_styleManager;
-	//! the spreadsheet
-	Spreadsheet m_spreadsheet;
+
+protected:
+	//! the list of spreadsheet ( first: main spreadsheet, other report spreadsheet )
+	std::vector<Spreadsheet> m_spreadsheetList;
+	//! the stack of spreadsheet id
+	std::stack<size_t> m_spreadsheetStack;
 };
 
 }
@@ -387,8 +438,8 @@ bool WKS4Spreadsheet::readSheetSize()
 	ascii().addNote(f.str().c_str());
 	if (nRow < 0 || nCol <= 0) return false;
 
-	m_state->m_spreadsheet.setRowHeight(nRow-1);
-	m_state->m_spreadsheet.setColumnWidth(nCol-1);
+	m_state->getActualSheet().setRowHeight(nRow-1);
+	m_state->getActualSheet().setColumnWidth(nCol-1);
 	return true;
 
 }
@@ -413,14 +464,14 @@ bool WKS4Spreadsheet::readColumnSize()
 	int col = libwps::read16(m_input);
 	int width = libwps::readU8(m_input);
 
-	bool ok = col >= 0 && col < m_state->m_spreadsheet.m_numCols+10;
+	bool ok = col >= 0 && col < m_state->getActualSheet().m_numCols+10;
 	f << "Entries(Column):Col" << col << "";
 	if (!ok) f << "###";
-	f << ":width=" << width;
+	f << ":width=" << width << ",";
 
 	if (ok)
 	{
-		if (col >= m_state->m_spreadsheet.m_numCols)
+		if (col >= m_state->getActualSheet().m_numCols)
 		{
 			static bool first = true;
 			if (first)
@@ -428,10 +479,10 @@ bool WKS4Spreadsheet::readColumnSize()
 				first = false;
 				WPS_DEBUG_MSG(("WKS4Spreadsheet::readColumnSize: I must increase the number of columns\n"));
 			}
-			f << "###";
+			f << "#col[inc],";
 		}
 		// checkme: unit in character(?) -> TWIP
-		m_state->m_spreadsheet.setColumnWidth(col, width*105);
+		m_state->getActualSheet().setColumnWidth(col, width*105);
 	}
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
@@ -459,8 +510,9 @@ bool WKS4Spreadsheet::readColumnSize2()
 	int col = libwps::read16(m_input);
 	int width = libwps::readU16(m_input); // unit? 1point ~ 115
 
-	bool ok = col >= 0 && col < m_state->m_spreadsheet.m_numCols+10;
-	if (ok)m_state->m_spreadsheet.setColumnWidth(col, width & 0x7FFF);
+	bool ok = col >= 0 && col < m_state->getActualSheet().m_numCols+10;
+	if (ok)
+		m_state->getActualSheet().setColumnWidth(col, width & 0x7FFF);
 
 	f << "Entries(Colum2):Col" << col << ":";
 	if (!ok) f << "###";
@@ -497,8 +549,8 @@ bool WKS4Spreadsheet::readRowSize2()
 	int row = libwps::read16(m_input);
 	int width = libwps::readU16(m_input); // unit? 1point ~ 105
 
-	bool ok = row >= 0 && row < m_state->m_spreadsheet.m_numRows+10;
-	if (ok)m_state->m_spreadsheet.setRowHeight(row, width & 0x7FFF);
+	bool ok = row >= 0 && row < m_state->getActualSheet().m_numRows+10;
+	if (ok)m_state->getActualSheet().setRowHeight(row, width & 0x7FFF);
 	f << "Entries(Row2):Row" << row << ":";
 	if (!ok) f << "###";
 	if (width & 0x8000)
@@ -514,6 +566,34 @@ bool WKS4Spreadsheet::readRowSize2()
 	return true;
 }
 
+bool WKS4Spreadsheet::readDOSPageBreak()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+
+	if (type != 0x5427)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSPageBreak: not a pgbreak zone\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (!sz)
+	{
+		ascii().addPos(pos);
+		ascii().addNote("_");
+		return true;
+	}
+	int row = (int) libwps::read8(m_input)+1;
+	m_state->getActualSheet().m_rowPageBreaksList.push_back(row);
+
+	f << "Entries(PBRK): row="<< row;
+	if (sz != 1) ascii().addDelimiter(m_input->tell(),'#');
+
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
 
 bool WKS4Spreadsheet::readPageBreak()
 {
@@ -535,7 +615,7 @@ bool WKS4Spreadsheet::readPageBreak()
 		return true;
 	}
 	int row = libwps::read16(m_input)+1;
-	m_state->m_spreadsheet.m_rowPageBreaksList.push_back(row);
+	m_state->getActualSheet().m_rowPageBreaksList.push_back(row);
 
 	f << "Entries(PBRK): row="<< row;
 	if (sz != 2) ascii().addDelimiter(m_input->tell(),'#');
@@ -786,7 +866,6 @@ bool WKS4Spreadsheet::readStyle()
 	/* end of parsing */
 	f.str("");
 	f << "Entries(Style):Style" << m_state->m_styleManager.size() << "," << style;
-
 	m_state->m_styleManager.add(style, false);
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
@@ -812,7 +891,7 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	}
 
 	f << "Entries(CellDosProperty):";
-	WKS4SpreadsheetInternal::Cell *cell = m_state->m_spreadsheet.getLastCell();
+	WKS4SpreadsheetInternal::Cell *cell = m_state->getActualSheet().getLastCell();
 	if (!cell)
 	{
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSCellProperty: can not find the cell\n"));
@@ -961,6 +1040,92 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
 	return true;
+}
+
+bool WKS4Spreadsheet::readDOSFieldProperty()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x5406)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSFieldProperty: not a cell property\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz < 4)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSFieldProperty: cell property is too short\n"));
+		return false;
+	}
+
+	f << "Entries(FieldDosProperty):";
+	f << "id=" << libwps::readU16(m_input) << ",";
+	WKS4SpreadsheetInternal::Style style;
+	int fl[2];
+	for (int i = 0; i < 2; i++)
+		fl[i] = libwps::readU8(m_input);
+
+	switch ((fl[0] & 0x7))
+	{
+	case 0x5:
+		f << "text,";
+		fl[0] &= 0xF8;
+		break;
+	case 0x6:
+		f << "number,";
+		fl[0] &= 0xF8;
+		break;
+	case 0x7:
+		f << "formula,";
+		fl[0] &= 0xF8;
+		break;
+	default:
+		break;
+	}
+	if (fl[0]>>5) f << "subForm=" << (fl[0]>>5) << ",";
+	fl[0] &= 0x1F;
+	uint32_t fflags = 0; // checkme
+	if (fl[0] & 0x10)
+	{
+		fflags |= WPS_ITALICS_BIT;
+		fl[0] &= 0xEF;
+	}
+	if (fl[1] & 0x20)
+	{
+		fflags |= WPS_BOLD_BIT;
+		fl[1] &= 0xDF;
+	}
+	if (fl[1] & 0x40)
+	{
+		fflags |= WPS_UNDERLINE_BIT;
+		fl[1] &= 0xBF;
+	}
+	style.m_font.m_attributes=fflags;
+	switch (fl[1]&3)
+	{
+	case 1:
+		style.setHAlignement(WPSCell::HALIGN_LEFT);
+		break;
+	case 2:
+		style.setHAlignement(WPSCell::HALIGN_CENTER);
+		break;
+	case 3:
+		style.setHAlignement(WPSCell::HALIGN_RIGHT);
+		break;
+	case 0:
+	default:
+		break;
+	}
+	fl[1] &= 0xFC;
+	style.m_unknFlags[0] = fl[0];
+	style.m_unknFlags[1] = fl[1];
+	f << style;
+	if (sz > 4) ascii().addDelimiter(pos+8, '|');
+
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
 
 }
 
@@ -982,7 +1147,7 @@ bool WKS4Spreadsheet::readDOSCellExtraProperty()
 	}
 
 	f << "Entries(CellDosExtra):";
-	WKS4SpreadsheetInternal::Cell *cell = m_state->m_spreadsheet.getLastCell();
+	WKS4SpreadsheetInternal::Cell *cell = m_state->getActualSheet().getLastCell();
 	if (!cell)
 	{
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::readDOSCellExtraProperty: can not find the cell\n"));
@@ -1238,7 +1403,7 @@ bool WKS4Spreadsheet::readCell()
 		style.setDigits(unkn1 & 0xF);
 		cell.m_styleId=m_state->m_styleManager.add(style, true);
 	}
-	m_state->m_spreadsheet.m_cellsList.push_back(cell);
+	m_state->getActualSheet().m_cellsList.push_back(cell);
 	m_input->seek(pos+sz, librevenge::RVNG_SEEK_SET);
 
 	std::string extra=f.str();
@@ -1254,6 +1419,47 @@ bool WKS4Spreadsheet::readCell()
 	return true;
 }
 
+bool WKS4Spreadsheet::readCellFormulaResult()
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x33)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readCellFormulaResult: not a cell property\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz<6)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readCellFormulaResult: the zone seems to short\n"));
+		return false;
+	}
+	long endPos = pos+4+sz;
+
+	bool dosFile=version()<=2;
+	// skip format for dosFile
+	m_input->seek(dosFile ? pos+5 : pos+4, librevenge::RVNG_SEEK_SET);
+	f << "CellContent[res]:";
+	int dim[2];
+	for (int i=0; i<2; ++i) dim[i]=(int) libwps::readU16(m_input);
+	f << "C" << dim[0] << "x" << dim[1] << ",";
+	// skip format for windows file
+	if (!dosFile) m_input->seek(2, librevenge::RVNG_SEEK_CUR);
+	int sSz=int(endPos-m_input->tell());
+	std::string text("");
+	for (int i=0; i<sSz; ++i)
+	{
+		char c=(char) libwps::readU8(m_input);
+		if (c==0) break;
+		text+=c;
+	}
+	f << text << ",";
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
 
 ////////////////////////////////////////////////////////////
 // Data
@@ -1322,7 +1528,7 @@ bool WKS4Spreadsheet::readFloat4(long endPos, double &res)
 	It find some file where the third some bytes is set, so this one is normal...
 	*/
 	int first = (int) libwps::readU8(m_input);
-	mantisse = first & 0xFE;
+	mantisse = float(first & 0xFE);
 	for (int i = 0; i < 1; i++)
 		mantisse = mantisse/256.f + (float) libwps::readU8(m_input);
 	int mantExp = (int) libwps::readU8(m_input);
@@ -1392,16 +1598,17 @@ bool WKS4Spreadsheet::readNumber(long endPos, double &res)
 		exp &= 0x7ff;
 		sign = -1;
 	}
-
+	
+	float const epsilon=1.e-5f;
 	if (exp == 0)
 	{
-		if (mantisse == 1.)  return true; // ok zero
+		if (mantisse > 1.f-epsilon && mantisse < 1.f+epsilon)  return true; // ok zero
 		// fixme find Nan representation
 		return false;
 	}
 	if (exp == 0x7FF)
 	{
-		if (mantisse >= 1.-1e-5)
+		if (mantisse >= 1.f-epsilon)
 		{
 			res=std::numeric_limits<double>::quiet_NaN();
 			return true; // ok 0x7FF and 0xFFF are nan
@@ -1673,6 +1880,162 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 }
 
 ////////////////////////////////////////////////////////////
+// filter
+////////////////////////////////////////////////////////////
+bool WKS4Spreadsheet::readFilterOpen()
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long type = (long) libwps::readU16(m_input);
+	if (type != 0x5410)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFilterOpen: not a filter header\n"));
+		return false;
+	}
+	m_state->pushNewSheet();
+	long sz = (long) libwps::readU16(m_input);
+	f << "Entries(Filter)[beg]:";
+	if (sz!=0)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFilterOpen: the field size seems odd\n"));
+		f << "###";
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool WKS4Spreadsheet::readFilterClose()
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long type = (long) libwps::readU16(m_input);
+	if (type != 0x5411)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFilterClose: not a filter header\n"));
+		return false;
+	}
+	long sz = (long) libwps::readU16(m_input);
+	f << "Entries(Filter)[end]:";
+	if (!m_state->popSheet())
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFilterClose: can not find filter spreadsheet\n"));
+		f << "###[noOpen],";
+	}
+	if (sz!=0)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFilterClose: the field size seems odd\n"));
+		f << "###";
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+////////////////////////////////////////////////////////////
+// report
+////////////////////////////////////////////////////////////
+bool WKS4Spreadsheet::readReportOpen()
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long type = (long) libwps::readU16(m_input);
+	if (type != 0x5417)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readReportOpen: not a report header\n"));
+		return false;
+	}
+	m_state->pushNewSheet();
+	long sz = (long) libwps::readU16(m_input);
+	long endPos = pos+4+sz;
+	f << "Entries(Report)[header]:";
+	if (sz < 16+10+7 || !checkFilePosition(endPos))
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readReportOpen: report header too short\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+
+	std::string name("");
+	for (int i=0; i<16; ++i)
+	{
+		char c=(char) libwps::readU8(m_input);
+		if (c=='\0') break;
+		name+=c;
+	}
+	f << name << ",";
+	m_input->seek(pos+4+16, librevenge::RVNG_SEEK_SET);
+	int val=(int) libwps::readU8(m_input); // always 0?
+	if (val) f << "f0=" << val << ",";
+	for (int i=0; i<3; ++i)   // normally -1:0, but I also find 4:1
+	{
+		val=(int) libwps::read16(m_input);
+		int unkn=(int) libwps::readU8(m_input);
+		if (val==-1 && unkn==0) continue;
+		f << "unk" << i << "=" << val << ":" << unkn << ",";
+	}
+	int N=(int) libwps::readU16(m_input);
+	if (m_input->tell()+N+7>endPos)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readReportOpen: number of fields seems bad\n"));
+		f << "###N[fields]=" << N << ",";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	// we must update the number of columns
+	m_state->getActualSheet().m_numCols=N;
+	f << "fields=[";
+	for (int i=0; i<N; ++i) f << (int) libwps::readU8(m_input) << ",";
+	f << "],";
+	for (int i=0; i<8; i++)
+	{
+		if (m_input->tell()>endPos) break;
+		static int const expected[]= {0,0x1a,4,0xff, 0,0xa, 0, 1};
+		val=(int) libwps::readU8(m_input);
+		if (val!=expected[i]) f << "g" << i << "=" << val << ",";
+	}
+	ascii().addDelimiter(m_input->tell(), '|');
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool WKS4Spreadsheet::readReportClose()
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long type = (long) libwps::readU16(m_input);
+	if (type != 0x5418)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readReportClose: not a report header\n"));
+		return false;
+	}
+	f << "Report[end]:";
+	if (!m_state->popSheet())
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readReportClose: can not find report spreadsheet\n"));
+		f << "###[noOpen],";
+	}
+	long sz = (long) libwps::readU16(m_input);
+	if (sz)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readReportClose: find some data\n"));
+		f << "###[sz],";
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+////////////////////////////////////////////////////////////
+// send data
 ////////////////////////////////////////////////////////////
 void WKS4Spreadsheet::sendSpreadsheet()
 {
@@ -1681,7 +2044,7 @@ void WKS4Spreadsheet::sendSpreadsheet()
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::sendSpreadsheet: I can not find the listener\n"));
 		return;
 	}
-	WKS4SpreadsheetInternal::Spreadsheet &sheet = m_state->m_spreadsheet;
+	WKS4SpreadsheetInternal::Spreadsheet &sheet = m_state->getSheet(0);
 	size_t numCell = sheet.m_cellsList.size();
 
 	int prevRow = -1;
