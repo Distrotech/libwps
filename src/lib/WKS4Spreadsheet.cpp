@@ -1574,7 +1574,9 @@ bool WKS4Spreadsheet::readFloat4(long endPos, double &res)
 	if (first & 1) res/=100;
 	if (first & 2)
 	{
+		// CHECKME...
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFloat4: ARRGGGGGGGGGG find a float with first & 2 ARRGGGGGGGGGG,\n some float can be broken\n"));
+		ascii().addDelimiter(pos,'#');
 	}
 	return true;
 }
@@ -1598,7 +1600,7 @@ bool WKS4Spreadsheet::readNumber(long endPos, double &res)
 		exp &= 0x7ff;
 		sign = -1;
 	}
-	
+
 	float const epsilon=1.e-5f;
 	if (exp == 0)
 	{

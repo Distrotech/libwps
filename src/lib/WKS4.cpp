@@ -716,8 +716,10 @@ bool WKS4Parser::readZone()
 			}
 			isParsed=needWriteInAscii=true;
 			break;
-		case 0x1:   // a selection field?
+		case 0x1: // the last selected cell
 		{
+			f.str("");
+			f << "Entries(SelectCells):";
 			if (sz!=0xc) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			val = (int) libwps::read16(input); // always 0?
@@ -964,10 +966,45 @@ bool WKS4Parser::readZone()
 			isParsed = true;
 			break;
 		// case 5c: a small number 0-8 (database)
-		// case 5d: CHECKME: id + flags (database)
-		/* case 5f: CHECKME: big zone in database, look like
-			02000000f20d0000000000000000000000000000000000000000000000000000b4010500bc0264006b54
-			0200a0320000406500000000040000000000ec9e9205ec9eec9e00700000182c191900 */
+		case 0x5d: // checkme
+			f.str("");
+			f << "FldProperties:";
+			if (sz!=4) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			f << "col=" << libwps::read16(input) << ",";
+			f << "form?=" << std::hex << libwps::readU16(input) << std::dec << ",";
+			break;
+		case 0x5f:
+		{
+			// fixme: read end of fields
+			f.str("");
+			f << "Entries(FormZones):";
+			if (sz<0x4d) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			int zType=libwps::read16(input);
+			switch (zType)
+			{
+			case 1:
+				f << "field,";
+				break;
+			case 2:
+				f << "textbox,";
+				break;
+			case 3:
+				f << "object,";
+				break;
+			case 4:
+				f << "rectangle,";
+				break;
+			default:
+				WPS_DEBUG_MSG(("WKS4Parser::readZone: find unknown zone type\n"));
+				f << "##type=" << zType << ",";
+				break;
+			}
+			ascii().addDelimiter(input->tell(),'|');
+			isParsed=needWriteInAscii=true;
+			break;
+		}
 		case 0x64: // present in database (can to store some block: graphic?)
 		{
 			if (sz!=4) break;
@@ -999,6 +1036,20 @@ bool WKS4Parser::readZone()
 		case 0x6b:
 			ok = m_spreadsheetParser->readColumnSize2();
 			isParsed = true;
+			break;
+		case 0x6e: // field(series)
+			f.str("");
+			f << "Entries(FldSeries):";
+			if (sz!=8) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::read16(input);
+			if (val) f << "col=" << val << ",";
+			f << "act[val]=" << libwps::read16(input) << ",";
+			val=(int) libwps::read16(input); // always 0 first?
+			if (val) f << "first=" << val << ",";
+			val=(int) libwps::read16(input);
+			if (val!=1) f << "increm=" << val << ",";
+			isParsed=needWriteInAscii=true;
 			break;
 		// case 70: id? (database)
 		case 0x80:

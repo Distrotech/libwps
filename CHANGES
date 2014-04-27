@@ -1,0 +1,17 @@
+CHANGES:
+
+27/04/2014:
+- create first code to read the main database in a WDB file and convert then as spreadsheet
+
+04/02/2014:
+- create first code to read the main spreadsheet in a WKS file
+
+28/12/2013:
+- change code to depend on librevenge
+
+-------- begin of version 0.3 ---------
+
+-------- end of version 0.2 ---------
+
+25/05/2013:
+- end of improving code to read WPS files

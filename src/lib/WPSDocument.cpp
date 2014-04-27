@@ -72,6 +72,7 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 		WPSConfidence confidence = WPS_CONFIDENCE_NONE;
 		if (kind==WPS_TEXT && header->getMajorVersion()<=4)
 		{
+			// create a WPS4Parser to check the header validity
 			WPS4Parser parser(header->getInput(), header);
 			if (!parser.checkHeader(header.get(), true))
 				return WPS_CONFIDENCE_NONE;
@@ -79,11 +80,16 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 		}
 		else if (kind==WPS_SPREADSHEET || kind==WPS_DATABASE)
 		{
+			// create a WKS4Parser to check the header validity
 			WKS4Parser parser(header->getInput(), header);
 			if (!parser.checkHeader(header.get(), true))
 				return WPS_CONFIDENCE_NONE;
 			return WPS_CONFIDENCE_EXCELLENT;
 		}
+
+		/* A word document: as WPS8Parser does not have a checkHeader
+		   function, only rely on the version
+		 */
 		switch (header->getMajorVersion())
 		{
 		case 8:
@@ -209,12 +215,7 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 		case 2:
 		case 1:
 		{
-#ifndef DEBUG
-			if (header->getKind() == WPS_SPREADSHEET)
-				parser.reset(new WKS4Parser(header->getInput(), header));
-#else
 			parser.reset(new WKS4Parser(header->getInput(), header));
-#endif
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
 			break;
