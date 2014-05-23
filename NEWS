@@ -1,4 +1,10 @@
 CHANGES:
+0.2.x -> 0.3.0
+- switch to librevenge
+- add support for Works Spreadsheet
+- add support for Works Database
+- miscellaneous fixes and cleanups
+
 beginning -> 0.1.0
 - libwps based on libwpd.
 - Read Works 2 through 8 documents (except maybe Mac) with basic formatting.
