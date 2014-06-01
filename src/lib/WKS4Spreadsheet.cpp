@@ -1523,14 +1523,25 @@ bool WKS4Spreadsheet::readFloat4(long endPos, double &res)
 	if (sz != 4) return false;
 
 	float mantisse = 0;
-	/** first small byte is used to decide if we store 100*N or N.
-	    Does the second small bute has also a meaning ?
-	It find some file where the third some bytes is set, so this one is normal...
+	/** (first&3)==1: is used to decide if we store 100*N or N.,
+		(first&3)==2: indicates a basic int number (appears mainly when converting a dos file in a windows file)
+		(first&3)==3: Can this exist ? What does this mean: 100*a basic int ?
+		The other bytes seem to have classic meaning...
 	*/
 	int first = (int) libwps::readU8(m_input);
-	mantisse = float(first & 0xFE);
-	for (int i = 0; i < 1; i++)
-		mantisse = mantisse/256.f + (float) libwps::readU8(m_input);
+	if ((first&3)==2)
+	{
+		// so read it as a normal number
+		m_input->seek(-1, librevenge::RVNG_SEEK_CUR);
+		long val=long(libwps::readU16(m_input)>>2);
+		val+=long(libwps::readU16(m_input))<<14;
+		if (val&0x20000000)
+			res = double(val-0x40000000);
+		else
+			res=double(val);
+		return true;
+	}
+	mantisse = float(first & 0xFE)/256.f + (float) libwps::readU8(m_input);
 	int mantExp = (int) libwps::readU8(m_input);
 	mantisse = (mantisse/256.f + float(0x10+(mantExp & 0x0F)))/16.f;
 	int exp = ((mantExp&0xF0)>>4)+int(libwps::readU8(m_input)<<4);
@@ -1575,7 +1586,7 @@ bool WKS4Spreadsheet::readFloat4(long endPos, double &res)
 	if (first & 2)
 	{
 		// CHECKME...
-		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFloat4: ARRGGGGGGGGGG find a float with first & 2 ARRGGGGGGGGGG,\n some float can be broken\n"));
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFloat4: ARRGGGGGGGGGG find a float with first & 3 ARRGGGGGGGGGG,\n some float can be broken\n"));
 		ascii().addDelimiter(pos,'#');
 	}
 	return true;
