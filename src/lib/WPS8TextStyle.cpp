@@ -790,6 +790,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 					break;
 				default:
 					f << "#bullet/type=" << type << ",";
+				// fall-through intended
 				case 2:
 					para.m_listLevel.m_type = libwps::ARABIC;
 					break;
