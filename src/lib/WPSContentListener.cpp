@@ -1316,6 +1316,7 @@ void WPSContentListener::_handleFrameParameters
 		{
 		case WPSPosition::YFull:
 			propList.insert("svg:height", double(h), unit);
+		// fall-through intended
 		case WPSPosition::YTop:
 			if (origin[1] < 0.0 || origin[1] > 0.0)
 			{
