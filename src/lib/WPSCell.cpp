@@ -82,6 +82,7 @@ bool WPSCellFormat::convertDTFormat(std::string const &dtFormat, librevenge::RVN
 			break;
 		case 'e':
 			list.insert("number:style", "long");
+		// fall-through intended
 		case 'd':
 			list.insert("librevenge:value-type", "day");
 			propVect.append(list);
