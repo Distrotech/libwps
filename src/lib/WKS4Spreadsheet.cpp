@@ -1538,10 +1538,10 @@ bool WKS4Spreadsheet::readFloat4(long endPos, double &res)
 		if (val&0x20000000)
 			res = double(val-0x40000000);
 		else
-			res=double(val);
+			res = double(val);
 		return true;
 	}
-	mantisse = float(first & 0xFE)/256.f + (float) libwps::readU8(m_input);
+	mantisse = float(first & 0xFC)/256.f + (float) libwps::readU8(m_input);
 	int mantExp = (int) libwps::readU8(m_input);
 	mantisse = (mantisse/256.f + float(0x10+(mantExp & 0x0F)))/16.f;
 	int exp = ((mantExp&0xF0)>>4)+int(libwps::readU8(m_input)<<4);

@@ -1649,10 +1649,9 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 	WPS8TextInternal::Token tokn;
 	std::vector<WPS8TextInternal::Token> listToken;
 
-	long pos = input->tell();
 	for (size_t i = 0; i < size_t(numTokn); i++)
 	{
-		pos = input->tell();
+		long pos = input->tell();
 		if (input->tell() + 2 > endPage) return false;
 
 		int sz = (int) libwps::read16(input);
@@ -1730,7 +1729,7 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 	int numFollow = 0;
 	for (int i = 0; i < numTokn; i++)
 	{
-		pos = input->tell();
+		long pos = input->tell();
 		if (input->tell() + 2 > endPage) return false;
 
 		WPS8Struct::FileData data;
@@ -1787,7 +1786,7 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 	if (numFollow != 0)
 	{
 		// read the strings header
-		pos = input->tell();
+		long pos = input->tell();
 		if (pos+20 > endPage) return false;
 		f.str("");
 		f << "TOKN(strings):";
@@ -1838,7 +1837,7 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 	size_t numStrings = sPtrs.size();
 	for (size_t i = 0; i < numStrings; i++)
 	{
-		pos = sPtrs[i];
+		long pos = sPtrs[i];
 		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		int sz = (int) libwps::read16(input);
 		if (sz < 0 || pos+2*sz+2 > endPage) return false;

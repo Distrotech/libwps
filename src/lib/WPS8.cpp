@@ -1266,7 +1266,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 
 
 	bool parsedAll = true, color = false;
-	long lastPos;
+	long lastPos=input->tell(); // uneeded initialization but makes clang analyser happier
 	for (int i = 0; i < numFram; i++)
 	{
 		lastPos = input->tell();

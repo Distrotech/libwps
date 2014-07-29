@@ -192,8 +192,6 @@ int WPS4Graph::readObject(RVNGInputStreamPtr input, WPSEntry const &entry)
 	long endPos = entry.end();
 	input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 
-	long lastPos = entry.begin();
-
 	libwps::DebugStream f;
 	int numFind = 0;
 
@@ -203,6 +201,7 @@ int WPS4Graph::readObject(RVNGInputStreamPtr input, WPSEntry const &entry)
 	int oleId = -1;
 	bool replace = false;
 
+	long lastPos;
 	while (1)
 	{
 		WPSPosition actPictPos;
@@ -309,7 +308,7 @@ int WPS4Graph::readObject(RVNGInputStreamPtr input, WPSEntry const &entry)
 		bool ok = readData && libwps::readData(input,(unsigned long)(endDataPos+1-actPos), data);
 		if (confidence > actConfidence && data.size())
 		{
-			confidence = actConfidence;
+			actConfidence = confidence;
 			pict = data;
 			replace = true;
 		}
