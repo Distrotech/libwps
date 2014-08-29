@@ -32,8 +32,12 @@
 #else
 #define WPSLIB __declspec(dllimport)
 #endif
+#else // !DLL_EXPORT
+#ifdef LIBWPS_VISIBILITY
+#define WPSLIB __attribute__((visibility("default")))
 #else
 #define WPSLIB
+#endif
 #endif
 
 
