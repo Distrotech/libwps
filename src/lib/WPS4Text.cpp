@@ -1564,6 +1564,7 @@ bool WPS4Text::readDosLink(WPSEntry const &entry)
 			val = libwps::readU16(m_input); // always 4
 			if (val != 4) f << "g1=" << val << ",";
 		}
+		// fall-through intended
 		case 0x40: // spreadsheet range
 		case 0x01: // char ?
 		{
