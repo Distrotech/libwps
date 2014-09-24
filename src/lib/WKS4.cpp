@@ -1158,7 +1158,9 @@ bool WKS4Parser::readFont()
 	if (fSize >= 1 && fSize <= 50)
 		font.m_size=double(fSize);
 	else
-		f << "###fSize=" << fSize;
+		f << "###fSize=" << fSize << ",";
+	if (name.empty())
+		f << "###noName,";
 	font.m_extra=f.str();
 
 	f.str("");
@@ -1166,7 +1168,6 @@ bool WKS4Parser::readFont()
 	f << "font" << m_state->m_fontsList.size() << "[" << font << "]";
 	m_state->m_fontsList.push_back(font);
 
-	if (name.length() <= 0) f << "###";
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
 

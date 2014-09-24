@@ -568,6 +568,7 @@ bool WPS4Parser::findZones()
 		{
 		case 0xda1:
 			apCreator = 2;
+		// fall-through intended
 		case 0:
 		case 1:
 			worksVersion = 1;

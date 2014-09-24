@@ -1968,6 +1968,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				break;
 			case 0x13: // seems another way to define the left margin
 				f << "#left,";
+			// fall-through intended
 			case 0x12:
 				pp.m_margins[1] = arg/1440.;
 				break;

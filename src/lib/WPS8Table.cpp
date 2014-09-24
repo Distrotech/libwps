@@ -614,6 +614,7 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 						break; // normal
 					case 0xFF: // also unset, diff with value = 1 ?
 						f2 << "#f" << dt.id() << "=" << std::hex << dt.m_value << std::dec << ",";
+					// fall-through intended
 					case 1:
 						cell->setVerticalSet(false);
 						break;
