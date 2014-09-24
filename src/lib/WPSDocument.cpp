@@ -58,6 +58,10 @@ the input stream can be parsed
 WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip, WPSKind &kind)
 {
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
+
+	if (!ip)
+		return WPS_CONFIDENCE_NONE;
+
 	kind=WPS_TEXT;
 	WPSHeaderPtr header;
 	shared_ptr<librevenge::RVNGInputStream > input(ip, WPS_shared_ptr_noop_deleter<librevenge::RVNGInputStream>());
@@ -128,6 +132,9 @@ librevenge::RVNGTextInterface class implementation when needed. This is often co
 */
 WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGTextInterface *documentInterface)
 {
+	if (!ip || !documentInterface)
+		return WPS_UNKNOWN_ERROR;
+
 	WPSResult error = WPS_OK;
 
 	WPSHeaderPtr header;
@@ -196,6 +203,9 @@ librevenge::RVNGSpreadsheetInterface class implementation when needed. This is o
 */
 WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGSpreadsheetInterface *documentInterface)
 {
+	if (!ip || !documentInterface)
+		return WPS_UNKNOWN_ERROR;
+
 	WPSResult error = WPS_OK;
 
 	WPSHeaderPtr header;
