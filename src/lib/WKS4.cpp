@@ -1157,6 +1157,8 @@ bool WKS4Parser::readFont()
 	int fSize = libwps::read16(input)/2;
 	if (fSize >= 1 && fSize <= 50)
 		font.m_size=double(fSize);
+	else
+		f << "###fSize=" << fSize;
 	font.m_extra=f.str();
 
 	f.str("");
@@ -1164,8 +1166,6 @@ bool WKS4Parser::readFont()
 	f << "font" << m_state->m_fontsList.size() << "[" << font << "]";
 	m_state->m_fontsList.push_back(font);
 
-	if (fSize == 0 && fSize > 50)
-		f << "###fSize=" << fSize;
 	if (name.length() <= 0) f << "###";
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
