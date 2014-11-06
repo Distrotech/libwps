@@ -26,7 +26,7 @@ wks2text_SOURCES = \
 
 if OS_WIN32
 
-@WKS2TEXT_WIN32_RESOURCE@ : wks2text.rc $(wks2raw_OBJECTS)
+@WKS2TEXT_WIN32_RESOURCE@ : wks2text.rc $(wks2text_OBJECTS)
 	chmod +x $(top_srcdir)/build/win32/*compile-resource
 	WINDRES=@WINDRES@ $(top_srcdir)/build/win32/lt-compile-resource wks2text.rc @WKS2TEXT_WIN32_RESOURCE@
 endif

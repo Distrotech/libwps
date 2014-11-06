@@ -26,7 +26,7 @@ wks2csv_SOURCES = \
 
 if OS_WIN32
 
-@WKS2CSV_WIN32_RESOURCE@ : wks2csv.rc $(wks2raw_OBJECTS)
+@WKS2CSV_WIN32_RESOURCE@ : wks2csv.rc $(wks2csv_OBJECTS)
 	chmod +x $(top_srcdir)/build/win32/*compile-resource
 	WINDRES=@WINDRES@ $(top_srcdir)/build/win32/lt-compile-resource wks2csv.rc @WKS2CSV_WIN32_RESOURCE@
 endif
