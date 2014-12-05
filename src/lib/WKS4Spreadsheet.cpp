@@ -1664,7 +1664,7 @@ static Functions const s_listFunctions[] =
 
 	{ "Choose", -1},{ "IsNa", 1},{ "IsError", 1},{ "False", 0},
 	{ "True", 0},{ "Rand", 0},{ "Date", 3},{ "Now", 0},
-	{ "PMT", 3} /*BAD*/,{ "PV", 3} /*BAD*/,{ "FV", 3} /*BAD*/,{ "If", 3},
+	{ "PMT", 3} /*BAD*/,{ "PV", 3} /*BAD*/,{ "FV", 3} /*BAD*/,{ "IF", 3},
 	{ "Day", 1},{ "Month", 1},{ "Year", 1},{ "Round", 2},
 
 	{ "Time", 3},{ "Hour", 1},{ "Minute", 1},{ "Second", 1},
@@ -1672,7 +1672,7 @@ static Functions const s_listFunctions[] =
 	{ "Text", 2}, { "Mid", 3}, { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 	{ "Find", 3},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
-	{ "Sum", -1},{ "Average", -1},{ "Count", -1},{ "Min", -1},
+	{ "Sum", -1},{ "Average", -1},{ "COUNT", -1},{ "Min", -1},
 	{ "Max", -1},{ "Find", 3} /*UNKN*/,{ "NPV", 2}, { "Var", -1},
 	{ "StDev", -1},{ "IRR", 2} /*BAD*/, { "HLookup", 3},{ "UNKN5B", 3} /*UNKN*/,
 	{ "UNKN5C", 3} /*UNKN*/,{ "UNKN5D", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
@@ -1683,7 +1683,7 @@ static Functions const s_listFunctions[] =
 	{ "", -2} /*UNKN*/,{ "Trim", 1},{ "", -2} /*UNKN*/,{ "T", 1},
 
 	{ "IsNonText", 1},{ "Exact", 2},{ "", -2} /*UNKN*/,{ "", 3} /*UNKN*/,
-	{ "Rate", 3} /*BAD*/,{ "UNKN75", 3} /*Termino*/,{ "CTERM", 3} /*UNKN*/,{ "SLN", 3},
+	{ "Rate", 3} /*BAD*/,{ "TERM", 3}, { "CTERM", 3}, { "SLN", 3},
 	{ "SYD", 4},{ "DDB", 4} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
 
@@ -1759,7 +1759,7 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 			{
 				ok = false;
 				f.str("");
-				f << "###list cell short";
+				f << "###list cell short(2)";
 				error=f.str();
 				break;
 			}
@@ -1820,6 +1820,80 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 			ok = false;
 			break;
 		}
+		//
+		// first treat the special cases
+		//
+		if (arity==3 && instr.m_type==WKSContentListener::FormulaInstruction::F_Function && instr.m_content=="TERM")
+		{
+			// @TERM(pmt,pint,fv) -> NPER(pint,-pmt,pv=0,fv)
+			std::vector<WKSContentListener::FormulaInstruction> pmt=
+			    stack[size_t((int)numElt-3)];
+			std::vector<WKSContentListener::FormulaInstruction> pint=
+			    stack[size_t((int)numElt-2)];
+			std::vector<WKSContentListener::FormulaInstruction> fv=
+			    stack[size_t((int)numElt-1)];
+
+			stack.resize(size_t(++numElt));
+			// pint
+			stack[size_t((int)numElt-4)]=pint;
+			//-pmt
+			std::vector<WKSContentListener::FormulaInstruction> &node=stack[size_t((int)numElt-3)];
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Operator;
+			instr.m_content="-";
+			node.resize(0);
+			node.push_back(instr);
+			instr.m_content="(";
+			node.push_back(instr);
+			node.insert(node.end(), pmt.begin(), pmt.end());
+			instr.m_content=")";
+			node.push_back(instr);
+			//pv=zero
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Long;
+			instr.m_longValue=0;
+			stack[size_t((int)numElt-2)].resize(0);
+			stack[size_t((int)numElt-2)].push_back(instr);
+			//fv
+			stack[size_t((int)numElt-1)]=fv;
+			arity=4;
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Function;
+			instr.m_content="NPER";
+		}
+		else if (arity==3 && instr.m_type==WKSContentListener::FormulaInstruction::F_Function && instr.m_content=="CTERM")
+		{
+			// @CTERM(pint,fv,pv) -> NPER(pint,pmt=0,-pv,fv)
+			std::vector<WKSContentListener::FormulaInstruction> pint=
+			    stack[size_t((int)numElt-3)];
+			std::vector<WKSContentListener::FormulaInstruction> fv=
+			    stack[size_t((int)numElt-2)];
+			std::vector<WKSContentListener::FormulaInstruction> pv=
+			    stack[size_t((int)numElt-1)];
+			stack.resize(size_t(++numElt));
+			// pint
+			stack[size_t((int)numElt-4)]=pint;
+			// pmt=0
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Long;
+			instr.m_longValue=0;
+			stack[size_t((int)numElt-3)].resize(0);
+			stack[size_t((int)numElt-3)].push_back(instr);
+			// -pv
+			std::vector<WKSContentListener::FormulaInstruction> &node=stack[size_t((int)numElt-2)];
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Operator;
+			instr.m_content="-";
+			node.resize(0);
+			node.push_back(instr);
+			instr.m_content="(";
+			node.push_back(instr);
+			node.insert(node.end(), pv.begin(), pv.end());
+			instr.m_content=")";
+			node.push_back(instr);
+
+			//fv
+			stack[size_t((int)numElt-1)]=fv;
+			arity=4;
+			instr.m_type=WKSContentListener::FormulaInstruction::F_Function;
+			instr.m_content="NPER";
+		}
+
 		if ((instr.m_content[0] >= 'A' && instr.m_content[0] <= 'Z') || instr.m_content[0] == '(')
 		{
 			if (instr.m_content[0] != '(')
