@@ -112,7 +112,7 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_isSpreadsheet(true), m_version(-1), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
+	State() :  m_eof(-1), m_isSpreadsheet(true), m_version(-1), m_hasLICSCharacters(false), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
 		m_headerString(""), m_footerString("")
 	{
 	}
@@ -136,6 +136,8 @@ struct State
 	bool m_isSpreadsheet;
 	//! the file version
 	int m_version;
+	//! flag to know if the character
+	bool m_hasLICSCharacters;
 	//! the fonts list
 	std::vector<Font> m_fontsList;
 	//! the actual document size
@@ -235,6 +237,13 @@ bool WKS4Parser::getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &ty
 	font=ft;
 	type=ft.m_type;
 	return true;
+}
+
+bool WKS4Parser::hasLICSCharacters() const
+{
+	if (version()<=2)
+		return m_state->m_hasLICSCharacters;
+	return false;
 }
 
 // main function to parse the document
@@ -574,7 +583,7 @@ bool WKS4Parser::readZone()
 		}
 		case 0x24:
 			f.str("");
-			f << "Entries(Protection)[database]:";
+			f << "Entries(Protection):";
 			if (sz!=1) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			val=(int) libwps::readU8(input);
@@ -644,19 +653,15 @@ bool WKS4Parser::readZone()
 		{
 		// always empty ?
 		case 0x25:
+			f.str("");
+			f << "Entries(LICS):";
 			if (sz)
 			{
 				f << "###";
-				WPS_DEBUG_MSG(("WKS4Parser::readZone: find a not empty %d zone\n", id));
+				WPS_DEBUG_MSG(("WKS4Parser::readZone: find a not empty LICS encoding zone\n"));
 				break;
 			}
-			f.str("");
-			switch (id)
-			{
-			default:
-				f << "Entries(EndA" << std::hex << id << std::dec << "):";
-				break;
-			}
+			m_state->m_hasLICSCharacters = true;
 			isParsed = needWriteInAscii = true;
 			break;
 		// boolean
@@ -1189,13 +1194,18 @@ void WKS4Parser::sendHeaderFooter(bool header)
 	libwps_tools_win::Font::Type fontType=version()<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
 
 	std::string const &text=header ? m_state->m_headerString : m_state->m_footerString;
+	bool hasLICS=hasLICSCharacters();
 	for (size_t i=0; i < text.size(); ++i)
 	{
 		unsigned char c=(unsigned char) text[i];
 		if (c==0xd)
 			m_listener->insertEOL();
-		else if (c!=0xa)
+		else if (c==0xa)
+			continue;
+		else if (!hasLICS)
 			m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType));
+		else
+			m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::LICSunicode(c,fontType));
 	}
 
 }

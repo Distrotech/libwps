@@ -310,7 +310,7 @@ public:
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_version(-1), m_styleManager(), m_spreadsheetList(), m_spreadsheetStack()
+	State() :  m_eof(-1), m_version(-1), m_hasLICSCharacters(-1), m_styleManager(), m_spreadsheetList(), m_spreadsheetStack()
 	{
 		pushNewSheet();
 	}
@@ -357,6 +357,8 @@ struct State
 	long m_eof;
 	//! the file version
 	int m_version;
+	//! int to code if the file has LICS characters:-1 means unknown, 0 means no, 1 means yes
+	int m_hasLICSCharacters;
 	//! the style manager
 	StyleManager m_styleManager;
 
@@ -386,6 +388,13 @@ int WKS4Spreadsheet::version() const
 	if (m_state->m_version<0)
 		m_state->m_version=m_mainParser.version();
 	return m_state->m_version;
+}
+
+bool WKS4Spreadsheet::hasLICSCharacters() const
+{
+	if (m_state->m_hasLICSCharacters<0)
+		m_state->m_hasLICSCharacters=m_mainParser.hasLICSCharacters() ? 1 : 0;
+	return m_state->m_hasLICSCharacters==1;
 }
 
 bool WKS4Spreadsheet::checkFilePosition(long pos)
@@ -2185,6 +2194,7 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 	finalCell.WPSCellFormat::operator=(cellStyle);
 	finalCell.setFont(cellStyle.m_font);
 	WKSContentListener::CellContent content(cell.m_content);
+	bool hasLICS=hasLICSCharacters();
 	for (size_t f=0; f < content.m_formula.size(); ++f)
 	{
 		if (content.m_formula[f].m_type!=WKSContentListener::FormulaInstruction::F_Text)
@@ -2192,8 +2202,14 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 		std::string &text=content.m_formula[f].m_content;
 		librevenge::RVNGString finalString("");
 		for (size_t c=0; c < text.length(); ++c)
-			WPSListener::appendUnicode
-			((uint32_t)libwps_tools_win::Font::unicode((unsigned char)text[c],fontType), finalString);
+		{
+			if (!hasLICS)
+				WPSListener::appendUnicode
+				((uint32_t)libwps_tools_win::Font::unicode((unsigned char)text[c],fontType), finalString);
+			else
+				WPSListener::appendUnicode
+				((uint32_t)libwps_tools_win::Font::LICSunicode((unsigned char)text[c],fontType), finalString);
+		}
 		text=finalString.cstr();
 	}
 	m_listener->openSheetCell(finalCell, content, propList);
@@ -2220,7 +2236,10 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 			}
 			else
 			{
-				m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType));
+				if (!hasLICS)
+					m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType));
+				else
+					m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::LICSunicode(c,fontType));
 				prevEOL=false;
 			}
 		}

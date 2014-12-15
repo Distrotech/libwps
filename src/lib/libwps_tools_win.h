@@ -56,6 +56,8 @@ public:
 
 	//! converts a character in unicode, knowing the character and the font type
 	static unsigned long unicode(unsigned char c, Type type);
+	//! converts a LICS character in unicode, knowing the character and the font type
+	static unsigned long LICSunicode(unsigned char c, Type type);
 	/*! returns the type corresponding to Windows OEM */
 	static Type getTypeForOEM(int oem);
 	/*! \brief returns the type of the font using the fontName

@@ -61,6 +61,8 @@ protected:
 	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
+	//! returns the true if the file has LICS characters
+	bool hasLICSCharacters() const;
 
 	//
 	// interface with WKS4Spreadsheet
