@@ -747,7 +747,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			case 0x08: // spreadsheet range
 			case 0x0e: // picture
 			{
-				if (!actFont.m_special || actFont.m_dlinkId >= int(m_state->m_dosLinkList.size()))
+				if (!actFont.m_special || m_state->m_dosLinkList.empty() || actFont.m_dlinkId >= int(m_state->m_dosLinkList.size()))
 				{
 					WPS_DEBUG_MSG(("WPS4Text::readText: send DLINK can not find id\n"));
 					break;
