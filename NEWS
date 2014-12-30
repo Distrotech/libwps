@@ -1,4 +1,16 @@
-CHANGES:
+libwps-0.3.1
+
+- Fix parsing of floating-point numbers in specific cases.
+- Fix several minor issues reported by Coverity and Clang.
+- Check arguments of public functions. Passing NULL no longer causes
+  a crash.
+- Use symbol visibility on Linux. The library only exports the public
+  functions now.
+- Import @TERM and @CTERM functions (fdo#86241).
+- Handle LICS character encoding in spreadsheets (fdo#87222).
+- Fix a crash when reading a broken file, found with the help of
+  american-fuzzy-lop.
+
 0.2.x -> 0.3.0
 - switch to librevenge
 - add support for Works Spreadsheet
