@@ -780,7 +780,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			{
 				if (m_state->m_objectMap.find(actPos) == m_state->m_objectMap.end())
 				{
-					WPS_DEBUG_MSG(("WPS4Text::readText: can not find object for position : %lX\n", actPos));
+					WPS_DEBUG_MSG(("WPS4Text::readText: can not find object for position : %lX\n", (unsigned long)actPos));
 				}
 				else
 				{
@@ -795,7 +795,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 			{
 				if (m_state->m_dateTimeMap.find(actPos) == m_state->m_dateTimeMap.end())
 				{
-					WPS_DEBUG_MSG(("WPS4Text::readText: can not find date/time for position : %lX\n", actPos));
+					WPS_DEBUG_MSG(("WPS4Text::readText: can not find date/time for position : %lX\n", (unsigned long)actPos));
 				}
 				else
 				{
@@ -805,7 +805,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 						m_listener->insertDateTimeField(format.c_str());
 					else
 					{
-						WPS_DEBUG_MSG(("WPS4Text::readText: unknown date/time format for position : %lX\n", actPos));
+						WPS_DEBUG_MSG(("WPS4Text::readText: unknown date/time format for position : %lX\n", (unsigned long)actPos));
 					}
 				}
 				break;
@@ -1321,7 +1321,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 		if (m_state->m_fontNames.find(font_number) != m_state->m_fontNames.end())
 		{
 			WPS_DEBUG_MSG(("WPS4Text::readFontNames: at position 0x%lx: font number %i duplicated\n",
-			               (m_input->tell())-2, font_number));
+			               (unsigned long)(m_input->tell()-2), font_number));
 			throw libwps::ParseException();
 		}
 
@@ -2089,7 +2089,7 @@ bool WPS4Text::readFootNotes(WPSEntry const &ftnD, WPSEntry const &ftnP)
 			{
 				WPS_DEBUG_MSG
 				(("WPS4Text: error: can not create footnotes zone, found %lx and %lx\n",
-				  m_state->m_footnoteList[j].end(),m_state->m_footnoteList[j-1].begin()));
+				  (unsigned long)m_state->m_footnoteList[j].end(),(unsigned long)m_state->m_footnoteList[j-1].begin()));
 
 				m_state->m_footnoteList.resize(0);
 				return false;

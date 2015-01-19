@@ -726,7 +726,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 				{
 					if (m_state->m_bookmarkMap.find(pos) == m_state->m_bookmarkMap.end())
 					{
-						WPS_DEBUG_MSG(("WPS8Text::readText: can not find bookmark for pos %lX\n",pos));
+						WPS_DEBUG_MSG(("WPS8Text::readText: can not find bookmark for pos %lX\n",(unsigned long)pos));
 					}
 					else
 					{
@@ -816,7 +816,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 					long fPos = input->tell()-2; // the note can be linked, so must retrieve the pos...
 					if (m_state->m_notesMap.find(fPos) == m_state->m_notesMap.end())
 					{
-						WPS_DEBUG_MSG(("WPS8Text::readText can not find notes for position : %lx\n", fPos));
+						WPS_DEBUG_MSG(("WPS8Text::readText can not find notes for position : %lx\n", (unsigned long)fPos));
 						break;
 					}
 					WPS8TextInternal::Notes const &note = *m_state->m_notesMap[fPos];
@@ -840,7 +840,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 							m_listener->insertDateTimeField(format.c_str());
 						else
 						{
-							WPS_DEBUG_MSG(("WPS8Text::readText: unknown date/time format for position : %lX\n", pos));
+							WPS_DEBUG_MSG(("WPS8Text::readText: unknown date/time format for position : %lX\n", (unsigned long)pos));
 						}
 						break;
 					}
@@ -863,7 +863,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 				long objPos = input->tell()-2;
 				if (m_state->m_objectMap.find(objPos) == m_state->m_objectMap.end())
 				{
-					WPS_DEBUG_MSG(("WPSText::readText can not find EOB for position : %lX\n", objPos));
+					WPS_DEBUG_MSG(("WPSText::readText can not find EOB for position : %lX\n", (unsigned long)objPos));
 					break;
 				}
 				WPS8TextInternal::Object const &obj = m_state->m_objectMap.find(objPos)->second;
@@ -873,7 +873,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 					mainParser().sendTable(obj.m_size, obj.m_id);
 				else
 				{
-					WPS_DEBUG_MSG(("WPSText::readText do not know how to send object in position : %lX\n", objPos));
+					WPS_DEBUG_MSG(("WPSText::readText do not know how to send object in position : %lX\n", (unsigned long)objPos));
 				}
 				break;
 			}
@@ -1059,7 +1059,7 @@ long WPS8Text::readUTF16LE(WPXInputStreamPtr input, long endPos, uint16_t firstC
 {
 	if (firstC >= 0xdc00 && firstC < 0xe000)
 	{
-		WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: character = %i (0x%X)\n", firstC, firstC));
+		WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: character = %i (0x%X)\n", firstC, (unsigned int)firstC));
 		return 0xfffd;
 	}
 	if (firstC >= 0xd800 && firstC < 0xdc00)
@@ -1078,13 +1078,13 @@ long WPS8Text::readUTF16LE(WPXInputStreamPtr input, long endPos, uint16_t firstC
 		}
 		else
 		{
-			WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: surrogate character = %i (0x%X)\n", firstC, firstC));
+			WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: surrogate character = %i (0x%X)\n", firstC, (unsigned int)firstC));
 			return 0xfffd;
 		}
 	}
 	/** CHECKME: for Symbol font, we must probably convert 0xF0xx and 0x00xx in a 0x03yy symbol :-~ */
 	if (firstC>=28) return firstC;
-	WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: character = %i (0x%X)\n", firstC, firstC));
+	WPS_DEBUG_MSG(("WPS8Text::readUTF16LE: error: character = %i (0x%X)\n", firstC, (unsigned int)firstC));
 	return 0xfffd;
 }
 
@@ -1533,7 +1533,7 @@ bool WPS8Text::bmktEndDataParser(long endPage, std::vector<long> const &textPtrs
 	{
 		if (m_state->m_bookmarkMap.find(textPtrs[t]) != m_state->m_bookmarkMap.end())
 		{
-			WPS_DEBUG_MSG(("WPS8Text::bmktEndDataParser: warning: already a bkmt in position %lx\n", textPtrs[t]));
+			WPS_DEBUG_MSG(("WPS8Text::bmktEndDataParser: warning: already a bkmt in position %lx\n", (unsigned long)textPtrs[t]));
 			continue;
 		}
 		else m_state->m_bookmarkMap[textPtrs[t]] = listBmk[t];
@@ -1865,7 +1865,7 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 	{
 		if (m_state->m_tokenMap.find(textPtrs[t]) != m_state->m_tokenMap.end())
 		{
-			WPS_DEBUG_MSG(("WPS8Text::tokenEndDataParser: warning: already a tokn in position %lx\n", textPtrs[t]));
+			WPS_DEBUG_MSG(("WPS8Text::tokenEndDataParser: warning: already a tokn in position %lx\n", (unsigned long)textPtrs[t]));
 			continue;
 		}
 		else m_state->m_tokenMap[textPtrs[t]] = listToken[t];
@@ -1980,7 +1980,7 @@ bool WPS8Text::readPLC
 	long endPage = entry.end();
 	if (length < 16)
 	{
-		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC length=0x%lx\n", length));
+		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC length=0x%lx\n", (unsigned long)length));
 		return false;
 	}
 
@@ -2006,7 +2006,7 @@ bool WPS8Text::readPLC
 
 	if (4*nPLC+16 + dataSz*nPLC > length)
 	{
-		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC length=0x%lx, N=%d\n", length, nPLC));
+		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC length=0x%lx, N=%d\n", (unsigned long)length, nPLC));
 		return false;
 	}
 	entry.setParsed();

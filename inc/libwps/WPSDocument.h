@@ -24,14 +24,18 @@
 #ifndef WPSDOCUMENT_H
 #define WPSDOCUMENT_H
 
-#ifdef DLL_EXPORT
-#ifdef BUILD_WPS
-#define WPSLIB _declspec(dllexport)
-#else
-#define WPSLIB _declspec(dllimport)
-#endif
-#else
-#define WPSLIB
+#ifdef _WINDLL
+#  ifdef BUILD_WPS
+#    define WPSLIB _declspec(dllexport)
+#  else
+#    define WPSLIB _declspec(dllimport)
+#  endif
+#else // !DLL_EXPORT
+#  ifdef LIBWPS_VISIBILITY
+#    define WPSLIB __attribute__((visibility("default")))
+#  else
+#    define WPSLIB
+#  endif
 #endif
 
 #include <libwpd-stream/WPXStream.h>

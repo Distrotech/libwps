@@ -336,7 +336,7 @@ bool WPS8TextStyle::readSGP(WPSEntry const &entry)
 
 	if (length < 2)
 	{
-		WPS_DEBUG_MSG(("WPS8TextStyle::readSGP: warning: SGP length=0x%lx\n", length));
+		WPS_DEBUG_MSG(("WPS8TextStyle::readSGP: warning: SGP length=0x%lx\n", (unsigned long)length));
 		return false;
 	}
 
@@ -1107,7 +1107,7 @@ bool WPS8TextStyle::readSTSH(WPSEntry const &entry)
 
 	if (length < 20)
 	{
-		WPS_DEBUG_MSG(("WPS8TextStyle::readSTSH: warning: STSH length=0x%lx\n", length));
+		WPS_DEBUG_MSG(("WPS8TextStyle::readSTSH: warning: STSH length=0x%lx\n", (unsigned long)length));
 		return false;
 	}
 

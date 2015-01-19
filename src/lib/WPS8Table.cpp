@@ -330,7 +330,7 @@ bool WPS8Table::readMCLD(WPXInputStreamPtr input, WPSEntry const &entry)
 
 	if (length < 24)
 	{
-		WPS_DEBUG_MSG(("WPS8Table::readMCLD: warning: MCLD length=0x%lx\n", length));
+		WPS_DEBUG_MSG(("WPS8Table::readMCLD: warning: MCLD length=0x%lx\n", (unsigned long)length));
 
 		return false;
 	}

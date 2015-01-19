@@ -87,7 +87,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 	if (length < headerSize)
 	{
 		WPS_DEBUG_MSG(("WPSTextParser::readFDP: warning: FDP offset=0x%lx, length=0x%lx\n",
-		               page_offset, length));
+		               (unsigned long)page_offset, (unsigned long)length));
 		return false;
 	}
 
@@ -107,7 +107,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 
 	if (headerSize+(4+deplSize)*static_cast<long>(cfod) > length)
 	{
-		WPS_DEBUG_MSG(("WPSTextParser::readFDP: error: cfod = %i (0x%X)\n", cfod, cfod));
+		WPS_DEBUG_MSG(("WPSTextParser::readFDP: error: cfod = %i (0x%X)\n", cfod, (unsigned int)cfod));
 		return false;
 	}
 
@@ -203,7 +203,7 @@ bool WPSTextParser::readFDP(WPSEntry const &entry,
 		if (smallSzInProp) szProp++;
 		if (szProp == 0)
 		{
-			WPS_DEBUG_MSG(("WPSTextParser::readFDP: error: 0 == szProp at file offset 0x%lx\n", (input->tell())-1));
+			WPS_DEBUG_MSG(("WPSTextParser::readFDP: error: 0 == szProp at file offset 0x%lx\n", (unsigned long)(input->tell()-1)));
 			return false;
 		}
 		long endPos = pos+szProp;

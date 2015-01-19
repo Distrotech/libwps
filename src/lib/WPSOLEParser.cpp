@@ -620,7 +620,7 @@ bool WPSOLEParser::readCompObj(WPXInputStreamPtr &ip, std::string const &oleName
 			f << "'" << clsName << "'";
 		else
 		{
-			WPS_DEBUG_MSG(("WPSOLEParser::readCompObj: unknown clsid=%ld\n", clsData[0]));
+			WPS_DEBUG_MSG(("WPSOLEParser::readCompObj: unknown clsid=%ld\n", (long) clsData[0]));
 			f << "unknCLSID='" << std::hex << clsData[0] << "'";
 		}
 	}

@@ -1974,7 +1974,7 @@ shared_ptr<WPXInputStream> Storage::getSubStream(const std::string &name)
 	if (oleLength != sz)
 	{
 		WPS_DEBUG_MSG(("Storage::getSubStream: Ole=%s expected length %ld but read %ld\n",
-		               name.c_str(), sz, oleLength));
+		               name.c_str(), (long)sz, (long)oleLength));
 
 		// Checkme: we ignore this error, if we read a ole in the root
 		// directory and we read at least 50% of the data. This may
