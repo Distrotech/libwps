@@ -1,5 +1,14 @@
 CHANGES:
-beginning -> 0.1.0
+
+1/20/2015 : libwps-0.2.10
+- merge WPSOLEStream with libwpd/libmwaw source to
+  correct a potential infinite loop which can appear in
+  damaged document
+- correct somme compilers' warnings
+
+---------- 0.2.0 ----------------
+
+beginning -> 0.2.0
 - libwps based on libwpd.
 - Read Works 2 through 8 documents (except maybe Mac) with basic formatting.
 
