@@ -1656,15 +1656,15 @@ namespace WKS4SpreadsheetInternal
 {
 static Functions const s_listFunctions[] =
 {
-	{ "", 0} /*SPEC: number*/, {"", 0}/*SPEC: cell*/, {"", 0}/*SPEC: cells*/, {"=", 1} /*=*/,
-	{ "(", 1} /* SPEC: () */, {"", 0}/*SPEC: number*/, { "", -2} /*UNKN*/, {"", -2}/*UNKN*/,
+	{ "", 0} /*SPEC: number*/, {"", 0}/*SPEC: cell*/, {"", 0}/*SPEC: cells*/, {"=", 1} /*SPEC: end of formula*/,
+	{ "(", 1} /* SPEC: () */, {"", 0}/*SPEC: number*/, { "", -2} /*SPEC: text*/, {"", -2}/*unused*/,
 	{ "-", 1}, {"+", 2}, {"-", 2}, {"*", 2},
 	{ "/", 2}, { "^", 2}, {"=", 2}, {"<>", 2},
 
 	{ "<=", 2},{ ">=", 2},{ "<", 2},{ ">", 2},
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/, { "Not", 1}, { "+", 1},
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "And", 2},{ "Or", 2}, { "Not", 1}, { "+", 1},
+	{ "&", 1}, { "", -2} /*unused*/,{ "", -2} /*unused*/,{ "", -2} /*unused*/,
+	{ "", -2} /*unused*/,{ "", -2} /*unused*/,{ "", -2} /*unused*/,{ "NA", 0} /*checkme*/,
 
 	{ "NA", 0} /* Error*/,{ "Abs", 1},{ "Int", 1},{ "Sqrt", 1},
 	{ "Log10", 1},{ "Ln", 1},{ "Pi", 0},{ "Sin", 1},
@@ -1677,19 +1677,19 @@ static Functions const s_listFunctions[] =
 	{ "Day", 1},{ "Month", 1},{ "Year", 1},{ "Round", 2},
 
 	{ "Time", 3},{ "Hour", 1},{ "Minute", 1},{ "Second", 1},
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Len", 1},{ "Value", 1},
-	{ "Text", 2}, { "Mid", 3}, { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
-	{ "Find", 3},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "IsNumber", 1},{ "IsText", 1},{ "Len", 1},{ "Value", 1},
+	{ "Text", 2}/* or fixed*/, { "Mid", 3}, { "Char", 1},{ "Ascii", 1},
+	{ "Find", 3},{ "DateValue", 1} /*checkme*/,{ "TimeValue", 1} /*checkme*/,{ "CellPointer", 1} /*checkme*/,
 
 	{ "Sum", -1},{ "Average", -1},{ "COUNT", -1},{ "Min", -1},
-	{ "Max", -1},{ "Find", 3} /*UNKN*/,{ "NPV", 2}, { "Var", -1},
-	{ "StDev", -1},{ "IRR", 2} /*BAD*/, { "HLookup", 3},{ "UNKN5B", 3} /*UNKN*/,
-	{ "UNKN5C", 3} /*UNKN*/,{ "UNKN5D", 3} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+	{ "Max", -1},{ "If", 3}/*VLookUp?*/,{ "NPV", 2}, { "Var", -1},
+	{ "StDev", -1},{ "IRR", 2} /*BAD*/, { "HLookup", 3},{ "DSum", 3},
+	{ "DAvg", 3},{ "DCnt", 3},{ "DMin", 3},{ "DMax", 3},
 
-	{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Index", 3}, { "Columns", 1},
+	{ "DVar", 3},{ "DStd", 3},{ "Index", 3}, { "Columns", 1},
 	{ "Rows", 1},{ "Rept", 2},{ "Upper", 1},{ "Lower", 1},
-	{ "Left", 2},{ "", -2} /*UNKN*/,{ "Replace", 4}, { "Proper", 1},
-	{ "", -2} /*UNKN*/,{ "Trim", 1},{ "", -2} /*UNKN*/,{ "T", 1},
+	{ "Left", 2},{ "Right", 2},{ "Replace", 4}, { "Proper", 1},
+	{ "Cell", 1} /*checkme*/,{ "Trim", 1},{ "", -2} /*UNKN*/,{ "T", 1},
 
 	{ "IsNonText", 1},{ "Exact", 2},{ "", -2} /*UNKN*/,{ "", 3} /*UNKN*/,
 	{ "Rate", 3} /*BAD*/,{ "TERM", 3}, { "CTERM", 3}, { "SLN", 3},

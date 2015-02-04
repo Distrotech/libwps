@@ -76,12 +76,13 @@ int main(int argc, char *argv[])
 {
 	bool printHelp=false;
 	bool generateFormula=false;
+	char const *encoding="";
 	char const *output = 0;
 	int ch;
 	char decSeparator='.', fieldSeparator=',', textSeparator='"';
 	std::string dateFormat("%m/%d/%y"), timeFormat("%H:%M:%S");
 
-	while ((ch = getopt(argc, argv, "hvo:d:f:t:D:FT:")) != -1)
+	while ((ch = getopt(argc, argv, "e:hvo:d:f:t:D:FT:")) != -1)
 	{
 		switch (ch)
 		{
@@ -96,6 +97,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'd':
 			decSeparator=optarg[0];
+			break;
+		case 'e':
+			encoding=optarg;
 			break;
 		case 'f':
 			fieldSeparator=optarg[0];
@@ -144,7 +148,7 @@ int main(int argc, char *argv[])
 		librevenge::RVNGCSVSpreadsheetGenerator listenerImpl(vec, generateFormula);
 		listenerImpl.setSeparators(fieldSeparator, textSeparator, decSeparator);
 		listenerImpl.setDTFormats(dateFormat.c_str(),timeFormat.c_str());
-		error= WPSDocument::parse(&input, &listenerImpl);
+		error= WPSDocument::parse(&input, &listenerImpl, encoding);
 	}
 	catch (...)
 	{

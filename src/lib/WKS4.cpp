@@ -448,17 +448,37 @@ bool WKS4Parser::readZone()
 	case 0:
 		switch (id)
 		{
-		case 0x1:
+		/* also
+		   0: BOF(2),
+		   32: symphony windows settings(144)
+		   37: password checksum(4)
+		   3c: query(127)
+		   3d: query name(16)
+		   3e: symphony print record (679)
+		   3f: printer name(16)
+		   40: symphony graph record (499)
+		   42: zoom(9)
+		   43: number of split windows(2)
+		   44: number of screen row(2)
+		   45: number of screen column(2)
+		   46: name ruler range(25)
+		   47: name sheet range(25)
+		   48: autoload comm(65)
+		   49: autoexecutute macro adress(8)
+		   4a: query parse information
+		 */
+		case 0x1: // EOF
 			ok = false;
 			break;
 		// boolean
-		case 0x2: // 0|FF and one time 1
-		case 0x3: // always 0
-		case 0x4:
-		case 0x5: // always true
-		case 0x29: // 22|27|5e (spreadsheet)
-		case 0x30: // 0|ff (spreadsheet)
-		case 0x31: // 1|2
+		case 0x2: // Calculation mode 0 or FF
+		case 0x3: // Calculation order
+		case 0x4: // Split window type
+		case 0x5: // Split window syn
+		case 0x29: // label format 22|27|5e (spreadsheet)
+		case 0x30: // formatted/unformatted print 0|ff (spreadsheet)
+		case 0x31: // cursor/location 1|2
+		case 0x38: // lock
 			f.str("");
 			f << "Entries(Byte" << std::hex << id << std::dec << "Z):";
 			if (sz!=1) break;
@@ -477,20 +497,20 @@ bool WKS4Parser::readZone()
 			}
 			isParsed=needWriteInAscii=true;
 			break;
-		case 0x6:
+		case 0x6: // active worksheet range
 			ok = m_spreadsheetParser->readSheetSize();
 			isParsed = true;
 			break;
-		case 0x7:
-		case 0x9:
-			ok = readUnknown0();
+		case 0x7: // window 1 record
+		case 0x9: // window 2 record
+			ok = readWindowRecord();
 			isParsed=true;
 			break;
-		case 0x8:
+		case 0x8: // col width
 			ok = m_spreadsheetParser->readColumnSize();
 			isParsed = true;
 			break;
-		case 0xa: // find in a spreadsheet v1 ( duplicated )
+		case 0xa: // col width (window 2)
 			if (sz!=3) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			// varies in this file from 0 to 5
@@ -499,56 +519,56 @@ bool WKS4Parser::readZone()
 			f << "dim?=" << libwps::read8(input) << ",";
 			isParsed=needWriteInAscii=true;
 			break;
-		case 0xb:
+		case 0xb: // named range
 			ok = readFieldName();
 			isParsed=true;
 			break;
-		case 0xc:
-		case 0xd:
-		case 0xe:
-		case 0xf:
-		case 0x10:
+		case 0xc: // blank cell
+		case 0xd: // integer cell
+		case 0xe: // floating cell
+		case 0xf: // label cell
+		case 0x10: // formula cell
 			ok = m_spreadsheetParser->readCell();
 			isParsed = true;
 			break;
-		case 0x33:
+		case 0x33:  // value of string formula
 			ok = m_spreadsheetParser->readCellFormulaResult();
 			isParsed = true;
 			break;
 		// some spreadsheet zone ( mainly flags )
-		case 0x18:
-		case 0x19:
-		case 0x20:
-		case 0x27:
-		case 0x2a:
+		case 0x18: // data table range
+		case 0x19: // query range
+		case 0x20: // distribution range
+		case 0x27: // print setup
+		case 0x2a: // print borders
 			ok = readUnknown1();
 			isParsed=true;
 			break;
-		case 0x1a:
-		case 0x1b:
-		case 0x1c:
-		case 0x1d:
-		case 0x23:
+		case 0x1a: // print range
+		case 0x1b: // sort range
+		case 0x1c: // fill range
+		case 0x1d: // primary sort key range
+		case 0x23: // secondary sort key range
 		{
 			int expectedSz=8;
 			f.str("");
 			switch (id)
 			{
 			case 0x1a: // only in spreadsheet?
-				f << "Entries(Select0):";
+				f << "Entries(PrintRange):";
 				break;
 			case 0x1b: // a dimension or also some big selection? 31999=infinity?, related to report?
-				f << "Entries(Dim0):";
+				f << "Entries(SortRange):";
 				break;
 			case 0x1c: // a dimension or also some big selection? only in spreadsheet
-				f << "Entries(Dim1):";
+				f << "Entries(FillRange):";
 				break;
 			case 0x1d:
-				f << "Entries(Select1):";
+				f << "Entries(PrimSort):";
 				expectedSz=9;
 				break;
 			case 0x23:
-				f << "Entries(Sort)[function]:";
+				f << "Entries(SecSort):";
 				expectedSz=9;
 				break;
 			default:
@@ -581,9 +601,9 @@ bool WKS4Parser::readZone()
 			isParsed=needWriteInAscii=true;
 			break;
 		}
-		case 0x24:
+		case 0x24: // protection (global)
 			f.str("");
-			f << "Entries(Protection):";
+			f << "Entries(Protection):global,";
 			if (sz!=1) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			val=(int) libwps::readU8(input);
@@ -596,12 +616,12 @@ bool WKS4Parser::readZone()
 			else if (val) f << "#protected=" << val << ",";
 			isParsed=needWriteInAscii=true;
 			break;
-		case 0x25:
-		case 0x26:
+		case 0x25: // footer
+		case 0x26: // header
 			readHeaderFooter(id==0x26);
 			isParsed = true;
 			break;
-		case 0x28: // only in spreadsheet ?
+		case 0x28: // print margin
 			if (sz!=10) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			for (int i=0; i<5; ++i)   // f1=4c|96|ac|f0
@@ -612,22 +632,22 @@ bool WKS4Parser::readZone()
 			}
 			isParsed=needWriteInAscii=true;
 			break;
-		case 0x2d:
-		case 0x2e:
+		case 0x2d: // graph setting
+		case 0x2e: // named graph setting
 			readChartDef();
 			isParsed = true;
 			break;
-		case 0x2f: // first microsoft works file ?
+		case 0x2f: // iteration count
 			if (sz!=1) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			WPS_DEBUG_MSG(("WKS4Parser::readZone: arggh a WKS1 file?\n"));
 			f.str("");
-			f << "Entries(PreVersion):vers=" << (int) libwps::readU8(input);
+			f << "Entries(ItCount):vers=" << (int) libwps::readU8(input);
 			if (m_state->m_version==2)
 				m_state->m_version=1;
 			isParsed = needWriteInAscii = true;
 			break;
-		case 0x36:   // find one time in a spreadsheet
+		case 0x36: // find one time in a spreadsheet (not standard)
 		{
 			if (sz!=0x1e) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
@@ -640,7 +660,7 @@ bool WKS4Parser::readZone()
 			isParsed = needWriteInAscii = true;
 			break;
 		}
-		case 0x41:
+		case 0x41: // graph record name
 			readChartName();
 			isParsed = true;
 			break;
@@ -1776,7 +1796,7 @@ bool WKS4Parser::readChartList()
 
 
 /* the zone 0:7 and 0:9 */
-bool WKS4Parser::readUnknown0()
+bool WKS4Parser::readWindowRecord()
 {
 	libwps::DebugStream f;
 	RVNGInputStreamPtr input = getInput();
@@ -1785,7 +1805,7 @@ bool WKS4Parser::readUnknown0()
 	long type = (long) libwps::read16(input);
 	if (type != 7 && type != 9)
 	{
-		WPS_DEBUG_MSG(("WKS4Parser::readUnknown0: unknown type\n"));
+		WPS_DEBUG_MSG(("WKS4Parser::readWindowRecord: unknown type\n"));
 		return false;
 	}
 	long sz = (long) libwps::readU16(input);
@@ -1793,13 +1813,13 @@ bool WKS4Parser::readUnknown0()
 	// normally size=0x1f but one time 0x1e
 	if (sz < 0x1e)
 	{
-		WPS_DEBUG_MSG(("WKS4Parser::readUnknown0: zone seems too short\n"));
+		WPS_DEBUG_MSG(("WKS4Parser::readWindowRecord: zone seems too short\n"));
 		ascii().addPos(pos);
-		ascii().addNote("Entries(Unknown0):###");
+		ascii().addNote("Entries(WindowRecord):###");
 		return true;
 	}
 
-	f << "Entries(Unknown0)[" << type << "]:";
+	f << "Entries(WindowRecord)[" << type << "]:";
 	// f0=0-a|1f|21, f1=1-3c|1da, f2=0-6|71|7f|f1, f3=4|9|a|c(size?),
 	// f4=0|4|6-11, f5=5-2c, f6=0|3|6|10|1f|20, f7=0-3c|1ca (related to f1?)
 	// f8=0|1, f9=0|2, f10=f11=0

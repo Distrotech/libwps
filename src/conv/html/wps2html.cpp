@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Version: MPL 2.0 / LGPLv2.1+
  *
@@ -45,6 +46,10 @@ static int printUsage()
 	printf("Usage: wps2html [OPTION] <Works Document>\n");
 	printf("\n");
 	printf("Options:\n");
+	printf("\t-e \"encoding\":   Defines the file encoding where encoding can be\n");
+	printf("\t\t CP424, CP437, CP737, CP775, CP850, CP852, CP855, CP856, CP857,\n");
+	printf("\t\t CP860, CP861, CP862, CP863, CP864, CP865, CP866, CP869, CP874, CP1006,\n");
+	printf("\t\t CP1250, CP1251, CP1252, CP1253, CP1254, CP1255, CP1256, CP1257, CP1258.\n");
 	printf("\t-h:                Shows this help message\n");
 	printf("\t-v:                Output wps2html version \n");
 	return -1;
@@ -60,11 +65,15 @@ int main(int argc, char *argv[])
 {
 	bool printHelp=false;
 	int ch;
+	char const *encoding="";
 
-	while ((ch = getopt(argc, argv, "hv")) != -1)
+	while ((ch = getopt(argc, argv, "e:hv")) != -1)
 	{
 		switch (ch)
 		{
+		case 'e':
+			encoding=optarg;
+			break;
 		case 'v':
 			printVersion();
 			return 0;
@@ -92,7 +101,7 @@ int main(int argc, char *argv[])
 
 	librevenge::RVNGString document;
 	librevenge::RVNGHTMLTextGenerator listenerImpl(document);
-	WPSResult error = WPSDocument::parse(&input, &listenerImpl);
+	WPSResult error = WPSDocument::parse(&input, &listenerImpl, encoding);
 
 	if (error == WPS_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
@@ -110,3 +119,4 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

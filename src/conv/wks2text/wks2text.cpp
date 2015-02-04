@@ -48,9 +48,13 @@ static int printUsage()
 	printf("Usage: wks2text [OPTION] <Works Spreadsheet Document>\n");
 	printf("\n");
 	printf("Options:\n");
+	printf("\t-e \"encoding\":    Define the file encoding where encoding can be\n");
+	printf("\t\t CP424, CP437, CP737, CP775, CP850, CP852, CP855, CP856, CP857,\n");
+	printf("\t\t CP860, CP861, CP862, CP863, CP864, CP865, CP866, CP869, CP874, CP1006,\n");
+	printf("\t\t CP1250, CP1251, CP1252, CP1253, CP1254, CP1255, CP1256, CP1257, CP1258.\n");
 	printf("\t-h:                 Shows this help message\n");
 	printf("\t-o file.text:       Defines the ouput file\n");
-	printf("\t-v:                Output wks2text version \n");
+	printf("\t-v:                 Output wks2text version \n");
 	return -1;
 }
 
@@ -63,6 +67,7 @@ static int printVersion()
 int main(int argc, char *argv[])
 {
 	bool printHelp=false;
+	char const *encoding="";
 	char const *output = 0;
 	int ch;
 
@@ -70,6 +75,9 @@ int main(int argc, char *argv[])
 	{
 		switch (ch)
 		{
+		case 'e':
+			encoding=optarg;
+			break;
 		case 'o':
 			output=optarg;
 			break;
@@ -109,7 +117,7 @@ int main(int argc, char *argv[])
 	try
 	{
 		librevenge::RVNGTextSpreadsheetGenerator listenerImpl(vec);
-		error= WPSDocument::parse(&input, &listenerImpl);
+		error= WPSDocument::parse(&input, &listenerImpl, encoding);
 	}
 	catch (...)
 	{

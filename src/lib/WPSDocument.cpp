@@ -48,13 +48,6 @@ the full 100%.
 
  \warning When compiled with -DDEBUG_WITH__FILES, code is added to store the results of the parsing in different files: one file by Ole parts and some files to store the read pictures. These files are created in the current repository, therefore it is recommended to launch the tests in an empty repository...*/
 
-/**
-Analyzes the content of an input stream to see if it can be parsed
-\param ip The input stream
-\param kind The document kind
-\return A confidence value which represents the likelyhood that the content from
-the input stream can be parsed
-*/
 WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip, WPSKind &kind)
 {
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
@@ -129,8 +122,10 @@ librevenge::RVNGTextInterface class implementation when needed. This is often co
 'main parsing routine'.
 \param ip The input stream
 \param documentInterface A WPSListener implementation
+\param encoding the encoding
 */
-WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGTextInterface *documentInterface)
+WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGTextInterface *documentInterface,
+                                    char const */*encoding*/)
 {
 	if (!ip || !documentInterface)
 		return WPS_UNKNOWN_ERROR;
@@ -200,8 +195,10 @@ librevenge::RVNGSpreadsheetInterface class implementation when needed. This is o
 'main parsing routine'.
 \param ip The input stream
 \param documentInterface A SpreadsheetInterface implementation
+\param encoding the encoding
 */
-WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGSpreadsheetInterface *documentInterface)
+WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGSpreadsheetInterface *documentInterface,
+                                    char const */*encoding*/)
 {
 	if (!ip || !documentInterface)
 		return WPS_UNKNOWN_ERROR;

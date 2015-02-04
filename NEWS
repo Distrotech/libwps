@@ -1,3 +1,6 @@
+0.3.x -> 0.4.0
+- add support for unknown encoding files (ie. DOS file)
+
 libwps-0.3.1
 
 - Fix parsing of floating-point numbers in specific cases.

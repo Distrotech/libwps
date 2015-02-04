@@ -130,8 +130,8 @@ protected:
 
 	//////////////////////// unknown zone //////////////////////////////
 
-	//! reads some unknown zones 0:7|0:9
-	bool readUnknown0();
+	//! reads windows record 0:7|0:9
+	bool readWindowRecord();
 	/** reads some unknown spreadsheet zones 0:18|0:19|0:20|0:27|0:2a
 
 	 \note this zones seems to consist of a list of flags potentially
