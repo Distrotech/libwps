@@ -53,7 +53,8 @@ class WPS4Parser : public WPSParser
 
 public:
 	//! constructor
-	WPS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
+	WPS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
+	           libwps_tools_win::Font::Type encoding=libwps_tools_win::Font::UNKNOWN);
 	//! destructor
 	~WPS4Parser();
 	//! called by WPSDocument to parse the file
@@ -89,8 +90,12 @@ protected:
 	float pageWidth() const;
 	//! returns the number of columns
 	int numColumns() const;
-	//! returns the document codepage ( if known )
-	libwps_tools_win::Font::Type getDocumentFontType() const;
+	/** returns the default font type, ie. the encoding given by the constructor if given
+		or the encoding deduiced from the version.
+	 */
+	libwps_tools_win::Font::Type getDefaultFontType() const;
+	//! returns the document codepage ( given from the file OEM field )
+	libwps_tools_win::Font::Type getOEMFontType() const;
 
 	/** creates a document for a comment entry and then send the data
 	 *

@@ -87,9 +87,8 @@ enum ZoneType { Z_String=-1, Z_Header=0, Z_Footer=1, Z_Main=2, Z_Note, Z_Bookmar
 struct FontName
 {
 	//! constructor with file's version to define the default encoding */
-	FontName(int version=4) : m_name(""), m_type(libwps_tools_win::Font::WIN3_WEUROPE)
+	FontName(libwps_tools_win::Font::Type type) : m_name(""), m_type(type)
 	{
-		if (version <= 2) m_type = libwps_tools_win::Font::DOS_850;
 	}
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, FontName const &ft);
@@ -143,15 +142,14 @@ std::string FontName::getDosName(int id)
 struct Font : public WPSFont
 {
 	//! constructor with file's version to define the default encoding */
-	Font(int version=4) : WPSFont(), m_type(libwps_tools_win::Font::WIN3_WEUROPE),
+	Font(libwps_tools_win::Font::Type type) : WPSFont(), m_type(type),
 		m_backColor(0xFFFFFF), m_special(false), m_dlinkId(-1)
 	{
-		if (version <= 2) m_type = libwps_tools_win::Font::DOS_850;
 	}
 	//! returns a default font (Courier12) with file's version to define the default encoding */
-	static Font getDefault(int version)
+	static Font getDefault(libwps_tools_win::Font::Type type, int version)
 	{
-		Font res(version);
+		Font res(type);
 		if (version <= 2)
 			res.m_name="Courier";
 		else
@@ -525,11 +523,9 @@ WPSEntry WPS4Text::getMainTextEntry() const
 	return m_state->m_main;
 }
 
-libwps_tools_win::Font::Type WPS4Text::getDefaultFontType() const
+WPS4TextInternal::Font WPS4Text::getDefaultFont() const
 {
-	if (version()<=2)
-		return libwps_tools_win::Font::DOS_850;
-	return libwps_tools_win::Font::WIN3_WEUROPE;
+	return WPS4TextInternal::Font::getDefault(mainParser().getDefaultFontType(), version());
 }
 
 ////////////////////////////////////////////////////////////
@@ -545,7 +541,7 @@ void WPS4Text::flushExtra()
 	size_t numExtra = m_state->m_otherZones.size();
 	if (numExtra == 0) return;
 
-	m_listener->setFont(WPS4TextInternal::Font::getDefault(version()));
+	m_listener->setFont(getDefaultFont());
 	m_listener->setParagraph(WPS4TextInternal::Paragraph());
 	m_listener->insertEOL();
 #ifdef DEBUG
@@ -613,14 +609,10 @@ bool WPS4Text::readText(WPSEntry const &zone)
 		else if (fod.m_type == DataFOD::ATTR_PARAG) prevPId = id;
 	}
 
-	WPS4TextInternal::Font actFont;
+	WPS4TextInternal::Font defaultFont(getDefaultFont());
+	WPS4TextInternal::Font actFont(defaultFont);
 	if (prevFId != -1)
 		actFont = m_state->m_fontList[size_t(prevFId)];
-	else
-	{
-		actFont = WPS4TextInternal::Font::getDefault(version());
-		actFont.m_type=getDefaultFontType();
-	}
 	m_listener->setFont(actFont);
 
 	if (prevPId != -1)
@@ -671,10 +663,7 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				if (fId >= 0)
 					actFont = m_state->m_fontList[size_t(fId)];
 				else
-				{
-					actFont = WPS4TextInternal::Font::getDefault(version());
-					actFont.m_type=getDefaultFontType();
-				}
+					actFont = defaultFont;
 				m_listener->setFont(actFont);
 #if DEBUG_FP
 				f << "[";
@@ -1308,7 +1297,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 
 	long endPos = entry.end();
 	int nFonts = 0;
-	libwps_tools_win::Font::Type docType=getDefaultFontType();
+	libwps_tools_win::Font::Type docType=mainParser().getDefaultFontType();
 	while (m_input->tell() < endPos)
 	{
 		long actPos;
@@ -1357,12 +1346,11 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 		libwps_tools_win::Font::Type fType=libwps_tools_win::Font::getFontType(s);
 		if (fType==libwps_tools_win::Font::UNKNOWN)
 			fType=docType;
-		WPS4TextInternal::FontName font;
+		WPS4TextInternal::FontName font(fType);
 		font.m_name = s;
-		font.m_type = fType;
 		f << font;
 
-		m_state->m_fontNames[font_number] = font;
+		m_state->m_fontNames.insert(std::pair<int,WPS4TextInternal::FontName>(font_number,font));
 
 		ascii().addPos(actPos);
 		ascii().addNote(f.str().c_str());
@@ -1377,7 +1365,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 ////////////////////////////////////////////////////////////
 bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 {
-	WPS4TextInternal::Font font(version());
+	WPS4TextInternal::Font font(getDefaultFont());
 	font.m_size = 12;
 
 	libwps::DebugStream f;
@@ -1416,13 +1404,14 @@ bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 
 		if (m_state->m_fontNames.find(font_n) != m_state->m_fontNames.end())
 		{
-			font.m_name=m_state->m_fontNames[font_n].m_name;
-			font.m_type=m_state->m_fontNames[font_n].m_type;
+			WPS4TextInternal::FontName const &fontName=m_state->m_fontNames.find(font_n)->second;
+			font.m_name=fontName.m_name;
+			font.m_type=fontName.m_type;
 		}
 		else if (version() <= 2)
 		{
 			font.m_name=WPS4TextInternal::FontName::getDosName(font_n);
-			font.m_type=getDefaultFontType();
+			font.m_type=mainParser().getDefaultFontType();
 		}
 		else
 		{
@@ -2146,7 +2135,7 @@ bool WPS4Text::footNotesDataParser(long /*bot*/, long /*eot*/, int id,
 	{
 		int numC = type/2;
 		librevenge::RVNGString label("");
-		libwps_tools_win::Font::Type actType = getDefaultFontType();
+		libwps_tools_win::Font::Type actType = mainParser().getDefaultFontType();
 		for (int i=0; i < numC; ++i)
 		{
 			unsigned char c = libwps::readU8(m_input);

@@ -54,6 +54,7 @@ static int printUsage()
 	printf("\t\t CP1250, CP1251, CP1252, CP1253, CP1254, CP1255, CP1256, CP1257, CP1258.\n");
 	printf("\t-h:                 Shows this help message\n");
 	printf("\t-o file.text:       Defines the ouput file\n");
+	printf("\t-p password:        Password to open the file\n");
 	printf("\t-v:                 Output wks2text version \n");
 	return -1;
 }
@@ -68,10 +69,11 @@ int main(int argc, char *argv[])
 {
 	bool printHelp=false;
 	char const *encoding="";
+	char const *password=0;
 	char const *output = 0;
 	int ch;
 
-	while ((ch = getopt(argc, argv, "hvo:")) != -1)
+	while ((ch = getopt(argc, argv, "hvo:p:")) != -1)
 	{
 		switch (ch)
 		{
@@ -80,6 +82,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'o':
 			output=optarg;
+			break;
+		case 'p':
+			password=optarg;
 			break;
 		case 'v':
 			printVersion();
@@ -98,33 +103,31 @@ int main(int argc, char *argv[])
 	char const *file=argv[optind];
 	librevenge::RVNGFileStream input(file);
 
+	WPSCreator creator;
 	WPSKind kind;
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind);
-	if (confidence == WPS_CONFIDENCE_NONE)
+	bool needCharEncoding;
+	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind,creator,needCharEncoding);
+	if (confidence == WPS_CONFIDENCE_NONE || (kind != WPS_SPREADSHEET && kind != WPS_DATABASE))
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
 	}
 
 	librevenge::RVNGStringVector vec;
-	if (kind != WPS_SPREADSHEET && kind != WPS_DATABASE)
-	{
-		printf("ERROR: Unsupported file format!\n");
-		return 1;
-	}
-
 	WPSResult error=WPS_OK;
 	try
 	{
 		librevenge::RVNGTextSpreadsheetGenerator listenerImpl(vec);
-		error= WPSDocument::parse(&input, &listenerImpl, encoding);
+		error= WPSDocument::parse(&input, &listenerImpl, password, encoding);
 	}
 	catch (...)
 	{
 		error=WPS_PARSE_ERROR;
 	}
 
-	if (error == WPS_FILE_ACCESS_ERROR)
+	if (error == WPS_ENCRYPTION_ERROR)
+		fprintf(stderr, "ERROR: Encrypted file, bad Password!\n");
+	else if (error == WPS_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
 	else if (error == WPS_PARSE_ERROR)
 		fprintf(stderr, "ERROR: Parse Exception!\n");

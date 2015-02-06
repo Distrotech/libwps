@@ -1,5 +1,7 @@
 0.3.x -> 0.4.0
 - add support for unknown encoding files (ie. DOS file)
+- add potential support for converting Lotus, ... document
+- add potential support for asking the document's password
 
 libwps-0.3.1
 

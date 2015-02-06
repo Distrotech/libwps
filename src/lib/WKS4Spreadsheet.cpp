@@ -1489,7 +1489,7 @@ bool WKS4Spreadsheet::readCell(Vec2i actPos, WKSContentListener::FormulaInstruct
 			if (version()==1)
 			{
 				val &= 0xFF;
-				if ((val & 0x80) && val+actPos[dim] > 0x100)
+				if ((val & 0x80) && val+actPos[dim] >= 0x100)
 					// sometimes this value is odd, so do not generate errors here
 					val = val - 0x100;
 			}

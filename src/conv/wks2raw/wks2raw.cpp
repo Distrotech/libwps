@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Version: MPL 2.0 / LGPLv2.1+
  *
@@ -42,9 +43,10 @@ static int printUsage()
 	printf("Usage: wks2raw [OPTION] <Works Spreadsheet Document>\n");
 	printf("\n");
 	printf("Options:\n");
-	printf("\t--callgraph:   Display the call graph nesting level\n");
-	printf("\t-h, --help:    Shows this help message\n");
-	printf("\t-v, --version:       Output wks2raw version \n");
+	printf("\t-h, --help:                Shows this help message\n");
+	printf("\t-v, --version:             Output wks2raw version \n");
+	printf("\t--callgraph:               Display the call graph nesting level\n");
+	printf("\t--password password:       Password to open the file\n");
 	return -1;
 }
 
@@ -60,60 +62,52 @@ int main(int argc, char *argv[])
 {
 	bool printIndentLevel = false;
 	char *file = 0;
+	char const *password=0;
 
-	if (argc < 2)
+	for (int arg=1; arg<argc; ++arg)
 	{
-		printUsage();
-		return -1;
-	}
-
-	if (!strcmp(argv[1], "--callgraph"))
-	{
-		if (argc == 2)
+		if (!strcmp(argv[arg], "-h") || !strcmp(argv[arg], "--help"))
+			return printUsage();
+		if (!strcmp(argv[arg], "-v") || !strcmp(argv[arg], "--version"))
+			return printVersion();
+		if (!strcmp(argv[arg], "--callgraph"))
 		{
-			printUsage();
-			return -1;
+			printIndentLevel = true;
+			continue;
 		}
-
-		printIndentLevel = true;
-		file = argv[2];
+		if (!strcmp(argv[arg], "--password"))
+		{
+			if (arg+1>=argc)
+				return printUsage();
+			password=argv[++arg];
+			continue;
+		}
+		if (file)
+			return printUsage();
+		file = argv[arg];
 	}
-	else if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))
-	{
-		printUsage();
-		return 0;
-	}
-	else if (!strcmp(argv[1], "-v") || !strcmp(argv[1], "--version"))
-	{
-		printVersion();
-		return 0;
-	}
-	else
-		file = argv[1];
+	if (!file)
+		return printUsage();
 
 	librevenge::RVNGFileStream input(file);
 
+	WPSCreator creator;
 	WPSKind kind;
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind);
-	if (confidence == WPS_CONFIDENCE_NONE)
+	bool needCharEncoding;
+	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind,creator,needCharEncoding);
+	if (confidence == WPS_CONFIDENCE_NONE || (kind != WPS_SPREADSHEET && kind != WPS_DATABASE))
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
 	}
 
 	WPSResult error=WPS_OK;
-	if (kind == WPS_SPREADSHEET || kind == WPS_DATABASE)
-	{
-		librevenge::RVNGRawSpreadsheetGenerator listenerImpl(printIndentLevel);
-		error= WPSDocument::parse(&input, &listenerImpl);
-	}
-	else
-	{
-		printf("ERROR: Unsupported file format!\n");
-		return 1;
-	}
+	librevenge::RVNGRawSpreadsheetGenerator listenerImpl(printIndentLevel);
+	error= WPSDocument::parse(&input, &listenerImpl, password);
 
-	if (error == WPS_FILE_ACCESS_ERROR)
+	if (error == WPS_ENCRYPTION_ERROR)
+		fprintf(stderr, "ERROR: Encrypted file, bad Password!\n");
+	else if (error == WPS_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
 	else if (error == WPS_PARSE_ERROR)
 		fprintf(stderr, "ERROR: Parse Exception!\n");
@@ -127,3 +121,4 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

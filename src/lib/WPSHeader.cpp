@@ -28,8 +28,9 @@
 
 using namespace libwps;
 
-WPSHeader::WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, WPSKind kind) :
-	m_input(input), m_fileInput(fileInput), m_majorVersion(majorVersion), m_kind(kind)
+WPSHeader::WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, WPSKind kind, WPSCreator creator) :
+	m_input(input), m_fileInput(fileInput), m_majorVersion(majorVersion), m_kind(kind), m_creator(creator),
+	m_needEncodingFlag(false)
 {
 }
 
@@ -67,13 +68,19 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 			WPS_DEBUG_MSG(("Microsoft Works wks database\n"));
 			return new WPSHeader(input, input, 1, WPS_DATABASE);
 		}
-		if ((firstOffset == 0xFF || firstOffset == 00) && secondOffset == 0x0 &&
-		        libwps::readU16(input) == 2 && libwps::readU16(input) == 0x0404)
+		uint16_t thirdVal=libwps::readU16(input);
+		if ((firstOffset == 0xFF || firstOffset == 00) && secondOffset == 0x0 && thirdVal==2)
 		{
 			WPS_DEBUG_MSG(("Microsoft Works wks detected\n"));
 			return new WPSHeader(input, input, 2, WPS_SPREADSHEET);
 		}
-
+#ifdef DEBUG
+		if (firstOffset == 00 && secondOffset == 0x0 && thirdVal==0x1a)
+		{
+			WPS_DEBUG_MSG(("Lotus wks detected\n"));
+			return new WPSHeader(input, input, 2, WPS_SPREADSHEET, WPS_LOTUS);
+		}
+#endif
 		return 0;
 	}
 

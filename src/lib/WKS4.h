@@ -48,7 +48,8 @@ class WKS4Parser : public WKSParser
 	friend class WKS4Spreadsheet;
 public:
 	//! constructor
-	WKS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header);
+	WKS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
+	           libwps_tools_win::Font::Type encoding=libwps_tools_win::Font::UNKNOWN);
 	//! destructor
 	~WKS4Parser();
 	//! called by WPSDocument to parse the file
@@ -61,6 +62,10 @@ protected:
 	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
+	/** returns the default font type, ie. the encoding given by the constructor if given
+		or the encoding deduiced from the version.
+	 */
+	libwps_tools_win::Font::Type getDefaultFontType() const;
 	//! returns the true if the file has LICS characters
 	bool hasLICSCharacters() const;
 
@@ -87,6 +92,8 @@ protected:
 	bool readZones();
 	//! reads a zone
 	bool readZone();
+	//! reads a Lotus 123 zone
+	bool readZoneLotus123();
 
 	//////////////////////// generic ////////////////////////////////////
 

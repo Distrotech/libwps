@@ -127,7 +127,9 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 //! the state of WPS4
 struct State
 {
-	State() : m_isDosFile(false), m_eof(-1), m_fontType(libwps_tools_win::Font::UNKNOWN),
+	State(libwps_tools_win::Font::Type fontType) :
+		m_isDosFile(false), m_eof(-1), m_fontType(fontType),
+		m_OEMFontType(libwps_tools_win::Font::UNKNOWN),
 		m_pageSpan(), m_noFirstPageHeader(false), m_noFirstPageFooter(false),
 		m_numColumns(1), m_actPage(0), m_numPages(0)
 	{
@@ -136,8 +138,10 @@ struct State
 	bool m_isDosFile;
 	//! the last file position
 	long m_eof;
-	//! the document code page
+	//! the user font type
 	libwps_tools_win::Font::Type m_fontType;
+	//! the OEM code page
+	libwps_tools_win::Font::Type m_OEMFontType;
 	//! the actual document size
 	WPSPageSpan m_pageSpan;
 	bool m_noFirstPageHeader /* true if the first page has no header */;
@@ -148,11 +152,12 @@ struct State
 }
 
 // constructor, destructor
-WPS4Parser::WPS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
+WPS4Parser::WPS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
+                       libwps_tools_win::Font::Type encoding) :
 	WPSParser(input, header),
 	m_listener(), m_graphParser(), m_textParser(), m_state()
 {
-	m_state.reset(new WPS4ParserInternal::State);
+	m_state.reset(new WPS4ParserInternal::State(encoding));
 	m_graphParser.reset(new WPS4Graph(*this));
 	m_textParser.reset(new WPS4Text(*this, input));
 }
@@ -177,9 +182,16 @@ int WPS4Parser::numColumns() const
 	return m_state->m_numColumns;
 }
 
-libwps_tools_win::Font::Type WPS4Parser::getDocumentFontType() const
+libwps_tools_win::Font::Type WPS4Parser::getDefaultFontType() const
 {
-	return m_state->m_fontType;
+	if (m_state->m_fontType != libwps_tools_win::Font::UNKNOWN)
+		return m_state->m_fontType;
+	return version()<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
+}
+
+libwps_tools_win::Font::Type WPS4Parser::getOEMFontType() const
+{
+	return m_state->m_OEMFontType;
 }
 
 bool WPS4Parser::getColor(int id, uint32_t &color) const
@@ -614,7 +626,7 @@ bool WPS4Parser::findZones()
 		libwps_tools_win::Font::Type type=libwps_tools_win::Font::getTypeForOEM((oem>>4)&0x7ff);
 		if (type != libwps_tools_win::Font::UNKNOWN)
 		{
-			m_state->m_fontType = type;
+			m_state->m_OEMFontType = type;
 			f << "codePage=" << libwps_tools_win::Font::getTypeName(type) << ",";
 		}
 		else

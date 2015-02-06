@@ -97,8 +97,8 @@ protected:
 		return reinterpret_cast<WPS4Parser const &>(m_mainParser);
 	}
 
-	//! returns the default codepage to use for the document
-	libwps_tools_win::Font::Type getDefaultFontType() const;
+	//! returns the default font to use for the document
+	WPS4TextInternal::Font getDefaultFont() const;
 
 	//! returns the header entry (if such entry exists, if not returns an invalid entry)
 	WPSEntry getHeaderEntry() const;

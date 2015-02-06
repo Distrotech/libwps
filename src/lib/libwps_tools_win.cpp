@@ -148,11 +148,53 @@ Font::Type Font::getTypeForOEM(int oem)
 		return CP_874;
 	case 1006:
 		return CP_1006;
+	case 1256:
+		return WIN3_ARABIC;
+	case 1257:
+		return WIN3_BALTIC;
+	case 1250:
+		return WIN3_CEUROPE;
+	case 1251:
+		return WIN3_CYRILLIC;
+	case 1253:
+		return WIN3_GREEK;
+	case 1255:
+		return WIN3_HEBREW;
+	case 1254:
+		return WIN3_TURKISH;
+	case 1258:
+		return WIN3_VIETNAMESE;
+	case 1252:
+		return WIN3_WEUROPE;
+
 	default:
 		WPS_DEBUG_MSG(("libwps_tools_win::Font::getTypeForOEM: find unknown oem %d\n", oem));
 	case 0:
 		return UNKNOWN;
 	}
+}
+
+Font::Type Font::getTypeForString(char const *encoding)
+{
+	if (!encoding) return UNKNOWN;
+	std::string code(encoding);
+	if (code.empty()) return UNKNOWN;
+	if (code.length()<5 || code.length()>6 || (code.substr(0,2)!="cp"&&code.substr(0,2)!="CP"))
+	{
+		WPS_DEBUG_MSG(("libwps_tools_win::Font::getTypeForString: find unknown encoding %s\n", encoding));
+		return UNKNOWN;
+	}
+	int val=0;
+	for (size_t i=2; i<code.length(); ++i)
+	{
+		if (code[i]<'0' || code[i]>'9')
+		{
+			WPS_DEBUG_MSG(("libwps_tools_win::Font::getTypeForString: find unknown encoding %s\n", encoding));
+			return UNKNOWN;
+		}
+		val=10*val+int(code[i]-'0');
+	}
+	return getTypeForOEM(val);
 }
 
 std::string Font::getTypeName(Type type)
@@ -220,6 +262,7 @@ std::string Font::getTypeName(Type type)
 		return "Unknown";
 	}
 }
+
 #ifdef UNDEF
 #  undef UNDEF
 #endif

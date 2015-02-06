@@ -31,7 +31,7 @@
 class WPSHeader
 {
 public:
-	WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, libwps::WPSKind kind=libwps::WPS_TEXT);
+	WPSHeader(RVNGInputStreamPtr &input, RVNGInputStreamPtr &fileInput, uint8_t majorVersion, libwps::WPSKind kind=libwps::WPS_TEXT, libwps::WPSCreator creator=libwps::WPS_MSWORKS);
 	virtual ~WPSHeader();
 
 	static WPSHeader *constructHeader(RVNGInputStreamPtr &input);
@@ -46,6 +46,16 @@ public:
 		return m_fileInput;
 	}
 
+	libwps::WPSCreator getCreator() const
+	{
+		return m_creator;
+	}
+
+	void setCreator(libwps::WPSCreator creator)
+	{
+		m_creator=creator;
+	}
+
 	libwps::WPSKind getKind() const
 	{
 		return m_kind;
@@ -54,6 +64,16 @@ public:
 	void setKind(libwps::WPSKind kind)
 	{
 		m_kind=kind;
+	}
+
+	bool getNeedEncoding() const
+	{
+		return m_needEncodingFlag;
+	}
+
+	void setNeedEncoding(bool needEncoding)
+	{
+		m_needEncodingFlag=needEncoding;
 	}
 
 	uint8_t getMajorVersion() const
@@ -73,6 +93,9 @@ private:
 	RVNGInputStreamPtr m_fileInput;
 	uint8_t m_majorVersion;
 	libwps::WPSKind m_kind;
+	libwps::WPSCreator m_creator;
+	//! a flag to know if we need to have the character set encoding
+	bool m_needEncodingFlag;
 };
 
 #endif /* WPSHEADER_H */

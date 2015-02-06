@@ -188,7 +188,8 @@ bool State::getColor(int id, uint32_t &color) const
 }
 
 // constructor, destructor
-WKS4Parser::WKS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
+WKS4Parser::WKS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
+                       libwps_tools_win::Font::Type /*encoding*/) :
 	WKSParser(input, header), m_listener(), m_state(), m_spreadsheetParser()
 
 {
@@ -332,7 +333,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	if ((firstOffset == 0 && type == 0) ||
 	        (firstOffset == 0x20 && type == 0x54))
 	{
-		m_state->m_version=2;
+		m_state->m_version=1;
 		f << "DOS,";
 	}
 	else if (firstOffset == 0xff)
@@ -345,9 +346,13 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find unexpected first data\n"));
 		return false;
 	}
+	libwps::WPSCreator creator=libwps::WPS_MSWORKS;
+	libwps::WPSKind kind=libwps::WPS_SPREADSHEET;
+	bool isSpreadsheet=true;
 	if (type == 0x54)
 	{
-		m_state->m_isSpreadsheet=false;
+		isSpreadsheet=false;
+		kind=libwps::WPS_DATABASE;
 		f << "database,";
 	}
 	else if (type == 0)
@@ -357,31 +362,82 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find unexpected type file\n"));
 		return false;
 	}
-	if (libwps::read16(input) != 2)
+	int val=(int) libwps::read16(input);
+	if (val==2)
+	{
+		// version
+		val=(int) libwps::read16(input);
+		if (isSpreadsheet)
+		{
+			if (val==0x404)
+			{
+			}
+			else if (val==0x504)
+			{
+				f << "symphony,";
+				creator=libwps::WPS_SYMPHONY;
+			}
+			else if (val==0x604)   // checkme maybe also quattro pro
+			{
+				m_state->m_version=1;
+				f << "lotus,";
+				creator=libwps::WPS_LOTUS;
+			}
+			else
+			{
+#ifdef DEBUG
+				f << "vers=" << std::hex << val << std::dec << ",";
+#else
+				WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find unknown file version\n"));
+				return false;
+#endif
+			}
+		}
+		else if (val)
+			return false;
+	}
+#ifdef DEBUG
+	else if (val==0x1a)
+	{
+		if (!isSpreadsheet) return false;
+		val=(int) libwps::readU16(input);
+		if (val==0x8007 || (val>=0x1000 && val<=0x1005))
+		{
+			WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find lotus123, sorry parsing for this files is not implemented\n"));
+			creator=libwps::WPS_LOTUS;
+			m_state->m_version=1000+(val-0x1000);
+			f << "lotus123[" << m_state->m_version << "],";
+		}
+		else
+		{
+			WPS_DEBUG_MSG(("WKS4Parser::checkHeader: unknown lotus 123 header\n"));
+			return false;
+		}
+	}
+#endif
+	else
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: header contain unexpected size field data\n"));
 		return false;
 	}
-	if ((m_state->m_isSpreadsheet && libwps::read16(input) != 0x0404) ||
-	        (!m_state->m_isSpreadsheet && libwps::read16(input) != 0))
-	{
-		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: header contain unknown data\n"));
-		return false;
-	}
+
+	input->seek(0, librevenge::RVNG_SEEK_SET);
 	if (strict)
 	{
-		for (int i=0; i < 3; ++i)
+		for (int i=0; i < 4; ++i)
 		{
 			if (!readZone()) return false;
 		}
 	}
 	ascii().addPos(0);
 	ascii().addNote(f.str().c_str());
-	ascii().addPos(6);
+
+	m_state->m_isSpreadsheet=isSpreadsheet;
 	if (header)
 	{
 		header->setMajorVersion((uint8_t) m_state->m_version);
-		header->setKind(m_state->m_isSpreadsheet ? WPS_SPREADSHEET : WPS_DATABASE);
+		header->setCreator(creator);
+		header->setKind(kind);
 	}
 	return true;
 }
@@ -389,7 +445,21 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 bool WKS4Parser::readZones()
 {
 	RVNGInputStreamPtr input = getInput();
-	input->seek(6, librevenge::RVNG_SEEK_SET);
+	input->seek(0, librevenge::RVNG_SEEK_SET);
+
+	if (version() >= 1000)
+	{
+		// error ok, we do no known how to parsed this structure
+		while (!input->isEnd())
+		{
+			if (!readZoneLotus123())
+				break;
+		}
+
+		ascii().addPos(input->tell());
+		ascii().addNote("Entries(UnknownZone):");
+		return false;
+	}
 
 	while (readZone()) ;
 
@@ -419,6 +489,28 @@ bool WKS4Parser::readZones()
 	else
 		ascii().addNote("__End");
 
+	return true;
+}
+
+bool WKS4Parser::readZoneLotus123()
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+	long pos = input->tell();
+	int id = (int) libwps::readU8(input);
+	int type = (int) libwps::read8(input);
+	long sz = (long) libwps::readU16(input);
+	if (type || sz<0 || !checkFilePosition(pos+4+sz))
+	{
+		input->seek(pos, librevenge::RVNG_SEEK_SET);
+		return false;
+	}
+	f << "Entries(Lotus";
+	f << std::hex << id << std::dec << "E):";
+	if (sz) ascii().addDelimiter(pos+4,'|');
+	input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
 	return true;
 }
 
@@ -467,6 +559,12 @@ bool WKS4Parser::readZone()
 		   49: autoexecutute macro adress(8)
 		   4a: query parse information
 		 */
+		case 0:
+			if (sz!=2) break;
+			f.str("");
+			f << "version=" << std::hex << libwps::readU16(input) << std::dec << ",";
+			isParsed=needWriteInAscii=true;
+			break;
 		case 0x1: // EOF
 			ok = false;
 			break;

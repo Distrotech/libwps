@@ -60,6 +60,8 @@ public:
 	static unsigned long LICSunicode(unsigned char c, Type type);
 	/*! returns the type corresponding to Windows OEM */
 	static Type getTypeForOEM(int oem);
+	/*! returns the type corresponding to encoding string */
+	static Type getTypeForString(char const *encoding);
 	/*! \brief returns the type of the font using the fontName
 	 * \param name the font name.
 	 *

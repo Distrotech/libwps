@@ -23,12 +23,15 @@
  */
 
 #include <libwps/libwps.h>
+
+#include "libwps_internal.h"
+#include "libwps_tools_win.h"
+
 #include "WKS4.h"
 #include "WPS4.h"
 #include "WPS8.h"
 #include "WPSHeader.h"
 #include "WPSParser.h"
-#include "libwps_internal.h"
 
 using namespace libwps;
 
@@ -48,7 +51,7 @@ the full 100%.
 
  \warning When compiled with -DDEBUG_WITH__FILES, code is added to store the results of the parsing in different files: one file by Ole parts and some files to store the read pictures. These files are created in the current repository, therefore it is recommended to launch the tests in an empty repository...*/
 
-WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip, WPSKind &kind)
+WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStream *ip, WPSKind &kind, WPSCreator &creator, bool &needEncoding)
 {
 	WPS_DEBUG_MSG(("WPSDocument::isFileFormatSupported()\n"));
 
@@ -64,6 +67,7 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 
 		if (!header)
 			return WPS_CONFIDENCE_NONE;
+		creator = header->getCreator();
 		kind = header->getKind();
 
 		WPSConfidence confidence = WPS_CONFIDENCE_NONE;
@@ -73,6 +77,7 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 			WPS4Parser parser(header->getInput(), header);
 			if (!parser.checkHeader(header.get(), true))
 				return WPS_CONFIDENCE_NONE;
+			needEncoding=header->getNeedEncoding();
 			return WPS_CONFIDENCE_EXCELLENT;
 		}
 		else if (kind==WPS_SPREADSHEET || kind==WPS_DATABASE)
@@ -81,6 +86,7 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 			WKS4Parser parser(header->getInput(), header);
 			if (!parser.checkHeader(header.get(), true))
 				return WPS_CONFIDENCE_NONE;
+			needEncoding=header->getNeedEncoding();
 			return WPS_CONFIDENCE_EXCELLENT;
 		}
 
@@ -116,16 +122,8 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 	return WPS_CONFIDENCE_NONE;
 }
 
-/**
-Parses the input stream content. It will make callbacks to the functions provided by a
-librevenge::RVNGTextInterface class implementation when needed. This is often commonly called the
-'main parsing routine'.
-\param ip The input stream
-\param documentInterface A WPSListener implementation
-\param encoding the encoding
-*/
 WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGTextInterface *documentInterface,
-                                    char const */*encoding*/)
+                                    char const */*password*/, char const *encoding)
 {
 	if (!ip || !documentInterface)
 		return WPS_UNKNOWN_ERROR;
@@ -160,7 +158,8 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 		case 2:
 		case 1:
 		{
-			parser.reset(new WPS4Parser(header->getInput(), header));
+			parser.reset(new WPS4Parser(header->getInput(), header,
+			                            libwps_tools_win::Font::getTypeForString(encoding)));
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
 			break;
@@ -189,16 +188,8 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 	return error;
 }
 
-/**
-Parses the input stream content. It will make callbacks to the functions provided by a
-librevenge::RVNGSpreadsheetInterface class implementation when needed. This is often commonly called the
-'main parsing routine'.
-\param ip The input stream
-\param documentInterface A SpreadsheetInterface implementation
-\param encoding the encoding
-*/
 WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGSpreadsheetInterface *documentInterface,
-                                    char const */*encoding*/)
+                                    char const */*password*/, char const *encoding)
 {
 	if (!ip || !documentInterface)
 		return WPS_UNKNOWN_ERROR;
@@ -222,7 +213,8 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 		case 2:
 		case 1:
 		{
-			parser.reset(new WKS4Parser(header->getInput(), header));
+			parser.reset(new WKS4Parser(header->getInput(), header,
+			                            libwps_tools_win::Font::getTypeForString(encoding)));
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
 			break;
