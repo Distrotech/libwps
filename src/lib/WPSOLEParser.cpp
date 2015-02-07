@@ -599,7 +599,7 @@ bool WPSOLEParser::readCompObj(RVNGInputStreamPtr &ip, std::string const &oleNam
 			f << "'" << clsName << "'";
 		else
 		{
-			WPS_DEBUG_MSG(("WPSOLEParser::readCompObj: unknown clsid=%ld\n", clsData[0]));
+			WPS_DEBUG_MSG(("WPSOLEParser::readCompObj: unknown clsid=%lx\n", clsData[0]));
 			f << "unknCLSID='" << std::hex << clsData[0] << "'";
 		}
 	}

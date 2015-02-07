@@ -52,7 +52,7 @@ namespace WKS4ParserInternal
 struct Font : public WPSFont
 {
 	//! constructor
-	Font() : WPSFont(), m_type(libwps_tools_win::Font::DOS_850)
+	Font(libwps_tools_win::Font::Type type) : WPSFont(), m_type(type)
 	{
 	}
 	//! font encoding type
@@ -112,12 +112,20 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_isSpreadsheet(true), m_version(-1), m_hasLICSCharacters(false), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
+	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_isSpreadsheet(true), m_fontType(fontType), m_version(-1), m_hasLICSCharacters(false), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
 		m_headerString(""), m_footerString("")
 	{
 	}
 	//! returns a color corresponding to an id
 	bool getColor(int id, uint32_t &color) const;
+	//! return the default font style
+	libwps_tools_win::Font::Type getDefaultFontType() const
+	{
+		if (m_fontType != libwps_tools_win::Font::UNKNOWN)
+			return m_fontType;
+		return m_version<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
+	}
+
 	//! returns a default font (Courier12) with file's version to define the default encoding */
 	WPSFont getDefaultFont() const
 	{
@@ -134,6 +142,8 @@ struct State
 	long m_eof;
 	//! boolean to know if the file is a spreadsheet file or a database file
 	bool m_isSpreadsheet;
+	//! the user font type
+	libwps_tools_win::Font::Type m_fontType;
 	//! the file version
 	int m_version;
 	//! flag to know if the character
@@ -189,11 +199,11 @@ bool State::getColor(int id, uint32_t &color) const
 
 // constructor, destructor
 WKS4Parser::WKS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
-                       libwps_tools_win::Font::Type /*encoding*/) :
+                       libwps_tools_win::Font::Type encoding) :
 	WKSParser(input, header), m_listener(), m_state(), m_spreadsheetParser()
 
 {
-	m_state.reset(new WKS4ParserInternal::State);
+	m_state.reset(new WKS4ParserInternal::State(encoding));
 	m_spreadsheetParser.reset(new WKS4Spreadsheet(*this));
 }
 
@@ -217,6 +227,11 @@ bool WKS4Parser::checkFilePosition(long pos)
 		input->seek(actPos, librevenge::RVNG_SEEK_SET);
 	}
 	return pos <= m_state->m_eof;
+}
+
+libwps_tools_win::Font::Type WKS4Parser::getDefaultFontType() const
+{
+	return m_state->getDefaultFontType();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -316,7 +331,7 @@ shared_ptr<WKSContentListener> WKS4Parser::createListener(librevenge::RVNGSpread
 ////////////////////////////////////////////////////////////
 bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 {
-	*m_state = WKS4ParserInternal::State();
+	*m_state = WKS4ParserInternal::State(m_state->m_fontType);
 	libwps::DebugStream f;
 
 	RVNGInputStreamPtr input = getInput();
@@ -329,6 +344,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	input->seek(0,librevenge::RVNG_SEEK_SET);
 	int firstOffset = (int) libwps::readU8(input);
 	int type = (int) libwps::read8(input);
+	bool needEncoding=true;
 	f << "FileHeader:";
 	if ((firstOffset == 0 && type == 0) ||
 	        (firstOffset == 0x20 && type == 0x54))
@@ -340,6 +356,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	{
 		f << "Windows,";
 		m_state->m_version=3;
+		needEncoding=false;
 	}
 	else
 	{
@@ -438,6 +455,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 		header->setMajorVersion((uint8_t) m_state->m_version);
 		header->setCreator(creator);
 		header->setKind(kind);
+		header->setNeedEncoding(needEncoding);
 	}
 	return true;
 }
@@ -1241,7 +1259,7 @@ bool WKS4Parser::readFont()
 		return true;
 	}
 
-	WKS4ParserInternal::Font font;
+	WKS4ParserInternal::Font font(getDefaultFontType());
 	int flags = (int)libwps::readU8(input);
 	uint32_t attributes = 0;
 	if (flags & 1) attributes |= WPS_BOLD_BIT;
@@ -1271,7 +1289,7 @@ bool WKS4Parser::readFont()
 
 	font.m_type=libwps_tools_win::Font::getFontType(name);
 	if (font.m_type==libwps_tools_win::Font::UNKNOWN)
-		font.m_type=version()<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
+		font.m_type=getDefaultFontType();
 	font.m_name=name;
 
 	input->seek(endPos-4, librevenge::RVNG_SEEK_SET);

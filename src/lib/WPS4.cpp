@@ -550,7 +550,11 @@ bool WPS4Parser::checkHeader(WPSHeader *header, bool /*strict*/)
 	uint8_t secondOffset = libwps::readU8(input);
 	if (secondOffset != 0xFE || firstOffset > 7) return false;
 	if (header)
+	{
+		if (firstOffset==1)
+			header->setNeedEncoding(true);
 		header->setMajorVersion(firstOffset<4 ? 2 : firstOffset<6 ? 3 : 4);
+	}
 	return true;
 }
 

@@ -89,7 +89,7 @@ void DebugFile::sort()
 	for (size_t i = 0; i < numNotes; i++) map[m_notes[i]] = 0;
 
 	size_t i = 0;
-	for (NotePos::Map::iterator it = map.begin(); it != map.end(); i++, it++)
+	for (NotePos::Map::iterator it = map.begin(); it != map.end(); i++, ++it)
 		m_notes[i] = it->first;
 	if (i != numNotes) m_notes.resize(i);
 
@@ -98,8 +98,7 @@ void DebugFile::sort()
 	for (size_t s = 0; s < numSkip; s++) sMap[m_skipZones[s]] = 0;
 
 	i = 0;
-	for (Vec2i::MapX::iterator it = sMap.begin();
-	        it != sMap.end(); i++, it++)
+	for (Vec2i::MapX::iterator it = sMap.begin(); it != sMap.end(); i++, ++it)
 		m_skipZones[i] = it->first;
 	if (i < numSkip) m_skipZones.resize(i);
 }

@@ -788,7 +788,7 @@ bool WPS8Parser::parseHeaderIndexEntry()
 
 		if (c != 0 && c != 0x20 && (41 > c || c > 90))
 		{
-			WPS_DEBUG_MSG(("WPS8Parser::parseHeaderIndexEntry: error: bad character=%u (0x%02x) in name in header index\n", c, c));
+			WPS_DEBUG_MSG(("WPS8Parser::parseHeaderIndexEntry: error: bad character=%u (0x%02x) in name in header index\n", (unsigned)c, (unsigned)c));
 			ascii().addNote("###IndexEntry bad name(ignored)");
 
 			input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
@@ -985,7 +985,7 @@ bool WPS8Parser::readDocProperties(WPSEntry const &entry, WPSPageSpan &page)
 
 	if (length < 2)
 	{
-		WPS_DEBUG_MSG(("WPS8Parser::readDocProperties: warning: DOP length=0x%lx\n", length));
+		WPS_DEBUG_MSG(("WPS8Parser::readDocProperties: warning: DOP length=0x%lx\n", (unsigned long) length));
 		return false;
 	}
 
@@ -1246,7 +1246,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 
 	if (length < 2)
 	{
-		WPS_DEBUG_MSG(("WPS8Parser::readFRAM warning: length=0x%lx\n", length));
+		WPS_DEBUG_MSG(("WPS8Parser::readFRAM warning: length=0x%lx\n", (unsigned long) length));
 		return false;
 	}
 
@@ -1256,7 +1256,7 @@ bool WPS8Parser::readFRAM(WPSEntry const &entry)
 	int numFram = libwps::read16(input);
 	if (numFram < 0 || numFram*2 > length)
 	{
-		WPS_DEBUG_MSG(("WPS8Parser::readFRAM warning: length=0x%lx, num=%d\n", length, numFram));
+		WPS_DEBUG_MSG(("WPS8Parser::readFRAM warning: length=0x%lx, num=%d\n", (unsigned long) length, numFram));
 		return false;
 	}
 	f << "N=" << numFram;
@@ -1619,7 +1619,7 @@ bool WPS8Parser::readSYID(WPSEntry const &entry, std::vector<int> &listId)
 
 	if (length < 4)
 	{
-		WPS_DEBUG_MSG(("WPS8Parser::readSYID: warning: SYID length=0x%lx\n", length));
+		WPS_DEBUG_MSG(("WPS8Parser::readSYID: warning: SYID length=0x%lx\n", (unsigned long) length));
 		return false;
 	}
 
@@ -1666,7 +1666,7 @@ bool WPS8Parser::readWNPR(WPSEntry const &entry)
 
 	if (length < 40)
 	{
-		WPS_DEBUG_MSG(("WPS8Parser::readWNPR: warning: WNPR length=0x%lx\n", length));
+		WPS_DEBUG_MSG(("WPS8Parser::readWNPR: warning: WNPR length=0x%lx\n", (unsigned long) length));
 		return false;
 	}
 
@@ -1716,7 +1716,7 @@ bool WPS8Parser::readWNPR(WPSEntry const &entry)
 	long actPos = input->tell();
 	if (actPos + 32*2+38+22 > endPage)
 	{
-		WPS_DEBUG_MSG(("WPS8Parser::readWNPR: length=0x%lx seems too short\n", length));
+		WPS_DEBUG_MSG(("WPS8Parser::readWNPR: length=0x%lx seems too short\n", (unsigned long) length));
 		return false;
 	}
 

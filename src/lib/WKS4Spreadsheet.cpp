@@ -49,7 +49,7 @@ namespace WKS4SpreadsheetInternal
 struct Style : public WPSCellFormat
 {
 	//! construtor
-	Style() : WPSCellFormat(), m_font(), m_fontType(libwps_tools_win::Font::DOS_850), m_extra("")
+	Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_font(), m_fontType(type), m_extra("")
 	{
 		for (int i = 0; i < 10; i++) m_unknFlags[i] = 0;
 	}
@@ -659,10 +659,9 @@ bool WKS4Spreadsheet::readStyle()
 	for (int i=0; i<3; ++i) fl[2+i] = libwps::readU16(m_input);
 	fl[5]= sz>=10 ? libwps::readU16(m_input) : 0;
 
-	WKS4SpreadsheetInternal::Style style;
+	WKS4SpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
 	if (!m_mainParser.getFont(fl[3], style.m_font, style.m_fontType))
 	{
-		style.m_fontType=version()<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
 		f << ",#fontId = " << fl[3];
 
 		static bool first = true;
@@ -909,7 +908,7 @@ bool WKS4Spreadsheet::readDOSCellProperty()
 		ascii().addNote(f.str().c_str());
 		return true;
 	}
-	WKS4SpreadsheetInternal::Style style;
+	WKS4SpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
 	if (cell->m_styleId>=0)
 	{
 		if (!m_state->m_styleManager.get(cell->m_styleId, style))
@@ -1070,7 +1069,7 @@ bool WKS4Spreadsheet::readDOSFieldProperty()
 
 	f << "Entries(FieldDosProperty):";
 	f << "id=" << libwps::readU16(m_input) << ",";
-	WKS4SpreadsheetInternal::Style style;
+	WKS4SpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
 	int fl[2];
 	for (int i = 0; i < 2; i++)
 		fl[i] = libwps::readU8(m_input);
@@ -1165,7 +1164,7 @@ bool WKS4Spreadsheet::readDOSCellExtraProperty()
 		ascii().addNote(f.str().c_str());
 		return true;
 	}
-	WKS4SpreadsheetInternal::Style style;
+	WKS4SpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
 	if (cell->m_styleId>=0)
 	{
 		if (!m_state->m_styleManager.get(cell->m_styleId, style))
@@ -1373,7 +1372,7 @@ bool WKS4Spreadsheet::readCell()
 
 	if (dosFile)
 	{
-		WKS4SpreadsheetInternal::Style style;
+		WKS4SpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
 		switch (cell.m_content.m_contentType)
 		{
 		case WKSContentListener::CellContent::C_NONE:
@@ -1503,7 +1502,7 @@ bool WKS4Spreadsheet::readCell(Vec2i actPos, WKSContentListener::FormulaInstruct
 		}
 		else
 		{
-			WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: can not read cell %x\n", val));
+			WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: can not read cell %x\n", (unsigned int)val));
 			ok = false;
 		}
 		pos[dim] = val;
@@ -2177,11 +2176,10 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 		return;
 	}
 
-	WKS4SpreadsheetInternal::Style cellStyle;
+	WKS4SpreadsheetInternal::Style cellStyle(m_mainParser.getDefaultFontType());
 	if (cell.m_styleId<0 || !m_state->m_styleManager.get(cell.m_styleId,cellStyle))
 	{
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::sendCellContent: I can not find the cell style\n"));
-		if (version()>=3) cellStyle.m_fontType=libwps_tools_win::Font::WIN3_WEUROPE;
 	}
 	if (version()<=2 && cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
 		cellStyle.setHAlignement(cell.m_hAlign);

@@ -470,7 +470,7 @@ bool WPS8Graph::readIBGF(RVNGInputStreamPtr input, WPSEntry const &entry)
 
 	if (length != 26)
 	{
-		WPS_DEBUG_MSG(("WPS8Graph::readIBGF: IBGF length=0x%lx\n", length));
+		WPS_DEBUG_MSG(("WPS8Graph::readIBGF: IBGF length=0x%lx\n", (unsigned long) length));
 		return false;
 	}
 
