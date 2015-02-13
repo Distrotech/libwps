@@ -409,6 +409,10 @@ bool WKS4Spreadsheet::checkFilePosition(long pos)
 	return pos <= m_state->m_eof;
 }
 
+bool WKS4Spreadsheet::hasSomeSpreadsheetData() const
+{
+	return !m_state->getSheet(0).m_cellsList.empty();
+}
 
 ////////////////////////////////////////////////////////////
 // low level
@@ -1293,7 +1297,8 @@ bool WKS4Spreadsheet::readCell()
 	case 14:
 	{
 		double val;
-		if (dataSz == 8 && readNumber(endPos, val))
+		bool isNaN;
+		if (dataSz == 8 && libwps::readDouble8(m_input, val, isNaN))
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
 			cell.m_content.setValue(val);
@@ -1338,7 +1343,8 @@ bool WKS4Spreadsheet::readCell()
 	case 16:
 	{
 		double val;
-		if (dataSz >= 8 && readNumber(dataPos+8, val))
+		bool isNaN;
+		if (dataSz >= 8 && libwps::readDouble8(m_input, val, isNaN))
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_FORMULA;
 			cell.m_content.setValue(val);
@@ -1354,7 +1360,8 @@ bool WKS4Spreadsheet::readCell()
 	case 0x545b:   // CHECKME: sometime we do not read the good number
 	{
 		double val;
-		if (dataSz == 4 && readFloat4(endPos, val))
+		bool isNaN;
+		if (dataSz == 4 && libwps::readDouble4(m_input, val, isNaN))
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
 			cell.m_content.setValue(val);
@@ -1523,128 +1530,6 @@ bool WKS4Spreadsheet::readCell(Vec2i actPos, WKSContentListener::FormulaInstruct
 	return ok;
 }
 
-bool WKS4Spreadsheet::readFloat4(long endPos, double &res)
-{
-	res = 0;
-	long pos = m_input->tell();
-	int sz = int(endPos - pos);
-	if (sz != 4) return false;
-
-	float mantisse = 0;
-	/** (first&3)==1: is used to decide if we store 100*N or N.,
-		(first&3)==2: indicates a basic int number (appears mainly when converting a dos file in a windows file)
-		(first&3)==3: Can this exist ? What does this mean: 100*a basic int ?
-		The other bytes seem to have classic meaning...
-	*/
-	int first = (int) libwps::readU8(m_input);
-	if ((first&3)==2)
-	{
-		// so read it as a normal number
-		m_input->seek(-1, librevenge::RVNG_SEEK_CUR);
-		long val=long(libwps::readU16(m_input)>>2);
-		val+=long(libwps::readU16(m_input))<<14;
-		if (val&0x20000000)
-			res = double(val-0x40000000);
-		else
-			res = double(val);
-		return true;
-	}
-	mantisse = float(first & 0xFC)/256.f + (float) libwps::readU8(m_input);
-	int mantExp = (int) libwps::readU8(m_input);
-	mantisse = (mantisse/256.f + float(0x10+(mantExp & 0x0F)))/16.f;
-	int exp = ((mantExp&0xF0)>>4)+int(libwps::readU8(m_input)<<4);
-	int sign = 1;
-	if (exp & 0x800)
-	{
-		exp &= 0x7ff;
-		sign = -1;
-	}
-
-	if (exp == 0)
-	{
-		if ((double) mantisse > 1.-1e-4)  return true; // ok zero
-		// fixme find Nan representation
-		return false;
-	}
-	if (exp == 0x7FF)
-	{
-		if ((double) mantisse > 1.-1e-4)
-		{
-			res=std::numeric_limits<double>::quiet_NaN();
-			/* 0x7FFFF.. are nan(infinite, ...):ok
-
-			   0xFFFFF.. are nan(in the sense, not a number but
-			   text...). In this case wps2csv and wps2text will
-			   display a nan. Not good, but difficult to retrieve the
-			   cell's content without excuting the formula associated
-			   to this cell :-~
-			 */
-			return true;
-		}
-		return false;
-	}
-
-	exp -= 0x3ff;
-	res = std::ldexp(mantisse, exp);
-	if (sign == -1)
-	{
-		res *= -1.;
-	}
-	if (first & 1) res/=100;
-	if (first & 2)
-	{
-		// CHECKME...
-		WPS_DEBUG_MSG(("WKS4Spreadsheet::readFloat4: ARRGGGGGGGGGG find a float with first & 3 ARRGGGGGGGGGG,\n some float can be broken\n"));
-		ascii().addDelimiter(pos,'#');
-	}
-	return true;
-}
-
-bool WKS4Spreadsheet::readNumber(long endPos, double &res)
-{
-	res = 0;
-	long pos = m_input->tell();
-	int sz = int(endPos - pos);
-	if (sz != 8) return false;
-
-	float mantisse = 0;
-	for (int i = 0; i < 6; i++)
-		mantisse = mantisse/256.f + (float)libwps::readU8(m_input);
-	int mantExp = (int) libwps::readU8(m_input);
-	mantisse = (mantisse/256.f + float(0x10+(mantExp & 0x0F)))/16.f;
-	int exp = ((mantExp&0xF0)>>4)+int(libwps::readU8(m_input)<<4);
-	int sign = 1;
-	if (exp & 0x800)
-	{
-		exp &= 0x7ff;
-		sign = -1;
-	}
-
-	float const epsilon=1.e-5f;
-	if (exp == 0)
-	{
-		if (mantisse > 1.f-epsilon && mantisse < 1.f+epsilon)  return true; // ok zero
-		// fixme find Nan representation
-		return false;
-	}
-	if (exp == 0x7FF)
-	{
-		if (mantisse >= 1.f-epsilon)
-		{
-			res=std::numeric_limits<double>::quiet_NaN();
-			return true; // ok 0x7FF and 0xFFF are nan
-		}
-		return false;
-	}
-
-	exp -= 0x3ff;
-	res = std::ldexp(mantisse, exp);
-	if (sign == -1)
-	{
-		res *= -1.;
-	}
-	return true;
-}
 struct Functions
 {
 	char const *m_name;
@@ -1720,6 +1605,7 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 	while (long(m_input->tell()) != endPos)
 	{
 		double val;
+		bool isNaN;
 		pos = m_input->tell();
 		if (pos > endPos) return false;
 		int wh = (int) libwps::readU8(m_input);
@@ -1728,7 +1614,7 @@ bool WKS4Spreadsheet::readFormula(long endPos, Vec2i const &position,
 		switch (wh)
 		{
 		case 0x0:
-			if (endPos-pos<9 || !readNumber(pos+9, val))
+			if (endPos-pos<9 || !libwps::readDouble8(m_input, val, isNaN))
 			{
 				f.str("");
 				f << "###number";

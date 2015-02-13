@@ -112,7 +112,7 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 struct State
 {
 	//! constructor
-	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_isSpreadsheet(true), m_fontType(fontType), m_version(-1), m_hasLICSCharacters(false), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
+	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_application(libwps::WPS_MSWORKS), m_isSpreadsheet(true), m_fontType(fontType), m_version(-1), m_hasLICSCharacters(false), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
 		m_headerString(""), m_footerString("")
 	{
 	}
@@ -140,6 +140,8 @@ struct State
 
 	//! the last file position
 	long m_eof;
+	//! the application
+	libwps::WPSCreator m_application;
 	//! boolean to know if the file is a spreadsheet file or a database file
 	bool m_isSpreadsheet;
 	//! the user font type
@@ -383,7 +385,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	if (val==2)
 	{
 		// version
-		val=(int) libwps::read16(input);
+		val=(int) libwps::readU16(input);
 		if (isSpreadsheet)
 		{
 			if (val==0x404)
@@ -394,12 +396,26 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 				f << "symphony,";
 				creator=libwps::WPS_SYMPHONY;
 			}
-			else if (val==0x604)   // checkme maybe also quattro pro
+			else if (val==0x604)
 			{
 				m_state->m_version=1;
 				f << "lotus,";
 				creator=libwps::WPS_LOTUS;
 			}
+			else if (val==0x8006)
+			{
+				WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find lotus file format, sorry parsing this format is not implemented\n"));
+				return false;
+			}
+#ifdef DEBUG
+			else if (val==0x1002)
+			{
+				WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find a quattro pro file, sorry parsing this format is not implemented\n"));
+				m_state->m_version=1000;
+				f << "quattropro,";
+				creator=libwps::WPS_QUATTRO_PRO;
+			}
+#endif
 			else
 			{
 #ifdef DEBUG
@@ -413,25 +429,6 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 		else if (val)
 			return false;
 	}
-#ifdef DEBUG
-	else if (val==0x1a)
-	{
-		if (!isSpreadsheet) return false;
-		val=(int) libwps::readU16(input);
-		if (val==0x8007 || (val>=0x1000 && val<=0x1005))
-		{
-			WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find lotus123, sorry parsing for this files is not implemented\n"));
-			creator=libwps::WPS_LOTUS;
-			m_state->m_version=1000+(val-0x1000);
-			f << "lotus123[" << m_state->m_version << "],";
-		}
-		else
-		{
-			WPS_DEBUG_MSG(("WKS4Parser::checkHeader: unknown lotus 123 header\n"));
-			return false;
-		}
-	}
-#endif
 	else
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::checkHeader: header contain unexpected size field data\n"));
@@ -439,7 +436,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	}
 
 	input->seek(0, librevenge::RVNG_SEEK_SET);
-	if (strict)
+	if (strict && m_state->m_version<1000)
 	{
 		for (int i=0; i < 4; ++i)
 		{
@@ -450,6 +447,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	ascii().addNote(f.str().c_str());
 
 	m_state->m_isSpreadsheet=isSpreadsheet;
+	m_state->m_application=creator;
 	if (header)
 	{
 		header->setMajorVersion((uint8_t) m_state->m_version);
@@ -464,13 +462,12 @@ bool WKS4Parser::readZones()
 {
 	RVNGInputStreamPtr input = getInput();
 	input->seek(0, librevenge::RVNG_SEEK_SET);
-
-	if (version() >= 1000)
+	if (m_state->m_application==libwps::WPS_QUATTRO_PRO)
 	{
 		// error ok, we do no known how to parsed this structure
 		while (!input->isEnd())
 		{
-			if (!readZoneLotus123())
+			if (!readZoneQuattro())
 				break;
 		}
 
@@ -488,47 +485,27 @@ bool WKS4Parser::readZones()
 	if (!checkFilePosition(pos+4))
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readZones: cell header is too short\n"));
-		return false;
+		return m_spreadsheetParser->hasSomeSpreadsheetData();
 	}
 	int type = (int) libwps::readU16(input); // 1
 	int length = (int) libwps::readU16(input);
 	if (length)
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readZones: parse breaks before ending\n"));
-		return false;
+		ascii().addPos(pos);
+		ascii().addNote("Entries(BAD):###");
+		return m_spreadsheetParser->hasSomeSpreadsheetData();
 	}
 
 	ascii().addPos(pos);
 	if (type != 1)
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readZones: odd end cell type: %d\n", type));
-		ascii().addNote("__End###");
+		ascii().addNote("Entries(BAD):###");
 	}
 	else
 		ascii().addNote("__End");
 
-	return true;
-}
-
-bool WKS4Parser::readZoneLotus123()
-{
-	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
-	long pos = input->tell();
-	int id = (int) libwps::readU8(input);
-	int type = (int) libwps::read8(input);
-	long sz = (long) libwps::readU16(input);
-	if (type || sz<0 || !checkFilePosition(pos+4+sz))
-	{
-		input->seek(pos, librevenge::RVNG_SEEK_SET);
-		return false;
-	}
-	f << "Entries(Lotus";
-	f << std::hex << id << std::dec << "E):";
-	if (sz) ascii().addDelimiter(pos+4,'|');
-	input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
 	return true;
 }
 
@@ -559,7 +536,6 @@ bool WKS4Parser::readZone()
 		switch (id)
 		{
 		/* also
-		   0: BOF(2),
 		   32: symphony windows settings(144)
 		   37: password checksum(4)
 		   3c: query(127)
@@ -988,22 +964,17 @@ bool WKS4Parser::readZone()
 		case 0x1f:
 		{
 			// frequent field, near the beginning of the file
-			// find with 050300000005|05000000, so maybe:
-			if (sz<4) break;
+			// find with 050300000005|058000000005|05000000, so maybe:
+			if (sz<4 || (sz%2)!=0) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-			val=(int) libwps::readU8(input); // always 5?
-			if (val!=5) f << "unkn=" << val << ",";
-			int dSz=(int) libwps::readU16(input);
-			if (dSz+3 != sz && dSz+4!= sz)
+			val=(int) libwps::read8(input); // always 5?
+			if (val!=5) f << "f0=" << val << ",";
+			val=(int) libwps::readU8(input); // 0|80
+			if (val) f << "f1=" << std::hex << val << ",";
+			for (int i=1; i<sz/2; ++i)
 			{
-				WPS_DEBUG_MSG(("WKS4Parser::readZone: find unexpected data size for field A1f\n"));
-				f << "###";
-				break;
-			}
-			for (int i=0; i<dSz; ++i)
-			{
-				val=(int) libwps::read8(input);
-				if (val) f << "f" << i << "=" << val << ",";
+				val=(int) libwps::read16(input);
+				if (val) f << "f" << i+2 << "=" << val << ",";
 			}
 			isParsed=needWriteInAscii=true;
 			break;
@@ -1142,7 +1113,8 @@ bool WKS4Parser::readZone()
 				f << "##type=" << zType << ",";
 				break;
 			}
-			ascii().addDelimiter(input->tell(),'|');
+			if (input->tell()!=pos+4+sz)
+				ascii().addDelimiter(input->tell(),'|');
 			isParsed=needWriteInAscii=true;
 			break;
 		}
@@ -1227,6 +1199,33 @@ bool WKS4Parser::readZone()
 		return true;
 	}
 
+	if (sz && input->tell()!=pos && input->tell()!=pos+4+sz)
+		ascii().addDelimiter(input->tell(),'|');
+	input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+////////////////////////////////////////////////////////////
+//   other formats
+////////////////////////////////////////////////////////////
+bool WKS4Parser::readZoneQuattro()
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+	long pos = input->tell();
+	int id = (int) libwps::readU8(input);
+	int type = (int) libwps::readU8(input);
+	long sz = (long) libwps::readU16(input);
+	if (type>5 || sz<0 || !checkFilePosition(pos+4+sz))
+	{
+		input->seek(pos, librevenge::RVNG_SEEK_SET);
+		return false;
+	}
+	f << "Entries(Quattro";
+	if (type) f << type << "A";
+	f << std::hex << id << std::dec << "E):";
 	if (sz) ascii().addDelimiter(pos+4,'|');
 	input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
 	ascii().addPos(pos);
@@ -1361,6 +1360,15 @@ bool WKS4Parser::readHeaderFooter(bool header)
 	long endPos = pos+4+sz;
 
 	f << "Entries(" << (header ? "HeaderText" : "FooterText") << "):";
+	if (sz==1)
+	{
+		// followed with 0
+		int val=(int) libwps::read8(input);
+		if (val) f << "##f0=" << val << ",";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
 	if (sz < 0xF2)
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readHeaderFooter: the header/footer size seeem odds\n"));
@@ -1992,6 +2000,7 @@ bool WKS4Parser::readUnknown1()
 	f << "Entries(Flags" << std::hex << type << std::dec << ")]:";
 	if (sz != expectedSize+extraSize)
 	{
+		// find also 2700010001 in a fuzzy file, so ...
 		WPS_DEBUG_MSG(("WKS4Parser::readUnknown1: the zone size seems too bad\n"));
 		f << "###";
 		ascii().addPos(pos);

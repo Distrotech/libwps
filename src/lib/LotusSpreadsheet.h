@@ -19,8 +19,8 @@
  * applicable instead of those above.
  */
 
-#ifndef WKS4_SPREADSHEET_H
-#define WKS4_SPREADSHEET_H
+#ifndef LOTUS_SPREADSHEET_H
+#define LOTUS_SPREADSHEET_H
 
 #include <ostream>
 #include <vector>
@@ -32,28 +32,28 @@
 #include "WPSDebug.h"
 #include "WKSContentListener.h"
 
-namespace WKS4SpreadsheetInternal
+namespace LotusSpreadsheetInternal
 {
 class Cell;
 class SpreadSheet;
 struct State;
 }
 
-class WKS4Parser;
+class LotusParser;
 
 /**
  * This class parses Microsoft Works spreadsheet file
  *
  */
-class WKS4Spreadsheet
+class LotusSpreadsheet
 {
 public:
-	friend class WKS4Parser;
+	friend class LotusParser;
 
 	//! constructor
-	WKS4Spreadsheet(WKS4Parser &parser);
+	LotusSpreadsheet(LotusParser &parser);
 	//! destructor
-	~WKS4Spreadsheet();
+	~LotusSpreadsheet();
 	//! sets the listener
 	void setListener(WKSContentListenerPtr &listen)
 	{
@@ -65,77 +65,24 @@ protected:
 	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
-	//! returns the true if the file has LICS characters
-	bool hasLICSCharacters() const;
-	//! returns true if some spreadshet are defined
-	bool hasSomeSpreadsheetData() const;
 
 	//! send the data
 	void sendSpreadsheet();
 
 	//! send the cell data
-	void sendCellContent(WKS4SpreadsheetInternal::Cell const &cell);
+	void sendCellContent(LotusSpreadsheetInternal::Cell const &cell);
 
 	//////////////////////// report //////////////////////////////
-
-	//! reads the report's header zone 17:54
-	bool readReportOpen();
-	//! reads the report's end zone 18:54
-	bool readReportClose();
-
-	//! reads the filter's header zone 10:54
-	bool readFilterOpen();
-	//! reads the filter's end zone 11:54
-	bool readFilterClose();
 
 	//
 	// low level
 	//
 	//////////////////////// spread sheet //////////////////////////////
 
-	//! reads a cell content data
-	bool readCell();
-	//! reads the result of a text formula
-	bool readCellFormulaResult();
-
-	//! reads a style
-	bool readStyle();
-
-	//! reads a field property
-	bool readDOSFieldProperty();
-
-	//! reads actualCell properties
-	bool readDOSCellProperty();
-
-	//! reads the actual cell addendum properties ( contains at least the color)
-	bool readDOSCellExtraProperty();
-
-	//! reads a page break (in a dos file)
-	bool readDOSPageBreak();
-
-	//! reads sheet size
-	bool readSheetSize();
-
-	//! reads a page break
-	bool readPageBreak();
-
-	//! reads the column size ( in ??? )
-	bool readColumnSize();
-
-	//! reads the column size ( in ???)
-	bool readColumnSize2();
-
-	//! reads the row size ( in ???)
-	bool readRowSize2();
-
-	/* reads a cell */
-	bool readCell(Vec2i actPos, WKSContentListener::FormulaInstruction &instr);
-	/* reads a formula */
-	bool readFormula(long endPos, Vec2i const &pos,	std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error);
 
 private:
-	WKS4Spreadsheet(WKS4Spreadsheet const &orig);
-	WKS4Spreadsheet &operator=(WKS4Spreadsheet const &orig);
+	LotusSpreadsheet(LotusSpreadsheet const &orig);
+	LotusSpreadsheet &operator=(LotusSpreadsheet const &orig);
 	//! returns the debug file
 	libwps::DebugFile &ascii()
 	{
@@ -145,9 +92,9 @@ private:
 	RVNGInputStreamPtr m_input;
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the main parser
-	WKS4Parser &m_mainParser;
+	LotusParser &m_mainParser;
 	//! the internal state
-	shared_ptr<WKS4SpreadsheetInternal::State> m_state;
+	shared_ptr<LotusSpreadsheetInternal::State> m_state;
 	//! the ascii file
 	libwps::DebugFile &m_asciiFile;
 };

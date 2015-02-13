@@ -20,6 +20,10 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	libwps_tools_win.h	\
 	libwps_tools_win.cpp	\
 	libwps_internal.h	\
+	Lotus.cpp		\
+	Lotus.h			\
+	LotusSpreadsheet.cpp	\
+	LotusSpreadsheet.h	\
 	WKS4.cpp		\
 	WKS4.h			\
 	WKS4Spreadsheet.cpp	\

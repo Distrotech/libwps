@@ -213,6 +213,46 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\Lotus.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LotusSpreadsheet.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\WKS4.cpp"
 				>
 				<FileConfiguration
@@ -807,6 +847,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\libwps_tools_win.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\Lotus.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\LotusSpreadsheet.h"
 				>
 			</File>
 			<File

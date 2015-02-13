@@ -77,8 +77,8 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 #ifdef DEBUG
 		if (firstOffset == 00 && secondOffset == 0x0 && thirdVal==0x1a)
 		{
-			WPS_DEBUG_MSG(("Lotus wks detected\n"));
-			return new WPSHeader(input, input, 2, WPS_SPREADSHEET, WPS_LOTUS);
+			WPS_DEBUG_MSG(("Lotus spreadsheet detected\n"));
+			return new WPSHeader(input, input, 101, WPS_SPREADSHEET, WPS_LOTUS);
 		}
 #endif
 		return 0;

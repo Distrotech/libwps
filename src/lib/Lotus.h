@@ -19,8 +19,8 @@
  * applicable instead of those above.
  */
 
-#ifndef WKS4_H
-#define WKS4_H
+#ifndef LOTUS_H
+#define LOTUS_H
 
 #include <vector>
 
@@ -30,28 +30,28 @@
 
 #include "WKSParser.h"
 
-namespace WKS4ParserInternal
+namespace LotusParserInternal
 {
 class SubDocument;
 struct State;
 }
 
-class WKS4Spreadsheet;
+class LotusSpreadsheet;
 
 /**
- * This class parses Microsoft Works spreadsheet or a database file
+ * This class parses a WK2..WK4 Lotus spreadsheet
  *
  */
-class WKS4Parser : public WKSParser
+class LotusParser : public WKSParser
 {
-	friend class WKS4ParserInternal::SubDocument;
-	friend class WKS4Spreadsheet;
+	friend class LotusParserInternal::SubDocument;
+	friend class LotusSpreadsheet;
 public:
 	//! constructor
-	WKS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
-	           libwps_tools_win::Font::Type encoding=libwps_tools_win::Font::UNKNOWN);
+	LotusParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
+	            libwps_tools_win::Font::Type encoding=libwps_tools_win::Font::UNKNOWN);
 	//! destructor
-	~WKS4Parser();
+	~LotusParser();
 	//! called by WPSDocument to parse the file
 	void parse(librevenge::RVNGSpreadsheetInterface *documentInterface);
 	//! checks if the document header is correct (or not)
@@ -66,11 +66,9 @@ protected:
 		or the encoding deduiced from the version.
 	 */
 	libwps_tools_win::Font::Type getDefaultFontType() const;
-	//! returns the true if the file has LICS characters
-	bool hasLICSCharacters() const;
 
 	//
-	// interface with WKS4Spreadsheet
+	// interface with LotusSpreadsheet
 	//
 
 	//! returns the color corresponding to an id
@@ -81,8 +79,6 @@ protected:
 
 	/** creates the main listener */
 	shared_ptr<WKSContentListener> createListener(librevenge::RVNGSpreadsheetInterface *interface);
-	//! send the header/footer
-	void sendHeaderFooter(bool header);
 
 	//
 	// low level
@@ -92,64 +88,21 @@ protected:
 	bool readZones();
 	//! reads a zone
 	bool readZone();
-	//! reads a Quattro Pro zone
-	bool readZoneQuattro();
 
 	//////////////////////// generic ////////////////////////////////////
 
-	//! reads the fonts
-	bool readFont();
-
-	//! reads a printer data ?
-	bool readPrnt();
-
-	//! reads another printer data. Seem simillar to ZZPrnt
-	bool readPrn2();
-
-	//! reads the header/footer
-	bool readHeaderFooter(bool header);
-
-	//! read a list of field name + ...
-	bool readFieldName();
 
 	//////////////////////// chart zone //////////////////////////////
 
-	//! reads the chart name or title
-	bool readChartName();
-
-	//! reads a structure which seems to define a chart
-	bool readChartDef();
-
-	//! reads a structure which seems to define two chart font (only present in windows file)
-	bool readChartFont();
-
-	//! reads a structure which seems to define four chart font (only present in windows file)
-	bool readChart2Font();
-
-	//! reads end/begin of chart (only present in windows file)
-	bool readChartLimit();
-
-	//! reads a list of int/cellule which seems relative to a chart : CHECKME
-	bool readChartList();
-
-	//! reads an unknown structure which seems relative to a chart : CHECKME
-	bool readChartUnknown();
 
 	//////////////////////// unknown zone //////////////////////////////
 
-	//! reads windows record 0:7|0:9
-	bool readWindowRecord();
-	/** reads some unknown spreadsheet zones 0:18|0:19|0:20|0:27|0:2a
-
-	 \note this zones seems to consist of a list of flags potentially
-	 followed by other data*/
-	bool readUnknown1();
 
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the internal state
-	shared_ptr<WKS4ParserInternal::State> m_state;
+	shared_ptr<LotusParserInternal::State> m_state;
 	//! the spreadsheet manager
-	shared_ptr<WKS4Spreadsheet> m_spreadsheetParser;
+	shared_ptr<LotusSpreadsheet> m_spreadsheetParser;
 };
 
 #endif /* WPS4_H */

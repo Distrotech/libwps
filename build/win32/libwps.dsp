@@ -95,6 +95,14 @@ SOURCE=..\..\src\lib\libwps_tools_win.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\Lotus.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\LotusSpreadsheet.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WKS4.cpp
 # End Source File
 # Begin Source File
@@ -224,6 +232,14 @@ SOURCE=..\..\src\lib\libwps_internal.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\libwps_tools_win.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\Lotus.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\LotusSpreadsheet.h
 # End Source File
 # Begin Source File
 

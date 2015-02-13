@@ -27,6 +27,7 @@
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
 
+#include "Lotus.h"
 #include "WKS4.h"
 #include "WPS4.h"
 #include "WPS8.h"
@@ -75,6 +76,15 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 		{
 			// create a WPS4Parser to check the header validity
 			WPS4Parser parser(header->getInput(), header);
+			if (!parser.checkHeader(header.get(), true))
+				return WPS_CONFIDENCE_NONE;
+			needEncoding=header->getNeedEncoding();
+			return WPS_CONFIDENCE_EXCELLENT;
+		}
+		else if (kind==WPS_SPREADSHEET && creator==WPS_LOTUS && header->getMajorVersion()>=100)
+		{
+			// create a Lotus to check the header validity
+			LotusParser parser(header->getInput(), header);
 			if (!parser.checkHeader(header.get(), true))
 				return WPS_CONFIDENCE_NONE;
 			needEncoding=header->getNeedEncoding();
@@ -206,6 +216,14 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 		if (!header || (header->getKind() != WPS_SPREADSHEET && header->getKind() != WPS_DATABASE))
 			return WPS_UNKNOWN_ERROR;
 
+		if (header->getKind() == WPS_SPREADSHEET && header->getCreator() == WPS_LOTUS &&
+		        header->getMajorVersion()>=100)
+		{
+			parser.reset(new LotusParser(header->getInput(), header,
+			                             libwps_tools_win::Font::getTypeForString(encoding)));
+			if (!parser) return WPS_UNKNOWN_ERROR;
+			parser->parse(documentInterface);
+		}
 		switch (header->getMajorVersion())
 		{
 		case 4:
@@ -220,6 +238,8 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 			break;
 		}
 		default:
+			WPS_DEBUG_MSG(("WPSDocument::parse: find unknown version number\n"));
+			error=WPS_UNKNOWN_ERROR;
 			break;
 		}
 	}

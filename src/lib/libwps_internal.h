@@ -177,6 +177,17 @@ inline int32_t read32(RVNGInputStreamPtr &input)
 	return read32(input.get());
 }
 
+//! read a double store with 4 bytes: mantisse 2.5 bytes, exponent 1.5 bytes
+bool readDouble4(RVNGInputStreamPtr &input, double &res, bool &isNaN);
+//! read a double store with 8 bytes: mantisse 6.5 bytes, exponent 1.5 bytes
+bool readDouble8(RVNGInputStreamPtr &input, double &res, bool &isNaN);
+//! read a double store with 10 bytes: mantisse 8 bytes, exponent 2 bytes
+bool readDouble10(RVNGInputStreamPtr &input, double &res, bool &isNaN);
+//! read a double store with 2 bytes: exponent 1.5 bytes, kind of mantisse 0.5 bytes
+bool readDouble2Inv(RVNGInputStreamPtr &input, double &res, bool &isNaN);
+//! read a double store with 4 bytes: exponent 3.5 bytes, mantisse 0.5 bytes
+bool readDouble4Inv(RVNGInputStreamPtr &input, double &res, bool &isNaN);
+
 bool readData(RVNGInputStreamPtr &input, unsigned long sz, librevenge::RVNGBinaryData &data);
 bool readDataToEnd(RVNGInputStreamPtr &input, librevenge::RVNGBinaryData &data);
 }
