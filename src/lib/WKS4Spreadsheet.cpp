@@ -1530,14 +1530,14 @@ bool WKS4Spreadsheet::readCell(Vec2i actPos, WKSContentListener::FormulaInstruct
 	return ok;
 }
 
+namespace WKS4SpreadsheetInternal
+{
 struct Functions
 {
 	char const *m_name;
 	int m_arity;
 };
 
-namespace WKS4SpreadsheetInternal
-{
 static Functions const s_listFunctions[] =
 {
 	{ "", 0} /*SPEC: number*/, {"", 0}/*SPEC: cell*/, {"", 0}/*SPEC: cells*/, {"=", 1} /*SPEC: end of formula*/,
@@ -1547,7 +1547,7 @@ static Functions const s_listFunctions[] =
 
 	{ "<=", 2},{ ">=", 2},{ "<", 2},{ ">", 2},
 	{ "And", 2},{ "Or", 2}, { "Not", 1}, { "+", 1},
-	{ "&", 1}, { "", -2} /*unused*/,{ "", -2} /*unused*/,{ "", -2} /*unused*/,
+	{ "&", 2}, { "", -2} /*unused*/,{ "", -2} /*unused*/,{ "", -2} /*unused*/,
 	{ "", -2} /*unused*/,{ "", -2} /*unused*/,{ "", -2} /*unused*/,{ "NA", 0} /*checkme*/,
 
 	{ "NA", 0} /* Error*/,{ "Abs", 1},{ "Int", 1},{ "Sqrt", 1},
@@ -1566,7 +1566,7 @@ static Functions const s_listFunctions[] =
 	{ "Find", 3},{ "DateValue", 1} /*checkme*/,{ "TimeValue", 1} /*checkme*/,{ "CellPointer", 1} /*checkme*/,
 
 	{ "Sum", -1},{ "Average", -1},{ "COUNT", -1},{ "Min", -1},
-	{ "Max", -1},{ "If", 3}/*VLookUp?*/,{ "NPV", 2}, { "Var", -1},
+	{ "Max", -1},{ "VLookUp", 3},{ "NPV", 2}, { "Var", -1},
 	{ "StDev", -1},{ "IRR", 2} /*BAD*/, { "HLookup", 3},{ "DSum", 3},
 	{ "DAvg", 3},{ "DCnt", 3},{ "DMin", 3},{ "DMax", 3},
 

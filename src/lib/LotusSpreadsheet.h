@@ -59,7 +59,8 @@ public:
 	{
 		m_listener = listen;
 	}
-
+	//! set the last spreadsheet number ( default 0)
+	void setLastSpreadsheetId(int id);
 protected:
 	//! return true if the pos is in the file, update the file size if need
 	bool checkFilePosition(long pos);
@@ -79,7 +80,26 @@ protected:
 	//
 	//////////////////////// spread sheet //////////////////////////////
 
+	//! reads a sheet name
+	bool readSheetName();
 
+	//! reads the columns definitions
+	bool readColumnDefinition();
+	//! reads the column sizes ( in char )
+	bool readColumnSizes();
+
+	//! reads a cell
+	bool readCell();
+	//! reads a cell or list of cell name
+	bool readCellName();
+
+	// data in formula
+
+	/* reads a cell */
+	bool readCell(int sId, bool isList, WKSContentListener::FormulaInstruction &instr);
+	/* reads a formula */
+	bool readFormula(long endPos, int sId, bool newFormula,
+	                 std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error);
 private:
 	LotusSpreadsheet(LotusSpreadsheet const &orig);
 	LotusSpreadsheet &operator=(LotusSpreadsheet const &orig);
