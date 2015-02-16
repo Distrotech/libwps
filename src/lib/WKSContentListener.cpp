@@ -982,6 +982,8 @@ librevenge::RVNGPropertyList WKSContentListener::FormulaInstruction::getProperty
 		pList.insert("librevenge:row",m_position[0][1], librevenge::RVNG_GENERIC);
 		pList.insert("librevenge:column-absolute",!m_positionRelative[0][0]);
 		pList.insert("librevenge:row-absolute",!m_positionRelative[0][1]);
+		if (!m_sheetName.empty())
+			pList.insert("librevenge:sheet-name",m_sheetName.cstr());
 		break;
 	case F_CellList:
 		pList.insert("librevenge:type","librevenge-cells");
@@ -993,6 +995,8 @@ librevenge::RVNGPropertyList WKSContentListener::FormulaInstruction::getProperty
 		pList.insert("librevenge:end-row",m_position[1][1], librevenge::RVNG_GENERIC);
 		pList.insert("librevenge:end-column-absolute",!m_positionRelative[1][0]);
 		pList.insert("librevenge:end-row-absolute",!m_positionRelative[1][1]);
+		if (!m_sheetName.empty())
+			pList.insert("librevenge:sheet-name",m_sheetName.cstr());
 		break;
 	default:
 		WPS_DEBUG_MSG(("WKSContentListener::FormulaInstruction::getPropertyList: unexpected type\n"));
@@ -1013,6 +1017,8 @@ std::ostream &operator<<(std::ostream &o, WKSContentListener::FormulaInstruction
 		o << (char)(inst.m_position[0][0]%26+'A');
 		if (!inst.m_positionRelative[0][1]) o << "$";
 		o << inst.m_position[0][1];
+		if (!inst.m_sheetName.empty())
+			o << "[" << inst.m_sheetName.cstr() << "]";
 	}
 	else if (inst.m_type==WKSContentListener::FormulaInstruction::F_CellList)
 	{
@@ -1025,6 +1031,8 @@ std::ostream &operator<<(std::ostream &o, WKSContentListener::FormulaInstruction
 			o << inst.m_position[l][1];
 			if (l==0) o << ":";
 		}
+		if (!inst.m_sheetName.empty())
+			o << "[" << inst.m_sheetName.cstr() << "]";
 	}
 	else if (inst.m_type==WKSContentListener::FormulaInstruction::F_Text)
 		o << "\"" << inst.m_content << "\"";

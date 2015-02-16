@@ -49,8 +49,6 @@ WPSHeader::~WPSHeader()
  */
 WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 {
-	WPS_DEBUG_MSG(("WPSHeader::constructHeader()\n"));
-
 	if (!input->isStructured())
 	{
 		input->seek(0, librevenge::RVNG_SEEK_SET);
@@ -59,25 +57,25 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 
 		if (firstOffset < 6 && secondOffset == 0xFE)
 		{
-			WPS_DEBUG_MSG(("Microsoft Works v2 format detected\n"));
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works v2 format detected\n"));
 			return new WPSHeader(input, input, 2);
 		}
 		// works1 dos file begin by 2054
 		if ((firstOffset == 0xFF || firstOffset == 0x20) && secondOffset==0x54)
 		{
-			WPS_DEBUG_MSG(("Microsoft Works wks database\n"));
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works wks database\n"));
 			return new WPSHeader(input, input, 1, WPS_DATABASE);
 		}
 		uint16_t thirdVal=libwps::readU16(input);
 		if ((firstOffset == 0xFF || firstOffset == 00) && secondOffset == 0x0 && thirdVal==2)
 		{
-			WPS_DEBUG_MSG(("Microsoft Works wks detected\n"));
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works wks detected\n"));
 			return new WPSHeader(input, input, 2, WPS_SPREADSHEET);
 		}
 #ifdef DEBUG
 		if (firstOffset == 00 && secondOffset == 0x0 && thirdVal==0x1a)
 		{
-			WPS_DEBUG_MSG(("Lotus spreadsheet detected\n"));
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Lotus spreadsheet detected\n"));
 			return new WPSHeader(input, input, 101, WPS_SPREADSHEET, WPS_LOTUS);
 		}
 #endif
@@ -92,17 +90,17 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		RVNGInputStreamPtr document_mm(input->getSubStreamByName("MM"));
 		if (document_mm && libwps::readU16(document_mm) == 0x4e44)
 		{
-			WPS_DEBUG_MSG(("Microsoft Works Mac v4 format detected\n"));
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works Mac v4 format detected\n"));
 			return 0;
 		}
 		// now, look if this is a database document
 		uint16_t fileMagic=libwps::readU16(document_mn0);
 		if (fileMagic == 0x54FF)
 		{
-			WPS_DEBUG_MSG(("Microsoft Works Database format detected\n"));
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works Database format detected\n"));
 			return new WPSHeader(document_mn0, input, 4, WPS_DATABASE);
 		}
-		WPS_DEBUG_MSG(("Microsoft Works v4 format detected\n"));
+		WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works v4 format detected\n"));
 		return new WPSHeader(document_mn0, input, 4);
 	}
 
@@ -120,7 +118,7 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		/* Works 7/8 */
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
 		{
-			WPS_DEBUG_MSG(("Microsoft Works v8 (maybe 7) format detected\n"));
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works v8 (maybe 7) format detected\n"));
 			return new WPSHeader(document_contents, input, 8);
 		}
 

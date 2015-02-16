@@ -52,7 +52,7 @@ public:
 	{
 		enum What { F_Operator, F_Function, F_Cell, F_CellList, F_Long, F_Double, F_Text };
 		//! constructor
-		FormulaInstruction() : m_type(F_Text), m_content(""), m_longValue(0), m_doubleValue(0)
+		FormulaInstruction() : m_type(F_Text), m_content(""), m_longValue(0), m_doubleValue(0), m_sheetName("")
 		{
 			for (int i=0; i<2; ++i)
 			{
@@ -76,6 +76,8 @@ public:
 		Vec2i m_position[2];
 		//! relative cell position ( if type==F_Cell or F_CellList )
 		Vec2b m_positionRelative[2];
+		//! the sheet name
+		librevenge::RVNGString m_sheetName;
 	};
 	//! small class use to define a sheet cell content
 	struct CellContent

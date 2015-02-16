@@ -284,14 +284,14 @@ bool readDouble2Inv(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 	if ((exp&1)==1)
 	{
 		int mantisse=(val>>4);
-		if (mantisse&0x800)
+		if ((mantisse&0x800))
 			mantisse -= 0x1000;
 		exp/=2;
 		const double factors[8]= { 5000, 500, 0.05, 0.005, 0.0005, 0.00005, 1/16., 1/64. };
 		res=double(mantisse)*factors[exp];
 		return true;
 	}
-	if (val==0x8000)
+	if ((val&0x8000))
 		val-=0x10000;
 	res=double(val>>1);
 	return true;
