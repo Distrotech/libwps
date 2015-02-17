@@ -121,9 +121,10 @@ protected:
 
 	//! reads the column size ( in ??? )
 	bool readColumnSize();
-
 	//! reads the column size ( in ???)
 	bool readColumnSize2();
+	//! reads the list of hidden columns zone ( unused )
+	bool readHiddenColumns();
 
 	//! reads the row size ( in ???)
 	bool readRowSize2();

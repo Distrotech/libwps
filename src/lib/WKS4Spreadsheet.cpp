@@ -542,6 +542,47 @@ bool WKS4Spreadsheet::readColumnSize2()
 	return true;
 }
 
+bool WKS4Spreadsheet::readHiddenColumns()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0x64)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readHiddenColumns: not a column hidden zone\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz != 32)
+	{
+		WPS_DEBUG_MSG(("WKS4Spreadsheet::readHiddenColumns: block size seems bad\n"));
+		return false;
+	}
+
+	f << "Entries(HiddenCol):";
+	for (int i=0; i<32; ++i)
+	{
+		int val=(int) libwps::readU8(m_input);
+		if (!val) continue;
+		static bool first=true;
+		if (first)
+		{
+			WPS_DEBUG_MSG(("WKS4Spreadsheet::readHiddenColumns: find some hidden col, ignored\n"));
+			first=false;
+		}
+		// checkme
+		for (int j=0, depl=1; j<8; ++j, depl<<=1)
+		{
+			if (val&depl)
+				f << "col" << j+8*i << "[hidden],";
+		}
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	return true;
+}
+
 bool WKS4Spreadsheet::readRowSize2()
 {
 	libwps::DebugStream f;

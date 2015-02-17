@@ -391,12 +391,12 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 			if (val==0x404)
 			{
 			}
-			else if (val==0x504)
+			else if (val==0x405)
 			{
 				f << "symphony,";
 				creator=libwps::WPS_SYMPHONY;
 			}
-			else if (val==0x604)
+			else if (val==0x406)
 			{
 				m_state->m_version=1;
 				f << "lotus,";
@@ -755,6 +755,9 @@ bool WKS4Parser::readZone()
 		case 0x41: // graph record name
 			readChartName();
 			isParsed = true;
+			break;
+		case 0x64: // hidden column
+			isParsed = m_spreadsheetParser->readHiddenColumns();
 			break;
 		default:
 			break;
