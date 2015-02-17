@@ -277,15 +277,14 @@ void LotusParser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 			m_listener=createListener(documentInterface);
 		if (m_listener)
 		{
-#if 0
 			m_spreadsheetParser->setListener(m_listener);
 
 			m_listener->startDocument();
-			m_spreadsheetParser->sendSpreadsheet();
+			for (int i=0; i<=m_state->m_maxSheet; ++i)
+				m_spreadsheetParser->sendSpreadsheet(i);
 			m_listener->endDocument();
 			m_listener.reset();
 			ok = true;
-#endif
 		}
 	}
 	catch (...)
@@ -404,6 +403,8 @@ bool LotusParser::readZones()
 	{
 		while (readZone()) ;
 
+		if (input->isEnd())
+			break;
 		//
 		// look for ending
 		//
@@ -447,7 +448,7 @@ bool LotusParser::readZones()
 		ascii().addNote("Entries(Unknown)");
 	}
 
-	return true;
+	return m_spreadsheetParser->hasSomeSpreadsheetData();
 }
 
 bool LotusParser::readZone()
@@ -458,7 +459,8 @@ bool LotusParser::readZone()
 	int id = (int) libwps::readU8(input);
 	int type = (int) libwps::readU8(input);
 	long sz = (long) libwps::readU16(input);
-	if ((type>0x2a) || sz<0 || !checkFilePosition(pos+4+sz))
+	long endPos=pos+4+sz;
+	if ((type>0x2a) || sz<0 || !checkFilePosition(endPos))
 	{
 		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		return false;
@@ -475,6 +477,7 @@ bool LotusParser::readZone()
 		switch (id)
 		{
 		case 0:
+		{
 			if (sz!=26)
 			{
 				ok=false;
@@ -484,10 +487,14 @@ bool LotusParser::readZone()
 			f.str("");
 			f << "Entries(BOF):";
 			val=(int) libwps::readU16(input);
+			bool mainBlock=false;
 			if (val==0x8007)
 				f << "FMT,";
 			else if (val>=0x1000 && val <= 0x1005)
+			{
+				mainBlock=true;
 				f << "version=" << (val-0x1000) << ",";
+			}
 			else
 				f << "#version=" << std::hex << val << std::dec << ",";
 			for (int i=0; i<4; ++i)   // f0=4, f3 a small number
@@ -497,12 +504,16 @@ bool LotusParser::readZone()
 					f << "f" << i << "=" << val << ",";
 			}
 			val=(int) libwps::readU8(input);
-			if (val)
+			if (mainBlock)
 			{
-				m_state->m_maxSheet=val;
 				m_spreadsheetParser->setLastSpreadsheetId(val);
-				f << "max[sheet]=" << val << ",";
+				m_state->m_maxSheet=val;
 			}
+			if (val && mainBlock)
+				f << "max[sheet]=" << val << ",";
+			else if (val)
+				f << "max[fmt]=" << val << ",";
+
 			for (int i=0; i<7; ++i)   // g0/g1=0..fd, g2=0|4, g3=0|5|7|1e|20|30, g4=0|8c|3d, g5=1|10, g6=2|a
 			{
 				val=(int) libwps::readU8(input);
@@ -511,6 +522,7 @@ bool LotusParser::readZone()
 			}
 			isParsed=needWriteInAscii=true;
 			break;
+		}
 		case 0x1: // EOF
 			ok = false;
 			break;
@@ -580,11 +592,12 @@ bool LotusParser::readZone()
 			val=(int) libwps::readU8(input);
 			if (val)
 				f << "sheet[id]=" << val << ",";
-			val=(int) libwps::read8(input); // always 0?
-			if (val)
-				f << "f0=" << val << ",";
-			f << "f1=" << libwps::readU16(input) << ",";
-			f << "f2=" << (int) libwps::read8(input) << ","; // 7-9
+			for (int i=0; i<4; ++i)   // f0=0, f2=0|1, f3=7-9
+			{
+				val=(int) libwps::read8(input); // always 0?
+				if (val)
+					f << "f" << i << "=" << val << ",";
+			}
 			isParsed=needWriteInAscii=true;
 			break;
 		case 0x7:
@@ -672,13 +685,15 @@ bool LotusParser::readZone()
 			}
 			isParsed=needWriteInAscii=true;
 			break;
-		case 0x10:
+		case 0x10: // CHECKME
 		{
 			if (sz<3)
 			{
 				ok=false;
 				break;
 			}
+			f.str("");
+			f << "Entries(Macro):";
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			for (int i=0; i<2; ++i)
 			{
@@ -694,7 +709,7 @@ bool LotusParser::readZone()
 			}
 			if (!data.empty())
 				f << "data=" << data << ",";
-			if (input->tell()!=pos+4+sz && input->tell()+1!=pos+4+sz)
+			if (input->tell()!=endPos && input->tell()+1!=endPos)
 			{
 				WPS_DEBUG_MSG(("LotusParser::readZone: the string zone %d seems too short\n", id));
 				f << "###";
@@ -702,6 +717,12 @@ bool LotusParser::readZone()
 			isParsed=needWriteInAscii=true;
 			break;
 		}
+		case 0x11:
+			ok=isParsed=readChartDefinition();
+			break;
+		case 0x12:
+			ok=isParsed=readChartName();
+			break;
 		case 0x15:
 		case 0x1d:
 			if (sz!=4)
@@ -719,9 +740,6 @@ bool LotusParser::readZone()
 				if (val) f << "f" << i+1 << "=" << val << ",";
 			}
 			isParsed=needWriteInAscii=true;
-			break;
-		case 0x12:
-			ok=isParsed=readChartName();
 			break;
 		case 0x16: // the cell text
 		case 0x17: // double10 cell
@@ -777,9 +795,9 @@ bool LotusParser::readZone()
 		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		return false;
 	}
-	if (sz && input->tell()!=pos && input->tell()!=pos+4+sz)
+	if (sz && input->tell()!=pos && input->tell()!=endPos)
 		ascii().addDelimiter(input->tell(),'|');
-	input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+	input->seek(endPos, librevenge::RVNG_SEEK_SET);
 	if (!isParsed || needWriteInAscii)
 	{
 		ascii().addPos(pos);
@@ -894,6 +912,73 @@ bool LotusParser::readLinkZone()
 ////////////////////////////////////////////////////////////
 //   chart
 ////////////////////////////////////////////////////////////
+
+bool LotusParser::readChartDefinition()
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+
+	long pos = input->tell();
+	long type = (long) libwps::read16(input);
+	if (type != 0x11)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readChartDefinition: not a chart name\n"));
+		return false;
+	}
+	long sz = (long) libwps::readU16(input);
+	long endPos=pos+4+sz;
+	f << "Entries(ChartDef):";
+	if (sz != 0xB2)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readChartDefinition: chart name is too short\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	f << "id=" << (int) libwps::readU8(input) << ",";
+	std::string name("");
+	for (int i=0; i<16; ++i)
+	{
+		char c=(char) libwps::readU8(input);
+		if (!c) break;
+		name += c;
+	}
+	if (!name.empty()) f << name << ",";
+	input->seek(pos+4+17, librevenge::RVNG_SEEK_SET);
+	for (int i=0; i<43; ++i)   // small number
+	{
+		int val=(int) libwps::read8(input);
+		if (val) f << "f" << i << "=" << val << ",";
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	pos=input->tell();
+	f.str("");
+	f << "ChartDef-A:";
+	for (int i=0; i<28; ++i)   // small number expect f24=0|4|64
+	{
+		int val=(int) libwps::read8(input);
+		if (val) f << "f" << i << "=" << val << ",";
+	}
+	for (int i=0; i<9; ++i)   // small number expect g0=1|2, g1=g2=g3=1|14|20, g4=g5=0|1
+	{
+		int val=(int) libwps::read16(input);
+		if (val) f << "g" << i << "=" << val << ",";
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	pos=input->tell();
+	f.str("");
+	f << "ChartDef-B:";
+	if (input->tell()!=endPos)
+		input->seek(endPos, librevenge::RVNG_SEEK_SET);
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
 
 bool LotusParser::readChartName()
 {

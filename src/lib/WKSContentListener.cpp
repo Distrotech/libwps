@@ -640,7 +640,7 @@ void WKSContentListener::_endSubDocument()
 ///////////////////
 // sheet
 ///////////////////
-void WKSContentListener::openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit)
+void WKSContentListener::openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit, librevenge::RVNGString const &name)
 {
 	if (m_ps->m_isSheetOpened)
 	{
@@ -669,6 +669,8 @@ void WKSContentListener::openSheet(std::vector<float> const &colWidth, libreveng
 		columns.append(column);
 	}
 	propList.insert("librevenge:columns", columns);
+	if (!name.empty())
+		propList.insert("librevenge:sheet-name", name);
 	m_documentInterface->openSheet(propList);
 	m_ps->m_isSheetOpened = true;
 }

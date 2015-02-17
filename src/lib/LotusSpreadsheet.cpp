@@ -189,6 +189,7 @@ struct CellsList
 	//! the first and last position
 	Box2i m_positions;
 };
+
 //! a cellule of a Lotus spreadsheet
 class Cell : public WPSCell
 {
@@ -253,18 +254,35 @@ std::ostream &operator<<(std::ostream &o, Cell const &cell)
 //! the spreadsheet of a WPS4Spreadsheet
 class Spreadsheet
 {
+protected:
+	//! a comparaison structure used to sort cell by rows and and columns
+	struct ComparePosition
+	{
+		//! constructor
+		ComparePosition() {}
+		//! comparaison function
+		bool operator()(Vec2i const &c1, Vec2i const &c2) const
+		{
+			if (c1[1]!=c2[1])
+				return c1[1]<c2[1];
+			return c1[0]<c2[0];
+		}
+	};
+
 public:
 	//! a constructor
-	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_boundsColsMap(), m_widthColsInChar(), m_heightRows(), m_cellsList(),
-		m_rowPageBreaksList() {}
-	//! check if a cell is in the spreadsheet
-	bool isInCell(Vec2i const &pos) const
+	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_boundsColsMap(), m_widthColsInChar(), m_heightRows(),
+		m_rowPageBreaksList(), m_cellList(), m_positionToCellMap() {}
+	//! return a cell corresponding to a spreadsheet, create one if needed
+	Cell &getCell(Vec2i const &pos)
 	{
-		if (m_boundsColsMap.empty()) return true;
-		if (m_boundsColsMap.find(pos[0])==m_boundsColsMap.end())
-			return false;
-		Vec2i const &bound=m_boundsColsMap.find(pos[0])->second;
-		return bound[0]<=pos[1] && pos[1]<=bound[1];
+		if (m_positionToCellMap.find(pos)==m_positionToCellMap.end())
+		{
+			Cell cell;
+			cell.setPosition(pos);
+			m_positionToCellMap[pos]=cell;
+		}
+		return m_positionToCellMap.find(pos)->second;
 	}
 	//! return the row bounds corresponding to a column
 	bool getRowBounds(int col, Vec2i &bound) const
@@ -320,7 +338,7 @@ public:
 	//! returns true if the spreedsheet is empty
 	bool empty() const
 	{
-		return m_cellsList.size() == 0 && m_name.empty();
+		return m_positionToCellMap.empty() && m_name.empty();
 	}
 	/** the sheet name */
 	librevenge::RVNGString m_name;
@@ -334,19 +352,19 @@ public:
 	std::vector<int> m_widthColsInChar;
 	/** the row size in TWIP (?) */
 	std::vector<int> m_heightRows;
-	/** the list of not empty cells */
-	std::vector<Cell> m_cellsList;
 	/** the list of row page break */
 	std::vector<int> m_rowPageBreaksList;
-
+	/** the cell list */
+	std::vector<Cell *> m_cellList;
+	/** a map cell to not empty cells */
+	std::map<Vec2i, Cell, ComparePosition> m_positionToCellMap;
 	/** returns the last Right Bottom cell position */
 	Vec2i getRightBottomPosition() const
 	{
 		int maxX = 0, maxY = 0;
-		size_t numCell = m_cellsList.size();
-		for (size_t i = 0; i < numCell; i++)
+		for (std::map<Vec2i, Cell>::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
 		{
-			Vec2i const &p = m_cellsList[i].position();
+			Vec2i const &p = it->second.position();
 			if (p[0] > maxX) maxX = p[0];
 			if (p[1] > maxY) maxY = p[1];
 		}
@@ -384,7 +402,7 @@ struct State
 		if (id>=0 && id<(int) m_spreadsheetList.size() && !m_spreadsheetList[size_t(id)].m_name.empty())
 			return m_spreadsheetList[size_t(id)].m_name;
 		librevenge::RVNGString name;
-		name.sprintf("Sheet%d", id);
+		name.sprintf("Sheet%d", id+1);
 		return name;
 	}
 	//! the last file position
@@ -442,6 +460,15 @@ bool LotusSpreadsheet::checkFilePosition(long pos)
 	return pos <= m_state->m_eof;
 }
 
+bool LotusSpreadsheet::hasSomeSpreadsheetData() const
+{
+	for (size_t i=0; i<m_state->m_spreadsheetList.size(); ++i)
+	{
+		if (!m_state->m_spreadsheetList[i].empty())
+			return true;
+	}
+	return false;
+}
 
 ////////////////////////////////////////////////////////////
 // low level
@@ -698,13 +725,16 @@ bool LotusSpreadsheet::readCellName()
 	}
 	else
 		m_state->m_nameToCellsMap[name]=cells;
-	long remain=endPos-m_input->tell();
-	for (long i=0; i<remain/2; ++i)   // find 4 or 9
+	std::string note("");
+	int remain=int(endPos-m_input->tell());
+	for (int i=0; i<remain; ++i)
 	{
-		val=(int) libwps::read16(m_input);
-		if (val)
-			f << "f" << i+1 << "=" << val << ",";
+		char c=(char) libwps::readU8(m_input);
+		if (!c) break;
+		note+=c;
 	}
+	if (!note.empty())
+		f << "note=" << note << ",";
 	if (m_input->tell()!=endPos)
 		ascii().addDelimiter(m_input->tell(),'|');
 
@@ -758,9 +788,18 @@ bool LotusSpreadsheet::readCell()
 	int sheetId=(int) libwps::readU8(m_input);
 	int col=(int) libwps::readU8(m_input);
 	if (sheetId) f << "sheet[id]=" << sheetId << ",";
-	LotusSpreadsheetInternal::Cell cell;
-	cell.setPosition(Vec2i(col, row));
 
+	LotusSpreadsheetInternal::Spreadsheet empty, *sheet=0;
+	if (sheetId<0||sheetId>=int(m_state->m_spreadsheetList.size()))
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: can find spreadsheet %d\n", sheetId));
+		sheet=&empty;
+		f << "###";
+	}
+	else
+		sheet=&m_state->m_spreadsheetList[size_t(sheetId)];
+
+	LotusSpreadsheetInternal::Cell &cell=sheet->getCell(Vec2i(col, row));
 	switch (type)
 	{
 	case 0x16:
@@ -789,7 +828,7 @@ bool LotusSpreadsheet::readCell()
 
 		WPSEntry entry;
 		entry.setBegin(begText);
-		entry.setBegin(endPos);
+		entry.setEnd(endPos);
 		if (type==0x16)
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_TEXT;
@@ -997,22 +1036,27 @@ bool LotusSpreadsheet::readCell()
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-void LotusSpreadsheet::sendSpreadsheet()
+void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 {
 	if (!m_listener)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::sendSpreadsheet: I can not find the listener\n"));
 		return;
 	}
-	LotusSpreadsheetInternal::Spreadsheet &sheet = m_state->getSheet(0);
-	size_t numCell = sheet.m_cellsList.size();
-
-	int prevRow = -1;
-	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,76), librevenge::RVNG_POINT);
-	std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
-	for (size_t i = 0; i < numCell; i++)
+	if (sheetId<0||sheetId>=m_state->getNumSheet())
 	{
-		LotusSpreadsheetInternal::Cell const &cell= sheet.m_cellsList[i];
+		WPS_DEBUG_MSG(("LotusSpreadsheet::sendSpreadsheet: the sheet %d seems bad\n", sheetId));
+		return;
+	}
+	LotusSpreadsheetInternal::Spreadsheet &sheet = m_state->getSheet(sheetId);
+
+	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,76), librevenge::RVNG_POINT, m_state->getSheetName(sheetId));
+	std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
+	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator it;
+	int prevRow = -1;
+	for (it=sheet.m_positionToCellMap.begin(); it!=sheet.m_positionToCellMap.end(); ++it)
+	{
+		LotusSpreadsheetInternal::Cell const &cell= it->second;
 		// FIXME: openSheetRow/openSheetCell must do that
 		if (cell.position()[1] != prevRow)
 		{
@@ -1042,11 +1086,13 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 	}
 
 	LotusSpreadsheetInternal::Style cellStyle(m_mainParser.getDefaultFontType());
+#if 0
 	if (cell.m_styleId<0 || !m_state->m_styleManager.get(cell.m_styleId,cellStyle))
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::sendCellContent: I can not find the cell style\n"));
 	}
-	if (version()<=2 && cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
+#endif
+	if (cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
 		cellStyle.setHAlignement(cell.m_hAlign);
 
 	librevenge::RVNGPropertyList propList;
@@ -1092,7 +1138,7 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 				}
 				prevEOL=false;
 			}
-			else
+			else if (c)
 			{
 				m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType));
 				prevEOL=false;

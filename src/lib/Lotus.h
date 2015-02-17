@@ -96,6 +96,8 @@ protected:
 
 	//////////////////////// chart zone //////////////////////////////
 
+	//! reads a chart definitions
+	bool readChartDefinition();
 	//! reads the chart name or title
 	bool readChartName();
 

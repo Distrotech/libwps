@@ -182,7 +182,7 @@ public:
 
 	// ------- sheet -----------------
 	/** open a sheet*/
-	void openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit);
+	void openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit, librevenge::RVNGString const &name="");
 	/** closes this sheet */
 	void closeSheet();
 	/** open a row with given height. If h<0, use min-row-heigth */

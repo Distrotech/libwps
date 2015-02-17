@@ -224,23 +224,26 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
 		}
-		switch (header->getMajorVersion())
+		else
 		{
-		case 4:
-		case 3:
-		case 2:
-		case 1:
-		{
-			parser.reset(new WKS4Parser(header->getInput(), header,
-			                            libwps_tools_win::Font::getTypeForString(encoding)));
-			if (!parser) return WPS_UNKNOWN_ERROR;
-			parser->parse(documentInterface);
-			break;
-		}
-		default:
-			WPS_DEBUG_MSG(("WPSDocument::parse: find unknown version number\n"));
-			error=WPS_UNKNOWN_ERROR;
-			break;
+			switch (header->getMajorVersion())
+			{
+			case 4:
+			case 3:
+			case 2:
+			case 1:
+			{
+				parser.reset(new WKS4Parser(header->getInput(), header,
+				                            libwps_tools_win::Font::getTypeForString(encoding)));
+				if (!parser) return WPS_UNKNOWN_ERROR;
+				parser->parse(documentInterface);
+				break;
+			}
+			default:
+				WPS_DEBUG_MSG(("WPSDocument::parse: find unknown version number\n"));
+				error=WPS_UNKNOWN_ERROR;
+				break;
+			}
 		}
 	}
 	catch (libwps::FileException)

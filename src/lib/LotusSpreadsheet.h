@@ -66,9 +66,11 @@ protected:
 	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
+	//! returns true if some spreadshet are defined
+	bool hasSomeSpreadsheetData() const;
 
 	//! send the data
-	void sendSpreadsheet();
+	void sendSpreadsheet(int sheetId);
 
 	//! send the cell data
 	void sendCellContent(LotusSpreadsheetInternal::Cell const &cell);
