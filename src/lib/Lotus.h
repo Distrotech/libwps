@@ -73,8 +73,6 @@ protected:
 	// interface with LotusSpreadsheet
 	//
 
-	//! returns the color corresponding to an id
-	bool getColor(int id, uint32_t &color) const;
 	//! returns the font corresponding to an id
 	bool getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &type) const;
 
@@ -97,12 +95,6 @@ protected:
 
 	//! reads a link
 	bool readLinkZone();
-	//! reads a color style
-	bool readColorStyle(long endPos);
-	//! reads a line style
-	bool readLineStyle(long endPos);
-	//! reads a graphic style
-	bool readGraphicStyle(long endPos);
 	//! reads a mac document info zone: zone 1b, then 2af8
 	bool readDocumentInfoMac(long endPos);
 

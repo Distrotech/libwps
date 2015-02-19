@@ -75,8 +75,27 @@ protected:
 
 	// ////////////////////// style //////////////////////////////
 
+	//! reads a color style
+	bool readColorStyle(long endPos);
+	//! reads a line style
+	bool readLineStyle(long endPos);
+	//! reads a graphic style
+	bool readGraphicStyle(long endPos);
+
 	// ////////////////////// zone //////////////////////////////
 
+	//! reads a begin graphic zone
+	bool readZoneBegin(long endPos);
+	//! reads a graphic zone
+	bool readZoneData(long endPos, int type);
+	//! reads a graphic textbox data
+	bool readTextboxData(long endPos);
+	//! reads a picture definition
+	bool readPictureDefinition(long endPos);
+	//! reads a picture data
+	bool readPictureData(long endPos);
+
+	//!
 private:
 	LotusGraph(LotusGraph const &orig);
 	LotusGraph &operator=(LotusGraph const &orig);

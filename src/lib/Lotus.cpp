@@ -115,12 +115,11 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 struct State
 {
 	//! constructor
-	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1), m_fontsList(), m_pageSpan(), m_maxSheet(0), m_actPage(0), m_numPages(0),
+	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1),
+		m_inMainContentBlock(false), m_fontsList(), m_pageSpan(), m_maxSheet(0), m_actPage(0), m_numPages(0),
 		m_headerString(""), m_footerString("")
 	{
 	}
-	//! returns a color corresponding to an id
-	bool getColor(int id, uint32_t &color) const;
 	//! return the default font style
 	libwps_tools_win::Font::Type getDefaultFontType() const
 	{
@@ -147,6 +146,8 @@ struct State
 	libwps_tools_win::Font::Type m_fontType;
 	//! the file version
 	int m_version;
+	//! a flag used to know if we are in the main block or no
+	bool m_inMainContentBlock;
 	//! the fonts list
 	std::vector<Font> m_fontsList;
 	//! the actual document size
@@ -159,42 +160,6 @@ struct State
 	//! the footer string
 	std::string m_footerString;
 };
-
-bool State::getColor(int id, uint32_t &color) const
-{
-	if (m_version<=2)
-	{
-		static const uint32_t colorDosMap[]=
-		{
-			0x0, 0xFF0000, 0x00FF00, 0x0000FF,
-			0x00FFFF, 0xFF00FF, 0xFFFF00
-		};
-		if (id < 0 || id >= 7)
-		{
-			WPS_DEBUG_MSG(("LotusParserInternal::State::getColor(): unknown Dos color id: %d\n",id));
-			return false;
-		}
-		color=colorDosMap[id];
-		return true;
-	}
-	static const uint32_t colorMap[]=
-	{
-		// 0x00RRGGBB
-		0, // auto
-		0,
-		0x0000FF, 0x00FFFF,
-		0x00FF00, 0xFF00FF,	0xFF0000, 0xFFFF00,
-		0x808080, 0xFFFFFF,	0x000080, 0x008080,
-		0x008000, 0x800080,	0x808000, 0xC0C0C0
-	};
-	if (id < 0 || id >= 16)
-	{
-		WPS_DEBUG_MSG(("LotusParserInternal::State::getColor(): unknown color id: %d\n",id));
-		return false;
-	}
-	color = colorMap[id];
-	return true;
-}
 
 }
 
@@ -239,11 +204,6 @@ libwps_tools_win::Font::Type LotusParser::getDefaultFontType() const
 //////////////////////////////////////////////////////////////////////
 // interface with LotusSpreadsheet
 //////////////////////////////////////////////////////////////////////
-bool LotusParser::getColor(int id, uint32_t &color) const
-{
-	return m_state->getColor(id, color);
-}
-
 bool LotusParser::getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &type) const
 {
 	if (id < 0 || id>=(int)m_state->m_fontsList.size())
@@ -359,16 +319,17 @@ bool LotusParser::checkHeader(WPSHeader *header, bool strict)
 	val=(int) libwps::readU16(input);
 	if (val>=0x1000 && val<=0x1005)
 	{
-		WPS_DEBUG_MSG(("LotusParser::checkHeader: find lotus123, sorry parsing this format is not implemented\n"));
+		WPS_DEBUG_MSG(("LotusParser::checkHeader: find lotus123 file\n"));
 		m_state->m_version=(val-0x1000)+1;
 		f << "lotus123[" << m_state->m_version << "],";
 	}
+#ifdef DEBUG
 	else if (val==0x8007)
 	{
-		WPS_DEBUG_MSG(("LotusParser::checkHeader: find lotus file format, sorry parsing only this file is not implemented\n"));
-		// REMOVE ME and return false;
+		WPS_DEBUG_MSG(("LotusParser::checkHeader: find lotus file format, sorry parsing this file is only implemented for debugging, not output will be created\n"));
 		f << "lotus123[FMT],";
 	}
+#endif
 	else
 	{
 		WPS_DEBUG_MSG(("LotusParser::checkHeader: unknown lotus 123 header\n"));
@@ -405,13 +366,15 @@ bool LotusParser::readZones()
 
 	input->seek(0, librevenge::RVNG_SEEK_SET);
 
+	bool mainDataRead=false;
 	// data, format and ?
 	for (int wh=0; wh<2; ++wh)
 	{
-		while (readZone()) ;
-
 		if (input->isEnd())
 			break;
+
+		while (readZone()) ;
+
 		//
 		// look for ending
 		//
@@ -424,6 +387,8 @@ bool LotusParser::readZones()
 		{
 			ascii().addPos(pos);
 			ascii().addNote("Entries(EOF)");
+			if (!mainDataRead)
+				mainDataRead=m_state->m_inMainContentBlock;
 			// end of block, look for other blocks
 			continue;
 		}
@@ -455,7 +420,7 @@ bool LotusParser::readZones()
 		ascii().addNote("Entries(Unknown)");
 	}
 
-	return m_spreadsheetParser->hasSomeSpreadsheetData();
+	return mainDataRead || m_spreadsheetParser->hasSomeSpreadsheetData();
 }
 
 bool LotusParser::readZone()
@@ -494,12 +459,12 @@ bool LotusParser::readZone()
 			f.str("");
 			f << "Entries(BOF):";
 			val=(int) libwps::readU16(input);
-			bool mainBlock=false;
+			m_state->m_inMainContentBlock=false;
 			if (val==0x8007)
 				f << "FMT,";
 			else if (val>=0x1000 && val <= 0x1005)
 			{
-				mainBlock=true;
+				m_state->m_inMainContentBlock=true;
 				f << "version=" << (val-0x1000) << ",";
 			}
 			else
@@ -511,12 +476,12 @@ bool LotusParser::readZone()
 					f << "f" << i << "=" << val << ",";
 			}
 			val=(int) libwps::readU8(input);
-			if (mainBlock)
+			if (m_state->m_inMainContentBlock)
 			{
 				m_spreadsheetParser->setLastSpreadsheetId(val);
 				m_state->m_maxSheet=val;
 			}
-			if (val && mainBlock)
+			if (val && m_state->m_inMainContentBlock)
 				f << "max[sheet]=" << val << ",";
 			else if (val)
 				f << "max[fmt]=" << val << ",";
@@ -572,7 +537,7 @@ bool LotusParser::readZone()
 		case 0x5:
 		{
 			f.str("");
-			f << "Entries(Select):";
+			f << "Entries(SheetUnknA):";
 			if (sz!=16)
 			{
 				ok=false;
@@ -590,6 +555,8 @@ bool LotusParser::readZone()
 			break;
 		}
 		case 0x6: // one by sheet
+			f.str("");
+			f << "Entries(SheetUnknB):";
 			if (sz!=5)
 			{
 				ok=false;
@@ -1006,163 +973,83 @@ bool LotusParser::readDataZone()
 		isParsed=needWriteInAscii=true;
 		break;
 	}
+
+	//
+	// selection
+	//
+	case 0xbb8:
+		f.str("");
+		f << "Entries(MacSelect):";
+
+		if (sz!=18)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the mac selection seems bad\n"));
+			f << "###";
+			break;
+		}
+		for (int i=0; i<3; ++i)   // f0=0, f1=f2=1
+		{
+			val=(int) libwps::read16(input);
+			if (val) f << "f" << i << "=" << val << ",";
+		}
+		for (int i=0; i<3; ++i)
+		{
+			int row=(int) libwps::readU16(input);
+			int sheet=(int) libwps::readU8(input);
+			int col=(int) libwps::readU8(input);
+			f << "C" << col << "-" << row;
+			if (sheet) f << "[" << sheet << "],";
+			else f << ",";
+		}
+		isParsed=needWriteInAscii=true;
+		break;
+
 	//
 	// style
 	//
 	case 0xfaa:
-		isParsed=readLineStyle(endPos);
+		isParsed=m_graphParser->readLineStyle(endPos);
 		break;
 	case 0xfb4:
-		isParsed=readColorStyle(endPos);
+		isParsed=m_graphParser->readColorStyle(endPos);
 		break;
 	case 0xfc8:
-		isParsed=readGraphicStyle(endPos);
+		isParsed=m_graphParser->readGraphicStyle(endPos);
+		break;
+	case 0xfdc:
+		f.str("");
+		f << "Entries(FontName):";
+		isParsed=needWriteInAscii=true;
 		break;
 	// 0xfd2: id, ..., colorid
 
 	//
-	// mac graphic
+	// graphic
 	//
 
 	case 0x2328:
-		f.str("");
-		f << "Entries(GraphMacDef):";
-		if (sz!=4)
-		{
-			WPS_DEBUG_MSG(("LotusParser::readDataZone: the graph mac seems bad\n"));
-			f << "###";
-			break;
-		}
-		val=(int) libwps::readU8(input);
-		f << "sheet[id]=" << val << ",";
-		for (int i=0; i<3; ++i)   // f0=1
-		{
-			val=(int) libwps::readU8(input);
-			if (val)
-				f << "f" << i << "=" << val << ",";
-		}
-		isParsed=needWriteInAscii=true;
+		isParsed=m_graphParser->readZoneBegin(endPos);
 		break;
 	case 0x2332: // line
 	case 0x2346: // rect, rectoval, rect
 	case 0x2350: // arac
 	case 0x2352: // rect shadow
-	case 0x23f0:   // frame
-	{
-		f.str("");
-		if (type==0x2332)
-			f << "Entries(GraphMacLine):";
-		else if (type==0x2346)
-			f << "Entries(GraphMacRect):";
-		else if (type==0x2350)
-			f << "Entries(GraphMacArc):";
-		else if (type==0x2352)
-			f << "Entries(GraphMacShadowRect):";
-		else if (type==0x23f0)
-			f << "Entries(GraphMacFrame):";
-		else
-		{
-			WPS_DEBUG_MSG(("LotusParser::readDataZone: find unexpected graph data\n"));
-			f << "Entries(GraphMacUnknown):###";
-		}
-		if (sz<20)
-		{
-			WPS_DEBUG_MSG(("LotusParser::readDataZone: the zone seems too short\n"));
-			f << "###";
-			break;
-		}
-		f << "graph[id]=" << (int) libwps::readU8(input) << ",";
-		for (int i=0; i<4; ++i)   // always 0?
-		{
-			val=(int) libwps::read8(input);
-			if (val)
-				f << "f" << i << "=" << val << ",";
-		}
-		int dim[4];
-		for (int i=0; i<4; ++i)   // dim3[high]=0|100
-		{
-			dim[i]=(int) libwps::read16(input);
-			val=(int) libwps::read16(input);
-			if (val) f << "dim" << i << "[high]=" << std::hex << val << std::dec << ",";
-		}
-		f << "dim=" << Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
-		isParsed=needWriteInAscii=true;
+	case 0x23f0: // frame
+		isParsed=m_graphParser->readZoneData(endPos, type);
 		break;
-	}
-	case 0x23fa: // text data
-		f.str("");
-		f << "Entries(GraphMacTBox):";
-		isParsed=needWriteInAscii=true;
+	case 0x23fa: // textbox data
+		isParsed=m_graphParser->readTextboxData(endPos);
 		break;
 
 	//
 	// mac pict
 	//
 	case 0x240e:
-	{
-		f.str("");
-		f << "Entries(PictMacDef):";
-		if (sz!=13)
-		{
-			WPS_DEBUG_MSG(("LotusParser::readDataZone: the picture def seems bad\n"));
-			f << "###";
-			break;
-		}
-		val=(int) libwps::readU8(input); // always 0?
-		if (val)
-			f << "f0=" << val << ",";
-		int dim=(int) libwps::readU16(input);
-		if (dim) f << "dim0=" << dim << ",";
-		for (int i=0; i<2; ++i)
-		{
-			val=(int) libwps::readU8(input);
-			if (val)
-				f << "f" << i+1 << "=" << val << ",";
-		}
-		dim=(int) libwps::readU16(input);
-		if (dim) f << "dim1=" << dim << ",";
-		val=(int) libwps::readU8(input);
-		if (val)
-			f << "f3=" << val << ",";
-		dim=(int) libwps::readU16(input);
-		if (dim) f << "dim2=" << dim << ",";
-		for (int i=0; i<3; ++i)   // always 0,0,1
-		{
-			val=(int) libwps::readU8(input);
-			if (val)
-				f << "g" << i << "=" << val << ",";
-		}
-		isParsed=needWriteInAscii=true;
+		isParsed=m_graphParser->readPictureDefinition(endPos);
 		break;
-	}
 	case 0x2410:
-	{
-		f.str("");
-		f << "Entries(PictMacData):";
-		if (sz<=1)
-		{
-			WPS_DEBUG_MSG(("LotusParser::readDataZone: the picture data seems bad\n"));
-			f << "###";
-			break;
-		}
-		val=(int) libwps::readU8(input); // always 1?
-		f << "pict[id]=" << val << ",";
-#ifdef DEBUG_WITH_FILES
-		ascii().skipZone(input->tell(), endPos-1);
-		librevenge::RVNGBinaryData data;
-		if (!libwps::readData(input, (unsigned long)(endPos-input->tell()), data))
-			f << "###";
-		else
-		{
-			std::stringstream s;
-			static int fileId=0;
-			s << "Pict" << ++fileId << ".pct";
-			libwps::Debug::dumpFile(data, s.str().c_str());
-		}
-#endif
-		isParsed=needWriteInAscii=true;
+		isParsed=m_graphParser->readPictureData(endPos);
 		break;
-	}
 
 	//
 	// mac printer
@@ -1237,129 +1124,6 @@ bool LotusParser::readDataZone()
 	if (input->tell()!=endPos)
 		ascii().addDelimiter(input->tell(),'|');
 	input->seek(endPos, librevenge::RVNG_SEEK_SET);
-	return true;
-}
-
-////////////////////////////////////////////////////////////
-//   style
-////////////////////////////////////////////////////////////
-bool LotusParser::readLineStyle(long endPos)
-{
-	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
-
-	long pos = input->tell();
-	f << "Entries(LineStyle):";
-	if (endPos-pos!=8)   // only find in a WK3 mac file
-	{
-		WPS_DEBUG_MSG(("LotusParser::readLineStyle: the zone size seems bad\n"));
-		f << "###";
-		ascii().addPos(pos-6);
-		ascii().addNote(f.str().c_str());
-		return true;
-	}
-	int id=(int) libwps::readU8(input);
-	f << "L" << id << ",";
-	int val=(int) libwps::readU8(input); // always 10?
-	if (val!=0x10)
-		f << "fl=" << std::hex << val << std::dec << ",";
-	for (int i=0; i<5; ++i)
-	{
-		val=(int) libwps::readU8(input);
-		if (val) f << "f" << i << "=" << val << ",";
-	}
-	val=(int) libwps::readU8(input);
-	if (val) f << "dash[id]=" << val << ",";
-	val=(int) libwps::readU8(input);
-	if (val!=1)
-		f << "w[line]=" << val << ",";
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
-	return true;
-}
-
-bool LotusParser::readColorStyle(long endPos)
-{
-	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
-
-	long pos = input->tell();
-	f << "Entries(ColorStyle):";
-	int colorSz=1;
-	if (endPos-pos==7)
-		colorSz=1;
-	else if (endPos-pos==11)
-		colorSz=2;
-	else
-	{
-		WPS_DEBUG_MSG(("LotusParser::readColorStyle: the zone size seems bad\n"));
-		f << "###";
-		ascii().addPos(pos-6);
-		ascii().addNote(f.str().c_str());
-		return true;
-	}
-	int id=(int) libwps::readU8(input);
-	f << "C" << id << ",";
-	int val=(int) libwps::readU8(input); // always 20?
-	if (val!=0x20)
-		f << "fl=" << std::hex << val << std::dec << ",";
-	for (int i=0; i<4; ++i)
-	{
-		val=(colorSz==1) ? (int) libwps::readU8(input) : (int) libwps::readU16(input);
-		if (!val) continue;
-		if (i==2)
-			f << "color[line]=" << val << ",";
-		else if (i==3)
-			f << "color[surf]=" << val << ",";
-		else
-			f << "color" << i << "=" << val << ",";
-	}
-	val=(int) libwps::readU8(input); // always 0|2|1b?
-	if (val) // 0=none, 2=full
-		f << "pat=" << val << ",";
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
-	return true;
-}
-
-bool LotusParser::readGraphicStyle(long endPos)
-{
-	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
-
-	long pos = input->tell();
-	f << "Entries(GraphicStyle):";
-	if (endPos-pos!=13)   // only find in a WK3 mac file
-	{
-		WPS_DEBUG_MSG(("LotusParser::readLineStyle: the zone size seems bad\n"));
-		f << "###";
-		ascii().addPos(pos-6);
-		ascii().addNote(f.str().c_str());
-		return true;
-	}
-	int id=(int) libwps::readU8(input);
-	f << "G" << id << ",";
-	int val=(int) libwps::readU8(input); // always 40?
-	if (val!=0x40)
-		f << "fl=" << std::hex << val << std::dec << ",";
-	for (int i=0; i<4; ++i)
-	{
-		val=(int) libwps::readU8(input);
-		int fl=(int) libwps::readU8(input);
-		if (!val) continue;
-		if (i==0) f << "unknId=" << val << "[" << std::hex << fl << std::dec << ",";
-		else if (i==1) f << "L" << val << ",";
-		else if (i==2) f << "C" << val << ",";
-		else if (i==3) f << "C" << val << "[shadow],";
-	}
-	for (int i=0; i<3; ++i)   //f0=f1=0|1|3|4 : a size?, f2=2|3|22
-	{
-		val=(int) libwps::readU8(input);
-		if (val)
-			f << "f" << i << "=" << std::hex << val << std::dec << ",";
-	}
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
 	return true;
 }
 

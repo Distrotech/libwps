@@ -64,6 +64,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSEntry.h		\
 	WPSFont.cpp		\
 	WPSFont.h		\
+	WPSGraphicShape.cpp	\
+	WPSGraphicShape.h	\
 	WPSHeader.cpp		\
 	WPSHeader.h		\
 	WPSList.cpp		\

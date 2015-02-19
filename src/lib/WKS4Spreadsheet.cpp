@@ -1548,6 +1548,16 @@ bool WKS4Spreadsheet::readCell(Vec2i actPos, WKSContentListener::FormulaInstruct
 			val += actPos[dim];
 			absolute[dim] = false;
 		}
+		else if (val==0xFFFF)
+		{
+			static bool first=true;
+			if (first)   // in general associated with a nan value, so maybe be normal
+			{
+				WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: find some ffff cell\n"));
+				first=false;
+			}
+			ok = false;
+		}
 		else
 		{
 			WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: can not read cell %x\n", (unsigned int)val));

@@ -600,6 +600,26 @@ public:
 		m_pt[0] -= Vec2<T>(val/2,val/2);
 		m_pt[1] += Vec2<T>(val-(val/2),val-(val/2));
 	}
+	//! returns the union between this and box
+	Box2<T> getUnion(Box2<T> const &box) const
+	{
+		Box2<T> res;
+		res.m_pt[0]=Vec2<T>(m_pt[0][0]<box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
+		                    m_pt[0][1]<box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
+		res.m_pt[1]=Vec2<T>(m_pt[1][0]>box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
+		                    m_pt[1][1]>box.m_pt[1][1]?m_pt[1][1] : box.m_pt[1][1]);
+		return res;
+	}
+	//! returns the intersection between this and box
+	Box2<T> getIntersection(Box2<T> const &box) const
+	{
+		Box2<T> res;
+		res.m_pt[0]=Vec2<T>(m_pt[0][0]>box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
+		                    m_pt[0][1]>box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
+		res.m_pt[1]=Vec2<T>(m_pt[1][0]<box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
+		                    m_pt[1][1]<box.m_pt[1][1]?m_pt[1][1] : box.m_pt[1][1]);
+		return res;
+	}
 
 	//! comparison operator==
 	bool operator==(Box2<T> const &p) const

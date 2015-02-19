@@ -183,6 +183,10 @@ SOURCE=..\..\src\lib\WPSFont.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSGraphicShape.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSHeader.cpp
 # End Source File
 # Begin Source File
@@ -328,6 +332,10 @@ SOURCE=..\..\src\lib\WPSEntry.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSFont.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSGraphicShape.h
 # End Source File
 # Begin Source File
 
