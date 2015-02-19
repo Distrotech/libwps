@@ -39,6 +39,7 @@
 #include "WPSHeader.h"
 #include "WPSPageSpan.h"
 
+#include "LotusGraph.h"
 #include "LotusSpreadsheet.h"
 
 #include "Lotus.h"
@@ -200,10 +201,11 @@ bool State::getColor(int id, uint32_t &color) const
 // constructor, destructor
 LotusParser::LotusParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
                          libwps_tools_win::Font::Type encoding) :
-	WKSParser(input, header), m_listener(), m_state(), m_spreadsheetParser()
+	WKSParser(input, header), m_listener(), m_state(), m_graphParser(), m_spreadsheetParser()
 
 {
 	m_state.reset(new LotusParserInternal::State(encoding));
+	m_graphParser.reset(new LotusGraph(*this));
 	m_spreadsheetParser.reset(new LotusSpreadsheet(*this));
 }
 
@@ -277,6 +279,7 @@ void LotusParser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 			m_listener=createListener(documentInterface);
 		if (m_listener)
 		{
+			m_graphParser->setListener(m_listener);
 			m_spreadsheetParser->setListener(m_listener);
 
 			m_listener->startDocument();
@@ -314,7 +317,9 @@ shared_ptr<WKSContentListener> LotusParser::createListener(librevenge::RVNGSprea
 		                         (getInput(), *this, false));
 		ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::ALL, subdoc);
 	}
-	pageList.push_back(ps);
+	int numPages=m_state->m_maxSheet+1;
+	if (numPages<=0) numPages=1;
+	for (int i=0; i<numPages; ++i) pageList.push_back(ps);
 	return shared_ptr<WKSContentListener>(new WKSContentListener(pageList, interface));
 }
 
@@ -395,7 +400,9 @@ bool LotusParser::readZones()
 {
 	RVNGInputStreamPtr input = getInput();
 	// reset data
-	m_spreadsheetParser.reset(new LotusSpreadsheet(*this));
+	m_graphParser->cleanState();
+	m_spreadsheetParser->cleanState();
+
 	input->seek(0, librevenge::RVNG_SEEK_SET);
 
 	// data, format and ?
@@ -723,6 +730,24 @@ bool LotusParser::readZone()
 		case 0x12:
 			ok=isParsed=readChartName();
 			break;
+		case 0x13:   // block related to sheet, with unknown structure
+		{
+			f.str("");
+			f << "Entries(SheetUnkn0):";
+			if (sz<8)
+			{
+				WPS_DEBUG_MSG(("LotusParser::readZone: size of zone%d seems bad\n", id));
+				f << "###";
+				break;
+			}
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=(int) libwps::readU8(input);
+			if (val) f << "sheet[id]=" << val << ",";
+			type=(int) libwps::readU8(input); // find 0: with various length, 1:+10 bytes, 2:+6 bytes
+			f << "type=" << type << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		}
 		case 0x15:
 		case 0x1d:
 			if (sz!=4)
@@ -752,6 +777,9 @@ bool LotusParser::readZone()
 		case 0x28: // double8+formula
 			ok=isParsed=m_spreadsheetParser->readCell();
 			break;
+		case 0x1b:
+			isParsed=readDataZone();
+			break;
 		case 0x1c: // always 00002d000000
 			if (sz!=6)
 			{
@@ -773,9 +801,7 @@ bool LotusParser::readZone()
 		case 0x23:
 			isParsed=ok=m_spreadsheetParser->readSheetName();
 			break;
-		// case 11: 1byte+strings + ?
 		// case 13: big structure
-		// case 1b: a struct checkme
 		default:
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			break;
@@ -806,10 +832,540 @@ bool LotusParser::readZone()
 	return true;
 }
 
+bool LotusParser::readDataZone()
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+	long pos = input->tell();
+	int type = (int) libwps::readU16(input);
+	long sz = (long) libwps::readU16(input);
+	long endPos=pos+4+sz;
+	if (type!=0x1b || sz<2)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readDataZone: the zone seems odd\n"));
+		input->seek(pos, librevenge::RVNG_SEEK_SET);
+		return false;
+	}
+	type = (int) libwps::readU16(input);
+	f << "Entries(Data" << std::hex << type << std::dec << "E):";
+	bool isParsed=false, needWriteInAscii=false;
+	sz-=2;
+	int val;
+	switch (type)
+	{
+	//
+	// mac windows
+	//
+	case 0x7d2:
+	{
+		f.str("");
+		f << "Entries(WindowsMacDef):";
+		if (sz<26)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the windows definition seems bad\n"));
+			f << "###";
+			break;
+		}
+		val=(int) libwps::readU8(input);
+		if (val) f << "id=" << val << ",";
+		val=(int) libwps::read8(input); // find 0|2
+		if (val) f << "f0=" << val << ",";
+		int dim[4];
+		for (int i=0; i<4; ++i)
+		{
+			dim[i]=(int) libwps::read16(input);
+			val=(int) libwps::read16(input);
+			if (!val) continue;
+			if (i)
+				f << "num[split]=" << val << ",";
+			else
+				f << "dim" << i << "[h]=" << val << ",";
+		}
+		f << "dim=" << Box2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3])) << ",";
+		for (int i=0; i<8; ++i)   // small value or 100
+		{
+			val=(int) libwps::read8(input);
+			if (val) f << "f" << i+1 << "=" << val << ",";
+		}
+		isParsed=needWriteInAscii=true;
+		int remain=int(sz-26);
+		if (remain<=1) break;
+		std::string name("");
+		for (int i=0; i<remain; ++i)
+			name+=(char) libwps::readU8(input);
+		f << name << ",";
+		break;
+	}
+	case 0x7d3:
+	{
+		f.str("");
+		f << "Entries(WindowsMacSplit):";
+		if (sz<24)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the windows split seems bad\n"));
+			f << "###";
+			break;
+		}
+		val=(int) libwps::readU8(input);
+		if (val) f << "id=" << val << ",";
+		val=(int) libwps::readU8(input);
+		if (val) f << "split[id]=" << val << ",";
+		for (int i=0; i<3; ++i)   // 0 or 1
+		{
+			val=(int) libwps::read8(input);
+			if (val) f << "f" << i+1 << "=" << val << ",";
+		}
+		int dim[4];
+		for (int i=0; i<4; ++i)
+		{
+			val=(int) libwps::read16(input);
+			dim[i]=(int) libwps::read16(input);
+			if (val) f << "dim" << i <<"[h]=" << val << ",";
+		}
+		f << "dim=" << Box2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3])) << ",";
+		for (int i=0; i<3; ++i)
+		{
+			static int const expected[]= {0,-1,25};
+			val=(int) libwps::read8(input);
+			if (val!=expected[i]) f << "g" << i << "=" << val << ",";
+		}
+		isParsed=needWriteInAscii=true;
+		break;
+	}
+	case 0x7d4:
+	{
+		f.str("");
+		f << "Entries(WindowsMacUnkn0)";
+		if (sz<5)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the windows unkn0 seems bad\n"));
+			f << "###";
+			break;
+		}
+		for (int i=0; i<4; ++i)   // always 2,1,1,2 ?
+		{
+			val=(int) libwps::read8(input);
+			if (val) f << "f" << i << "=" << val << ",";
+		}
+		isParsed=needWriteInAscii=true;
+		int remain=int(sz-4);
+		if (remain<=1) break;
+		std::string name("");
+		for (int i=0; i<remain; ++i) // always LMBCS 1.2?
+			name+=(char) libwps::readU8(input);
+		f << name << ",";
+		break;
+	}
+	case 0x7d5: // frequently followed by Lotus13 block and SheetRow, ...
+		f.str("");
+		f << "Entries(SheetBegin):";
+		if (sz!=11)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the sheet begin zone seems bad\n"));
+			f << "###";
+			break;
+		}
+		val=(int) libwps::readU8(input);
+		if (val) f << "sheet[id]=" << val << ",";
+		// then always 0a3fff00ffff508451ff ?
+		isParsed=needWriteInAscii=true;
+		break;
+	case 0x7d7:
+		isParsed=m_spreadsheetParser->readRowSizes(endPos);
+		break;
+	case 0x7d8:
+	case 0x7d9:
+	{
+		f.str("");
+		int dataSz=type==0x7d8 ? 1 : 2;
+		if (type==0x7d8)
+			f << "Entries(ColMacBreak):";
+		else
+			f << "Entries(RowMacBreak):";
+
+		if (sz<4 || (sz%dataSz))
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the page mac break seems bad\n"));
+			f << "###";
+			break;
+		}
+		val=(int) libwps::readU8(input);
+		if (val) f << "sheet[id]=" << val << ",";
+		val=(int) libwps::readU8(input); // always 0
+		if (val) f << "f0=" << val << ",";
+		f << "break=[";
+		int N=int((sz-2)/dataSz);
+		for (int i=0; i<N; ++i)
+		{
+			if (dataSz==1)
+				f << (int) libwps::readU8(input) << ",";
+			else
+				f << libwps::readU16(input) << ",";
+		}
+		f << "],";
+		isParsed=needWriteInAscii=true;
+		break;
+	}
+	//
+	// style
+	//
+	case 0xfaa:
+		isParsed=readLineStyle(endPos);
+		break;
+	case 0xfb4:
+		isParsed=readColorStyle(endPos);
+		break;
+	case 0xfc8:
+		isParsed=readGraphicStyle(endPos);
+		break;
+	// 0xfd2: id, ..., colorid
+
+	//
+	// mac graphic
+	//
+
+	case 0x2328:
+		f.str("");
+		f << "Entries(GraphMacDef):";
+		if (sz!=4)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the graph mac seems bad\n"));
+			f << "###";
+			break;
+		}
+		val=(int) libwps::readU8(input);
+		f << "sheet[id]=" << val << ",";
+		for (int i=0; i<3; ++i)   // f0=1
+		{
+			val=(int) libwps::readU8(input);
+			if (val)
+				f << "f" << i << "=" << val << ",";
+		}
+		isParsed=needWriteInAscii=true;
+		break;
+	case 0x2332: // line
+	case 0x2346: // rect, rectoval, rect
+	case 0x2350: // arac
+	case 0x2352: // rect shadow
+	case 0x23f0:   // frame
+	{
+		f.str("");
+		if (type==0x2332)
+			f << "Entries(GraphMacLine):";
+		else if (type==0x2346)
+			f << "Entries(GraphMacRect):";
+		else if (type==0x2350)
+			f << "Entries(GraphMacArc):";
+		else if (type==0x2352)
+			f << "Entries(GraphMacShadowRect):";
+		else if (type==0x23f0)
+			f << "Entries(GraphMacFrame):";
+		else
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: find unexpected graph data\n"));
+			f << "Entries(GraphMacUnknown):###";
+		}
+		if (sz<20)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the zone seems too short\n"));
+			f << "###";
+			break;
+		}
+		f << "graph[id]=" << (int) libwps::readU8(input) << ",";
+		for (int i=0; i<4; ++i)   // always 0?
+		{
+			val=(int) libwps::read8(input);
+			if (val)
+				f << "f" << i << "=" << val << ",";
+		}
+		int dim[4];
+		for (int i=0; i<4; ++i)   // dim3[high]=0|100
+		{
+			dim[i]=(int) libwps::read16(input);
+			val=(int) libwps::read16(input);
+			if (val) f << "dim" << i << "[high]=" << std::hex << val << std::dec << ",";
+		}
+		f << "dim=" << Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+		isParsed=needWriteInAscii=true;
+		break;
+	}
+	case 0x23fa: // text data
+		f.str("");
+		f << "Entries(GraphMacTBox):";
+		isParsed=needWriteInAscii=true;
+		break;
+
+	//
+	// mac pict
+	//
+	case 0x240e:
+	{
+		f.str("");
+		f << "Entries(PictMacDef):";
+		if (sz!=13)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the picture def seems bad\n"));
+			f << "###";
+			break;
+		}
+		val=(int) libwps::readU8(input); // always 0?
+		if (val)
+			f << "f0=" << val << ",";
+		int dim=(int) libwps::readU16(input);
+		if (dim) f << "dim0=" << dim << ",";
+		for (int i=0; i<2; ++i)
+		{
+			val=(int) libwps::readU8(input);
+			if (val)
+				f << "f" << i+1 << "=" << val << ",";
+		}
+		dim=(int) libwps::readU16(input);
+		if (dim) f << "dim1=" << dim << ",";
+		val=(int) libwps::readU8(input);
+		if (val)
+			f << "f3=" << val << ",";
+		dim=(int) libwps::readU16(input);
+		if (dim) f << "dim2=" << dim << ",";
+		for (int i=0; i<3; ++i)   // always 0,0,1
+		{
+			val=(int) libwps::readU8(input);
+			if (val)
+				f << "g" << i << "=" << val << ",";
+		}
+		isParsed=needWriteInAscii=true;
+		break;
+	}
+	case 0x2410:
+	{
+		f.str("");
+		f << "Entries(PictMacData):";
+		if (sz<=1)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the picture data seems bad\n"));
+			f << "###";
+			break;
+		}
+		val=(int) libwps::readU8(input); // always 1?
+		f << "pict[id]=" << val << ",";
+#ifdef DEBUG_WITH_FILES
+		ascii().skipZone(input->tell(), endPos-1);
+		librevenge::RVNGBinaryData data;
+		if (!libwps::readData(input, (unsigned long)(endPos-input->tell()), data))
+			f << "###";
+		else
+		{
+			std::stringstream s;
+			static int fileId=0;
+			s << "Pict" << ++fileId << ".pct";
+			libwps::Debug::dumpFile(data, s.str().c_str());
+		}
+#endif
+		isParsed=needWriteInAscii=true;
+		break;
+	}
+
+	//
+	// mac printer
+	//
+	case 0x2af8:
+		isParsed=readDocumentInfoMac(endPos);
+		break;
+	case 0x2afa:
+		f.str("");
+		f << "Entries(PrinterMacUnkn1):";
+		if (sz!=3)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the printer unkn1 seems bad\n"));
+			f << "###";
+			break;
+		}
+		for (int i=0; i<3; ++i)
+		{
+			val=(int) libwps::readU8(input);
+			static int const expected[]= {0x1f, 0xe0, 0/*or 1*/};
+			if (val!=expected[i])
+				f << "f" << i << "=" << val << ",";
+		}
+		isParsed=needWriteInAscii=true;
+		break;
+	case 0x2afb:
+	{
+		f.str("");
+		f << "Entries(PrinterMacName):";
+		if (sz<3)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the printername seems bad\n"));
+			f << "###";
+			break;
+		}
+		val=(int) libwps::read16(input);
+		if (val!=20) f << "f0=" << val << ",";
+		std::string name("");
+		for (int i=4; i<sz; ++i)
+		{
+			char c=(char) libwps::readU8(input);
+			if (!c) break;
+			name+=c;
+		}
+		f << name << ",";
+		isParsed=needWriteInAscii=true;
+		break;
+	}
+	case 0x2afc:
+		f.str("");
+		f << "Entries(PrintMacInfo):";
+		if (sz<120)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the printinfo seems bad\n"));
+			f << "###";
+			break;
+		}
+		isParsed=needWriteInAscii=true;
+		break;
+
+	//
+	// 4268, 4269
+	//
+	default:
+		break;
+	}
+	if (!isParsed || needWriteInAscii)
+	{
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+	}
+	if (input->tell()!=endPos)
+		ascii().addDelimiter(input->tell(),'|');
+	input->seek(endPos, librevenge::RVNG_SEEK_SET);
+	return true;
+}
+
+////////////////////////////////////////////////////////////
+//   style
+////////////////////////////////////////////////////////////
+bool LotusParser::readLineStyle(long endPos)
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+
+	long pos = input->tell();
+	f << "Entries(LineStyle):";
+	if (endPos-pos!=8)   // only find in a WK3 mac file
+	{
+		WPS_DEBUG_MSG(("LotusParser::readLineStyle: the zone size seems bad\n"));
+		f << "###";
+		ascii().addPos(pos-6);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	int id=(int) libwps::readU8(input);
+	f << "L" << id << ",";
+	int val=(int) libwps::readU8(input); // always 10?
+	if (val!=0x10)
+		f << "fl=" << std::hex << val << std::dec << ",";
+	for (int i=0; i<5; ++i)
+	{
+		val=(int) libwps::readU8(input);
+		if (val) f << "f" << i << "=" << val << ",";
+	}
+	val=(int) libwps::readU8(input);
+	if (val) f << "dash[id]=" << val << ",";
+	val=(int) libwps::readU8(input);
+	if (val!=1)
+		f << "w[line]=" << val << ",";
+	ascii().addPos(pos-6);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusParser::readColorStyle(long endPos)
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+
+	long pos = input->tell();
+	f << "Entries(ColorStyle):";
+	int colorSz=1;
+	if (endPos-pos==7)
+		colorSz=1;
+	else if (endPos-pos==11)
+		colorSz=2;
+	else
+	{
+		WPS_DEBUG_MSG(("LotusParser::readColorStyle: the zone size seems bad\n"));
+		f << "###";
+		ascii().addPos(pos-6);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	int id=(int) libwps::readU8(input);
+	f << "C" << id << ",";
+	int val=(int) libwps::readU8(input); // always 20?
+	if (val!=0x20)
+		f << "fl=" << std::hex << val << std::dec << ",";
+	for (int i=0; i<4; ++i)
+	{
+		val=(colorSz==1) ? (int) libwps::readU8(input) : (int) libwps::readU16(input);
+		if (!val) continue;
+		if (i==2)
+			f << "color[line]=" << val << ",";
+		else if (i==3)
+			f << "color[surf]=" << val << ",";
+		else
+			f << "color" << i << "=" << val << ",";
+	}
+	val=(int) libwps::readU8(input); // always 0|2|1b?
+	if (val) // 0=none, 2=full
+		f << "pat=" << val << ",";
+	ascii().addPos(pos-6);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusParser::readGraphicStyle(long endPos)
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+
+	long pos = input->tell();
+	f << "Entries(GraphicStyle):";
+	if (endPos-pos!=13)   // only find in a WK3 mac file
+	{
+		WPS_DEBUG_MSG(("LotusParser::readLineStyle: the zone size seems bad\n"));
+		f << "###";
+		ascii().addPos(pos-6);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	int id=(int) libwps::readU8(input);
+	f << "G" << id << ",";
+	int val=(int) libwps::readU8(input); // always 40?
+	if (val!=0x40)
+		f << "fl=" << std::hex << val << std::dec << ",";
+	for (int i=0; i<4; ++i)
+	{
+		val=(int) libwps::readU8(input);
+		int fl=(int) libwps::readU8(input);
+		if (!val) continue;
+		if (i==0) f << "unknId=" << val << "[" << std::hex << fl << std::dec << ",";
+		else if (i==1) f << "L" << val << ",";
+		else if (i==2) f << "C" << val << ",";
+		else if (i==3) f << "C" << val << "[shadow],";
+	}
+	for (int i=0; i<3; ++i)   //f0=f1=0|1|3|4 : a size?, f2=2|3|22
+	{
+		val=(int) libwps::readU8(input);
+		if (val)
+			f << "f" << i << "=" << std::hex << val << std::dec << ",";
+	}
+	ascii().addPos(pos-6);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
 ////////////////////////////////////////////////////////////
 //   generic
 ////////////////////////////////////////////////////////////
-
 bool LotusParser::readLinkZone()
 {
 	libwps::DebugStream f;
@@ -906,8 +1462,75 @@ bool LotusParser::readLinkZone()
 }
 
 // ----------------------------------------------------------------------
-// Header/Footer
+// Header/Footer/PageDim
 // ----------------------------------------------------------------------
+bool LotusParser::readDocumentInfoMac(long endPos)
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+
+	long pos = input->tell();
+	f << "Entries(DocMacInfo):";
+	if (endPos-pos!=51)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readDocumentInfoMac: the zone size seems bad\n"));
+		f << "###";
+		ascii().addPos(pos-6);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	int dim[7];
+	for (int i=0; i<7; ++i)
+	{
+		int val=(int) libwps::read8(input);
+		if (i==0)
+			f << "dim[unkn]=";
+		else if (i==1)
+			f << "margins=[";
+		else if (i==5)
+			f << "pagesize=[";
+		dim[i]=(int) libwps::read16(input);
+		f << dim[i];
+		if (val) f << "[" << val << "]";
+		val=(int) libwps::read8(input); // always 0
+		if (val) f << "[" << val << "]";
+		f << ",";
+		if (i==4 || i==6) f << "],";
+	}
+	// check order
+	if (dim[5]>dim[1]+dim[3] && dim[6]>dim[2]+dim[4])
+	{
+		m_state->m_pageSpan.setFormWidth(dim[5]);
+		m_state->m_pageSpan.setFormLength(dim[6]);
+		m_state->m_pageSpan.setMarginLeft(dim[1]);
+		m_state->m_pageSpan.setMarginTop(dim[2]);
+		m_state->m_pageSpan.setMarginRight(dim[3]);
+		m_state->m_pageSpan.setMarginBottom(dim[4]);
+	}
+	else
+		f << "###";
+	f << "unkn=[";
+	for (int i=0; i<5; ++i)   // 1,1,1,100|inf,1
+	{
+		int val=(int) libwps::read16(input);
+		if (val==9999)
+			f << "inf,";
+		else if (val)
+			f << val << ",";
+		else
+			f << "_,";
+	}
+	f << "],";
+	for (int i=0; i<13; ++i)   // always 0?
+	{
+		int val=(int) libwps::read8(input);
+		if (val)
+			f << "g" << i << "=" << val << ",";
+	}
+	ascii().addPos(pos-6);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
 
 ////////////////////////////////////////////////////////////
 //   chart

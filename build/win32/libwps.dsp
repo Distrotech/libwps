@@ -99,6 +99,10 @@ SOURCE=..\..\src\lib\Lotus.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\LotusGraph.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\LotusSpreadsheet.cpp
 # End Source File
 # Begin Source File
@@ -236,6 +240,10 @@ SOURCE=..\..\src\lib\libwps_tools_win.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\Lotus.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\LotusGraph.h
 # End Source File
 # Begin Source File
 

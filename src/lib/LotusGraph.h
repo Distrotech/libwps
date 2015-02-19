@@ -19,8 +19,8 @@
  * applicable instead of those above.
  */
 
-#ifndef LOTUS_SPREADSHEET_H
-#define LOTUS_SPREADSHEET_H
+#ifndef LOTUS_GRAPH_H
+#define LOTUS_GRAPH_H
 
 #include <ostream>
 #include <vector>
@@ -32,28 +32,26 @@
 #include "WPSDebug.h"
 #include "WKSContentListener.h"
 
-namespace LotusSpreadsheetInternal
+namespace LotusGraphInternal
 {
-class Cell;
-class SpreadSheet;
 struct State;
 }
 
 class LotusParser;
 
 /**
- * This class parses Microsoft Works spreadsheet file
+ * This class parses Microsoft Works graph file
  *
  */
-class LotusSpreadsheet
+class LotusGraph
 {
 public:
 	friend class LotusParser;
 
 	//! constructor
-	LotusSpreadsheet(LotusParser &parser);
+	LotusGraph(LotusParser &parser);
 	//! destructor
-	~LotusSpreadsheet();
+	~LotusGraph();
 	//! clean internal state
 	void cleanState();
 	//! sets the listener
@@ -61,54 +59,27 @@ public:
 	{
 		m_listener = listen;
 	}
-	//! set the last spreadsheet number ( default 0)
-	void setLastSpreadsheetId(int id);
 protected:
 	//! return true if the pos is in the file, update the file size if need
 	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
-	//! returns true if some spreadshet are defined
-	bool hasSomeSpreadsheetData() const;
 
-	//! send the data
-	void sendSpreadsheet(int sheetId);
+	//! send the graph corresponding to a sheetId
+	void sendGraph(int sheetId);
 
-	//! send the cell data
-	void sendCellContent(LotusSpreadsheetInternal::Cell const &cell);
-
-	//////////////////////// report //////////////////////////////
 
 	//
 	// low level
 	//
-	//////////////////////// spread sheet //////////////////////////////
 
-	//! reads a sheet name
-	bool readSheetName();
+	// ////////////////////// style //////////////////////////////
 
-	//! reads the columns definitions
-	bool readColumnDefinition();
-	//! reads the column sizes ( in char )
-	bool readColumnSizes();
-	//! reads the row size ( in pt*32 )
-	bool readRowSizes(long endPos);
+	// ////////////////////// zone //////////////////////////////
 
-	//! reads a cell
-	bool readCell();
-	//! reads a cell or list of cell name
-	bool readCellName();
-
-	// data in formula
-
-	/* reads a cell */
-	bool readCell(int sId, bool isList, WKSContentListener::FormulaInstruction &instr);
-	/* reads a formula */
-	bool readFormula(long endPos, int sId, bool newFormula,
-	                 std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error);
 private:
-	LotusSpreadsheet(LotusSpreadsheet const &orig);
-	LotusSpreadsheet &operator=(LotusSpreadsheet const &orig);
+	LotusGraph(LotusGraph const &orig);
+	LotusGraph &operator=(LotusGraph const &orig);
 	//! returns the debug file
 	libwps::DebugFile &ascii()
 	{
@@ -120,7 +91,7 @@ private:
 	//! the main parser
 	LotusParser &m_mainParser;
 	//! the internal state
-	shared_ptr<LotusSpreadsheetInternal::State> m_state;
+	shared_ptr<LotusGraphInternal::State> m_state;
 	//! the ascii file
 	libwps::DebugFile &m_asciiFile;
 };

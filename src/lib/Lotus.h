@@ -36,6 +36,7 @@ class SubDocument;
 struct State;
 }
 
+class LotusGraph;
 class LotusSpreadsheet;
 
 /**
@@ -45,6 +46,7 @@ class LotusSpreadsheet;
 class LotusParser : public WKSParser
 {
 	friend class LotusParserInternal::SubDocument;
+	friend class LotusGraph;
 	friend class LotusSpreadsheet;
 public:
 	//! constructor
@@ -86,6 +88,8 @@ protected:
 
 	/** finds the different zones (spreadsheet, chart, print, ...) */
 	bool readZones();
+	/** parse the different zones 1B */
+	bool readDataZone();
 	//! reads a zone
 	bool readZone();
 
@@ -93,6 +97,14 @@ protected:
 
 	//! reads a link
 	bool readLinkZone();
+	//! reads a color style
+	bool readColorStyle(long endPos);
+	//! reads a line style
+	bool readLineStyle(long endPos);
+	//! reads a graphic style
+	bool readGraphicStyle(long endPos);
+	//! reads a mac document info zone: zone 1b, then 2af8
+	bool readDocumentInfoMac(long endPos);
 
 	//////////////////////// chart zone //////////////////////////////
 
@@ -107,6 +119,8 @@ protected:
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the internal state
 	shared_ptr<LotusParserInternal::State> m_state;
+	//! the graph manager
+	shared_ptr<LotusGraph> m_graphParser;
 	//! the spreadsheet manager
 	shared_ptr<LotusSpreadsheet> m_spreadsheetParser;
 };

@@ -323,7 +323,7 @@ public:
 
 	//! convert the m_widthColsInChar, m_heightRows in a vector of of point size
 	static std::vector<float> convertInPoint(std::vector<int> const &list,
-	                                         float defSize)
+	                                         float defSize, float factor=1)
 	{
 		size_t numElt = list.size();
 		std::vector<float> res;
@@ -331,7 +331,7 @@ public:
 		for (size_t i = 0; i < numElt; i++)
 		{
 			if (list[i] < 0) res[i] = defSize;
-			else res[i] = float(list[i]*12);
+			else res[i] = float(list[i])*factor;
 		}
 		return res;
 	}
@@ -429,6 +429,11 @@ LotusSpreadsheet::LotusSpreadsheet(LotusParser &parser) :
 
 LotusSpreadsheet::~LotusSpreadsheet()
 {
+}
+
+void LotusSpreadsheet::cleanState()
+{
+	m_state.reset(new LotusSpreadsheetInternal::State);
 }
 
 void LotusSpreadsheet::setLastSpreadsheetId(int id)
@@ -602,6 +607,62 @@ bool LotusSpreadsheet::readColumnSizes()
 	f << "],";
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
+
+	return true;
+}
+
+bool LotusSpreadsheet::readRowSizes(long endPos)
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long sz=endPos-pos;
+	f << "Entries(RowSize):";
+	if (sz<10 || (sz%8)!=2)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readRowSizes: the zone size seems bad\n"));
+		f << "###";
+		ascii().addPos(pos-6);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+
+	int sheetId=(int) libwps::readU8(m_input);
+	f << "id[sheet]=" << sheetId << ",";
+	LotusSpreadsheetInternal::Spreadsheet empty, *sheet=0;
+	if (sheetId<0||sheetId>=int(m_state->m_spreadsheetList.size()))
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowSizes: can find spreadsheet %d\n", sheetId));
+		sheet=&empty;
+		f << "###";
+	}
+	else
+		sheet=&m_state->m_spreadsheetList[size_t(sheetId)];
+	int val=(int) libwps::readU8(m_input);  // always 0
+	if (val) f << "f0=" << val << ",";
+	ascii().addPos(pos-6);
+	ascii().addNote(f.str().c_str());
+	int N=int(sz/8);
+	for (int i=0; i<N; ++i)
+	{
+		pos=m_input->tell();
+		f.str("");
+		f << "RowSize-" << i << ":";
+		int row=(int) libwps::readU16(m_input);
+		f << "row=" << row << ",";
+		val=(int) libwps::readU16(m_input);
+		f << "dim=" << float(val)/32.f << ",";
+		sheet->setRowHeight(row, int((val+31)/32));
+		for (int j=0; j<2; ++j)
+		{
+			val=(int) libwps::read16(m_input);
+			if (val!=j-1)
+				f << "f" << j << "=" << val <<",";
+		}
+		m_input->seek(pos+8, librevenge::RVNG_SEEK_SET);
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+	}
 
 	return true;
 }
@@ -1050,7 +1111,7 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 	}
 	LotusSpreadsheetInternal::Spreadsheet &sheet = m_state->getSheet(sheetId);
 
-	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,76), librevenge::RVNG_POINT, m_state->getSheetName(sheetId));
+	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,72,8), librevenge::RVNG_POINT, m_state->getSheetName(sheetId));
 	std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
 	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator it;
 	int prevRow = -1;
@@ -1144,6 +1205,10 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 				prevEOL=false;
 			}
 		}
+	}
+	if (cell.m_comment.valid())
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::sendCellContent: oops sending comment is not implemented\n"));
 	}
 	m_listener->closeSheetCell();
 }
