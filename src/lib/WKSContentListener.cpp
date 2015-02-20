@@ -36,6 +36,7 @@
 
 #include "WPSCell.h"
 #include "WPSFont.h"
+#include "WPSGraphicShape.h"
 #include "WPSPageSpan.h"
 #include "WPSParagraph.h"
 #include "WPSPosition.h"
@@ -81,6 +82,8 @@ struct WKSContentParsingState
 	~WKSContentParsingState();
 
 	bool m_isPageSpanOpened;
+	bool m_isFrameOpened;
+
 	unsigned m_currentPage;
 	int m_numPagesRemainingInSpan;
 	int m_currentPageNumber;
@@ -122,7 +125,7 @@ private:
 };
 
 WKSContentParsingState::WKSContentParsingState() :
-	m_isPageSpanOpened(false), m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
+	m_isPageSpanOpened(false), m_isFrameOpened(false), m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
 	m_pageFormLength(11.0),	m_pageFormWidth(8.5f), m_pageFormOrientationIsPortrait(true),
 	m_pageMarginLeft(1.0), m_pageMarginRight(1.0), m_pageMarginTop(1.0), m_pageMarginBottom(1.0),
 
@@ -569,6 +572,250 @@ void WKSContentListener::insertComment(WPSSubDocumentPtr &subDocument)
 
 	m_documentInterface->closeComment();
 	m_ps->m_isNote = false;
+}
+
+void WKSContentListener::insertTextBox
+(WPSPosition const &pos, WPSSubDocumentPtr subDocument, librevenge::RVNGPropertyList frameExtras)
+{
+	if (!_openFrame(pos, frameExtras)) return;
+
+	librevenge::RVNGPropertyList propList;
+	m_documentInterface->openTextBox(propList);
+	handleSubDocument(subDocument, libwps::DOC_TEXT_BOX);
+	m_documentInterface->closeTextBox();
+
+	_closeFrame();
+}
+
+void WKSContentListener::insertPicture
+(WPSPosition const &pos, const librevenge::RVNGBinaryData &binaryData, std::string type,
+ librevenge::RVNGPropertyList frameExtras)
+{
+	if (!_openFrame(pos, frameExtras)) return;
+
+	librevenge::RVNGPropertyList propList;
+	propList.insert("librevenge:mime-type", type.c_str());
+	propList.insert("office:binary-data", binaryData);
+	m_documentInterface->insertBinaryObject(propList);
+
+	_closeFrame();
+}
+
+void WKSContentListener::insertPicture
+(WPSPosition const &pos, const WPSGraphicShape &shape, bool hasSurface, librevenge::RVNGPropertyList styleExtras)
+{
+	librevenge::RVNGPropertyList shapePList;
+	_handleFrameParameters(shapePList, pos);
+	shapePList.remove("svg:x");
+	shapePList.remove("svg:y");
+
+	librevenge::RVNGPropertyList list(styleExtras);
+	float factor=pos.getScaleFactor(pos.unit(), librevenge::RVNG_POINT);
+	Vec2f decal = factor*pos.origin();
+	switch (shape.addTo(decal, hasSurface, shapePList))
+	{
+	case WPSGraphicShape::C_Ellipse:
+		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->drawEllipse(shapePList);
+		break;
+	case WPSGraphicShape::C_Path:
+		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->drawPath(shapePList);
+		break;
+	case WPSGraphicShape::C_Polyline:
+		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->drawPolyline(shapePList);
+		break;
+	case WPSGraphicShape::C_Polygon:
+		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->drawPolygon(shapePList);
+		break;
+	case WPSGraphicShape::C_Rectangle:
+		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->drawRectangle(shapePList);
+		break;
+	case WPSGraphicShape::C_Bad:
+		break;
+	default:
+		WPS_DEBUG_MSG(("WKSSpreadsheetListener::insertPicture: unexpected shape\n"));
+		break;
+	}
+}
+
+///////////////////
+// frame
+///////////////////
+bool WKSContentListener::_openFrame(WPSPosition const &pos, librevenge::RVNGPropertyList extras)
+{
+	if (m_ps->m_isFrameOpened)
+	{
+		WPS_DEBUG_MSG(("WKSContentListener::openFrame: called but a frame is already opened\n"));
+		return false;
+	}
+
+	switch (pos.m_anchorTo)
+	{
+	case WPSPosition::Page:
+		break;
+	case WPSPosition::Paragraph:
+		if (m_ps->m_isParagraphOpened)
+			_flushText();
+		else
+			_openParagraph();
+		break;
+	case WPSPosition::CharBaseLine:
+	case WPSPosition::Char:
+		if (m_ps->m_isSpanOpened)
+			_flushText();
+		else
+			_openSpan();
+		break;
+	default:
+		WPS_DEBUG_MSG(("WKSContentListener::openFrame: can not determine the anchor\n"));
+		return false;
+	}
+
+	librevenge::RVNGPropertyList propList(extras);
+	_handleFrameParameters(propList, pos);
+	m_documentInterface->openFrame(propList);
+
+	m_ps->m_isFrameOpened = true;
+	return true;
+}
+
+void WKSContentListener::_closeFrame()
+{
+	if (!m_ps->m_isFrameOpened)
+	{
+		WPS_DEBUG_MSG(("WKSContentListener::closeFrame: called but no frame is already opened\n"));
+		return;
+	}
+	m_documentInterface->closeFrame();
+	m_ps->m_isFrameOpened = false;
+}
+
+void WKSContentListener::_handleFrameParameters
+(librevenge::RVNGPropertyList &propList, WPSPosition const &pos)
+{
+	Vec2f origin = pos.origin();
+	librevenge::RVNGUnit unit = pos.unit();
+	float inchFactor=pos.getInvUnitScale(librevenge::RVNG_INCH);
+	float pointFactor = pos.getInvUnitScale(librevenge::RVNG_POINT);
+
+	propList.insert("svg:width", double(pos.size()[0]), unit);
+	propList.insert("svg:height", double(pos.size()[1]), unit);
+	if (pos.naturalSize().x() > 4*pointFactor && pos.naturalSize().y() > 4*pointFactor)
+	{
+		propList.insert("librevenge:naturalWidth", pos.naturalSize().x(), pos.unit());
+		propList.insert("librevenge:naturalHeight", pos.naturalSize().y(), pos.unit());
+	}
+
+	if (pos.m_wrapping ==  WPSPosition::WDynamic)
+		propList.insert("style:wrap", "dynamic");
+	else if (pos.m_wrapping ==  WPSPosition::WRunThrough)
+	{
+		propList.insert("style:wrap", "run-through");
+		propList.insert("style:run-through", "background");
+	}
+	else
+		propList.insert("style:wrap", "none");
+
+	if (pos.m_anchorTo != WPSPosition::Page)
+	{
+		WPS_DEBUG_MSG(("WKSContentListener::openFrame: only implemented for page anchor\n"));
+		return;
+	}
+
+	// Page position seems to do not use the page margin...
+	propList.insert("text:anchor-type", "page");
+	if (pos.page() > 0) propList.insert("text:anchor-page-number", pos.page());
+	double  w = m_ps->m_pageFormWidth;
+	double h = m_ps->m_pageFormLength;
+	w *= inchFactor;
+	h *= inchFactor;
+
+	propList.insert("style:vertical-rel", "page");
+	propList.insert("style:horizontal-rel", "page");
+
+	double newPosition;
+	switch (pos.m_yPos)
+	{
+	case WPSPosition::YFull:
+		propList.insert("svg:height", double(h), unit);
+	// fall-through intended
+	case WPSPosition::YTop:
+		if (origin[1] < 0.0 || origin[1] > 0.0)
+		{
+			propList.insert("style:vertical-pos", "from-top");
+			newPosition = origin[1];
+			if (newPosition > h -pos.size()[1])
+				newPosition = h - pos.size()[1];
+			propList.insert("svg:y", double(newPosition), unit);
+		}
+		else
+			propList.insert("style:vertical-pos", "top");
+		break;
+	case WPSPosition::YCenter:
+		if (origin[1] < 0.0 || origin[1] > 0.0)
+		{
+			propList.insert("style:vertical-pos", "from-top");
+			newPosition = (h - pos.size()[1])/2.0;
+			if (newPosition > h -pos.size()[1]) newPosition = h - pos.size()[1];
+			propList.insert("svg:y", double(newPosition), unit);
+		}
+		else
+			propList.insert("style:vertical-pos", "middle");
+		break;
+	case WPSPosition::YBottom:
+		if (origin[1] < 0.0 || origin[1] > 0.0)
+		{
+			propList.insert("style:vertical-pos", "from-top");
+			newPosition = h - pos.size()[1]-origin[1];
+			if (newPosition > h -pos.size()[1]) newPosition = h -pos.size()[1];
+			else if (newPosition < 0) newPosition = 0;
+			propList.insert("svg:y", double(newPosition), unit);
+		}
+		else
+			propList.insert("style:vertical-pos", "bottom");
+		break;
+	default:
+		break;
+	}
+
+	switch (pos.m_xPos)
+	{
+	case WPSPosition::XFull:
+		propList.insert("svg:width", double(w), unit);
+	// fallthrough intended
+	case WPSPosition::XLeft:
+		if (origin[0] < 0.0 || origin[0] > 0.0)
+		{
+			propList.insert("style:horizontal-pos", "from-left");
+			propList.insert("svg:x", double(origin[0]), unit);
+		}
+		else
+			propList.insert("style:horizontal-pos", "left");
+		break;
+	case WPSPosition::XRight:
+		if (origin[0] < 0.0 || origin[0] > 0.0)
+		{
+			propList.insert("style:horizontal-pos", "from-left");
+			propList.insert("svg:x",double(w - pos.size()[0] + origin[0]), unit);
+		}
+		else
+			propList.insert("style:horizontal-pos", "right");
+		break;
+	case WPSPosition::XCenter:
+	default:
+		if (origin[0] < 0.0 || origin[0] > 0.0)
+		{
+			propList.insert("style:horizontal-pos", "from-left");
+			propList.insert("svg:x", double((w - pos.size()[0])/2. + origin[0]), unit);
+		}
+		else
+			propList.insert("style:horizontal-pos", "center");
+		break;
+	}
 }
 
 ///////////////////

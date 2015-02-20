@@ -36,6 +36,7 @@
 #include "WPSListener.h"
 
 class WPSCellFormat;
+class WPSGraphicShape;
 class WPSList;
 class WPSPageSpan;
 struct WPSParagraph;
@@ -179,6 +180,16 @@ public:
 	// ------- subdocument -----------------
 	/** adds comment */
 	void insertComment(WPSSubDocumentPtr &subDocument);
+	/** adds a picture in given position */
+	void insertPicture(WPSPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
+	                   std::string type="image/pict",
+	                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+	/** adds a picture in given position */
+	void insertPicture(WPSPosition const &pos, WPSGraphicShape const &shape, bool hasSurface,
+	                   librevenge::RVNGPropertyList styleExtras=librevenge::RVNGPropertyList());
+	/** adds a textbox in given position */
+	void insertTextBox(WPSPosition const &pos, WPSSubDocumentPtr subDocument,
+	                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
 
 	// ------- sheet -----------------
 	/** open a sheet*/
@@ -200,6 +211,10 @@ public:
 protected:
 	void _openPageSpan();
 	void _closePageSpan();
+
+	void _handleFrameParameters(librevenge::RVNGPropertyList &propList, WPSPosition const &pos);
+	bool _openFrame(WPSPosition const &pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+	void _closeFrame();
 
 	void _startSubDocument();
 	void _endSubDocument();
