@@ -38,6 +38,7 @@
 #include "WPSFont.h"
 
 #include "Lotus.h"
+#include "LotusStyleManager.h"
 
 #include "LotusSpreadsheet.h"
 
@@ -115,59 +116,6 @@ bool Style::operator==(Style const &st) const
 	}
 	return m_extra==st.m_extra;
 }
-
-///////////////////////////////////////////////////////////////////
-//! the style manager
-class StyleManager
-{
-public:
-	StyleManager() : m_stylesList() {}
-	//! add a new style and returns its id
-	int add(Style const &st, bool dosFile)
-	{
-		if (dosFile)
-		{
-			for (size_t i=0; i < m_stylesList.size(); ++i)
-			{
-				if (m_stylesList[i]==st) return int(i);
-			}
-		}
-		m_stylesList.push_back(st);
-		return int(m_stylesList.size())-1;
-	}
-	//! returns the style with id
-	bool get(int id, Style &style) const
-	{
-		if (id<0|| id >= (int) m_stylesList.size())
-		{
-			WPS_DEBUG_MSG(("LotusSpreadsheetInternal::StyleManager::get can not find style %d\n", id));
-			return false;
-		}
-		style=m_stylesList[size_t(id)];
-		return true;
-	}
-	//! returns the number of style
-	int size() const
-	{
-		return (int) m_stylesList.size();
-	}
-	//! print a style
-	void print(int id, std::ostream &o) const
-	{
-		if (id < 0) return;
-		if (id < int(m_stylesList.size()))
-			o << ", style=" << m_stylesList[size_t(id)];
-		else
-		{
-			WPS_DEBUG_MSG(("LotusSpreadsheetInternal::StyleManager::print: can not find a style\n"));
-			o << ", ###style=" << id;
-		}
-	}
-
-protected:
-	//! the styles
-	std::vector<Style> m_stylesList;
-};
 
 //! a list of position of a Lotus spreadsheet
 struct CellsList
@@ -376,7 +324,7 @@ public:
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_version(-1), m_styleManager(), m_spreadsheetList(), m_nameToCellsMap()
+	State() :  m_eof(-1), m_version(-1), m_spreadsheetList(), m_nameToCellsMap()
 	{
 		m_spreadsheetList.resize(1);
 	}
@@ -409,8 +357,6 @@ struct State
 	long m_eof;
 	//! the file version
 	int m_version;
-	//! the style manager
-	StyleManager m_styleManager;
 	//! the list of spreadsheet ( first: main spreadsheet, other report spreadsheet )
 	std::vector<Spreadsheet> m_spreadsheetList;
 	//! map name to position
@@ -421,8 +367,8 @@ struct State
 
 // constructor, destructor
 LotusSpreadsheet::LotusSpreadsheet(LotusParser &parser) :
-	m_input(parser.getInput()), m_listener(), m_mainParser(parser), m_state(new LotusSpreadsheetInternal::State),
-	m_asciiFile(parser.ascii())
+	m_input(parser.getInput()), m_listener(), m_mainParser(parser), m_styleManager(parser.m_styleManager),
+	m_state(new LotusSpreadsheetInternal::State), m_asciiFile(parser.ascii())
 {
 	m_state.reset(new LotusSpreadsheetInternal::State);
 }
@@ -1148,12 +1094,6 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 	}
 
 	LotusSpreadsheetInternal::Style cellStyle(m_mainParser.getDefaultFontType());
-#if 0
-	if (cell.m_styleId<0 || !m_state->m_styleManager.get(cell.m_styleId,cellStyle))
-	{
-		WPS_DEBUG_MSG(("LotusSpreadsheet::sendCellContent: I can not find the cell style\n"));
-	}
-#endif
 	if (cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
 		cellStyle.setHAlignement(cell.m_hAlign);
 

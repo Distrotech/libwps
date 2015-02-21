@@ -19,8 +19,8 @@
  * applicable instead of those above.
  */
 
-#ifndef LOTUS_GRAPH_H
-#define LOTUS_GRAPH_H
+#ifndef LOTUS_STYLE_MANAGER_H
+#define LOTUS_STYLE_MANAGER_H
 
 #include <ostream>
 #include <vector>
@@ -30,66 +30,51 @@
 #include "libwps_internal.h"
 
 #include "WPSDebug.h"
-#include "WKSContentListener.h"
 
-namespace LotusGraphInternal
+namespace LotusStyleManagerInternal
 {
 struct State;
 }
 
 class LotusParser;
-class LotusStyleManager;
 
 /**
- * This class parses Microsoft Works graph file
+ * This class parses the Lotus style
  *
  */
-class LotusGraph
+class LotusStyleManager
 {
 public:
 	friend class LotusParser;
 
 	//! constructor
-	LotusGraph(LotusParser &parser);
+	LotusStyleManager(LotusParser &parser);
 	//! destructor
-	~LotusGraph();
+	~LotusStyleManager();
 	//! clean internal state
 	void cleanState();
-	//! sets the listener
-	void setListener(WKSContentListenerPtr &listen)
-	{
-		m_listener = listen;
-	}
 protected:
 	//! return true if the pos is in the file, update the file size if need
 	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
 
-	//! send the graphics corresponding to a sheetId
-	void sendGraphics(int sheetId);
-
-
 	//
 	// low level
 	//
 
-	// ////////////////////// zone //////////////////////////////
+	// ////////////////////// style //////////////////////////////
 
-	//! reads a begin graphic zone
-	bool readZoneBegin(long endPos);
-	//! reads a graphic zone
-	bool readZoneData(long endPos, int type);
-	//! reads a graphic textbox data
-	bool readTextboxData(long endPos);
-	//! reads a picture definition
-	bool readPictureDefinition(long endPos);
-	//! reads a picture data
-	bool readPictureData(long endPos);
+	//! reads a color style
+	bool readColorStyle(long endPos);
+	//! reads a line style
+	bool readLineStyle(long endPos);
+	//! reads a graphic style
+	bool readGraphicStyle(long endPos);
 
 private:
-	LotusGraph(LotusGraph const &orig);
-	LotusGraph &operator=(LotusGraph const &orig);
+	LotusStyleManager(LotusStyleManager const &orig);
+	LotusStyleManager &operator=(LotusStyleManager const &orig);
 	//! returns the debug file
 	libwps::DebugFile &ascii()
 	{
@@ -97,16 +82,13 @@ private:
 	}
 	/** the input */
 	RVNGInputStreamPtr m_input;
-	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the main parser
 	LotusParser &m_mainParser;
-	//! the style manager
-	shared_ptr<LotusStyleManager> m_styleManager;
 	//! the internal state
-	shared_ptr<LotusGraphInternal::State> m_state;
+	shared_ptr<LotusStyleManagerInternal::State> m_state;
 	//! the ascii file
 	libwps::DebugFile &m_asciiFile;
 };
 
-#endif /* LOTUS_GRAPH_H */
+#endif /* LOTUS_STYLE_MANAGER_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

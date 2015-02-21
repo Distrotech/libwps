@@ -36,101 +36,16 @@
 #include "WPSEntry.h"
 #include "WPSFont.h"
 #include "WPSGraphicShape.h"
+#include "WPSGraphicStyle.h"
 #include "WPSPosition.h"
 
 #include "Lotus.h"
+#include "LotusStyleManager.h"
 
 #include "LotusGraph.h"
 
 namespace LotusGraphInternal
 {
-//! small struct used to defined color style
-struct ColorStyle
-{
-	//! constructor
-	ColorStyle() : m_patternId(0), m_patternPercent(0), m_extra("")
-	{
-		m_colors[0]=m_colors[1]=m_colors[3]=WPSColor::white();
-		m_colors[2]=WPSColor::black();
-	}
-	//! operator<<
-	friend std::ostream &operator<<(std::ostream &o, ColorStyle const &color)
-	{
-		for (int i=0; i<4; ++i)
-		{
-			if ((i==2 && color.m_colors[i].isBlack()) || (i!=2 && color.m_colors[i].isWhite()))
-				continue;
-			static char const *(wh[])= {"unkn0", "unkn1", "line", "surf" };
-			o << "color[" << wh[i] << "]=" << color.m_colors[i] << ",";
-		}
-		if (color.m_patternId) // 0: none, 2:full
-			o << "id[pattern]=" << color.m_patternId << "[" << color.m_patternPercent*100 << "%],";
-		o << color.m_extra;
-		return o;
-	}
-	//! the color id : unknown0, unknown1, line, surface
-	WPSColor m_colors[4];
-	//! the pattern id
-	int m_patternId;
-	//! float pattern percent
-	float m_patternPercent;
-	//! extra data
-	std::string m_extra;
-};
-
-//! small struct used to defined line style
-struct LineStyle
-{
-	//! constructor
-	LineStyle() : m_width(1), m_dashId(0), m_extra("")
-	{
-	}
-	//! operator<<
-	friend std::ostream &operator<<(std::ostream &o, LineStyle const &line)
-	{
-		if (line.m_width<1 || line.m_width>1)
-			o << "w=" << line.m_width << ",";
-		if (line.m_dashId)
-			o << "id[dash]=" << line.m_dashId << ",";
-		o << line.m_extra;
-		return o;
-	}
-	//! the line width
-	float m_width;
-	//! the dash id
-	int m_dashId;
-	//! extra data
-	std::string m_extra;
-};
-
-//! small struct used to defined graphic style
-struct GraphicStyle
-{
-	//! constructor
-	GraphicStyle() : m_lineId(0), m_extra("")
-	{
-		for (int i=0; i<2; ++i) m_colorsId[i]=0;
-	}
-	//! operator<<
-	friend std::ostream &operator<<(std::ostream &o, GraphicStyle const &graphic)
-	{
-		if (graphic.m_lineId)
-			o << "L" << graphic.m_lineId << ",";
-		if (graphic.m_colorsId[0])
-			o << "C" << graphic.m_colorsId[0] << ",";
-		if (graphic.m_colorsId[1])
-			o << "shadow[color]=C" << graphic.m_colorsId[1] << ",";
-		o << graphic.m_extra;
-		return o;
-	}
-	//! the surface and shadow color id
-	int m_colorsId[2];
-	//! the border line id
-	int m_lineId;
-	//! extra data
-	std::string m_extra;
-};
-
 //! the graphic zone of a LotusGraph
 struct Zone
 {
@@ -271,7 +186,7 @@ bool Zone::getGraphicShape(WPSGraphicShape &shape, WPSPosition &pos) const
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_version(-1), m_actualSheetId(-1), m_idColorStyleMap(), m_idGraphicStyleMap(), m_idLineStyleMap(), m_sheetIdZoneMap(), m_actualZone(0)
+	State() :  m_eof(-1), m_version(-1), m_actualSheetId(-1), m_sheetIdZoneMap(), m_actualZone(0)
 	{
 	}
 	//! returns a color corresponding to an id
@@ -285,12 +200,6 @@ struct State
 	int m_version;
 	//! the actual sheet id
 	int m_actualSheetId;
-	//! a map id to color style
-	std::map<int, ColorStyle> m_idColorStyleMap;
-	//! a map id to graphic style
-	std::map<int, GraphicStyle> m_idGraphicStyleMap;
-	//! a map id to line style
-	std::map<int, LineStyle> m_idLineStyleMap;
 	//! a map sheetid to zone
 	std::multimap<int, shared_ptr<Zone> > m_sheetIdZoneMap;
 	//! a pointer to the actual zone
@@ -368,8 +277,8 @@ bool State::getPatternPercent(int id, float &percent) const
 
 // constructor, destructor
 LotusGraph::LotusGraph(LotusParser &parser) :
-	m_input(parser.getInput()), m_listener(), m_mainParser(parser), m_state(new LotusGraphInternal::State),
-	m_asciiFile(parser.ascii())
+	m_input(parser.getInput()), m_listener(), m_mainParser(parser), m_styleManager(parser.m_styleManager),
+	m_state(new LotusGraphInternal::State),	m_asciiFile(parser.ascii())
 {
 	m_state.reset(new LotusGraphInternal::State);
 }
@@ -405,173 +314,6 @@ bool LotusGraph::checkFilePosition(long pos)
 
 ////////////////////////////////////////////////////////////
 // low level
-
-////////////////////////////////////////////////////////////
-// styles
-////////////////////////////////////////////////////////////
-bool LotusGraph::readLineStyle(long endPos)
-{
-	libwps::DebugStream f;
-
-	long pos = m_input->tell();
-	if (endPos-pos!=8)   // only find in a WK3 mac file
-	{
-		WPS_DEBUG_MSG(("LotusGraph::readLineStyle: the zone size seems bad\n"));
-		ascii().addPos(pos-6);
-		ascii().addNote("Entries(LineStyle):###");
-		return true;
-	}
-	LotusGraphInternal::LineStyle line;
-	int id=(int) libwps::readU8(m_input);
-	int val=(int) libwps::readU8(m_input); // always 10?
-	if (val!=0x10)
-		f << "fl=" << std::hex << val << std::dec << ",";
-	for (int i=0; i<5; ++i)
-	{
-		val=(int) libwps::readU8(m_input);
-		if (val) f << "f" << i << "=" << val << ",";
-	}
-	line.m_dashId=(int) libwps::readU8(m_input);
-	line.m_width=(float) libwps::readU8(m_input);
-	line.m_extra=f.str();
-
-	f.str("");
-	f << "Entries(LineStyle):L" << id << "," << line;
-	if (m_state->m_idLineStyleMap.find(id)!=m_state->m_idLineStyleMap.end())
-	{
-		WPS_DEBUG_MSG(("LotusGraph::readLineStyle: the line style %d already exists\n", id));
-		f << "###";
-	}
-	else
-		m_state->m_idLineStyleMap[id]=line;
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
-	return true;
-}
-
-bool LotusGraph::readColorStyle(long endPos)
-{
-	libwps::DebugStream f;
-
-	long pos = m_input->tell();
-	int colorSz=1;
-	if (endPos-pos==7)
-		colorSz=1;
-	else if (endPos-pos==11)
-		colorSz=2;
-	else
-	{
-		WPS_DEBUG_MSG(("LotusGraph::readColorStyle: the zone size seems bad\n"));
-		ascii().addPos(pos-6);
-		ascii().addNote("Entries(ColorStyle):###");
-		return true;
-	}
-	int id=(int) libwps::readU8(m_input);
-	int val=(int) libwps::readU8(m_input); // always 20?
-	if (val!=0x20)
-		f << "fl=" << std::hex << val << std::dec << ",";
-	LotusGraphInternal::ColorStyle color;
-	for (int i=0; i<4; ++i)
-	{
-		val=(colorSz==1) ? (int) libwps::readU8(m_input) : (int) libwps::readU16(m_input);
-		if (!m_state->getColor(val,color.m_colors[i]))
-		{
-			WPS_DEBUG_MSG(("LotusGraph::readColorStyle: can not read a color\n"));
-			f << "##colId=" << val << ",";
-		}
-	}
-	color.m_patternId=(int) libwps::readU8(m_input);
-	if (color.m_patternId && !m_state->getPatternPercent(color.m_patternId, color.m_patternPercent))
-	{
-		WPS_DEBUG_MSG(("LotusGraph::readColorStyle: can not read a pattern\n"));
-		f << "##patId=" << color.m_patternId << ",";
-	}
-
-	color.m_extra=f.str();
-
-	f.str("");
-	f << "Entries(ColorStyle):C" << id << "," << color;
-	if (m_state->m_idColorStyleMap.find(id)!=m_state->m_idColorStyleMap.end())
-	{
-		WPS_DEBUG_MSG(("LotusGraph::readColorStyle: the color style %d already exists\n", id));
-		f << "###";
-	}
-	else
-		m_state->m_idColorStyleMap[id]=color;
-
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
-	return true;
-}
-
-bool LotusGraph::readGraphicStyle(long endPos)
-{
-	libwps::DebugStream f;
-
-	long pos = m_input->tell();
-	if (endPos-pos!=13)   // only find in a WK3 mac file
-	{
-		WPS_DEBUG_MSG(("LotusGraph::readGraphicStyle: the zone size seems bad\n"));
-		ascii().addPos(pos-6);
-		ascii().addNote("Entries(GraphicStyle):###");
-		return true;
-	}
-	int id=(int) libwps::readU8(m_input);
-	LotusGraphInternal::GraphicStyle style;
-	int val=(int) libwps::readU8(m_input); // always 40?
-	if (val!=0x40)
-		f << "fl=" << std::hex << val << std::dec << ",";
-	for (int i=0; i<4; ++i)
-	{
-		val=(int) libwps::readU8(m_input);
-		int fl=(int) libwps::readU8(m_input);
-		if (!val) continue;
-		if (i==0) f << "unknId=" << val << "[" << std::hex << fl << std::dec << ",";
-		else if (i==1)
-		{
-			if (fl!=0x10) f << "#fl[line]=" << std::hex << fl << std::dec << ",";
-			if (m_state->m_idLineStyleMap.find(val)==m_state->m_idLineStyleMap.end())
-			{
-				WPS_DEBUG_MSG(("LotusGraph::readLineStyle: the line style %d does not exists\n", val));
-				f << "###lineId=" << val << ",";
-			}
-			else
-				style.m_lineId=val;
-		}
-		else
-		{
-			if (fl!=0x20) f << "#fl[color" << i-2 << "]=" << std::hex << fl << std::dec << ",";
-			if (m_state->m_idColorStyleMap.find(val)==m_state->m_idColorStyleMap.end())
-			{
-				WPS_DEBUG_MSG(("LotusGraph::readColorStyle: the color style %d does not exists\n", val));
-				f << "###colorId[" << i-2 << "]=" << val << ",";
-			}
-			else
-				style.m_colorsId[i-2]=val;
-		}
-	}
-	for (int i=0; i<3; ++i)   //f0=f1=0|1|3|4 : a size?, f2=2|3|22
-	{
-		val=(int) libwps::readU8(m_input);
-		if (val)
-			f << "f" << i << "=" << std::hex << val << std::dec << ",";
-	}
-	style.m_extra=f.str();
-	f.str("");
-	f << "Entries(GraphicStyle):G" << id << "," << style;
-
-	if (m_state->m_idGraphicStyleMap.find(id)!=m_state->m_idGraphicStyleMap.end())
-	{
-		WPS_DEBUG_MSG(("LotusGraph::readGraphicStyle: the graphic style %d already exists\n", id));
-		f << "###";
-	}
-	else
-		m_state->m_idGraphicStyleMap[id]=style;
-
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
-	return true;
-}
 
 ////////////////////////////////////////////////////////////
 // zones
@@ -674,13 +416,7 @@ bool LotusGraph::readZoneData(long endPos, int type)
 		{
 			if (fl!=0x10)
 				f << "#line[fl]=" << std::hex << fl << std::dec << ",";
-			if (m_state->m_idLineStyleMap.find(val)==m_state->m_idLineStyleMap.end())
-			{
-				WPS_DEBUG_MSG(("LotusGraph::readZoneData: the line style %d does not exists\n", val));
-				f << "###lineId=" << val << ",";
-			}
-			else
-				zone->m_lineId=val;
+			zone->m_lineId=val;
 		}
 		val=(int) libwps::readU8(m_input); // always 1?
 		if (val!=1)
@@ -720,24 +456,12 @@ bool LotusGraph::readZoneData(long endPos, int type)
 			{
 				if (fl!=0x10)
 					f << "#line[fl]=" << std::hex << fl << std::dec << ",";
-				if (m_state->m_idLineStyleMap.find(val)==m_state->m_idLineStyleMap.end())
-				{
-					WPS_DEBUG_MSG(("LotusGraph::readZoneData: the line style %d does not exists\n", val));
-					f << "###lineId=" << val << ",";
-				}
-				else
-					zone->m_lineId=val;
+				zone->m_lineId=val;
 				continue;
 			}
 			if (fl!=0x20)
 				f << "#surface[fl]=" << std::hex << fl << std::dec << ",";
-			if (m_state->m_idColorStyleMap.find(val)==m_state->m_idColorStyleMap.end())
-			{
-				WPS_DEBUG_MSG(("LotusGraph::readZoneData: the color style %d does not exists\n", val));
-				f << "###colorId=" << val << ",";
-			}
-			else
-				zone->m_surfaceId=val;
+			zone->m_surfaceId=val;
 		}
 		val=(int) libwps::read16(m_input); // always 3?
 		if (val!=3)
@@ -754,13 +478,7 @@ bool LotusGraph::readZoneData(long endPos, int type)
 		if (!val) break;;
 		if (fl!=0x40)
 			f << "#graphic[fl]=" << std::hex << fl << std::dec << ",";
-		if (m_state->m_idGraphicStyleMap.find(val)==m_state->m_idGraphicStyleMap.end())
-		{
-			WPS_DEBUG_MSG(("LotusGraph::readZoneData: the graphic style %d does not exists\n", val));
-			f << "###graphicId=" << val << ",";
-		}
-		else
-			zone->m_graphicId=val;
+		zone->m_graphicId=val;
 		// can be followed by 000000000100 : some way to determine the content ?
 		break;
 	case LotusGraphInternal::Zone::Arc:
@@ -775,13 +493,7 @@ bool LotusGraph::readZoneData(long endPos, int type)
 		{
 			if (fl!=0x10)
 				f << "#line[fl]=" << std::hex << fl << std::dec << ",";
-			if (m_state->m_idLineStyleMap.find(val)==m_state->m_idLineStyleMap.end())
-			{
-				WPS_DEBUG_MSG(("LotusGraph::readZoneData: the line style %d does not exists\n", val));
-				f << "###lineId=" << val << ",";
-			}
-			else
-				zone->m_lineId=val;
+			zone->m_lineId=val;
 		}
 		if (sz<26)
 		{
@@ -945,7 +657,7 @@ void LotusGraph::sendGraphics(int sheetId)
 		WPSPosition pos;
 		if (!zone->getGraphicShape(shape, pos))
 			continue;
-		m_listener->insertPicture(pos, shape, true);
+		m_listener->insertPicture(pos, shape, WPSGraphicStyle());
 	}
 }
 

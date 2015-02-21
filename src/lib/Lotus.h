@@ -38,6 +38,7 @@ struct State;
 
 class LotusGraph;
 class LotusSpreadsheet;
+class LotusStyleManager;
 
 /**
  * This class parses a WK2..WK4 Lotus spreadsheet
@@ -48,6 +49,7 @@ class LotusParser : public WKSParser
 	friend class LotusParserInternal::SubDocument;
 	friend class LotusGraph;
 	friend class LotusSpreadsheet;
+	friend class LotusStyleManager;
 public:
 	//! constructor
 	LotusParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
@@ -119,11 +121,13 @@ protected:
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the internal state
 	shared_ptr<LotusParserInternal::State> m_state;
+	//! the style manager
+	shared_ptr<LotusStyleManager> m_styleManager;
 	//! the graph manager
 	shared_ptr<LotusGraph> m_graphParser;
 	//! the spreadsheet manager
 	shared_ptr<LotusSpreadsheet> m_spreadsheetParser;
 };
 
-#endif /* WPS4_H */
+#endif /* LOTUS_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

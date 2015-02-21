@@ -40,6 +40,7 @@ struct State;
 }
 
 class LotusParser;
+class LotusStyleManager;
 
 /**
  * This class parses Microsoft Works spreadsheet file
@@ -119,11 +120,13 @@ private:
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the main parser
 	LotusParser &m_mainParser;
+	//! the style manager
+	shared_ptr<LotusStyleManager> m_styleManager;
 	//! the internal state
 	shared_ptr<LotusSpreadsheetInternal::State> m_state;
 	//! the ascii file
 	libwps::DebugFile &m_asciiFile;
 };
 
-#endif /* WPS4_H */
+#endif /* LOTUS_SPREAD_SHEET_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

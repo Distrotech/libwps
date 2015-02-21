@@ -122,6 +122,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\LotusStyleManager.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\WKS4.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -254,6 +258,7 @@
     <ClInclude Include="..\..\src\lib\Lotus.h" />
     <ClInclude Include="..\..\src\lib\LotusGraph.h" />
     <ClInclude Include="..\..\src\lib\LotusSpreadsheet.h" />
+    <ClInclude Include="..\..\src\lib\LotusStyleManager.h" />
     <ClInclude Include="..\..\src\lib\WKS4.h" />
     <ClInclude Include="..\..\src\lib\WKS4SubDocument.h" />
     <ClInclude Include="..\..\src\lib\WKSContentListener.h" />

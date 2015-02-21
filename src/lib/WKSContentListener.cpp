@@ -575,9 +575,9 @@ void WKSContentListener::insertComment(WPSSubDocumentPtr &subDocument)
 }
 
 void WKSContentListener::insertTextBox
-(WPSPosition const &pos, WPSSubDocumentPtr subDocument, librevenge::RVNGPropertyList frameExtras)
+(WPSPosition const &pos, WPSSubDocumentPtr subDocument, WPSGraphicStyle const &frameStyle)
 {
-	if (!_openFrame(pos, frameExtras)) return;
+	if (!_openFrame(pos, frameStyle)) return;
 
 	librevenge::RVNGPropertyList propList;
 	m_documentInterface->openTextBox(propList);
@@ -589,9 +589,9 @@ void WKSContentListener::insertTextBox
 
 void WKSContentListener::insertPicture
 (WPSPosition const &pos, const librevenge::RVNGBinaryData &binaryData, std::string type,
- librevenge::RVNGPropertyList frameExtras)
+ WPSGraphicStyle const &style)
 {
-	if (!_openFrame(pos, frameExtras)) return;
+	if (!_openFrame(pos, style)) return;
 
 	librevenge::RVNGPropertyList propList;
 	propList.insert("librevenge:mime-type", type.c_str());
@@ -602,36 +602,37 @@ void WKSContentListener::insertPicture
 }
 
 void WKSContentListener::insertPicture
-(WPSPosition const &pos, const WPSGraphicShape &shape, bool hasSurface, librevenge::RVNGPropertyList styleExtras)
+(WPSPosition const &pos, const WPSGraphicShape &shape, WPSGraphicStyle const &style)
 {
 	librevenge::RVNGPropertyList shapePList;
 	_handleFrameParameters(shapePList, pos);
 	shapePList.remove("svg:x");
 	shapePList.remove("svg:y");
 
-	librevenge::RVNGPropertyList list(styleExtras);
+	librevenge::RVNGPropertyList styleList;
+	style.addTo(styleList, shape.getType()==WPSGraphicShape::Line);
 	float factor=pos.getScaleFactor(pos.unit(), librevenge::RVNG_POINT);
 	Vec2f decal = factor*pos.origin();
-	switch (shape.addTo(decal, hasSurface, shapePList))
+	switch (shape.addTo(decal, style.hasSurface(), shapePList))
 	{
 	case WPSGraphicShape::C_Ellipse:
-		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->defineGraphicStyle(styleList);
 		m_documentInterface->drawEllipse(shapePList);
 		break;
 	case WPSGraphicShape::C_Path:
-		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->defineGraphicStyle(styleList);
 		m_documentInterface->drawPath(shapePList);
 		break;
 	case WPSGraphicShape::C_Polyline:
-		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->defineGraphicStyle(styleList);
 		m_documentInterface->drawPolyline(shapePList);
 		break;
 	case WPSGraphicShape::C_Polygon:
-		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->defineGraphicStyle(styleList);
 		m_documentInterface->drawPolygon(shapePList);
 		break;
 	case WPSGraphicShape::C_Rectangle:
-		m_documentInterface->defineGraphicStyle(list);
+		m_documentInterface->defineGraphicStyle(styleList);
 		m_documentInterface->drawRectangle(shapePList);
 		break;
 	case WPSGraphicShape::C_Bad:
@@ -645,7 +646,7 @@ void WKSContentListener::insertPicture
 ///////////////////
 // frame
 ///////////////////
-bool WKSContentListener::_openFrame(WPSPosition const &pos, librevenge::RVNGPropertyList extras)
+bool WKSContentListener::_openFrame(WPSPosition const &pos, WPSGraphicStyle const &style)
 {
 	if (m_ps->m_isFrameOpened)
 	{
@@ -675,7 +676,10 @@ bool WKSContentListener::_openFrame(WPSPosition const &pos, librevenge::RVNGProp
 		return false;
 	}
 
-	librevenge::RVNGPropertyList propList(extras);
+	librevenge::RVNGPropertyList propList;
+	style.addFrameTo(propList);
+	if (!propList["draw:fill"])
+		propList.insert("draw:fill","none");
 	_handleFrameParameters(propList, pos);
 	m_documentInterface->openFrame(propList);
 

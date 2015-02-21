@@ -107,6 +107,10 @@ SOURCE=..\..\src\lib\LotusSpreadsheet.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\LotusStyleManager.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WKS4.cpp
 # End Source File
 # Begin Source File
@@ -256,6 +260,10 @@ SOURCE=..\..\src\lib\LotusGraph.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\LotusSpreadsheet.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\LotusStyleManager.h
 # End Source File
 # Begin Source File
 

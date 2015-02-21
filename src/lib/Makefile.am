@@ -26,6 +26,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	LotusGraph.h		\
 	LotusSpreadsheet.cpp	\
 	LotusSpreadsheet.h	\
+	LotusStyleManager.cpp	\
+	LotusStyleManager.h	\
 	WKS4.cpp		\
 	WKS4.h			\
 	WKS4Spreadsheet.cpp	\

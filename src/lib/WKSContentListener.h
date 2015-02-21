@@ -32,11 +32,13 @@
 #include "libwps_internal.h"
 
 #include "WPSEntry.h"
+#include "WPSGraphicStyle.h"
 
 #include "WPSListener.h"
 
 class WPSCellFormat;
 class WPSGraphicShape;
+class WPSGraphicStyle;
 class WPSList;
 class WPSPageSpan;
 struct WPSParagraph;
@@ -182,14 +184,12 @@ public:
 	void insertComment(WPSSubDocumentPtr &subDocument);
 	/** adds a picture in given position */
 	void insertPicture(WPSPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
-	                   std::string type="image/pict",
-	                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+	                   std::string type="image/pict", WPSGraphicStyle const &style=WPSGraphicStyle::emptyStyle());
 	/** adds a picture in given position */
-	void insertPicture(WPSPosition const &pos, WPSGraphicShape const &shape, bool hasSurface,
-	                   librevenge::RVNGPropertyList styleExtras=librevenge::RVNGPropertyList());
+	void insertPicture(WPSPosition const &pos, WPSGraphicShape const &shape, WPSGraphicStyle const &style);
 	/** adds a textbox in given position */
 	void insertTextBox(WPSPosition const &pos, WPSSubDocumentPtr subDocument,
-	                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+					   WPSGraphicStyle const &frameStyle=WPSGraphicStyle::emptyStyle());
 
 	// ------- sheet -----------------
 	/** open a sheet*/
@@ -213,7 +213,7 @@ protected:
 	void _closePageSpan();
 
 	void _handleFrameParameters(librevenge::RVNGPropertyList &propList, WPSPosition const &pos);
-	bool _openFrame(WPSPosition const &pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+	bool _openFrame(WPSPosition const &pos, WPSGraphicStyle const &style);
 	void _closeFrame();
 
 	void _startSubDocument();

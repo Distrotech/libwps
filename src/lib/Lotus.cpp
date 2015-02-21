@@ -41,6 +41,7 @@
 
 #include "LotusGraph.h"
 #include "LotusSpreadsheet.h"
+#include "LotusStyleManager.h"
 
 #include "Lotus.h"
 
@@ -166,10 +167,11 @@ struct State
 // constructor, destructor
 LotusParser::LotusParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
                          libwps_tools_win::Font::Type encoding) :
-	WKSParser(input, header), m_listener(), m_state(), m_graphParser(), m_spreadsheetParser()
+	WKSParser(input, header), m_listener(), m_state(), m_styleManager(), m_graphParser(), m_spreadsheetParser()
 
 {
 	m_state.reset(new LotusParserInternal::State(encoding));
+	m_styleManager.reset(new LotusStyleManager(*this));
 	m_graphParser.reset(new LotusGraph(*this));
 	m_spreadsheetParser.reset(new LotusSpreadsheet(*this));
 }
@@ -370,6 +372,7 @@ bool LotusParser::readZones()
 {
 	RVNGInputStreamPtr input = getInput();
 	// reset data
+	m_styleManager->cleanState();
 	m_graphParser->cleanState();
 	m_spreadsheetParser->cleanState();
 
@@ -1017,13 +1020,13 @@ bool LotusParser::readDataZone()
 	// style
 	//
 	case 0xfaa:
-		isParsed=m_graphParser->readLineStyle(endPos);
+		isParsed=m_styleManager->readLineStyle(endPos);
 		break;
 	case 0xfb4:
-		isParsed=m_graphParser->readColorStyle(endPos);
+		isParsed=m_styleManager->readColorStyle(endPos);
 		break;
 	case 0xfc8:
-		isParsed=m_graphParser->readGraphicStyle(endPos);
+		isParsed=m_styleManager->readGraphicStyle(endPos);
 		break;
 	case 0xfdc:
 		isParsed=readFontName(endPos);
