@@ -194,7 +194,7 @@ libwps_tools_win::Font::Type WPS4Parser::getOEMFontType() const
 	return m_state->m_OEMFontType;
 }
 
-bool WPS4Parser::getColor(int id, uint32_t &color) const
+bool WPS4Parser::getColor(int id, WPSColor &color) const
 {
 	if (m_state->m_isDosFile)
 	{
@@ -208,7 +208,7 @@ bool WPS4Parser::getColor(int id, uint32_t &color) const
 			WPS_DEBUG_MSG(("WPS4Parser::getColor(): unknown Dos color id: %d\n",id));
 			return false;
 		}
-		color=colorDosMap[id];
+		color=WPSColor(colorDosMap[id]);
 		return true;
 	}
 	static const uint32_t colorMap[]=
@@ -226,7 +226,7 @@ bool WPS4Parser::getColor(int id, uint32_t &color) const
 		WPS_DEBUG_MSG(("WPS4Parser::getColor(): unknown color id: %d\n",id));
 		return false;
 	}
-	color = colorMap[id];
+	color = WPSColor(colorMap[id]);
 	return true;
 }
 
@@ -1012,9 +1012,9 @@ bool WPS4Parser::readDocWindowsInfo(WPSEntry const &entry)
 	if (dim[0] || dim[1])
 		f << "pageBorderDist=" << dim[1]/1440. << "x" << dim[0]/1440. << ",";
 	long val = libwps::readU8(input);
-	uint32_t color;
+	WPSColor color;
 	if (val && getColor(int(val), color))
-		f << "pageBorderColor=" << std::hex << color << std::dec << ",";
+		f << "pageBorderColor=" << color << ",";
 	else if (val)
 		f << "#pageBorderColor=" << std::hex << val << std::dec << ",";
 	val = libwps::readU8(input);

@@ -155,8 +155,8 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 			o << pp.m_tabs[i] << ",";
 		o << "),";
 	}
-	if (pp.m_backgroundColor != 0xFFFFFF)
-		o << "backgroundColor=" << std::hex << pp.m_backgroundColor << std::dec << ",";
+	if (!pp.m_backgroundColor.isWhite())
+		o << "backgroundColor=" << pp.m_backgroundColor << ",";
 	if (pp.m_listLevelIndex >= 1)
 		o << pp.m_listLevel << ":" << pp.m_listLevelIndex <<",";
 
@@ -205,13 +205,8 @@ void WPSParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) c
 		propList.insert("fo:margin-left", m_listLevelIndex >= 1 ? m_listLevel.m_labelIndent : m_margins[1]);
 		propList.insert("fo:text-indent", m_margins[0]);
 		propList.insert("fo:margin-right", m_margins[2]);
-		if (m_backgroundColor !=  0xFFFFFF)
-		{
-			std::stringstream stream;
-			stream << "#" << std::hex << std::setfill('0') << std::setw(6)
-			       << (m_backgroundColor&0xFFFFFF);
-			propList.insert("fo:background-color", stream.str().c_str());
-		}
+		if (!m_backgroundColor.isWhite())
+			propList.insert("fo:background-color", m_backgroundColor.str().c_str());
 		if (m_border && m_borderStyle.m_style != WPSBorder::None)
 		{
 			int border = m_border;

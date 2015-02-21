@@ -50,18 +50,18 @@ struct ColorStyle
 	//! constructor
 	ColorStyle() : m_patternId(0), m_patternPercent(0), m_extra("")
 	{
-		m_colorsId[0]=m_colorsId[1]=m_colorsId[3]=0xffffff;
-		m_colorsId[2]=0;
+		m_colors[0]=m_colors[1]=m_colors[3]=WPSColor::white();
+		m_colors[2]=WPSColor::black();
 	}
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, ColorStyle const &color)
 	{
 		for (int i=0; i<4; ++i)
 		{
-			if ((i==2 && color.m_colorsId[i]==0) || (i!=2 && color.m_colorsId[i]==0xffffff))
+			if ((i==2 && color.m_colors[i].isBlack()) || (i!=2 && color.m_colors[i].isWhite()))
 				continue;
 			static char const *(wh[])= {"unkn0", "unkn1", "line", "surf" };
-			o << "color[" << wh[i] << "]=" << std::hex << color.m_colorsId[i] << std::dec << ",";
+			o << "color[" << wh[i] << "]=" << color.m_colors[i] << ",";
 		}
 		if (color.m_patternId) // 0: none, 2:full
 			o << "id[pattern]=" << color.m_patternId << "[" << color.m_patternPercent*100 << "%],";
@@ -69,7 +69,7 @@ struct ColorStyle
 		return o;
 	}
 	//! the color id : unknown0, unknown1, line, surface
-	uint32_t m_colorsId[4];
+	WPSColor m_colors[4];
 	//! the pattern id
 	int m_patternId;
 	//! float pattern percent
@@ -275,7 +275,7 @@ struct State
 	{
 	}
 	//! returns a color corresponding to an id
-	bool getColor(int id, uint32_t &color) const;
+	bool getColor(int id, WPSColor &color) const;
 	//! returns the pattern percent corresponding to a pattern id
 	bool getPatternPercent(int id, float &percent) const;
 
@@ -297,7 +297,7 @@ struct State
 	shared_ptr<Zone> m_actualZone;
 };
 
-bool State::getColor(int id, uint32_t &color) const
+bool State::getColor(int id, WPSColor &color) const
 {
 	if (id<0||id>=256)
 	{
@@ -339,7 +339,7 @@ bool State::getColor(int id, uint32_t &color) const
 		0x996666, 0x993333, 0x999966, 0x666633, 0x66cc33, 0x009933, 0x669966, 0x66cc99,
 		0x669999, 0x666666, 0x666699, 0x333366, 0x996699, 0x663333, 0x663366, 0x000000
 	};
-	color=colorMap[id];
+	color=WPSColor(colorMap[id]);
 	return true;
 }
 
@@ -474,7 +474,7 @@ bool LotusGraph::readColorStyle(long endPos)
 	for (int i=0; i<4; ++i)
 	{
 		val=(colorSz==1) ? (int) libwps::readU8(m_input) : (int) libwps::readU16(m_input);
-		if (!m_state->getColor(val,color.m_colorsId[i]))
+		if (!m_state->getColor(val,color.m_colors[i]))
 		{
 			WPS_DEBUG_MSG(("LotusGraph::readColorStyle: can not read a color\n"));
 			f << "##colId=" << val << ",";

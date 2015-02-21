@@ -80,10 +80,10 @@ struct FileData
 		return !hasStr() && (m_type & 0x30) != 0;
 	}
 	//! returns a rgb color by converting the integer value field
-	uint32_t getRGBColor() const
+	WPSColor getRGBColor() const
 	{
 		uint32_t col = (uint32_t)(m_value&0xFFFFFF);
-		return (((col>>16)&0xFF) |(col&0xFF00)|((col&0xFF)<<16));
+		return WPSColor(col&0xFF, (col>>8)&0xFF, (col>>16)&0xFF);
 	}
 	//! returns the border, type style using the integer value field
 	bool getBorderStyles(WPSBorder::Style &style, WPSBorder::Type &type, std::string &mess) const;

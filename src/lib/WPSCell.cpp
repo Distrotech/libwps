@@ -214,12 +214,8 @@ void WPSCellFormat::addTo(librevenge::RVNGPropertyList &propList) const
 			break;
 		}
 	}
-	if (backgroundColor() != 0xFFFFFF)
-	{
-		char color[20];
-		sprintf(color,"#%06x",backgroundColor());
-		propList.insert("fo:background-color", color);
-	}
+	if (!backgroundColor().isWhite())
+		propList.insert("fo:background-color", backgroundColor().str().c_str());
 	if (m_protected)
 		propList.insert("style:cell-protect","protected");
 }
@@ -359,8 +355,8 @@ int WPSCellFormat::compare(WPSCellFormat const &cell, bool onlyNumbering) const
 	if (diff) return diff;
 	diff = int(m_vAlign) - int(cell.m_vAlign);
 	if (diff) return diff;
-	diff = int(m_backgroundColor) - int(cell.m_backgroundColor);
-	if (diff) return diff;
+	if (m_backgroundColor<cell.m_backgroundColor) return 1;
+	if (m_backgroundColor>cell.m_backgroundColor) return -1;
 	if (m_protected !=cell.m_protected) return m_protected ? 1 : -1;
 	diff = int(m_bordersList.size()) - int(cell.m_bordersList.size());
 	if (diff) return diff;
@@ -469,12 +465,8 @@ std::ostream &operator<<(std::ostream &o, WPSCellFormat const &cell)
 
 	if (cell.m_digits>-1000) o << "digits=" << cell.m_digits << ",";
 	if (cell.m_protected) o << "protected,";
-	if (cell.m_backgroundColor != 0xFFFFFF)
-	{
-		std::ios::fmtflags oldflags = o.setf(std::ios::hex, std::ios::basefield);
+	if (!cell.m_backgroundColor.isWhite())
 		o << "backColor=" << cell.m_backgroundColor << ",";
-		o.setf(oldflags, std::ios::basefield);
-	}
 	for (size_t i = 0; i < cell.m_bordersList.size(); i++)
 	{
 		if (cell.m_bordersList[i].m_style == WPSBorder::None)

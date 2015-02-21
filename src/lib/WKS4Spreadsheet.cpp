@@ -842,12 +842,12 @@ bool WKS4Spreadsheet::readStyle()
 	// the color
 	//
 
-	uint32_t frontColor=0;
+	WPSColor frontColor=WPSColor::black();
 	int colorId=(fl[4]>>5)&0xF;
 	if (colorId && m_mainParser.getColor(colorId,frontColor))   // primary color
 		f << "primColor=" << std::hex << frontColor << std::dec << ",";
 
-	uint32_t backColor=0xFFFFFF;
+	WPSColor backColor=WPSColor::white();
 	colorId=(fl[4]>>9)&0xF;
 	if (colorId && m_mainParser.getColor(colorId,backColor))   // secondary color
 		f << "secColor=" << std::hex << backColor << std::dec << ",";
@@ -859,16 +859,7 @@ bool WKS4Spreadsheet::readStyle()
 		static float const patternPercent[]= {0, 1.f, 0.5f, 0.25f, 0.2f, 0.2f, 0.2f, 0.5f, 0.5f, 0.5f, 0.5f, 0.8f, 0.2f, 0.8f, 0.2f};
 		float percent=patternPercent[pat];
 		f << "patPercent=" << percent << ",";
-		uint32_t fCol = 0;
-		int decal = 0;
-		for (int i = 0; i < 3; i++)
-		{
-			uint32_t col = uint32_t(percent*float((frontColor>>decal)&0xFF)+
-			                        (1.0f-percent)*float((backColor>>decal)&0xFF));
-			fCol = uint32_t(fCol | (col<<decal));
-			decal+=8;
-		}
-		style.setBackgroundColor(fCol);
+		style.setBackgroundColor(WPSColor::barycenter(percent,frontColor, 1.0f-percent, backColor));
 	}
 	fl[4]&=0xE010;
 
@@ -1233,7 +1224,7 @@ bool WKS4Spreadsheet::readDOSCellExtraProperty()
 			values[3]&=0xC7;
 		}
 	}
-	uint32_t color;
+	WPSColor color;
 	if ((values[6]&0xE0) && m_mainParser.getColor(values[6]>>5,color))
 	{
 		style.m_font.m_color=color;

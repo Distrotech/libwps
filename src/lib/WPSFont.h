@@ -38,7 +38,7 @@ class WPSFont
 {
 public:
 	//! constructor
-	WPSFont() : m_name(""), m_size(0), m_attributes(0), m_color(0), m_languageId(-1), m_extra("") {}
+	WPSFont() : m_name(""), m_size(0), m_attributes(0), m_color(WPSColor::black()), m_languageId(-1), m_extra("") {}
 	//! returns the default font ( Courier 12pt)
 	static WPSFont getDefault()
 	{
@@ -76,7 +76,7 @@ public:
 	//! the font attributes defined as a set of bits
 	uint32_t m_attributes;
 	//! the font color
-	uint32_t m_color;
+	WPSColor m_color;
 	//! the language (simplified locale name id) if known
 	int m_languageId;
 

@@ -143,7 +143,7 @@ struct Font : public WPSFont
 {
 	//! constructor with file's version to define the default encoding */
 	Font(libwps_tools_win::Font::Type type) : WPSFont(), m_type(type),
-		m_backColor(0xFFFFFF), m_special(false), m_dlinkId(-1)
+		m_backColor(WPSColor::white()), m_special(false), m_dlinkId(-1)
 	{
 	}
 	//! returns a default font (Courier12) with file's version to define the default encoding */
@@ -164,7 +164,7 @@ struct Font : public WPSFont
 	//! the font encoding type
 	libwps_tools_win::Font::Type m_type;
 	//! background  color index
-	uint32_t m_backColor;
+	WPSColor m_backColor;
 	//! a flag to know if we have a special field (a note), ...
 	bool m_special;
 	//! a id to retrieve a file name ( dos )
@@ -184,7 +184,7 @@ std::ostream &operator<<(std::ostream &o, Font const &ft)
 			o << "spec,";
 	}
 
-	if (ft.m_backColor != 0xFFFFFF)
+	if (!ft.m_backColor.isWhite())
 		o << "bgCol=" << ft.m_backColor << ",";
 	return o;
 }
@@ -1471,7 +1471,7 @@ bool WPS4Text::readFont(long endPos, int &id, std::string &mess)
 		}
 		if (setColor)
 		{
-			uint32_t color;
+			WPSColor color;
 			if (mainParser().getColor(bkColor, color))
 				font.m_backColor = color;
 			if (mainParser().getColor(ftColor, color))
@@ -1724,7 +1724,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			int high = (arg>>4);
 			if (version() < 3)
 			{
-				uint32_t color;
+				WPSColor color;
 				if (high && mainParser().getColor(high, color))
 					pp.m_borderStyle.m_color = color;
 				else if (high)
@@ -1793,7 +1793,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				break;
 			}
 			int colorId = libwps::readU8(m_input);
-			uint32_t color;
+			WPSColor color;
 			if (mainParser().getColor(colorId, color))
 				pp.m_borderStyle.m_color = color;
 			else
@@ -1844,13 +1844,13 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			case 0x1b:
 			{
 				if (arg==0) break;
-				uint32_t color;
+				WPSColor color;
 				if (mainParser().getColor(arg>>4, color))
-					f << "backPatternBackColor=" << std::hex << color << std::dec << ";";
+					f << "backPatternBackColor=" << color << ";";
 				else
 					f << "#backPatternBackColor=" << (arg>>4) << ",";
 				if (mainParser().getColor(arg&0xf, color))
-					f << "backPatternFrontColor=" << std::hex << color << std::dec << ";";
+					f << "backPatternFrontColor=" << color << ";";
 				else
 					f << "#backPatternFrontColor=" << (arg&0xf) << ",";
 				break;

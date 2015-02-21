@@ -132,7 +132,7 @@ struct Frame
 	//! constructor
 	Frame() : m_parsed(false), m_type(UNKNOWN), m_pos(),
 		m_idStrs(-1), m_idObject(-1), m_idTable(-1), m_idOle(-1), m_columns(1), m_idBorder(),
-		m_backgroundColor(0xFFFFFF), m_error("")
+		m_backgroundColor(WPSColor::white()), m_error("")
 	{
 		m_pos.setRelativePosition(WPSPosition::Page);
 		m_pos.setPage(1);
@@ -164,7 +164,7 @@ struct Frame
 	//! the border: an entry to some complex border (if sets)
 	WPSEntry m_idBorder;
 	//! the border's color
-	uint32_t m_backgroundColor;
+	WPSColor m_backgroundColor;
 	//! a string used to store the parsing errors
 	std::string m_error;
 };
@@ -215,8 +215,8 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
 	if (ft.m_columns != 1) o << ft.m_columns << "columns,";
 	if (ft.m_idBorder.valid())
 		o << "border='" << ft.m_idBorder.name() << "':" << ft.m_idBorder.id() << ",";
-	if (ft.m_backgroundColor != 0xFFFFFF)
-		o << "backColor=" << std::hex << ft.m_backgroundColor << std::dec << ",";
+	if (!ft.m_backgroundColor.isWhite())
+		o << "backColor=" << ft.m_backgroundColor << ",";
 
 	if (!ft.m_error.empty()) o << "errors=(" << ft.m_error << ")";
 	return o;
@@ -727,12 +727,8 @@ void WPS8Parser::sendPageFrames()
 		else if (frame.m_type == Frame::Text)
 		{
 			librevenge::RVNGPropertyList frameExtras;
-			if (frame.m_backgroundColor != 0xFFFFFF)
-			{
-				char color[20];
-				sprintf(color,"#%06x",frame.m_backgroundColor);
-				frameExtras.insert("fo:background-color", color);
-			}
+			if (!frame.m_backgroundColor.isWhite())
+				frameExtras.insert("fo:background-color", frame.m_backgroundColor.str().c_str());
 			sendTextBox(pos, frame.m_idStrs, frameExtras);
 		}
 		else if (frame.m_type != Frame::Header && frame.m_type != Frame::Footer)

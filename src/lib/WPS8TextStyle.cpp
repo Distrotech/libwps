@@ -679,7 +679,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 	if (mainData.m_value) f << "unk=" << mainData.m_value << ",";
 
 	WPSParagraph para;
-	uint32_t paraColor[] = { 0, 0xFFFFFF };
+	WPSColor paraColor[] = { WPSColor::black(), WPSColor::white() };
 	for (size_t c = 0; c < mainData.m_recursData.size(); c++)
 	{
 		WPS8Struct::FileData const &data = mainData.m_recursData[c];
@@ -893,16 +893,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 				percent = float(data.m_value)*0.1f; // gray motif
 			else
 				f << "backMotif=" << data.m_value << ",";
-			uint32_t fCol = 0;
-			int decal = 0;
-			for (int i = 0; i < 3; i++)
-			{
-				uint32_t col = uint32_t(percent*float((paraColor[0]>>decal)&0xFF)+
-				                        (1.0f-percent)*float((paraColor[1]>>decal)&0xFF));
-				fCol = uint32_t(fCol | (col<<decal));
-				decal+=8;
-			}
-			para.m_backgroundColor = fCol;
+			para.m_backgroundColor=WPSColor::barycenter(percent,paraColor[0],1.f-percent,paraColor[1]);
 			break;
 		}
 		case 0x2a: // exists with f29(1d) in style sheet, find 0|1|3

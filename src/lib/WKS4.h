@@ -74,7 +74,7 @@ protected:
 	//
 
 	//! returns the color corresponding to an id
-	bool getColor(int id, uint32_t &color) const;
+	bool getColor(int id, WPSColor &color) const;
 	//! returns the font corresponding to an id
 	bool getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &type) const;
 

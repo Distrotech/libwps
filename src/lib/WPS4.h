@@ -63,7 +63,7 @@ public:
 	bool checkHeader(WPSHeader *header, bool strict=false);
 protected:
 	//! color
-	bool getColor(int id, uint32_t &color) const;
+	bool getColor(int id, WPSColor &color) const;
 
 	//! sets the file size ( filled by WPS4Text )
 	void setSizeFile(long sz);

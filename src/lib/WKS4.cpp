@@ -117,7 +117,7 @@ struct State
 	{
 	}
 	//! returns a color corresponding to an id
-	bool getColor(int id, uint32_t &color) const;
+	bool getColor(int id, WPSColor &color) const;
 	//! return the default font style
 	libwps_tools_win::Font::Type getDefaultFontType() const
 	{
@@ -161,7 +161,7 @@ struct State
 	std::string m_footerString;
 };
 
-bool State::getColor(int id, uint32_t &color) const
+bool State::getColor(int id, WPSColor &color) const
 {
 	if (m_version<=2)
 	{
@@ -175,7 +175,7 @@ bool State::getColor(int id, uint32_t &color) const
 			WPS_DEBUG_MSG(("WKS4ParserInternal::State::getColor(): unknown Dos color id: %d\n",id));
 			return false;
 		}
-		color=colorDosMap[id];
+		color=WPSColor(colorDosMap[id]);
 		return true;
 	}
 	static const uint32_t colorMap[]=
@@ -193,7 +193,7 @@ bool State::getColor(int id, uint32_t &color) const
 		WPS_DEBUG_MSG(("WKS4ParserInternal::State::getColor(): unknown color id: %d\n",id));
 		return false;
 	}
-	color = colorMap[id];
+	color = WPSColor(colorMap[id]);
 	return true;
 }
 
@@ -239,7 +239,7 @@ libwps_tools_win::Font::Type WKS4Parser::getDefaultFontType() const
 //////////////////////////////////////////////////////////////////////
 // interface with WKS4Spreadsheet
 //////////////////////////////////////////////////////////////////////
-bool WKS4Parser::getColor(int id, uint32_t &color) const
+bool WKS4Parser::getColor(int id, WPSColor &color) const
 {
 	return m_state->getColor(id, color);
 }

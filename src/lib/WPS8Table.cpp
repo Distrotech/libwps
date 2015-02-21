@@ -499,7 +499,7 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 			cell->m_id = int(actualCell);
 
 			libwps::DebugStream f2;
-			uint32_t cellColor[] = { 0, 0xFFFFFF };
+			WPSColor cellColor[] = { WPSColor::black(), WPSColor::white() };
 
 			for (size_t c = 0; c < nChild; c++)
 			{
@@ -563,16 +563,7 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 						percent = float(dt.m_value)*0.1f; // gray motif
 					else
 						f2 << "backMotif=" << dt.m_value << ",";
-					uint32_t fCol = 0;
-					int decal = 0;
-					for (int i = 0; i < 3; i++)
-					{
-						uint32_t col = uint32_t(percent*float((cellColor[0]>>decal)&0xFF)+
-						                        (1.0f-percent)*float((cellColor[1]>>decal)&0xFF));
-						fCol = uint32_t(fCol | (col<<decal));
-						decal+=8;
-					}
-					cell->setBackgroundColor(fCol);
+					cell->setBackgroundColor(WPSColor::barycenter(percent,cellColor[0],1.f-percent,cellColor[1]));
 					break;
 				}
 				// the border color

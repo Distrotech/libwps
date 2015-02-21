@@ -56,7 +56,7 @@ std::ostream &operator<<(std::ostream &o, WPSFont const &ft)
 	if (flags&WPS_SUBSCRIPT_BIT) o << "subS:";
 	if (flags) o << ",";
 
-	if (ft.m_color) o << "col=" << std::hex << ft.m_color << std::dec << ",";
+	if (!ft.m_color.isBlack()) o << "col=" << ft.m_color << ",";
 	if (ft.m_extra.length()) o << "extra=" << ft.m_extra << ",";
 	return o;
 }
@@ -135,9 +135,7 @@ void WPSFont::addTo(librevenge::RVNGPropertyList &propList) const
 	if (m_size>0)
 		propList.insert("fo:font-size", fontSizeChange*m_size, librevenge::RVNG_POINT);
 
-	librevenge::RVNGString color;
-	color.sprintf("#%06x", m_color);
-	propList.insert("fo:color", color);
+	propList.insert("fo:color", m_color.str().c_str());
 
 	if (m_languageId < 0)
 		libwps_tools_win::Language::addLocaleName(0x409, propList);

@@ -376,6 +376,45 @@ std::string numberingTypeToString(NumberingType type)
 }
 
 ////////////////////////////////////////////////////////////
+// color
+////////////////////////////////////////////////////////////
+
+// color function
+WPSColor WPSColor::barycenter(float alpha, WPSColor const &colA,
+                              float beta, WPSColor const &colB)
+{
+	uint32_t res = 0;
+	for (int i=0, depl=0; i<4; i++, depl+=8)
+	{
+		float val=alpha*float((colA.m_value>>depl)&0xFF)+beta*float((colB.m_value>>depl)&0xFF);
+		if (val < 0) val=0;
+		if (val > 256) val=256;
+		unsigned char comp= (unsigned char)val;
+		res+=uint32_t(comp<<depl);
+	}
+	return res;
+}
+
+std::ostream &operator<< (std::ostream &o, WPSColor const &c)
+{
+	const std::streamsize width = o.width();
+	const char fill = o.fill();
+	o << "#" << std::hex << std::setfill('0') << std::setw(6)
+	  << (c.m_value&0xFFFFFF)
+	  // std::ios::width() takes/returns std::streamsize (long), but
+	  // std::setw() takes int. Go figure...
+	  << std::dec << std::setfill(fill) << std::setw(static_cast<int>(width));
+	return o;
+}
+
+std::string WPSColor::str() const
+{
+	std::stringstream stream;
+	stream << *this;
+	return stream.str();
+}
+
+////////////////////////////////////////////////////////////
 // border
 ////////////////////////////////////////////////////////////
 
@@ -386,7 +425,14 @@ int WPSBorder::compare(WPSBorder const &orig) const
 	diff = m_width-orig.m_width;
 	if (diff) return diff;
 	if (m_color < orig.m_color) return -1;
-	if (m_color > orig.m_color) return -1;
+	if (m_color > orig.m_color) return 1;
+	if (m_widthsList.size() != orig.m_widthsList.size())
+		return m_widthsList.size() < orig.m_widthsList.size() ? -1 : 1;
+	for (size_t i=0; i<m_widthsList.size(); ++i)
+	{
+		if (m_widthsList[i]<orig.m_widthsList[i]) return -1;
+		if (m_widthsList[i]>orig.m_widthsList[i]) return 1;
+	}
 	return 0;
 }
 
@@ -424,8 +470,7 @@ bool WPSBorder::addTo(librevenge::RVNGPropertyList &propList, std::string const 
 			break;
 		}
 	}
-	stream << " #" << std::hex << std::setfill('0') << std::setw(6)
-	       << (m_color&0xFFFFFF);
+	stream << " " << m_color.str();
 	field << "fo:border";
 	if (which.length())
 		field << "-" << which;
@@ -512,7 +557,7 @@ std::ostream &operator<< (std::ostream &o, WPSBorder const &border)
 		break;
 	}
 	if (border.m_width > 1 || border.m_width < 1) o << "w=" << border.m_width << ":";
-	if (border.m_color!=0)
+	if (!border.m_color.isBlack())
 		o << "col=" << std::hex << border.m_color << std::dec << ":";
 	o << ",";
 	size_t numRelWidth=border.m_widthsList.size();

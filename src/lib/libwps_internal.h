@@ -224,6 +224,112 @@ struct WPSColumnProperties
 	uint8_t m_alignment;
 };
 
+//! the class to store a color
+struct WPSColor
+{
+	//! constructor
+	WPSColor(uint32_t argb=0) : m_value(argb)
+	{
+	}
+	//! constructor from color
+	WPSColor(unsigned char r, unsigned char g,  unsigned char b, unsigned char a=255) :
+		m_value(uint32_t((a<<24)+(r<<16)+(g<<8)+b))
+	{
+	}
+	//! operator=
+	WPSColor &operator=(uint32_t argb)
+	{
+		m_value = argb;
+		return *this;
+	}
+	//! return the back color
+	static WPSColor black()
+	{
+		return WPSColor(0,0,0);
+	}
+	//! return the white color
+	static WPSColor white()
+	{
+		return WPSColor(255,255,255);
+	}
+
+	//! return alpha*colA+beta*colB
+	static WPSColor barycenter(float alpha, WPSColor const &colA,
+	                           float beta, WPSColor const &colB);
+	//! return the rgba value
+	uint32_t value() const
+	{
+		return m_value;
+	}
+	//! returns the alpha value
+	unsigned char getAlpha() const
+	{
+		return (unsigned char)((m_value>>24)&0xFF);
+	}
+	//! returns the green value
+	unsigned char getBlue() const
+	{
+		return (unsigned char)(m_value&0xFF);
+	}
+	//! returns the red value
+	unsigned char getRed() const
+	{
+		return (unsigned char)((m_value>>16)&0xFF);
+	}
+	//! returns the green value
+	unsigned char getGreen() const
+	{
+		return (unsigned char)((m_value>>8)&0xFF);
+	}
+	//! return true if the color is black
+	bool isBlack() const
+	{
+		return (m_value&0xFFFFFF)==0;
+	}
+	//! return true if the color is white
+	bool isWhite() const
+	{
+		return (m_value&0xFFFFFF)==0xFFFFFF;
+	}
+	//! operator==
+	bool operator==(WPSColor const &c) const
+	{
+		return (c.m_value&0xFFFFFF)==(m_value&0xFFFFFF);
+	}
+	//! operator!=
+	bool operator!=(WPSColor const &c) const
+	{
+		return !operator==(c);
+	}
+	//! operator<
+	bool operator<(WPSColor const &c) const
+	{
+		return (c.m_value&0xFFFFFF)<(m_value&0xFFFFFF);
+	}
+	//! operator<=
+	bool operator<=(WPSColor const &c) const
+	{
+		return (c.m_value&0xFFFFFF)<=(m_value&0xFFFFFF);
+	}
+	//! operator>
+	bool operator>(WPSColor const &c) const
+	{
+		return !operator<=(c);
+	}
+	//! operator>=
+	bool operator>=(WPSColor const &c) const
+	{
+		return !operator<(c);
+	}
+	//! operator<< in the form \#rrggbb
+	friend std::ostream &operator<< (std::ostream &o, WPSColor const &c);
+	//! print the color in the form \#rrggbb
+	std::string str() const;
+protected:
+	//! the argb color
+	uint32_t m_value;
+};
+
 //! a border list
 struct WPSBorder
 {
@@ -235,7 +341,7 @@ struct WPSBorder
 	enum { LeftBit = 0x01,  RightBit = 0x02, TopBit=0x4, BottomBit = 0x08 };
 
 	//! constructor
-	WPSBorder() : m_style(Simple), m_type(Single), m_width(1), m_widthsList(), m_color(0), m_extra("") { }
+	WPSBorder() : m_style(Simple), m_type(Single), m_width(1), m_widthsList(), m_color(WPSColor::black()), m_extra("") { }
 	/** add the border property to proplist (if needed )
 
 		\note if set which must be equal to "left", "top", ... */
@@ -275,7 +381,7 @@ struct WPSBorder
 		\note when defined, the size of this list must be equal to 2*Type-1*/
 	std::vector<double> m_widthsList;
 	//! the border color
-	uint32_t m_color;
+	WPSColor m_color;
 	//! extra data ( if needed)
 	std::string m_extra;
 };

@@ -66,7 +66,7 @@ public:
 
 	//! constructor
 	WPSCellFormat() :
-		m_font(), m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(), m_format(F_UNKNOWN), m_subFormat(0), m_DTFormat(""), m_digits(-1000), m_protected(false), m_backgroundColor(0xFFFFFF) { }
+		m_font(), m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT), m_bordersList(), m_format(F_UNKNOWN), m_subFormat(0), m_DTFormat(""), m_digits(-1000), m_protected(false), m_backgroundColor(WPSColor::white()) { }
 	//! destructor
 	virtual ~WPSCellFormat() {}
 	//! returns true if this is a basic format style
@@ -187,12 +187,12 @@ public:
 	void setBorders(int wh, WPSBorder const &border);
 
 	//! returns the background color
-	uint32_t backgroundColor() const
+	WPSColor backgroundColor() const
 	{
 		return m_backgroundColor;
 	}
 	//! set the background color
-	void setBackgroundColor(uint32_t color)
+	void setBackgroundColor(WPSColor const &color)
 	{
 		m_backgroundColor = color;
 	}
@@ -237,7 +237,7 @@ protected:
 	//! cell protected
 	bool m_protected;
 	//! the backgroung color
-	uint32_t m_backgroundColor;
+	WPSColor m_backgroundColor;
 };
 
 class WPSTable;
