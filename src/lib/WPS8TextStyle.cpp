@@ -867,7 +867,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		case 0x20:
 		{
 			std::string styleMessage("");
-			para.m_borderStyle.m_style = data.getBorderStyle(styleMessage);
+			data.getBorderStyles(para.m_borderStyle.m_style, para.m_borderStyle.m_type, styleMessage);
 			f << styleMessage;
 			break;
 		}

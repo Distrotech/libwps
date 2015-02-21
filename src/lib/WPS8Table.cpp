@@ -595,7 +595,7 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 					std::string mess("");
 					int wh = (dt.id()-0x21)/3;
 					WPSBorder border = cell->borders()[size_t(borderPos[wh])];
-					border.m_style = dt.getBorderStyle(mess);
+					dt.getBorderStyles(border.m_style, border.m_type, mess);
 					cell->setBorders(borderBit[wh], border);
 					if (mess.length())
 						f2 << "bordStyle" << borderNames[wh] << "=[" << mess << "],";

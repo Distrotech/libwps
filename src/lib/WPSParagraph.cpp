@@ -214,22 +214,19 @@ void WPSParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) c
 		}
 		if (m_border && m_borderStyle.m_style != WPSBorder::None)
 		{
-			std::string style = m_borderStyle.getPropertyValue();
 			int border = m_border;
 			if (border == 0xF)
-			{
-				propList.insert("fo:border", style.c_str());
-			}
+				m_borderStyle.addTo(propList);
 			else
 			{
 				if (border & WPSBorder::LeftBit)
-					propList.insert("fo:border-left", style.c_str());
+					m_borderStyle.addTo(propList, "left");
 				if (border & WPSBorder::RightBit)
-					propList.insert("fo:border-right", style.c_str());
+					m_borderStyle.addTo(propList, "right");
 				if (border & WPSBorder::TopBit)
-					propList.insert("fo:border-top", style.c_str());
+					m_borderStyle.addTo(propList, "top");
 				if (border & WPSBorder::BottomBit)
-					propList.insert("fo:border-bottom", style.c_str());
+					m_borderStyle.addTo(propList, "bottom");
 			}
 		}
 	}

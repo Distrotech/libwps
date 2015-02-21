@@ -390,65 +390,140 @@ int WPSBorder::compare(WPSBorder const &orig) const
 	return 0;
 }
 
-std::string WPSBorder::getPropertyValue() const
+bool WPSBorder::addTo(librevenge::RVNGPropertyList &propList, std::string const which) const
 {
-	if (m_style == None) return "";
-	std::stringstream stream;
-	stream << m_width*0.03 << "cm";
-	switch (m_style)
+	std::stringstream stream, field;
+	stream << m_width << "pt ";
+	if (m_type==WPSBorder::Double || m_type==WPSBorder::Triple)
 	{
-	case Dot:
-	case LargeDot:
-		stream << " dotted";
-		break;
-	case Dash:
-		stream << " dashed";
-		break;
-	case Single:
-		stream << " solid";
-		break;
-	case Double:
-		stream << " double";
-		break;
-	case None:
-	default:
-		break;
+		static bool first = true;
+		if (first && m_style!=Simple)
+		{
+			WPS_DEBUG_MSG(("WPSBorder::addTo: find double or tripe border with complex style\n"));
+			first = false;
+		}
+		stream << "double";
+	}
+	else
+	{
+		switch (m_style)
+		{
+		case Dot:
+		case LargeDot:
+			stream << "dotted";
+			break;
+		case Dash:
+			stream << "dashed";
+			break;
+		case Simple:
+			stream << "solid";
+			break;
+		case None:
+		default:
+			stream << "none";
+			break;
+		}
 	}
 	stream << " #" << std::hex << std::setfill('0') << std::setw(6)
 	       << (m_color&0xFFFFFF);
-	return stream.str();
+	field << "fo:border";
+	if (which.length())
+		field << "-" << which;
+	propList.insert(field.str().c_str(), stream.str().c_str());
+	size_t numRelWidth=m_widthsList.size();
+	if (!numRelWidth)
+		return true;
+	if (m_type!=WPSBorder::Double || numRelWidth!=3)
+	{
+		static bool first = true;
+		if (first)
+		{
+			WPS_DEBUG_MSG(("WPSBorder::addTo: relative width is only implemented with double style\n"));
+			first = false;
+		}
+		return true;
+	}
+	double totalWidth=0;
+	for (size_t w=0; w < numRelWidth; w++)
+		totalWidth+=m_widthsList[w];
+	if (totalWidth <= 0)
+	{
+		WPS_DEBUG_MSG(("WPSBorder::addTo: can not compute total width\n"));
+		return true;
+	}
+	double factor=m_width/totalWidth;
+	stream.str("");
+	for (size_t w=0; w < numRelWidth; w++)
+	{
+		stream << factor *m_widthsList[w]<< "pt";
+		if (w+1!=numRelWidth)
+			stream << " ";
+	}
+	field.str("");
+	field << "style:border-line-width";
+	if (which.length())
+		field << "-" << which;
+	propList.insert(field.str().c_str(), stream.str().c_str());
+	return true;
+}
+
+std::ostream &operator<< (std::ostream &o, WPSBorder::Style const &style)
+{
+	switch (style)
+	{
+	case WPSBorder::None:
+		o << "none";
+		break;
+	case WPSBorder::Simple:
+		break;
+	case WPSBorder::Dot:
+		o << "dot";
+		break;
+	case WPSBorder::LargeDot:
+		o << "large dot";
+		break;
+	case WPSBorder::Dash:
+		o << "dash";
+		break;
+	default:
+		WPS_DEBUG_MSG(("WPSBorder::operator<<: find unknown style\n"));
+		o << "#style=" << int(style);
+		break;
+	}
+	return o;
 }
 
 std::ostream &operator<< (std::ostream &o, WPSBorder const &border)
 {
-	switch (border.m_style)
+	o << border.m_style << ":";
+	switch (border.m_type)
 	{
-	case WPSBorder::None:
-		o << "none:";
-		break;
 	case WPSBorder::Single:
-		break;
-	case WPSBorder::Dot:
-		o << "dot:";
-		break;
-	case WPSBorder::LargeDot:
-		o << "large dot:";
-		break;
-	case WPSBorder::Dash:
-		o << "dash:";
 		break;
 	case WPSBorder::Double:
 		o << "double:";
 		break;
+	case WPSBorder::Triple:
+		o << "triple:";
+		break;
 	default:
-		WPS_DEBUG_MSG(("WPSBorder::operator<<: find unknown style\n"));
-		o << "#style=" << int(border.m_style) << ":";
+		WPS_DEBUG_MSG(("WPSBorder::operator<<: find unknown type\n"));
+		o << "#type=" << int(border.m_type) << ":";
 		break;
 	}
-	if (border.m_width > 1) o << "w=" << border.m_width << ":";
-	if (border.m_color)
+	if (border.m_width > 1 || border.m_width < 1) o << "w=" << border.m_width << ":";
+	if (border.m_color!=0)
 		o << "col=" << std::hex << border.m_color << std::dec << ":";
 	o << ",";
+	size_t numRelWidth=border.m_widthsList.size();
+	if (numRelWidth)
+	{
+		o << "bordW[rel]=[";
+		for (size_t i=0; i < numRelWidth; i++)
+			o << border.m_widthsList[i] << ",";
+		o << "]:";
+	}
+	o << border.m_extra;
 	return o;
 }
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

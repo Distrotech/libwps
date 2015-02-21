@@ -1112,6 +1112,7 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 	LotusSpreadsheetInternal::Spreadsheet &sheet = m_state->getSheet(sheetId);
 
 	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,72,8), librevenge::RVNG_POINT, m_state->getSheetName(sheetId));
+	m_mainParser.sendGraphics(sheetId);
 	std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
 	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator it;
 	int prevRow = -1;

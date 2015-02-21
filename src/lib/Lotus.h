@@ -64,18 +64,24 @@ protected:
 	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
+
+	//
+	// interface
+	//
+
+	//! returns the font corresponding to an id
+	bool getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &type) const;
 	/** returns the default font type, ie. the encoding given by the constructor if given
 		or the encoding deduiced from the version.
 	 */
 	libwps_tools_win::Font::Type getDefaultFontType() const;
 
 	//
-	// interface with LotusSpreadsheet
+	// interface with LotusGraph
 	//
 
-	//! returns the font corresponding to an id
-	bool getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &type) const;
-
+	//! send the graphics corresponding to a sheetId
+	void sendGraphics(int sheetId);
 
 	/** creates the main listener */
 	shared_ptr<WKSContentListener> createListener(librevenge::RVNGSpreadsheetInterface *interface);
@@ -93,6 +99,8 @@ protected:
 
 	//////////////////////// generic ////////////////////////////////////
 
+	//! reads a font name
+	bool readFontName(long endPos);
 	//! reads a link
 	bool readLinkZone();
 	//! reads a mac document info zone: zone 1b, then 2af8

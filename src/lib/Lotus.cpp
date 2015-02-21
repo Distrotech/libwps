@@ -116,7 +116,7 @@ struct State
 {
 	//! constructor
 	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1),
-		m_inMainContentBlock(false), m_fontsList(), m_pageSpan(), m_maxSheet(0), m_actPage(0), m_numPages(0),
+		m_inMainContentBlock(false), m_fontsMap(), m_pageSpan(), m_maxSheet(0), m_actPage(0), m_numPages(0),
 		m_headerString(""), m_footerString("")
 	{
 	}
@@ -148,8 +148,8 @@ struct State
 	int m_version;
 	//! a flag used to know if we are in the main block or no
 	bool m_inMainContentBlock;
-	//! the fonts list
-	std::vector<Font> m_fontsList;
+	//! the fonts map
+	std::map<int, Font> m_fontsMap;
 	//! the actual document size
 	WPSPageSpan m_pageSpan;
 	//! the last sheet number
@@ -196,26 +196,35 @@ bool LotusParser::checkFilePosition(long pos)
 	return pos <= m_state->m_eof;
 }
 
+//////////////////////////////////////////////////////////////////////
+// interface
+//////////////////////////////////////////////////////////////////////
 libwps_tools_win::Font::Type LotusParser::getDefaultFontType() const
 {
 	return m_state->getDefaultFontType();
 }
 
-//////////////////////////////////////////////////////////////////////
-// interface with LotusSpreadsheet
-//////////////////////////////////////////////////////////////////////
 bool LotusParser::getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &type) const
 {
-	if (id < 0 || id>=(int)m_state->m_fontsList.size())
+	if (m_state->m_fontsMap.find(id)==m_state->m_fontsMap.end())
 	{
 		WPS_DEBUG_MSG(("LotusParser::getFont: can not find font %d\n", id));
 		return false;
 	}
-	LotusParserInternal::Font const &ft=m_state->m_fontsList[size_t(id)];
+	LotusParserInternal::Font const &ft=m_state->m_fontsMap.find(id)->second;
 	font=ft;
 	type=ft.m_type;
 	return true;
 }
+
+void LotusParser::sendGraphics(int sheetId)
+{
+	m_graphParser->sendGraphics(sheetId);
+}
+
+//////////////////////////////////////////////////////////////////////
+// parsing
+//////////////////////////////////////////////////////////////////////
 
 // main function to parse the document
 void LotusParser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
@@ -1017,9 +1026,7 @@ bool LotusParser::readDataZone()
 		isParsed=m_graphParser->readGraphicStyle(endPos);
 		break;
 	case 0xfdc:
-		f.str("");
-		f << "Entries(FontName):";
-		isParsed=needWriteInAscii=true;
+		isParsed=readFontName(endPos);
 		break;
 	// 0xfd2: id, ..., colorid
 
@@ -1130,6 +1137,95 @@ bool LotusParser::readDataZone()
 ////////////////////////////////////////////////////////////
 //   generic
 ////////////////////////////////////////////////////////////
+bool LotusParser::readFontName(long endPos)
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+
+	const int vers=version();
+	long pos = input->tell();
+	long sz=endPos-pos;
+	f << "Entries(FontName):";
+	if ((vers<=1 && sz<7) || (vers>1 && sz!=42))
+	{
+		WPS_DEBUG_MSG(("LotusParser::readFontName: the zone size seems bad\n"));
+		f << "###";
+		ascii().addPos(pos-6);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	if (vers<=1)
+	{
+		int id=(int) libwps::readU16(input);
+		f << "id=" << id << ",";
+		int val=(int) libwps::readU16(input); // always 0?
+		if (val)
+			f << "f0=" << val << ",";
+		val=(int) libwps::read16(input); // find -1, 30 (Geneva), 60 (Helvetica)
+		if (val)
+			f << "f1=" << val << ",";
+		std::string name("");
+		bool nameOk=true;
+		for (int i=0; i<sz-6; ++i)
+		{
+			char c=(char) libwps::readU8(input);
+			if (!c) break;
+			if (nameOk && !(c==' ' || (c>='0'&&c<='9') || (c>='a'&&c<='z') || (c>='A'&&c<='Z')))
+			{
+				nameOk=false;
+				WPS_DEBUG_MSG(("LotusParser::readFontName: find odd character in name\n"));
+				f << "#";
+			}
+			name += c;
+		}
+		f << name << ",";
+		if (m_state->m_fontsMap.find(id)!=m_state->m_fontsMap.end())
+		{
+			WPS_DEBUG_MSG(("LotusParser::readFontName: a font with id=%d already exists\n", id));
+			f << "###id,";
+		}
+		else if (nameOk && !name.empty())
+		{
+			LotusParserInternal::Font font(getDefaultFontType());
+			font.m_name=name;
+			m_state->m_fontsMap.insert(std::map<int, LotusParserInternal::Font>::value_type(id,font));
+		}
+		ascii().addPos(pos-6);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+
+	for (int i=0; i<4; ++i)
+	{
+		int val=(int) libwps::read8(input); // 0|1
+		if (val)
+			f << "fl" << i << "=" << val << ",";
+	}
+	for (int i=0; i<2; ++i)   // f1=0|1288
+	{
+		int val=(int) libwps::read16(input);
+		if (val)
+			f << "f" << i << "=" << val << ",";
+	}
+	std::string name("");
+	for (int i=0; i<8; ++i)
+	{
+		char c=(char) libwps::read8(input);
+		if (!c) break;
+		name+=c;
+	}
+	f << name << ",";
+	input->seek(pos+16, librevenge::RVNG_SEEK_SET);
+	if (input->tell()!=endPos)
+	{
+		ascii().addDelimiter(input->tell(),'|');
+		input->seek(endPos, librevenge::RVNG_SEEK_SET);
+	}
+	ascii().addPos(pos-6);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
 bool LotusParser::readLinkZone()
 {
 	libwps::DebugStream f;

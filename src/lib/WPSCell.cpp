@@ -194,21 +194,20 @@ void WPSCellFormat::addTo(librevenge::RVNGPropertyList &propList) const
 
 	for (size_t c = 0; c < m_bordersList.size(); c++)
 	{
-		std::string property = m_bordersList[c].getPropertyValue();
-		if (property.length() == 0) continue;
+		if (m_bordersList[c].isEmpty()) continue;
 		switch (c)
 		{
 		case WPSBorder::Left:
-			propList.insert("fo:border-left", property.c_str());
+			m_bordersList[c].addTo(propList, "left");
 			break;
 		case WPSBorder::Right:
-			propList.insert("fo:border-right", property.c_str());
+			m_bordersList[c].addTo(propList, "right");
 			break;
 		case WPSBorder::Top:
-			propList.insert("fo:border-top", property.c_str());
+			m_bordersList[c].addTo(propList, "top");
 			break;
 		case WPSBorder::Bottom:
-			propList.insert("fo:border-bottom", property.c_str());
+			m_bordersList[c].addTo(propList, "bottom");
 			break;
 		default:
 			WPS_DEBUG_MSG(("WPSContentListener::openTableCell: can not send %d border\n",int(c)));

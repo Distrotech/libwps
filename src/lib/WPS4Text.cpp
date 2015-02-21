@@ -1683,7 +1683,8 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				break;
 			}
 			arg = libwps::readU8(m_input);
-			pp.m_borderStyle.m_style = WPSBorder::Single;
+			pp.m_borderStyle.m_style = WPSBorder::Simple;
+			pp.m_borderStyle.m_type = WPSBorder::Single;
 			pp.m_borderStyle.m_width = 1;
 			int style = (arg&0xf);
 			switch (style)
@@ -1694,7 +1695,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				pp.m_borderStyle.m_width = 2;
 				break;
 			case 2:
-				pp.m_borderStyle.m_style = WPSBorder::Double;
+				pp.m_borderStyle.m_type = WPSBorder::Double;
 				break;
 			case 3:
 				pp.m_borderStyle.m_style = WPSBorder::Dot;
@@ -1713,7 +1714,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 			case 9:
 			case 10:
 				pp.m_borderStyle.m_width = style-7;
-				pp.m_borderStyle.m_style = WPSBorder::Double;
+				pp.m_borderStyle.m_type = WPSBorder::Double;
 				break;
 			default:
 				f << "#borderStyle=" << style << ",";

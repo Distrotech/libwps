@@ -65,8 +65,8 @@ protected:
 	//! return the file version
 	int version() const;
 
-	//! send the graph corresponding to a sheetId
-	void sendGraph(int sheetId);
+	//! send the graphics corresponding to a sheetId
+	void sendGraphics(int sheetId);
 
 
 	//

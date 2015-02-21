@@ -895,7 +895,7 @@ bool WKS4Spreadsheet::readStyle()
 			border.m_style = WPSBorder::Dash;
 			break;
 		case 5:
-			border.m_style = WPSBorder::Double;
+			border.m_type = WPSBorder::Double;
 			break;
 		case 6:
 			border.m_style = WPSBorder::Dot;
