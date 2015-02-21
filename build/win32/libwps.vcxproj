@@ -202,6 +202,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\WPSGraphicStyle.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\WPSHeader.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -271,6 +275,7 @@
     <ClInclude Include="..\..\src\lib\WPSEntry.h" />
     <ClInclude Include="..\..\src\lib\WPSFont.h" />
     <ClInclude Include="..\..\src\lib\WPSGraphicShape.h" />
+    <ClInclude Include="..\..\src\lib\WPSGraphicStyle.h" />
     <ClInclude Include="..\..\src\lib\WPSHeader.h" />
     <ClInclude Include="..\..\src\lib\WPSList.h" />
     <ClInclude Include="..\..\src\lib\WPSOLEParser.h" />

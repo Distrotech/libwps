@@ -673,6 +673,26 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\WPSGraphicStyle.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\WPSHeader.cpp"
 				>
 				<FileConfiguration
@@ -983,6 +1003,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\WPSGraphicShape.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WPSGraphicStyle.h"
 				>
 			</File>
 			<File
