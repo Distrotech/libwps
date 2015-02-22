@@ -33,10 +33,13 @@
 #include "libwps_tools_win.h"
 
 #include "WKSContentListener.h"
+#include "WKSSubDocument.h"
+
 #include "WPSEntry.h"
 #include "WPSFont.h"
 #include "WPSGraphicShape.h"
 #include "WPSGraphicStyle.h"
+#include "WPSParagraph.h"
 #include "WPSPosition.h"
 
 #include "Lotus.h"
@@ -54,7 +57,7 @@ struct Zone
 	//! constructor
 	Zone() : m_type(Unknown), m_subType(0), m_box(), m_ordering(0),
 		m_lineId(0), m_graphicId(0), m_surfaceId(0), m_hasShadow(false),
-		m_pictureEntry(), m_extra("")
+		m_pictureEntry(), m_textBoxEntry(), m_extra("")
 	{
 		for (int i=0; i<4; ++i) m_values[i]=0;
 	}
@@ -125,6 +128,8 @@ struct Zone
 	bool m_hasShadow;
 	//! the picture entry
 	WPSEntry m_pictureEntry;
+	//! the text box entry
+	WPSEntry m_textBoxEntry;
 	//! unknown other value
 	int m_values[4];
 	//! extra data
@@ -272,6 +277,51 @@ bool State::getPatternPercent(int id, float &percent) const
 	};
 	percent=percentValues[id-1];
 	return true;
+}
+
+//! Internal: the subdocument of a LotusGraphc
+class SubDocument : public WKSSubDocument
+{
+public:
+	//! constructor for a text entry
+	SubDocument(RVNGInputStreamPtr input, LotusGraph &graphParser, WPSEntry &entry) :
+		WKSSubDocument(input, &graphParser.m_mainParser), m_graphParser(graphParser), m_entry(entry) {}
+	//! destructor
+	~SubDocument() {}
+
+	//! operator==
+	virtual bool operator==(shared_ptr<WKSSubDocument> const &doc) const
+	{
+		if (!doc || !WKSSubDocument::operator==(doc))
+			return false;
+		SubDocument const *sDoc = dynamic_cast<SubDocument const *>(doc.get());
+		if (!sDoc) return false;
+		if (&m_graphParser != &sDoc->m_graphParser) return false;
+		return m_entry == sDoc->m_entry;
+	}
+
+	//! the parser function
+	void parse(shared_ptr<WKSContentListener> &listener, libwps::SubDocumentType subDocumentType);
+	//! the graph parser
+	LotusGraph &m_graphParser;
+	//! a flag to known if we need to send the entry or the footer
+	WPSEntry m_entry;
+};
+
+void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDocumentType)
+{
+	if (!listener.get())
+	{
+		WPS_DEBUG_MSG(("LotusParserInternal::SubDocument::parse: no listener\n"));
+		return;
+	}
+	if (!dynamic_cast<WKSContentListener *>(listener.get()))
+	{
+		WPS_DEBUG_MSG(("LotusParserInternal::SubDocument::parse: bad listener\n"));
+		return;
+	}
+
+	m_graphParser.sendTextBox(m_entry);
 }
 
 }
@@ -527,19 +577,36 @@ bool LotusGraph::readZoneData(long endPos, int type)
 	return true;
 }
 
-bool LotusGraph::readTextboxData(long /*endPos*/)
+bool LotusGraph::readTextBoxData(long endPos)
 {
 	libwps::DebugStream f;
 	long pos = m_input->tell();
+	long sz=endPos-pos;
 	f << "Entries(GraphTextBox):";
+	if (sz<1)
+	{
+		WPS_DEBUG_MSG(("LotusGraph::readTextBoxData: Oops the zone seems too short\n"));
+		f << "###";
+		ascii().addPos(pos-6);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+
 	if (!m_state->m_actualZone || m_state->m_actualZone->m_type != LotusGraphInternal::Zone::Frame)
 	{
-		WPS_DEBUG_MSG(("LotusGraph::readTextboxData: Oops can not find the parent frame\n"));
+		WPS_DEBUG_MSG(("LotusGraph::readTextBoxData: Oops can not find the parent frame\n"));
 	}
-	WPS_DEBUG_MSG(("LotusGraph::readTextboxData: Oops not implemented\n"));
+	else
+	{
+		m_state->m_actualZone->m_textBoxEntry.setBegin(m_input->tell());
+		m_state->m_actualZone->m_textBoxEntry.setEnd(endPos);
+		m_state->m_actualZone.reset();
+	}
+
 	m_state->m_actualZone.reset();
 	ascii().addPos(pos-6);
 	ascii().addNote(f.str().c_str());
+	m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
 	return true;
 }
 
@@ -665,6 +732,196 @@ void LotusGraph::sendPicture(LotusGraphInternal::Zone const &zone)
 	m_listener->insertPicture(pos, data, "image/pict", style);
 }
 
+void LotusGraph::sendTextBox(WPSEntry const &entry)
+{
+	if (!m_listener || entry.length()<1)
+	{
+		WPS_DEBUG_MSG(("LotusGraph::sendTextBox: I can not find the listener/textbox entry\n"));
+		return;
+	}
+	libwps::DebugStream f;
+	long pos = entry.begin();
+	long sz=entry.length();
+	f << "GraphTextBox[data]:";
+	m_input->seek(pos, librevenge::RVNG_SEEK_SET);
+	int val=(int) libwps::readU8(m_input); // always 1?
+	if (val!=1) f << "f0=" << val << ",";
+	libwps_tools_win::Font::Type fontType = m_mainParser.getDefaultFontType();
+	WPSFont font=WPSFont::getDefault();
+	m_listener->setFont(font);
+	bool actualFlags[7]= {false, false, false, false, false, false, false };
+	for (long i=1; i<sz; ++i)
+	{
+		char c=(char) libwps::readU8(m_input);
+		if (c==0)
+		{
+			if (i+2<sz)
+			{
+				WPS_DEBUG_MSG(("LotusGraph::sendTextBox: find a 0 char\n"));
+				f << "[###0]";
+			}
+			continue;
+		}
+		if (c!=0xe && c!=0xf)
+		{
+			f << c;
+			m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode((unsigned char)c,fontType));
+			continue;
+		}
+		if (i+1>=sz)
+		{
+			WPS_DEBUG_MSG(("LotusGraph::sendTextBox: find modifier in last pos\n"));
+			f << "[###" << int(c) << "]";
+		}
+		int mod=(int) libwps::readU8(m_input);
+		++i;
+		if (c==0xf)
+		{
+			if (mod==45)
+			{
+				f << "[break]";
+				m_listener->insertEOL();
+			}
+			else
+			{
+				WPS_DEBUG_MSG(("LotusGraph::sendTextBox: find unknown modifier f\n"));
+				f << "[###f:" << mod << "]";
+			}
+			continue;
+		}
+		int szParam=(mod==0x80) ? 4 : (mod>=0x40 && mod<=0x44) ? 2 : 0;
+		if (i+1+2*szParam>=sz)
+		{
+			WPS_DEBUG_MSG(("LotusGraph::sendTextBox: the param size seems bad\n"));
+			f << "[##e:" << std::hex << mod << std::dec << "]";
+			continue;
+		}
+		int param=0;
+		long actPos=m_input->tell();
+		bool ok=true;
+		for (int d=0; d<szParam; ++d)
+		{
+			int mod1=(int) libwps::readU8(m_input);
+			val=(int) libwps::readU8(m_input);
+			static int const decal[]= {1,0,3,2};
+			if (mod1==0xe && (val>='0'&&val<='9'))
+			{
+				param += (val-'0')<<(4*decal[d]);
+				continue;
+			}
+			else if (mod1==0xe && (val>='A'&&val<='F'))
+			{
+				param += (val-'A'+10)<<(4*decal[d]);
+				continue;
+			}
+			WPS_DEBUG_MSG(("LotusGraph::sendTextBox: something when bad when reading param\n"));
+			f << "[##e:" << std::hex << mod << ":" << param << std::dec << "]";
+		}
+		if (!ok)
+		{
+			m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
+			continue;
+		}
+		i+=2*szParam;
+		switch (mod)
+		{
+		case 1:
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		{
+			bool newFlag=actualFlags[mod-1]=!actualFlags[mod-1];
+			static char const *(wh[])= {"b", "it", "outline", "underline", "shadow", "condensed", "extended"};
+			f << "[";
+			if (!newFlag) f << "/";
+			f << wh[mod-1] << "]";
+			static uint32_t const(attrib[])= { WPS_BOLD_BIT, WPS_ITALICS_BIT, WPS_OUTLINE_BIT, WPS_UNDERLINE_BIT, WPS_SHADOW_BIT };
+			if (mod<=5)
+			{
+				if (newFlag)
+					font.m_attributes |= attrib[mod-1];
+				else
+					font.m_attributes &= ~attrib[mod-1];
+			}
+			else
+			{
+				font.m_spacing=0;
+				if (actualFlags[5]) font.m_spacing-=2;
+				if (actualFlags[6]) font.m_spacing+=2;
+			}
+			m_listener->setFont(font);
+			break;
+		}
+		case 0x40:
+		{
+			WPSFont newFont;
+			f << "[FN" << param<< "]";
+			if (m_mainParser.getFont(param, newFont, fontType))
+			{
+				font.m_name=newFont.m_name;
+				m_listener->setFont(font);
+			}
+			else
+				f << "###";
+			break;
+		}
+		case 0x41:
+		{
+			f << "[color=" << param << "]";
+			WPSColor color;
+			if (m_styleManager->getColor(param, color))
+			{
+				font.m_color=color;
+				m_listener->setFont(font);
+			}
+			else
+				f << "###";
+			break;
+		}
+		case 0x44:
+		{
+			WPSParagraph para;
+			switch (param)
+			{
+			case 1:
+				f << "align[left]";
+				para.m_justify=libwps::JustificationLeft;
+				break;
+			case 2:
+				f << "align[right]";
+				para.m_justify=libwps::JustificationRight;
+				break;
+			case 3:
+				f << "align[center]";
+				para.m_justify=libwps::JustificationCenter;
+				break;
+			default:
+				f << "#align=" << param << ",";
+				break;
+			};
+			m_listener->setParagraph(para);
+			break;
+		}
+		case 0x80:
+		{
+			f << "[fSz=" << param/32. << "]";
+			font.m_size=param/32.;
+			m_listener->setFont(font);
+			break;
+		}
+		default:
+			WPS_DEBUG_MSG(("LotusGraph::sendTextBox: Oops find unknown modifier e\n"));
+			f << "[##e:" << std::hex << mod << "=" << param << std::dec << "]";
+			break;
+		}
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+}
+
 void LotusGraph::sendGraphics(int sheetId)
 {
 	if (!m_listener)
@@ -694,6 +951,13 @@ void LotusGraph::sendGraphics(int sheetId)
 			m_styleManager->updateSurfaceStyle(zone->m_surfaceId, style);
 		if (zone->m_graphicId)
 			m_styleManager->updateGraphicStyle(zone->m_graphicId, style);
+		if (zone->m_textBoxEntry.valid())
+		{
+			shared_ptr<LotusGraphInternal::SubDocument> doc
+			(new LotusGraphInternal::SubDocument(m_input, *this, zone->m_textBoxEntry));
+			m_listener->insertTextBox(pos, doc, style);
+			continue;
+		}
 		if (zone->m_type==LotusGraphInternal::Zone::Line)
 		{
 			if (zone->m_values[0]&1)

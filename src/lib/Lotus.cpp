@@ -61,7 +61,7 @@ struct Font : public WPSFont
 	libwps_tools_win::Font::Type m_type;
 };
 
-//! Internal: the subdocument of a WPS4Parser
+//! Internal: the subdocument of a LotusParser
 class SubDocument : public WKSSubDocument
 {
 public:
@@ -1048,7 +1048,7 @@ bool LotusParser::readDataZone()
 		isParsed=m_graphParser->readZoneData(endPos, type);
 		break;
 	case 0x23fa: // textbox data
-		isParsed=m_graphParser->readTextboxData(endPos);
+		isParsed=m_graphParser->readTextBoxData(endPos);
 		break;
 
 	//
@@ -1160,7 +1160,7 @@ bool LotusParser::readFontName(long endPos)
 	if (vers<=1)
 	{
 		int id=(int) libwps::readU16(input);
-		f << "id=" << id << ",";
+		f << "FN" << id << ",";
 		int val=(int) libwps::readU16(input); // always 0?
 		if (val)
 			f << "f0=" << val << ",";

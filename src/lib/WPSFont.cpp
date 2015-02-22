@@ -56,6 +56,10 @@ std::ostream &operator<<(std::ostream &o, WPSFont const &ft)
 	if (flags&WPS_SUBSCRIPT_BIT) o << "subS:";
 	if (flags) o << ",";
 
+	if (ft.m_spacing<0)
+		o << "condensed=" << -ft.m_spacing << "pt,";
+	else if (ft.m_spacing>0)
+		o << "extended=" << ft.m_spacing << "pt,";
 	if (!ft.m_color.isBlack()) o << "col=" << ft.m_color << ",";
 	if (ft.m_extra.length()) o << "extra=" << ft.m_extra << ",";
 	return o;
@@ -65,6 +69,7 @@ bool WPSFont::operator==(WPSFont const &ft) const
 {
 	if (m_size < ft.m_size || m_size > ft.m_size ||
 	        m_attributes != ft.m_attributes || m_color != ft.m_color ||
+	        m_spacing < ft.m_spacing || m_spacing > ft.m_spacing ||
 	        m_languageId != ft.m_languageId)
 		return false;
 	if (m_name.compare(ft.m_name) || m_extra.compare(ft.m_extra))
@@ -134,6 +139,8 @@ void WPSFont::addTo(librevenge::RVNGPropertyList &propList) const
 		propList.insert("style:font-name", m_name.c_str());
 	if (m_size>0)
 		propList.insert("fo:font-size", fontSizeChange*m_size, librevenge::RVNG_POINT);
+	if (m_spacing < 0 || m_spacing > 0)
+		propList.insert("fo:letter-spacing", m_spacing, librevenge::RVNG_POINT);
 
 	propList.insert("fo:color", m_color.str().c_str());
 

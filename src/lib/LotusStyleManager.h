@@ -54,6 +54,8 @@ public:
 	//! clean internal state
 	void cleanState();
 
+	//! returns if possible the color
+	bool getColor(int cId, WPSColor &color) const;
 	//! update style using line id
 	bool updateLineStyle(int lineId, WPSGraphicStyle &style) const;
 	//! update style using color id

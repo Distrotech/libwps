@@ -821,6 +821,7 @@ bool LotusSpreadsheet::readCell()
 			if (!c) break;
 			text += c;
 		}
+		f << "\"" << text << "\",";
 		if (!text.empty())
 		{
 			if (text[0]=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT;
@@ -831,7 +832,6 @@ bool LotusSpreadsheet::readCell()
 				--begText;
 			++begText;
 		}
-		f << "\"" << text << "\",";
 
 		WPSEntry entry;
 		entry.setBegin(begText);

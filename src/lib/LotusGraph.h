@@ -36,6 +36,8 @@ namespace LotusGraphInternal
 {
 struct Zone;
 struct State;
+
+class SubDocument;
 }
 
 class LotusParser;
@@ -49,6 +51,7 @@ class LotusGraph
 {
 public:
 	friend class LotusParser;
+	friend class LotusGraphInternal::SubDocument;
 
 	//! constructor
 	LotusGraph(LotusParser &parser);
@@ -71,6 +74,8 @@ protected:
 	void sendGraphics(int sheetId);
 	//! try to send a picture
 	void sendPicture(LotusGraphInternal::Zone const &zone);
+	//! try to send a textbox content's
+	void sendTextBox(WPSEntry const &entry);
 
 	//
 	// low level
@@ -83,7 +88,7 @@ protected:
 	//! reads a graphic zone
 	bool readZoneData(long endPos, int type);
 	//! reads a graphic textbox data
-	bool readTextboxData(long endPos);
+	bool readTextBoxData(long endPos);
 	//! reads a picture definition
 	bool readPictureDefinition(long endPos);
 	//! reads a picture data

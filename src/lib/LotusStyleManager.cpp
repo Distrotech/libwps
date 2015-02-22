@@ -279,6 +279,10 @@ bool LotusStyleManager::checkFilePosition(long pos)
 	return pos <= m_state->m_eof;
 }
 
+bool LotusStyleManager::getColor(int cId, WPSColor &color) const
+{
+	return m_state->getColor(cId, color);
+}
 
 ////////////////////////////////////////////////////////////
 // styles
