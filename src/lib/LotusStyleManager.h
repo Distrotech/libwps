@@ -53,6 +53,13 @@ public:
 	~LotusStyleManager();
 	//! clean internal state
 	void cleanState();
+
+	//! update style using line id
+	bool updateLineStyle(int lineId, WPSGraphicStyle &style) const;
+	//! update style using color id
+	bool updateSurfaceStyle(int colorId, WPSGraphicStyle &style) const;
+	//! update style using graphic id
+	bool updateGraphicStyle(int graphicId, WPSGraphicStyle &style) const;
 protected:
 	//! return true if the pos is in the file, update the file size if need
 	bool checkFilePosition(long pos);
@@ -63,14 +70,15 @@ protected:
 	// low level
 	//
 
-	// ////////////////////// style //////////////////////////////
-
 	//! reads a color style
 	bool readColorStyle(long endPos);
 	//! reads a line style
 	bool readLineStyle(long endPos);
 	//! reads a graphic style
 	bool readGraphicStyle(long endPos);
+
+	//! update style using color id for defining shadow
+	bool updateShadowStyle(int colorId, WPSGraphicStyle &style) const;
 
 private:
 	LotusStyleManager(LotusStyleManager const &orig);

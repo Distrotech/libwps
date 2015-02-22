@@ -177,6 +177,7 @@ bool Zone::getGraphicShape(WPSGraphicShape &shape, WPSPosition &pos) const
 		shape=WPSGraphicShape::arc(box, Box2f(Vec2f(-box[1][0],0),Vec2f(box[1][0],2*box[1][1])), Vec2f(0,90));
 		return true;
 	case Unknown:
+	default:
 		break;
 	}
 	return false;
@@ -186,7 +187,7 @@ bool Zone::getGraphicShape(WPSGraphicShape &shape, WPSPosition &pos) const
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_version(-1), m_actualSheetId(-1), m_sheetIdZoneMap(), m_actualZone(0)
+	State() :  m_eof(-1), m_version(-1), m_actualSheetId(-1), m_sheetIdZoneMap(), m_actualZone()
 	{
 	}
 	//! returns a color corresponding to an id
@@ -640,6 +641,30 @@ bool LotusGraph::readPictureData(long endPos)
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
+void LotusGraph::sendPicture(LotusGraphInternal::Zone const &zone)
+{
+	if (!m_listener || !zone.m_pictureEntry.valid())
+	{
+		WPS_DEBUG_MSG(("LotusGraph::sendPicture: I can not find the listener/picture entry\n"));
+		return;
+	}
+	librevenge::RVNGBinaryData data;
+	m_input->seek(zone.m_pictureEntry.begin(), librevenge::RVNG_SEEK_SET);
+	if (!libwps::readData(m_input, (unsigned long)(zone.m_pictureEntry.length()), data))
+	{
+		WPS_DEBUG_MSG(("LotusGraph::sendPicture: I can not find the picture\n"));
+		return;
+	}
+	WPSGraphicShape shape;
+	WPSPosition pos;
+	if (!zone.getGraphicShape(shape, pos))
+		return;
+	WPSGraphicStyle style;
+	if (zone.m_graphicId)
+		m_styleManager->updateGraphicStyle(zone.m_graphicId, style);
+	m_listener->insertPicture(pos, data, "image/pict", style);
+}
+
 void LotusGraph::sendGraphics(int sheetId)
 {
 	if (!m_listener)
@@ -653,11 +678,30 @@ void LotusGraph::sendGraphics(int sheetId)
 	{
 		shared_ptr<LotusGraphInternal::Zone> zone=(it++)->second;
 		if (!zone) continue;
+		if (zone->m_pictureEntry.valid())
+		{
+			sendPicture(*zone);
+			continue;
+		}
 		WPSGraphicShape shape;
 		WPSPosition pos;
 		if (!zone->getGraphicShape(shape, pos))
 			continue;
-		m_listener->insertPicture(pos, shape, WPSGraphicStyle());
+		WPSGraphicStyle style;
+		if (zone->m_lineId)
+			m_styleManager->updateLineStyle(zone->m_lineId, style);
+		if (zone->m_surfaceId)
+			m_styleManager->updateSurfaceStyle(zone->m_surfaceId, style);
+		if (zone->m_graphicId)
+			m_styleManager->updateGraphicStyle(zone->m_graphicId, style);
+		if (zone->m_type==LotusGraphInternal::Zone::Line)
+		{
+			if (zone->m_values[0]&1)
+				style.m_arrows[1]=true;
+			if (zone->m_values[0]&2)
+				style.m_arrows[0]=true;
+		}
+		m_listener->insertPicture(pos, shape, style);
 	}
 }
 

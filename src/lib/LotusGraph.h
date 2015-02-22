@@ -34,6 +34,7 @@
 
 namespace LotusGraphInternal
 {
+struct Zone;
 struct State;
 }
 
@@ -68,7 +69,8 @@ protected:
 
 	//! send the graphics corresponding to a sheetId
 	void sendGraphics(int sheetId);
-
+	//! try to send a picture
+	void sendPicture(LotusGraphInternal::Zone const &zone);
 
 	//
 	// low level

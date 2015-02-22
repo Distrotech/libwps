@@ -48,7 +48,7 @@ namespace LotusStyleManagerInternal
 struct ColorStyle
 {
 	//! constructor
-	ColorStyle() : m_patternId(0), m_patternPercent(0), m_extra("")
+	ColorStyle() : m_patternId(0), m_pattern(), m_extra("")
 	{
 		m_colors[0]=m_colors[1]=m_colors[3]=WPSColor::white();
 		m_colors[2]=WPSColor::black();
@@ -64,7 +64,9 @@ struct ColorStyle
 			o << "color[" << wh[i] << "]=" << color.m_colors[i] << ",";
 		}
 		if (color.m_patternId) // 0: none, 2:full
-			o << "id[pattern]=" << color.m_patternId << "[" << color.m_patternPercent*100 << "%],";
+			o << "id[pattern]=" << color.m_patternId;
+		if (!color.m_pattern.empty())
+			o << "[" << color.m_pattern << "%],";
 		o << color.m_extra;
 		return o;
 	}
@@ -72,8 +74,8 @@ struct ColorStyle
 	WPSColor m_colors[4];
 	//! the pattern id
 	int m_patternId;
-	//! float pattern percent
-	float m_patternPercent;
+	//! the pattern
+	WPSGraphicStyle::Pattern m_pattern;
 	//! extra data
 	std::string m_extra;
 };
@@ -82,7 +84,7 @@ struct ColorStyle
 struct LineStyle
 {
 	//! constructor
-	LineStyle() : m_width(1), m_dashId(0), m_extra("")
+	LineStyle() : m_width(1), m_color(WPSColor::black()), m_dashId(0), m_extra("")
 	{
 	}
 	//! operator<<
@@ -90,13 +92,17 @@ struct LineStyle
 	{
 		if (line.m_width<1 || line.m_width>1)
 			o << "w=" << line.m_width << ",";
+		if (!line.m_color.isBlack())
+			o << "color=" << line.m_color << ",";
 		if (line.m_dashId)
-			o << "id[dash]=" << line.m_dashId << ",";
+			o << "dashId=" << line.m_dashId << ",";
 		o << line.m_extra;
 		return o;
 	}
 	//! the line width
 	float m_width;
+	//! the line color
+	WPSColor m_color;
 	//! the dash id
 	int m_dashId;
 	//! extra data
@@ -140,8 +146,8 @@ struct State
 	}
 	//! returns a color corresponding to an id
 	bool getColor(int id, WPSColor &color) const;
-	//! returns the pattern percent corresponding to a pattern id
-	bool getPatternPercent(int id, float &percent) const;
+	//! returns the pattern corresponding to a pattern id
+	bool getPattern(int id, WPSGraphicStyle::Pattern &pattern) const;
 
 	//! the last file position
 	long m_eof;
@@ -201,41 +207,37 @@ bool State::getColor(int id, WPSColor &color) const
 	return true;
 }
 
-bool State::getPatternPercent(int id, float &percent) const
+bool State::getPattern(int id, WPSGraphicStyle::Pattern &pat) const
 {
 	if (id<=0 || id>=49)
 	{
-		WPS_DEBUG_MSG(("LotusStyleManagerInteranl::State::getPatternPercent(): unknown pattern id: %d\n",id));
+		WPS_DEBUG_MSG(("LotusStyleManagerInternal::State::getPattern(): unknown pattern id: %d\n",id));
 		return false;
 	}
-#if 0
-	static const uint16_t (patterns[])={
-		0xffff, 0xffff, 0xffff, 0xffff, 0x0, 0x0, 0x0, 0x0, 0x50a, 0x1428, 0x50a0, 0x4182, 0xa851, 0xa245, 0x8a15, 0x2a54, 
-		0x2142, 0x8409, 0x1224, 0x4890, 0x102, 0x408, 0x1020, 0x4080, 0x1122, 0x4488, 0x1122, 0x4488, 0xeedd, 0xbb77, 0xeedd, 0xbb77, 
-		0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa, 0x8888, 0x8888, 0x8888, 0x8888, 0xa050, 0x2814, 0xa05, 0x8241, 0x158a, 0x45a2, 0x51a8, 0x542a, 
-		0x9048, 0x2412, 0x984, 0x4221, 0x8040, 0x2010, 0x804, 0x201, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0x0, 0xff00, 0x0, 
-		0x44aa, 0x11aa, 0x44aa, 0x11aa, 0x182, 0x4428, 0x1028, 0x4482, 0xf874, 0x2247, 0x8f17, 0x2271, 0xaa00, 0xaa00, 0xaa00, 0xaa00, 
-		0xff88, 0x8888, 0xff88, 0x8888, 0xff80, 0x8080, 0x8080, 0x8080, 0xaa00, 0x8000, 0x8800, 0x8000, 0xbf00, 0xbfbf, 0xb0b0, 0xb0b0, 
-		0xddff, 0x77ff, 0xddff, 0x77ff, 0xdd77, 0xdd77, 0xdd77, 0xdd77, 0xaa55, 0xaa55, 0xaa55, 0xaa55, 0x8822, 0x8822, 0x8822, 0x8822, 
-		0x8010, 0x220, 0x108, 0x4004, 0x8800, 0x2200, 0x8800, 0x2200, 0x8000, 0x800, 0x8000, 0x800, 0x40a0, 0x0, 0x40a, 0x0, 
-		0x8040, 0x2000, 0x204, 0x800, 0x8000, 0x0, 0x0, 0x0, 0xb130, 0x31b, 0xd8c0, 0xc8d, 0xff80, 0x8080, 0xff08, 0x808, 
-		0x81c, 0x22c1, 0x8001, 0x204, 0x8244, 0x3944, 0x8201, 0x101, 0x55a0, 0x4040, 0x550a, 0x404, 0x384, 0x4830, 0xc02, 0x101, 
-		0x8080, 0x413e, 0x808, 0x14e3, 0x1020, 0x54aa, 0xff02, 0x408, 0x7789, 0x8f8f, 0x7798, 0xf8f8, 0x8, 0x142a, 0x552a, 0x1408, 
+	static const uint16_t (patterns[])=
+	{
+		0xffff, 0xffff, 0xffff, 0xffff, 0x0, 0x0, 0x0, 0x0, 0x50a, 0x1428, 0x50a0, 0x4182, 0xa851, 0xa245, 0x8a15, 0x2a54,
+		0x2142, 0x8409, 0x1224, 0x4890, 0x102, 0x408, 0x1020, 0x4080, 0x1122, 0x4488, 0x1122, 0x4488, 0xeedd, 0xbb77, 0xeedd, 0xbb77,
+		0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa, 0x8888, 0x8888, 0x8888, 0x8888, 0xa050, 0x2814, 0xa05, 0x8241, 0x158a, 0x45a2, 0x51a8, 0x542a,
+		0x9048, 0x2412, 0x984, 0x4221, 0x8040, 0x2010, 0x804, 0x201, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0x0, 0xff00, 0x0,
+		0x44aa, 0x11aa, 0x44aa, 0x11aa, 0x182, 0x4428, 0x1028, 0x4482, 0xf874, 0x2247, 0x8f17, 0x2271, 0xaa00, 0xaa00, 0xaa00, 0xaa00,
+		0xff88, 0x8888, 0xff88, 0x8888, 0xff80, 0x8080, 0x8080, 0x8080, 0xaa00, 0x8000, 0x8800, 0x8000, 0xbf00, 0xbfbf, 0xb0b0, 0xb0b0,
+		0xddff, 0x77ff, 0xddff, 0x77ff, 0xdd77, 0xdd77, 0xdd77, 0xdd77, 0xaa55, 0xaa55, 0xaa55, 0xaa55, 0x8822, 0x8822, 0x8822, 0x8822,
+		0x8010, 0x220, 0x108, 0x4004, 0x8800, 0x2200, 0x8800, 0x2200, 0x8000, 0x800, 0x8000, 0x800, 0x40a0, 0x0, 0x40a, 0x0,
+		0x8040, 0x2000, 0x204, 0x800, 0x8000, 0x0, 0x0, 0x0, 0xb130, 0x31b, 0xd8c0, 0xc8d, 0xff80, 0x8080, 0xff08, 0x808,
+		0x81c, 0x22c1, 0x8001, 0x204, 0x8244, 0x3944, 0x8201, 0x101, 0x55a0, 0x4040, 0x550a, 0x404, 0x384, 0x4830, 0xc02, 0x101,
+		0x8080, 0x413e, 0x808, 0x14e3, 0x1020, 0x54aa, 0xff02, 0x408, 0x7789, 0x8f8f, 0x7798, 0xf8f8, 0x8, 0x142a, 0x552a, 0x1408,
 		0xf0f0, 0xf0f0, 0xf0f, 0xf0f, 0x9966, 0x6699, 0x9966, 0x6699, 0x8814, 0x2241, 0x8800, 0xaa00, 0x2050, 0x8888, 0x8888, 0x502
 	};
-#endif
-
-	static float const(percentValues[])=
+	pat.m_dim=Vec2i(8,8);
+	uint16_t const *ptr=&patterns[4*(id-1)];
+	pat.m_data.resize(8);
+	for (size_t i=0; i < 8; i+=2)
 	{
-		1.000000, 0.000000, 0.250000, 0.375000, 0.250000, 0.125000, 0.250000, 0.750000,
-		0.500000, 0.250000, 0.250000, 0.375000, 0.250000, 0.125000, 0.500000, 0.250000,
-		0.375000, 0.218750, 0.468750, 0.250000, 0.437500, 0.234375, 0.125000, 0.515625,
-		0.875000, 0.750000, 0.500000, 0.250000, 0.125000, 0.125000, 0.062500, 0.093750,
-		0.093750, 0.015625, 0.375000, 0.343750, 0.203125, 0.234375, 0.250000, 0.203125,
-		0.281250, 0.312500, 0.593750, 0.250000, 0.500000, 0.500000,
-		0.218750/* or gradient0*/, 0.218750 /*or gradient 1*/
-	};
-	percent=percentValues[id-1];
+		uint16_t val=*(ptr++);
+		pat.m_data[i]=(unsigned char)((val>>8) & 0xFF);
+		pat.m_data[i+1]=(unsigned char)(val & 0xFF);
+	}
 	return true;
 }
 
@@ -298,13 +300,47 @@ bool LotusStyleManager::readLineStyle(long endPos)
 	int val=(int) libwps::readU8(m_input); // always 10?
 	if (val!=0x10)
 		f << "fl=" << std::hex << val << std::dec << ",";
-	for (int i=0; i<5; ++i)
+	for (int i=0; i<2; ++i) // always 0?
 	{
 		val=(int) libwps::readU8(m_input);
 		if (val) f << "f" << i << "=" << val << ",";
 	}
-	line.m_dashId=(int) libwps::readU8(m_input);
-	line.m_width=(float) libwps::readU8(m_input);
+	WPSColor color[2]= {WPSColor::black(), WPSColor::white()};
+	for (int i=0; i<2; ++i)
+	{
+		int col=(int) libwps::readU8(m_input);
+		if (!m_state->getColor(col, color[i]))
+		{
+			f << "###col" << i << "=" << col << ",";
+			continue;
+		}
+		if ((i==0 && color[0].isBlack()) || (i==1 && color[1].isWhite()))
+			continue;
+		f << "col" << i << "=" << color[i] << ",";
+	}
+	WPSColor finalColor=color[0];
+	val=(int) libwps::readU16(m_input);
+	int patId=(val&0x3f);
+	line.m_width=float((val>>6)&0xF);
+	line.m_dashId=(val>>11);
+	if (patId!=1)
+	{
+		f << "pattern=" << patId << ",";
+		WPSGraphicStyle::Pattern pattern;
+		if (patId==0) // no pattern
+			line.m_width=0;
+		else if (patId==2)
+			finalColor=color[1];
+		else if (m_state->getPattern(patId, pattern))
+		{
+			pattern.m_colors[0]=color[1];
+			pattern.m_colors[1]=color[0];
+			pattern.getAverageColor(finalColor);
+		}
+	}
+	if (line.m_dashId) // no plain, so ...
+		finalColor=WPSColor::barycenter(0.5f, finalColor, 0.5f, WPSColor::white());
+	line.m_color=finalColor;
 	line.m_extra=f.str();
 
 	f.str("");
@@ -318,6 +354,21 @@ bool LotusStyleManager::readLineStyle(long endPos)
 		m_state->m_idLineStyleMap[id]=line;
 	ascii().addPos(pos-6);
 	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusStyleManager::updateLineStyle(int lineId, WPSGraphicStyle &style) const
+{
+	if (lineId==0)
+		return true;
+	if (m_state->m_idLineStyleMap.find(lineId)==m_state->m_idLineStyleMap.end())
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::updateLineStyle: the line style %d does not exist\n", lineId));
+		return false;
+	}
+	LotusStyleManagerInternal::LineStyle const &line=m_state->m_idLineStyleMap.find(lineId)->second;
+	style.m_lineWidth=line.m_width;
+	style.m_lineColor=line.m_color;
 	return true;
 }
 
@@ -353,7 +404,7 @@ bool LotusStyleManager::readColorStyle(long endPos)
 		}
 	}
 	color.m_patternId=(int) libwps::readU8(m_input);
-	if (color.m_patternId && !m_state->getPatternPercent(color.m_patternId, color.m_patternPercent))
+	if (color.m_patternId && !m_state->getPattern(color.m_patternId, color.m_pattern))
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readColorStyle: can not read a pattern\n"));
 		f << "##patId=" << color.m_patternId << ",";
@@ -373,6 +424,69 @@ bool LotusStyleManager::readColorStyle(long endPos)
 
 	ascii().addPos(pos-6);
 	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusStyleManager::updateSurfaceStyle(int colorId, WPSGraphicStyle &style) const
+{
+	if (colorId==0)
+		return true;
+	if (m_state->m_idColorStyleMap.find(colorId)==m_state->m_idColorStyleMap.end())
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::updateSurfaceStyle: the color style %d does not exist\n", colorId));
+		return false;
+	}
+	LotusStyleManagerInternal::ColorStyle const &color=m_state->m_idColorStyleMap.find(colorId)->second;
+	if (color.m_patternId==0) // empty
+		return true;
+	WPSColor finalColor=color.m_colors[2];
+	WPSGraphicStyle::Pattern pattern;
+	if (color.m_patternId==2)
+		finalColor=color.m_colors[3];
+	else if (color.m_patternId==47 || color.m_patternId==48)
+	{
+		style.m_gradientType=WPSGraphicStyle::G_Linear;
+		style.m_gradientStopList.clear();
+		style.m_gradientStopList.push_back(WPSGraphicStyle::GradientStop(0.0, color.m_patternId==47 ? color.m_colors[2] : WPSColor::black()));
+		style.m_gradientStopList.push_back(WPSGraphicStyle::GradientStop(1.0, color.m_patternId==47 ? WPSColor::black() : color.m_colors[2]));
+	}
+	else if (color.m_patternId!=1 && m_state->getPattern(color.m_patternId, pattern))
+	{
+		pattern.m_colors[0]=color.m_colors[3];
+		pattern.m_colors[1]=color.m_colors[2];
+		if (!pattern.getUniqueColor(finalColor))
+			style.setPattern(pattern);
+	}
+
+	if (!style.hasPattern() && !style.hasGradient())
+		style.setSurfaceColor(finalColor);
+	return true;
+}
+
+bool LotusStyleManager::updateShadowStyle(int colorId, WPSGraphicStyle &style) const
+{
+	if (colorId==0)
+		return true;
+	if (m_state->m_idColorStyleMap.find(colorId)==m_state->m_idColorStyleMap.end())
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::updateShadowStyle: the color style %d does not exist\n", colorId));
+		return false;
+	}
+	LotusStyleManagerInternal::ColorStyle const &color=m_state->m_idColorStyleMap.find(colorId)->second;
+	if (color.m_patternId==0) // empty
+		return true;
+	WPSColor finalColor=color.m_colors[2];
+	WPSGraphicStyle::Pattern pattern;
+	if (color.m_patternId==2)
+		finalColor=color.m_colors[3];
+	else if (color.m_patternId!=1 && m_state->getPattern(color.m_patternId, pattern))
+	{
+		pattern.m_colors[0]=color.m_colors[3];
+		pattern.m_colors[1]=color.m_colors[2];
+		pattern.getAverageColor(finalColor);
+	}
+	style.setShadowColor(finalColor);
+	style.m_shadowOffset=Vec2f(3,3);
 	return true;
 }
 
@@ -404,7 +518,7 @@ bool LotusStyleManager::readGraphicStyle(long endPos)
 			if (fl!=0x10) f << "#fl[line]=" << std::hex << fl << std::dec << ",";
 			if (m_state->m_idLineStyleMap.find(val)==m_state->m_idLineStyleMap.end())
 			{
-				WPS_DEBUG_MSG(("LotusStyleManager::readLineStyle: the line style %d does not exists\n", val));
+				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the line style %d does not exists\n", val));
 				f << "###lineId=" << val << ",";
 			}
 			else
@@ -415,7 +529,7 @@ bool LotusStyleManager::readGraphicStyle(long endPos)
 			if (fl!=0x20) f << "#fl[color" << i-2 << "]=" << std::hex << fl << std::dec << ",";
 			if (m_state->m_idColorStyleMap.find(val)==m_state->m_idColorStyleMap.end())
 			{
-				WPS_DEBUG_MSG(("LotusStyleManager::readColorStyle: the color style %d does not exists\n", val));
+				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the color style %d does not exists\n", val));
 				f << "###colorId[" << i-2 << "]=" << val << ",";
 			}
 			else
@@ -445,5 +559,23 @@ bool LotusStyleManager::readGraphicStyle(long endPos)
 	return true;
 }
 
+bool LotusStyleManager::updateGraphicStyle(int graphicId, WPSGraphicStyle &style) const
+{
+	if (graphicId==0)
+		return true;
+	if (m_state->m_idGraphicStyleMap.find(graphicId)==m_state->m_idGraphicStyleMap.end())
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::updateGraphicStyle: the graphic style %d does not exist\n", graphicId));
+		return false;
+	}
+	LotusStyleManagerInternal::GraphicStyle const &graphic=m_state->m_idGraphicStyleMap.find(graphicId)->second;
+	if (graphic.m_lineId)
+		updateLineStyle(graphic.m_lineId, style);
+	if (graphic.m_colorsId[0])
+		updateSurfaceStyle(graphic.m_colorsId[0], style);
+	if (graphic.m_colorsId[1])
+		updateShadowStyle(graphic.m_colorsId[1], style);
+	return true;
+}
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

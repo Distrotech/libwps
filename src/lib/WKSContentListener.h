@@ -189,7 +189,7 @@ public:
 	void insertPicture(WPSPosition const &pos, WPSGraphicShape const &shape, WPSGraphicStyle const &style);
 	/** adds a textbox in given position */
 	void insertTextBox(WPSPosition const &pos, WPSSubDocumentPtr subDocument,
-					   WPSGraphicStyle const &frameStyle=WPSGraphicStyle::emptyStyle());
+	                   WPSGraphicStyle const &frameStyle=WPSGraphicStyle::emptyStyle());
 
 	// ------- sheet -----------------
 	/** open a sheet*/
