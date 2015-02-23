@@ -101,8 +101,10 @@ protected:
 
 	//////////////////////// generic ////////////////////////////////////
 
-	//! reads a font name
-	bool readFontName(long endPos);
+	//! reads a mac font name
+	bool readMacFontName(long endPos);
+	//! reads a format font name
+	bool readFMTFontName();
 	//! reads a link
 	bool readLinkZone();
 	//! reads a mac document info zone: zone 1b, then 2af8

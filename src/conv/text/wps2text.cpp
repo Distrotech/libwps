@@ -47,7 +47,8 @@ static int printUsage()
 	printf("\t-e \"encoding\":   Define the file encoding where encoding can be\n");
 	printf("\t\t CP424, CP437, CP737, CP775, CP850, CP852, CP855, CP856, CP857,\n");
 	printf("\t\t CP860, CP861, CP862, CP863, CP864, CP865, CP866, CP869, CP874, CP1006,\n");
-	printf("\t\t CP1250, CP1251, CP1252, CP1253, CP1254, CP1255, CP1256, CP1257, CP1258.\n");
+	printf("\t\t CP1250, CP1251, CP1252, CP1253, CP1254, CP1255, CP1256, CP1257, CP1258,\n");
+	printf("\t\t MacRoman, MacSymbol.\n");
 	printf("\t-h:                Shows this help message\n");
 	printf("\t-p password:       Password to open the file\n");
 	printf("\t-v:                Output wps2text version \n");

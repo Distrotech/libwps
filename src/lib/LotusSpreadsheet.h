@@ -92,6 +92,8 @@ protected:
 	bool readColumnDefinition();
 	//! reads the column sizes ( in char )
 	bool readColumnSizes();
+	//! reads the row formats
+	bool readRowFormat();
 	//! reads the row size ( in pt*32 )
 	bool readRowSizes(long endPos);
 

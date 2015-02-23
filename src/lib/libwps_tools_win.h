@@ -51,6 +51,8 @@ public:
 	            WIN3_ARABIC, WIN3_BALTIC, WIN3_CEUROPE, WIN3_CYRILLIC,
 	            WIN3_GREEK, WIN3_HEBREW, WIN3_TURKISH,
 	            WIN3_VIETNAMESE, WIN3_WEUROPE,
+
+	            MAC_ROMAN, MAC_SYMBOL,
 	            UNKNOWN
 	          };
 

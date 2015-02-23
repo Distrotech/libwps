@@ -709,24 +709,9 @@ bool LotusParser::readZone()
 		case 0x12:
 			ok=isParsed=readChartName();
 			break;
-		case 0x13:   // block related to sheet, with unknown structure
-		{
-			f.str("");
-			f << "Entries(SheetUnkn0):";
-			if (sz<8)
-			{
-				WPS_DEBUG_MSG(("LotusParser::readZone: size of zone%d seems bad\n", id));
-				f << "###";
-				break;
-			}
-			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-			val=(int) libwps::readU8(input);
-			if (val) f << "sheet[id]=" << val << ",";
-			type=(int) libwps::readU8(input); // find 0: with various length, 1:+10 bytes, 2:+6 bytes
-			f << "type=" << type << ",";
-			isParsed=needWriteInAscii=true;
+		case 0x13:
+			isParsed=m_spreadsheetParser->readRowFormat();
 			break;
-		}
 		case 0x15:
 		case 0x1d:
 			if (sz!=4)
@@ -781,6 +766,14 @@ bool LotusParser::readZone()
 			isParsed=ok=m_spreadsheetParser->readSheetName();
 			break;
 		// case 13: big structure
+
+		//
+		// format:
+		//
+
+		case 0xae:
+			isParsed=readFMTFontName();
+			break;
 		default:
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			break;
@@ -1029,7 +1022,7 @@ bool LotusParser::readDataZone()
 		isParsed=m_styleManager->readGraphicStyle(endPos);
 		break;
 	case 0xfdc:
-		isParsed=readFontName(endPos);
+		isParsed=readMacFontName(endPos);
 		break;
 	// 0xfd2: id, ..., colorid
 
@@ -1140,7 +1133,7 @@ bool LotusParser::readDataZone()
 ////////////////////////////////////////////////////////////
 //   generic
 ////////////////////////////////////////////////////////////
-bool LotusParser::readFontName(long endPos)
+bool LotusParser::readMacFontName(long endPos)
 {
 	libwps::DebugStream f;
 	RVNGInputStreamPtr input = getInput();
@@ -1148,10 +1141,10 @@ bool LotusParser::readFontName(long endPos)
 	const int vers=version();
 	long pos = input->tell();
 	long sz=endPos-pos;
-	f << "Entries(FontName):";
+	f << "Entries(MacFontName):";
 	if ((vers<=1 && sz<7) || (vers>1 && sz!=42))
 	{
-		WPS_DEBUG_MSG(("LotusParser::readFontName: the zone size seems bad\n"));
+		WPS_DEBUG_MSG(("LotusParser::readMacFontName: the zone size seems bad\n"));
 		f << "###";
 		ascii().addPos(pos-6);
 		ascii().addNote(f.str().c_str());
@@ -1159,6 +1152,10 @@ bool LotusParser::readFontName(long endPos)
 	}
 	if (vers<=1)
 	{
+		// seems only to exist in a lotus mac file, so revert the default encoding to MacRoman if undef
+		if (m_state->m_fontType==libwps_tools_win::Font::UNKNOWN)
+			m_state->m_fontType=libwps_tools_win::Font::MAC_ROMAN;
+
 		int id=(int) libwps::readU16(input);
 		f << "FN" << id << ",";
 		int val=(int) libwps::readU16(input); // always 0?
@@ -1176,7 +1173,7 @@ bool LotusParser::readFontName(long endPos)
 			if (nameOk && !(c==' ' || (c>='0'&&c<='9') || (c>='a'&&c<='z') || (c>='A'&&c<='Z')))
 			{
 				nameOk=false;
-				WPS_DEBUG_MSG(("LotusParser::readFontName: find odd character in name\n"));
+				WPS_DEBUG_MSG(("LotusParser::readMacFontName: find odd character in name\n"));
 				f << "#";
 			}
 			name += c;
@@ -1184,12 +1181,14 @@ bool LotusParser::readFontName(long endPos)
 		f << name << ",";
 		if (m_state->m_fontsMap.find(id)!=m_state->m_fontsMap.end())
 		{
-			WPS_DEBUG_MSG(("LotusParser::readFontName: a font with id=%d already exists\n", id));
+			WPS_DEBUG_MSG(("LotusParser::readMacFontName: a font with id=%d already exists\n", id));
 			f << "###id,";
 		}
 		else if (nameOk && !name.empty())
 		{
-			LotusParserInternal::Font font(getDefaultFontType());
+			libwps_tools_win::Font::Type encoding=name!="Symbol" ?
+			                                      libwps_tools_win::Font::MAC_ROMAN : libwps_tools_win::Font::MAC_SYMBOL;
+			LotusParserInternal::Font font(encoding);
 			font.m_name=name;
 			m_state->m_fontsMap.insert(std::map<int, LotusParserInternal::Font>::value_type(id,font));
 		}
@@ -1229,6 +1228,57 @@ bool LotusParser::readFontName(long endPos)
 	return true;
 }
 
+bool LotusParser::readFMTFontName()
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+
+	long pos = input->tell();
+	int type = (int) libwps::read16(input);
+	if (type!=0xae)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readFMTFontName: not a font name definition\n"));
+		return false;
+	}
+	long sz = (long) libwps::readU16(input);
+	long endPos=pos+4+sz;
+	f << "Entries(FontFMTName):";
+	if (sz < 2)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readFMTFontName: the zone is too short\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	int id=(int) libwps::readU8(input);
+	f << "id=" << id << ",";
+	bool nameOk=true;
+	std::string name("");
+	for (long i=1; i<sz; ++i)
+	{
+		char c=(char) libwps::readU8(input);
+		if (!c) break;
+		if (nameOk && !(c==' ' || (c>='0'&&c<='9') || (c>='a'&&c<='z') || (c>='A'&&c<='Z')))
+		{
+			nameOk=false;
+			WPS_DEBUG_MSG(("LotusParser::readFMTFontName: find odd character in name\n"));
+			f << "#";
+		}
+		name += c;
+	}
+	f << name << ",";
+	if (input->tell()!=endPos)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readFMTFontName: find extra data\n"));
+		f << "###extra";
+		input->seek(endPos, librevenge::RVNG_SEEK_SET);
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
 bool LotusParser::readLinkZone()
 {
 	libwps::DebugStream f;
@@ -1238,7 +1288,7 @@ bool LotusParser::readLinkZone()
 	int type = (int) libwps::read16(input);
 	if (type!=0xa)
 	{
-		WPS_DEBUG_MSG(("LotusParser::readLinkZone: not a chart definition\n"));
+		WPS_DEBUG_MSG(("LotusParser::readLinkZone: not a link definition\n"));
 		return false;
 	}
 	long sz = (long) libwps::readU16(input);

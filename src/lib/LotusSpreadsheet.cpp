@@ -557,6 +557,145 @@ bool LotusSpreadsheet::readColumnSizes()
 	return true;
 }
 
+bool LotusSpreadsheet::readRowFormat()
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long type = (long) libwps::read16(m_input);
+	if (type != 0x13)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: not a row definition\n"));
+		return false;
+	}
+	long sz = (long) libwps::readU16(m_input);
+	long endPos = pos+4+sz;
+	f << "Entries(RowFormat):";
+	if (sz<8)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: the zone is too short\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	int sheetId=(int) libwps::readU8(m_input);
+	int rowType=(int) libwps::readU8(m_input);
+	int row=(int) libwps::readU16(m_input);
+	int val;
+	f << "sheet[id]=" << sheetId << ",";
+	if (row) f << "row=" << row << ",";
+	switch (rowType)
+	{
+	case 0:
+	{
+		f << "def,";
+		int actCell=0;
+		while (m_input->tell()+4<=endPos)
+		{
+			long actPos=m_input->tell();
+			int values[4];
+			int numCell=1;
+			for (int i=0; i<4; ++i) values[i]=(int) libwps::readU8(m_input);
+			if (values[3]&0x80)
+			{
+				if (actPos+5>endPos)
+				{
+					m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
+					break;
+				}
+				values[3]&=0x7F;
+				numCell=1+(int) libwps::readU8(m_input);
+			}
+			if (values[0]==0xFF && values[1]==0 && values[2]==0 && values[3]==0)
+			{
+				actCell+=numCell;
+				f << "skip";
+				if (numCell>1)
+					f << numCell;
+				f << ",";
+				continue;
+			}
+			f << "[";
+			for (int i=0; i<4; ++i)
+			{
+				if (values[i])
+					f << std::hex << values[i] << std::dec << ",";
+				else
+					f << "_,";
+			}
+			f << "]";
+			if (numCell>1)
+				f << "x" << numCell;
+			f << ",";
+			actCell+=numCell;
+		}
+		if (m_input->tell()!=endPos)
+		{
+			f << "###";
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find extra data\n"));
+		}
+		if (actCell>256)
+		{
+			f << "###";
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find too much cells\n"));
+		}
+		break;
+	}
+	case 1: // the last row definition, maybe the actual row style ?
+		f << "last,";
+		if (sz!=12)
+		{
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: the size seems bad\n"));
+			f << "###sz,";
+			break;
+		}
+		for (int i=0; i<8; ++i)  // f0=0|32|41|71|7e|fe,f1=0|1|40|50|c0, f2=0|4|5|b|41, f3=0|40|54|5c, f4=27, other 0
+		{
+			val=(int) libwps::readU8(m_input);
+			if (val)
+				f << "f" << i << "=" << std::hex << val << std::dec << ",";
+		}
+		break;
+	case 2:
+	{
+		f << "dup,";
+		if (sz!=8)
+		{
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: the size seems bad\n"));
+			f << "###sz,";
+			break;
+		}
+		val=(int) libwps::readU8(m_input);
+		if (val!=sheetId)
+			f << "#sheetId2=" << val << ",";
+		val=(int) libwps::readU8(m_input); // always 0?
+		if (val)
+			f << "f0=" << val << ",";
+		val=(int) libwps::readU16(m_input);
+		if (val>=row)
+		{
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: the original row seems bad\n"));
+			f << "###";
+		}
+		f << "orig[row]=" << val << ",";
+		break;
+	}
+	default:
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find unknown row type\n"));
+		f << "###type=" << rowType << ",";
+		break;
+	}
+	if (m_input->tell()!=endPos)
+	{
+		ascii().addDelimiter(m_input->tell(),'|');
+		m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
 bool LotusSpreadsheet::readRowSizes(long endPos)
 {
 	libwps::DebugStream f;
