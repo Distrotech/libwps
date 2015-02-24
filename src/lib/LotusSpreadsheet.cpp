@@ -23,9 +23,10 @@
 #include <string.h>
 
 #include <cmath>
-#include <sstream>
 #include <limits>
+#include <map>
 #include <stack>
+#include <sstream>
 
 #include <librevenge-stream/librevenge-stream.h>
 
@@ -50,9 +51,8 @@ namespace LotusSpreadsheetInternal
 struct Style : public WPSCellFormat
 {
 	//! construtor
-	Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_font(), m_fontType(type), m_extra("")
+	Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_fontType(type), m_extra("")
 	{
-		for (int i = 0; i < 10; i++) m_unknFlags[i] = 0;
 	}
 
 	//! operator<<
@@ -64,12 +64,8 @@ struct Style : public WPSCellFormat
 	{
 		return !(*this==st);
 	}
-	/** the font */
-	WPSFont m_font;
 	//! font encoding type
 	libwps_tools_win::Font::Type m_fontType;
-	/** some flag */
-	int m_unknFlags[10];
 	/** extra data */
 	std::string m_extra;
 };
@@ -77,44 +73,18 @@ struct Style : public WPSCellFormat
 //! operator<<
 std::ostream &operator<<(std::ostream &o, Style const &style)
 {
-	o << "font=[" << style.m_font << "],";
 	o << static_cast<WPSCellFormat const &>(style) << ",";
 
-	bool hasUnkn = false;
-	for (int i = 0; i < 10; i++)
-	{
-		if (!style.m_unknFlags[i]) continue;
-		hasUnkn=true;
-		break;
-	}
-	if (hasUnkn)
-	{
-		o << "unkn=[" << std::hex;
-		for (int i = 0; i < 10; i++)
-		{
-			if (style.m_unknFlags[i]) o << "fS" << i << "=" << std::hex << style.m_unknFlags[i] << std::dec << ",";
-		}
-		o << std::dec << "]";
-	}
-	if (style.m_extra.length())
-		o << ", extra=[" << style.m_extra << "]";
+	if (!style.m_extra.empty())
+		o << style.m_extra;
 
 	return o;
 }
 
 bool Style::operator==(Style const &st) const
 {
-	if (m_font!=st.m_font) return false;
-	if (m_format!=st.m_format || m_subFormat!=st.m_subFormat || m_digits!=st.m_digits || m_protected !=st.m_protected)
-		return false;
-	int diff = WPSCellFormat::compare(st);
-	if (diff) return false;
-	for (int i = 0; i < 10; i++)
-	{
-		if (m_unknFlags[i]!=st.m_unknFlags[i])
-			return false;
-	}
-	return m_extra==st.m_extra;
+	if (m_fontType!=st.m_fontType || WPSCellFormat::compare(st)!=0) return false;
+	return true;
 }
 
 //! a list of position of a Lotus spreadsheet
@@ -324,7 +294,8 @@ public:
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_version(-1), m_spreadsheetList(), m_nameToCellsMap()
+	State() :  m_eof(-1), m_version(-1), m_spreadsheetList(), m_nameToCellsMap(),
+		m_rowStylesList(), m_rowIdToStyleIdMap(), m_rowIdToChildRowIdMap()
 	{
 		m_spreadsheetList.resize(1);
 	}
@@ -361,6 +332,12 @@ struct State
 	std::vector<Spreadsheet> m_spreadsheetList;
 	//! map name to position
 	std::map<std::string, CellsList> m_nameToCellsMap;
+	//! the list of row styles
+	std::vector<std::vector<Style> > m_rowStylesList;
+	//! map sheet x row to row style id
+	std::map<Vec2i,size_t> m_rowIdToStyleIdMap;
+	//! map sheet x row to child style
+	std::multimap<Vec2i,Vec2i> m_rowIdToChildRowIdMap;
 };
 
 }
@@ -380,6 +357,36 @@ LotusSpreadsheet::~LotusSpreadsheet()
 void LotusSpreadsheet::cleanState()
 {
 	m_state.reset(new LotusSpreadsheetInternal::State);
+}
+
+void LotusSpreadsheet::updateState()
+{
+	if (m_state->m_rowIdToChildRowIdMap.empty())
+		return;
+	std::stack<Vec2i> done;
+	for (std::map<Vec2i,size_t>::const_iterator it=m_state->m_rowIdToStyleIdMap.begin();
+	        it!=m_state->m_rowIdToStyleIdMap.begin(); ++it)
+		done.push(it->first);
+	while (!done.empty())
+	{
+		Vec2i pos=done.top();
+		done.pop();
+		std::multimap<Vec2i,Vec2i>::const_iterator cIt=m_state->m_rowIdToChildRowIdMap.lower_bound(pos);
+		if (cIt==m_state->m_rowIdToChildRowIdMap.end() || cIt->first!=pos)
+			continue;
+		if (m_state->m_rowIdToStyleIdMap.find(pos)==m_state->m_rowIdToStyleIdMap.end())
+		{
+			WPS_DEBUG_MSG(("LotusSpreadsheet::updateState: something is bad\n"));
+			continue;
+		}
+		size_t finalPos=m_state->m_rowIdToStyleIdMap.find(pos)->second;
+		while (cIt!=m_state->m_rowIdToChildRowIdMap.end() && cIt->first==pos)
+		{
+			Vec2i const &cPos=cIt++->second;
+			m_state->m_rowIdToStyleIdMap[cPos]=finalPos;
+			done.push(cPos);
+		}
+	}
 }
 
 void LotusSpreadsheet::setLastSpreadsheetId(int id)
@@ -557,7 +564,7 @@ bool LotusSpreadsheet::readColumnSizes()
 	return true;
 }
 
-bool LotusSpreadsheet::readRowFormat()
+bool LotusSpreadsheet::readRowFormats()
 {
 	libwps::DebugStream f;
 
@@ -565,7 +572,7 @@ bool LotusSpreadsheet::readRowFormat()
 	long type = (long) libwps::read16(m_input);
 	if (type != 0x13)
 	{
-		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: not a row definition\n"));
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: not a row definition\n"));
 		return false;
 	}
 	long sz = (long) libwps::readU16(m_input);
@@ -573,7 +580,7 @@ bool LotusSpreadsheet::readRowFormat()
 	f << "Entries(RowFormat):";
 	if (sz<8)
 	{
-		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: the zone is too short\n"));
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the zone is too short\n"));
 		f << "###";
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
@@ -591,126 +598,33 @@ bool LotusSpreadsheet::readRowFormat()
 	{
 		f << "def,";
 		int actCell=0;
+		std::vector<LotusSpreadsheetInternal::Style> stylesList;
 		f << "[";
-		while (m_input->tell()+4<=endPos)
+		while (m_input->tell()<endPos)
 		{
-			long actPos=m_input->tell();
-			int value[2];
-			for (int i=0; i<2; ++i) value[i]=(int) libwps::readU16(m_input);
-			int numCell=1;
-			if (value[1]&0x8000)
+			int numCell;
+			LotusSpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
+			if (!readRowFormat(style, numCell, endPos))
 			{
-				if (actPos+5>endPos)
-				{
-					m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
-					break;
-				}
-				value[1]&=0x7FFF;
-				numCell=1+(int) libwps::readU8(m_input);
-			}
-			f << "[";
-			if (value[0]&0x100)
-				f << "red[neg],";
-			if (value[0]&0x200)
-				f << "add[parenthesis],";
-			if (!value[0]&0x80) // no sure what this means...
-				f << "not80[fo],";
-			value[0]&=0xFC7F;
-			switch ((value[0]&0x70)>>4)
-			{
-			case 0:
-				f << "fixed[" << (value[0]&0xF) << "],";
-				break;
-			case 1:
-				f << "scientific[" << (value[0]&0xF) << "],";
-				break;
-			case 2:
-				f << "currency[" << (value[0]&0xF) << "],";
-				break;
-			case 3:
-				f << "percent[" << (value[0]&0xF) << "],";
-				break;
-			case 4:
-				f << "commas[" << (value[0]&0xF) << "],";
-				break;
-			case 7:
-				switch (value[0]&0xF)
-				{
-				case 0: // +/- : kind of bool
-					f << "+/-,";
-					break;
-				case 1:
-					f << "decimal,";
-					break;
-				case 2:
-					f << "dd-B-yy,";
-					break;
-				case 3:
-					f << "dd-B,";
-					break;
-				case 4:
-					f << "B-yy,";
-					break;
-				case 5:
-					f << "text,";
-					break;
-				case 6:
-					f << "hidden,";
-					break;
-				case 7:
-					f << "hh:mm APM";
-					break;
-				case 8:
-					f << "hh:mm:ss APM";
-					break;
-				case 9:
-					f << "mm/dd/yy,";
-					break;
-				case 0xa:
-					f << "mm/dd,";
-					break;
-				case 0xb:
-					f << "hh:mm";
-					break;
-				case 0xc:
-					f << "hh:mm:ss";
-					break;
-				case 0xd:
-					f << "label,";
-					break;
-				case 0xf: // automatic
-					break;
-				default:
-					WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find unknown 7e format\n"));
-					f << "Fo=##7e,";
-					break;
-				}
-				break;
-			default:
-				WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find unknown %x format\n", (unsigned int)(value[0]&0x7F)));
-				f << "##Fo=" << std::hex << (value[0]&0x7F) << std::dec << ",";
+				f << "###";
+				WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: find extra data\n"));
 				break;
 			}
-			if (value[0]&0xFF00)
-				f << "Fo[h]=" << std::hex << (value[0]>>8)  << std::dec << ",";
-			if (value[1])
-				f << "f1=" << std::hex << value[1] << std::dec << ",";
-			f << "]";
+			for (int i=0; i<numCell; ++i)
+				stylesList.push_back(style);
+			f << "[" << style << "]";
 			if (numCell>1)
 				f << "x" << numCell;
 			f << ",";
 			actCell+=numCell;
 		}
 		f << "],";
-		if (m_input->tell()!=endPos)
-		{
-			f << "###";
-			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find extra data\n"));
-		}
+		m_state->m_rowIdToStyleIdMap[Vec2i(sheetId,row)]=m_state->m_rowStylesList.size();
+		m_state->m_rowStylesList.push_back(stylesList);
 		if (actCell>256)
 		{
 			f << "###";
-			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find too much cells\n"));
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: find too much cells\n"));
 		}
 		break;
 	}
@@ -718,7 +632,7 @@ bool LotusSpreadsheet::readRowFormat()
 		f << "last,";
 		if (sz!=12)
 		{
-			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: the size seems bad\n"));
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the size seems bad\n"));
 			f << "###sz,";
 			break;
 		}
@@ -734,27 +648,29 @@ bool LotusSpreadsheet::readRowFormat()
 		f << "dup,";
 		if (sz!=8)
 		{
-			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: the size seems bad\n"));
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the size seems bad\n"));
 			f << "###sz,";
 			break;
 		}
-		val=(int) libwps::readU8(m_input);
-		if (val!=sheetId)
-			f << "#sheetId2=" << val << ",";
+		int sheetId2=(int) libwps::readU8(m_input);
+		if (sheetId2!=sheetId)
+			f << "#sheetId2=" << sheetId2 << ",";
 		val=(int) libwps::readU8(m_input); // always 0?
 		if (val)
 			f << "f0=" << val << ",";
 		val=(int) libwps::readU16(m_input);
 		if (val>=row)
 		{
-			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: the original row seems bad\n"));
-			f << "###";
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the original row seems bad\n"));
+			f << "#";
 		}
+		m_state->m_rowIdToChildRowIdMap.insert
+		(std::multimap<Vec2i,Vec2i>::value_type(Vec2i(sheetId2,val),Vec2i(sheetId,row)));
 		f << "orig[row]=" << val << ",";
 		break;
 	}
 	default:
-		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find unknown row type\n"));
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: find unknown row type\n"));
 		f << "###type=" << rowType << ",";
 		break;
 	}
@@ -765,6 +681,162 @@ bool LotusSpreadsheet::readRowFormat()
 	}
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusSpreadsheet::readRowFormat(LotusSpreadsheetInternal::Style &style, int &numCell, long endPos)
+{
+	numCell=1;
+
+	libwps::DebugStream f;
+	long actPos=m_input->tell();
+	if (endPos-actPos<4)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the zone seems too short\n"));
+		return false;
+	}
+
+	int value[4];
+	for (int i=0; i<4; ++i) value[i]=(int) libwps::readU8(m_input);
+	WPSFont font;
+	if (value[3]&0x80)
+	{
+		if (actPos+5>endPos)
+		{
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the zone seems too short\n"));
+			m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
+			return false;
+		}
+		value[3]&=0x7F;
+		numCell=1+(int) libwps::readU8(m_input);
+	}
+	if (value[1]&1)
+		f << "red[neg],";
+	if (value[1]&2)
+		f << "add[parenthesis],";
+	if ((value[0]&0x80)==0)
+		f << "protected?,";
+	int dType=(value[1]>>4);
+	if (value[1]&0xC)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find unexpected flag\n"));
+		f << "##fl=" << (value[1]&0xC) << ",";
+	}
+	switch ((value[0]>>4)&7)
+	{
+	case 0: // fixed
+		style.setFormat(WPSCellFormat::F_NUMBER, 6);
+		style.setDigits(value[0]&0xF);
+		break;
+	case 1: // scientific
+		style.setFormat(WPSCellFormat::F_NUMBER, 2);
+		style.setDigits(value[0]&0xF);
+		break;
+	case 2: // currency
+		style.setFormat(WPSCellFormat::F_NUMBER, 4);
+		style.setDigits(value[0]&0xF);
+		break;
+	case 3: // percent
+		style.setFormat(WPSCellFormat::F_NUMBER, 3);
+		style.setDigits(value[0]&0xF);
+		break;
+	case 4: // decimal
+		style.setFormat(WPSCellFormat::F_NUMBER, 1);
+		style.setDigits(value[0]&0xF);
+		break;
+	case 7:
+		switch (value[0]&0xF)
+		{
+		case 0: // +/- : kind of bool
+			style.setFormat(WPSCellFormat::F_BOOLEAN);
+			f << "+/-,";
+			break;
+		case 1:
+			style.setFormat(WPSCellFormat::F_NUMBER, 0);
+			break;
+		case 2:
+			style.setDTFormat(WPSCellFormat::F_DATE, "%d %B %y");
+			break;
+		case 3:
+			style.setDTFormat(WPSCellFormat::F_DATE, "%d %B");
+			break;
+		case 4:
+			style.setDTFormat(WPSCellFormat::F_DATE, "%B %y");
+			break;
+		case 5:
+			style.setFormat(WPSCellFormat::F_TEXT);
+			break;
+		case 6:
+			style.setFormat(WPSCellFormat::F_TEXT);
+			font.m_attributes |= WPS_HIDDEN_BIT;
+			break;
+		case 7:
+			style.setDTFormat(WPSCellFormat::F_TIME, "%I:%M:%S%p");
+			break;
+		case 8:
+			style.setDTFormat(WPSCellFormat::F_TIME, "%I:%M%p");
+			break;
+		case 9:
+			style.setDTFormat(WPSCellFormat::F_DATE, "%m/%d/%y");
+			break;
+		case 0xa:
+			style.setDTFormat(WPSCellFormat::F_DATE, "%m/%d");
+			break;
+		case 0xb:
+			style.setDTFormat(WPSCellFormat::F_TIME, "%H:%M:%S");
+			break;
+		case 0xc:
+			style.setDTFormat(WPSCellFormat::F_TIME, "%H:%M");
+			break;
+		case 0xd:
+			style.setFormat(WPSCellFormat::F_TEXT);
+			f << "label,";
+			break;
+		case 0xf: // automatic
+			break;
+		default:
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find unknown 7e format\n"));
+			f << "Fo=##7e,";
+			break;
+		}
+		break;
+	default:
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find unknown %x format\n", (unsigned int)(value[0]&0x7F)));
+		f << "##Fo=" << std::hex << (value[0]&0x7F) << std::dec << ",";
+		break;
+	}
+
+	switch (value[3]&3)
+	{
+	case 1:
+		style.setHAlignement(WPSCellFormat::HALIGN_LEFT);
+		break;
+	case 2:
+		style.setHAlignement(WPSCellFormat::HALIGN_RIGHT);
+		break;
+	case 3:
+		style.setHAlignement(WPSCellFormat::HALIGN_CENTER);
+		break;
+	default: // general
+		break;
+	}
+	int fId=(value[3]>>2);
+	if (fId)
+	{
+		if (dType==1 && value[2]==0)
+		{
+			f << "Fo" << fId << ",";
+			dType=0;
+		}
+		else
+			f << "id?=" << fId << ",";
+	}
+	if (dType)
+		f << "type=" << std::hex << dType << std::dec << ",";
+	if (value[2])
+		f << "f1=" << std::hex << value[2] << std::dec << ",";
+	style.setFont(font);
+	style.m_extra=f.str();
 	return true;
 }
 
@@ -1273,10 +1345,11 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 	std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
 	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator it;
 	int prevRow = -1;
+	std::vector<LotusSpreadsheetInternal::Style> const *listStyles=0;
+	LotusSpreadsheetInternal::Style defaultStyle(m_mainParser.getDefaultFontType());
 	for (it=sheet.m_positionToCellMap.begin(); it!=sheet.m_positionToCellMap.end(); ++it)
 	{
 		LotusSpreadsheetInternal::Cell const &cell= it->second;
-		// FIXME: openSheetRow/openSheetCell must do that
 		if (cell.position()[1] != prevRow)
 		{
 			while (cell.position()[1] > prevRow)
@@ -1289,14 +1362,31 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 				else
 					m_listener->openSheetRow(16, librevenge::RVNG_POINT);
 			}
+			// update list styles
+			listStyles=0;
+			if (m_state->m_rowIdToStyleIdMap.find(Vec2i(sheetId,cell.position()[1]))
+			        !=m_state->m_rowIdToStyleIdMap.end())
+			{
+				size_t listId=m_state->m_rowIdToStyleIdMap.find(Vec2i(sheetId,cell.position()[1]))->second;
+				if (listId<m_state->m_rowStylesList.size())
+					listStyles=&m_state->m_rowStylesList[listId];
+				else
+				{
+					WPS_DEBUG_MSG(("LotusSpreadsheet::sendSpreadsheet: can not find the list id\n"));
+				}
+			}
 		}
-		sendCellContent(cell);
+		if (listStyles && cell.position()[0]>=0 && cell.position()[0]<(int) listStyles->size())
+			sendCellContent(cell, (*listStyles)[size_t(cell.position()[0])]);
+		else
+			sendCellContent(cell, defaultStyle);
 	}
 	if (prevRow!=-1) m_listener->closeSheetRow();
 	m_listener->closeSheet();
 }
 
-void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cell)
+void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cell,
+                                       LotusSpreadsheetInternal::Style const &style)
 {
 	if (m_listener.get() == 0L)
 	{
@@ -1304,17 +1394,16 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 		return;
 	}
 
-	LotusSpreadsheetInternal::Style cellStyle(m_mainParser.getDefaultFontType());
+	LotusSpreadsheetInternal::Style cellStyle(style);
 	if (cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
 		cellStyle.setHAlignement(cell.m_hAlign);
 
 	librevenge::RVNGPropertyList propList;
 	libwps_tools_win::Font::Type fontType = cellStyle.m_fontType;
-	m_listener->setFont(cellStyle.m_font);
+	m_listener->setFont(cellStyle.getFont());
 
 	LotusSpreadsheetInternal::Cell finalCell(cell);
 	finalCell.WPSCellFormat::operator=(cellStyle);
-	finalCell.setFont(cellStyle.m_font);
 	WKSContentListener::CellContent content(cell.m_content);
 	for (size_t f=0; f < content.m_formula.size(); ++f)
 	{

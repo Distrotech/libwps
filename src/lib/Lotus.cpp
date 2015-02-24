@@ -251,6 +251,8 @@ void LotusParser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 		if (m_listener)
 		{
 			m_styleManager->updateState();
+			m_spreadsheetParser->updateState();
+
 			m_graphParser->setListener(m_listener);
 			m_spreadsheetParser->setListener(m_listener);
 
@@ -711,7 +713,7 @@ bool LotusParser::readZone()
 			ok=isParsed=readChartName();
 			break;
 		case 0x13:
-			isParsed=m_spreadsheetParser->readRowFormat();
+			isParsed=m_spreadsheetParser->readRowFormats();
 			break;
 		case 0x15:
 		case 0x1d:

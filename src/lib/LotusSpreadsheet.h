@@ -36,6 +36,7 @@ namespace LotusSpreadsheetInternal
 {
 class Cell;
 class SpreadSheet;
+struct Style;
 struct State;
 }
 
@@ -57,6 +58,8 @@ public:
 	~LotusSpreadsheet();
 	//! clean internal state
 	void cleanState();
+	//! update internal state (must be called one time before sending data)
+	void updateState();
 	//! sets the listener
 	void setListener(WKSContentListenerPtr &listen)
 	{
@@ -76,7 +79,8 @@ protected:
 	void sendSpreadsheet(int sheetId);
 
 	//! send the cell data
-	void sendCellContent(LotusSpreadsheetInternal::Cell const &cell);
+	void sendCellContent(LotusSpreadsheetInternal::Cell const &cell,
+	                     LotusSpreadsheetInternal::Style const &style);
 
 	//////////////////////// report //////////////////////////////
 
@@ -93,7 +97,9 @@ protected:
 	//! reads the column sizes ( in char )
 	bool readColumnSizes();
 	//! reads the row formats
-	bool readRowFormat();
+	bool readRowFormats();
+	//! reads a cell's row format
+	bool readRowFormat(LotusSpreadsheetInternal::Style &style, int &numCell, long endPos);
 	//! reads the row size ( in pt*32 )
 	bool readRowSizes(long endPos);
 
