@@ -53,6 +53,8 @@ public:
 	~LotusStyleManager();
 	//! clean internal state
 	void cleanState();
+	//! update the state (need to be called one time before asking for style)
+	void updateState();
 
 	//! returns if possible the color
 	bool getColor(int cId, WPSColor &color) const;
@@ -72,8 +74,14 @@ protected:
 	// low level
 	//
 
+	//! reads a cell style
+	bool readCellStyle(long endPos);
 	//! reads a color style
 	bool readColorStyle(long endPos);
+	//! reads a font style
+	bool readFontStyle(long endPos);
+	//! reads a format style
+	bool readFormatStyle(long endPos);
 	//! reads a line style
 	bool readLineStyle(long endPos);
 	//! reads a graphic style

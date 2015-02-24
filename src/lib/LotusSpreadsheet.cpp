@@ -591,45 +591,117 @@ bool LotusSpreadsheet::readRowFormat()
 	{
 		f << "def,";
 		int actCell=0;
+		f << "[";
 		while (m_input->tell()+4<=endPos)
 		{
 			long actPos=m_input->tell();
-			int values[4];
+			int value[2];
+			for (int i=0; i<2; ++i) value[i]=(int) libwps::readU16(m_input);
 			int numCell=1;
-			for (int i=0; i<4; ++i) values[i]=(int) libwps::readU8(m_input);
-			if (values[3]&0x80)
+			if (value[1]&0x8000)
 			{
 				if (actPos+5>endPos)
 				{
 					m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 					break;
 				}
-				values[3]&=0x7F;
+				value[1]&=0x7FFF;
 				numCell=1+(int) libwps::readU8(m_input);
 			}
-			if (values[0]==0xFF && values[1]==0 && values[2]==0 && values[3]==0)
-			{
-				actCell+=numCell;
-				f << "skip";
-				if (numCell>1)
-					f << numCell;
-				f << ",";
-				continue;
-			}
 			f << "[";
-			for (int i=0; i<4; ++i)
+			if (value[0]&0x100)
+				f << "red[neg],";
+			if (value[0]&0x200)
+				f << "add[parenthesis],";
+			if (!value[0]&0x80) // no sure what this means...
+				f << "not80[fo],";
+			value[0]&=0xFC7F;
+			switch ((value[0]&0x70)>>4)
 			{
-				if (values[i])
-					f << std::hex << values[i] << std::dec << ",";
-				else
-					f << "_,";
+			case 0:
+				f << "fixed[" << (value[0]&0xF) << "],";
+				break;
+			case 1:
+				f << "scientific[" << (value[0]&0xF) << "],";
+				break;
+			case 2:
+				f << "currency[" << (value[0]&0xF) << "],";
+				break;
+			case 3:
+				f << "percent[" << (value[0]&0xF) << "],";
+				break;
+			case 4:
+				f << "commas[" << (value[0]&0xF) << "],";
+				break;
+			case 7:
+				switch (value[0]&0xF)
+				{
+				case 0: // +/- : kind of bool
+					f << "+/-,";
+					break;
+				case 1:
+					f << "decimal,";
+					break;
+				case 2:
+					f << "dd-B-yy,";
+					break;
+				case 3:
+					f << "dd-B,";
+					break;
+				case 4:
+					f << "B-yy,";
+					break;
+				case 5:
+					f << "text,";
+					break;
+				case 6:
+					f << "hidden,";
+					break;
+				case 7:
+					f << "hh:mm APM";
+					break;
+				case 8:
+					f << "hh:mm:ss APM";
+					break;
+				case 9:
+					f << "mm/dd/yy,";
+					break;
+				case 0xa:
+					f << "mm/dd,";
+					break;
+				case 0xb:
+					f << "hh:mm";
+					break;
+				case 0xc:
+					f << "hh:mm:ss";
+					break;
+				case 0xd:
+					f << "label,";
+					break;
+				case 0xf: // automatic
+					break;
+				default:
+					WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find unknown 7e format\n"));
+					f << "Fo=##7e,";
+					break;
+				}
+				break;
+			default:
+				WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormat: find unknown %x format\n", (unsigned int)(value[0]&0x7F)));
+				f << "##Fo=" << std::hex << (value[0]&0x7F) << std::dec << ",";
+				break;
 			}
+			if (value[0]&0xFF00)
+				f << "Fo[h]=" << std::hex << (value[0]>>8)  << std::dec << ",";
+			if (value[1])
+				f << "f1=" << std::hex << value[1] << std::dec << ",";
 			f << "]";
 			if (numCell>1)
 				f << "x" << numCell;
 			f << ",";
 			actCell+=numCell;
 		}
+		f << "],";
 		if (m_input->tell()!=endPos)
 		{
 			f << "###";

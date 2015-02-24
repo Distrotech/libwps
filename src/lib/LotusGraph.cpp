@@ -97,7 +97,7 @@ struct Zone
 		if (z.m_lineId)
 			o << "L" << z.m_lineId << ",";
 		if (z.m_surfaceId)
-			o << "C" << z.m_surfaceId << ",";
+			o << "Co" << z.m_surfaceId << ",";
 		if (z.m_graphicId)
 			o << "G" << z.m_graphicId << ",";
 		if (z.m_hasShadow)

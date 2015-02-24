@@ -250,6 +250,7 @@ void LotusParser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 			m_listener=createListener(documentInterface);
 		if (m_listener)
 		{
+			m_styleManager->updateState();
 			m_graphParser->setListener(m_listener);
 			m_spreadsheetParser->setListener(m_listener);
 
@@ -1012,14 +1013,23 @@ bool LotusParser::readDataZone()
 	//
 	// style
 	//
+	case 0xfa0:
+		isParsed=m_styleManager->readFontStyle(endPos);
+		break;
 	case 0xfaa:
 		isParsed=m_styleManager->readLineStyle(endPos);
 		break;
 	case 0xfb4:
 		isParsed=m_styleManager->readColorStyle(endPos);
 		break;
+	case 0xfbe:
+		isParsed=m_styleManager->readFormatStyle(endPos);
+		break;
 	case 0xfc8:
 		isParsed=m_styleManager->readGraphicStyle(endPos);
+		break;
+	case 0xfd2:
+		isParsed=m_styleManager->readCellStyle(endPos);
 		break;
 	case 0xfdc:
 		isParsed=readMacFontName(endPos);

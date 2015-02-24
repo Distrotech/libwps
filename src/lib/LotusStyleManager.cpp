@@ -80,6 +80,56 @@ struct ColorStyle
 	std::string m_extra;
 };
 
+//! small struct used to defined font style
+struct FontStyle
+{
+	//! constructor
+	FontStyle(libwps_tools_win::Font::Type fontType) : m_font(), m_fontType(fontType), m_fontId(0), m_extra("")
+	{
+	}
+	//! operator<<
+	friend std::ostream &operator<<(std::ostream &o, FontStyle const &font)
+	{
+		o << font.m_font;
+		if (font.m_fontId) o << "FN" << font.m_fontId << ",";
+		o << font.m_extra;
+		return o;
+	}
+	//! the font
+	WPSFont m_font;
+	//! the font type
+	libwps_tools_win::Font::Type m_fontType;
+	//! the font id
+	int m_fontId;
+	//! extra data
+	std::string m_extra;
+};
+
+//! small struct used to defined format style
+struct FormatStyle
+{
+	//! constructor
+	FormatStyle() : m_prefix(""), m_suffix(""), m_extra("")
+	{
+	}
+	//! operator<<
+	friend std::ostream &operator<<(std::ostream &o, FormatStyle const &format)
+	{
+		if (!format.m_prefix.empty())
+			o << "prefix=" << format.m_prefix << ",";
+		if (!format.m_suffix.empty())
+			o << "suffix=" << format.m_suffix << ",";
+		o << format.m_extra;
+		return o;
+	}
+	//! the prefix
+	std::string m_prefix;
+	//! the suffix
+	std::string m_suffix;
+	//! extra data
+	std::string m_extra;
+};
+
 //! small struct used to defined line style
 struct LineStyle
 {
@@ -109,6 +159,47 @@ struct LineStyle
 	std::string m_extra;
 };
 
+//! small struct used to defined cell style
+struct CellStyle
+{
+	//! constructor
+	CellStyle() : m_fontId(0), m_formatId(0), m_extra("")
+	{
+		for (int i=0; i<4; ++i) m_bordersId[i]=0;
+		for (int i=0; i<2; ++i) m_colorsId[i]=0;
+	}
+	//! operator<<
+	friend std::ostream &operator<<(std::ostream &o, CellStyle const &cell)
+	{
+		if (cell.m_fontId)
+			o << "id[font]=FS" << cell.m_fontId << ",";
+		for (int i=0; i<4; ++i)
+		{
+			if (cell.m_bordersId[i])
+				o << "bord" << i << "=Li" << cell.m_bordersId[i] << ",";
+		}
+		for (int i=0; i<2; ++i)
+		{
+			if (cell.m_colorsId[i])
+				o << (i==0 ? "color" : "color[shadow]") << "=Co" << cell.m_colorsId[i] << ",";
+		}
+		if (cell.m_formatId)
+			o << "id[format]=Fo" << cell.m_formatId << ",";
+		o << cell.m_extra;
+		return o;
+	}
+	//! the border line id
+	int m_bordersId[4];
+	//! the color id : surface, shadow ?
+	int m_colorsId[2];
+	//! the font id
+	int m_fontId;
+	//! the format id
+	int m_formatId;
+	//! extra data
+	std::string m_extra;
+};
+
 //! small struct used to defined graphic style
 struct GraphicStyle
 {
@@ -123,9 +214,9 @@ struct GraphicStyle
 		if (graphic.m_lineId)
 			o << "L" << graphic.m_lineId << ",";
 		if (graphic.m_colorsId[0])
-			o << "C" << graphic.m_colorsId[0] << ",";
+			o << "Co" << graphic.m_colorsId[0] << ",";
 		if (graphic.m_colorsId[1])
-			o << "shadow[color]=C" << graphic.m_colorsId[1] << ",";
+			o << "shadow[color]=Co" << graphic.m_colorsId[1] << ",";
 		o << graphic.m_extra;
 		return o;
 	}
@@ -141,7 +232,8 @@ struct GraphicStyle
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_version(-1), m_idColorStyleMap(), m_idGraphicStyleMap(), m_idLineStyleMap()
+	State() :  m_eof(-1), m_version(-1), m_idCellStyleMap(), m_idColorStyleMap(),
+		m_idFontStyleMap(), m_idFormatStyleMap(), m_idGraphicStyleMap(), m_idLineStyleMap()
 	{
 	}
 	//! returns a color corresponding to an id
@@ -153,8 +245,14 @@ struct State
 	long m_eof;
 	//! the file version
 	int m_version;
+	//! a map id to cell style
+	std::map<int, CellStyle> m_idCellStyleMap;
 	//! a map id to color style
 	std::map<int, ColorStyle> m_idColorStyleMap;
+	//! a map id to font style
+	std::map<int, FontStyle> m_idFontStyleMap;
+	//! a map id to format style
+	std::map<int, FormatStyle> m_idFormatStyleMap;
 	//! a map id to graphic style
 	std::map<int, GraphicStyle> m_idGraphicStyleMap;
 	//! a map id to line style
@@ -258,6 +356,21 @@ LotusStyleManager::~LotusStyleManager()
 void LotusStyleManager::cleanState()
 {
 	m_state.reset(new LotusStyleManagerInternal::State);
+}
+
+void LotusStyleManager::updateState()
+{
+	// try to update the font styles
+	std::map<int, LotusStyleManagerInternal::FontStyle>::iterator fIt;
+	for (fIt=m_state->m_idFontStyleMap.begin(); fIt!=m_state->m_idFontStyleMap.end(); ++fIt)
+	{
+		LotusStyleManagerInternal::FontStyle &font=fIt->second;
+		if (!font.m_fontId) continue;
+		WPSFont defFont;
+		if (!m_mainParser.getFont(font.m_fontId, defFont, font.m_fontType))
+			continue;
+		font.m_font.m_name = defFont.m_name;
+	}
 }
 
 int LotusStyleManager::version() const
@@ -417,7 +530,7 @@ bool LotusStyleManager::readColorStyle(long endPos)
 	color.m_extra=f.str();
 
 	f.str("");
-	f << "Entries(ColorStyle):C" << id << "," << color;
+	f << "Entries(ColorStyle):Co" << id << "," << color;
 	if (m_state->m_idColorStyleMap.find(id)!=m_state->m_idColorStyleMap.end())
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readColorStyle: the color style %d already exists\n", id));
@@ -582,4 +695,260 @@ bool LotusStyleManager::updateGraphicStyle(int graphicId, WPSGraphicStyle &style
 	return true;
 }
 
+bool LotusStyleManager::readFontStyle(long endPos)
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	if (endPos-pos!=12)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFontStyle: the zone size seems bad\n"));
+		ascii().addPos(pos-6);
+		ascii().addNote("Entries(FontStyle):###");
+		return true;
+	}
+	int id=(int) libwps::readU8(m_input);
+	LotusStyleManagerInternal::FontStyle font(m_mainParser.getDefaultFontType());
+	int val=(int) libwps::readU8(m_input); // always 0?
+	if (val)
+		f << "fl=" << std::hex << val << std::dec << ",";
+	for (int i=0; i<2; ++i)   // always 0?
+	{
+		val=(int) libwps::readU8(m_input);
+		if (val)
+			f << "f" << i << "=" << val << ",";
+	}
+	val=(int) libwps::readU8(m_input);
+	if (val!=0xFF)
+		f << "g0=" << std::hex << val << std::dec << ",";
+	// we can not read the font name here, because the font is defined after...
+	font.m_fontId=(int) libwps::readU8(m_input);
+	val=(int) libwps::readU16(m_input);
+	if (val)
+		font.m_font.m_size=val/32.;
+	for (int i=0; i<2; ++i)
+	{
+		val=(int) libwps::readU8(m_input);
+		if (val==0xFF) continue;
+		WPSColor color;
+		if (!getColor(val, color))
+			f << "#col" << i << "=" << std::hex << val << std::dec << ",";
+		else if (i==0)
+			font.m_font.m_color=color;
+		else if (color!=font.m_font.m_color) //unsured
+			f << "col[def]=" << color << ",";
+	}
+	val=(int) libwps::readU8(m_input);
+	if (val)
+	{
+		if (val&1) font.m_font.m_attributes |= WPS_BOLD_BIT;
+		if (val&2) font.m_font.m_attributes |= WPS_ITALICS_BIT;
+		if (val&4) font.m_font.m_attributes |= WPS_OUTLINE_BIT;
+		if (val&8) font.m_font.m_attributes |= WPS_UNDERLINE_BIT;
+		if (val&0x10) font.m_font.m_attributes |= WPS_SHADOW_BIT;
+		if (val&0x20) font.m_font.m_spacing=-2;
+		if (val&0x40) font.m_font.m_spacing=-2;
+		if (val&0x80) f << "flags[#80],";
+	}
+	val=(int) libwps::readU8(m_input);
+	if (val) // 0|18|20|24
+		f << "h0=" << std::hex << val << std::dec << ",";
+	font.m_extra=f.str();
+	if (m_state->m_idFontStyleMap.find(id)!=m_state->m_idFontStyleMap.end())
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFontStyle: the font style %d already exists\n", id));
+		f << "###";
+	}
+	else
+		m_state->m_idFontStyleMap.insert
+		(std::map<int,LotusStyleManagerInternal::FontStyle>::value_type(id,font));
+
+	f.str("");
+	f << "Entries(FontStyle):FS" << id << "," << font;
+	ascii().addPos(pos-6);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusStyleManager::readFormatStyle(long endPos)
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	if (endPos-pos<23)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFormatStyle: the zone size seems bad\n"));
+		ascii().addPos(pos-6);
+		ascii().addNote("Entries(FormatStyle):###");
+		return true;
+	}
+	int id=(int) libwps::readU8(m_input);
+	LotusStyleManagerInternal::FormatStyle format;
+	int val=(int) libwps::readU8(m_input); // always 30?
+	if (val!=0x30)
+		f << "fl=" << std::hex << val << std::dec << ",";
+
+	for (int i=0; i<10; ++i) // always f1=100, other 0?
+	{
+		val=(int) libwps::readU16(m_input);
+		if (val) f << "f" << i << "=" << val << ",";
+	}
+	bool ok=true;
+	for (int i=0; i<2; ++i)
+	{
+		val=(int) libwps::readU8(m_input);
+		if (val==0xf) continue;
+		if (val!=0x3c)
+		{
+			WPS_DEBUG_MSG(("LotusStyleManager::readFormatStyle: find unknown type\n"));
+			f << "###type=" << std::hex << val << std::dec << ",";
+			ok=false;
+			break;
+		}
+		int dSz=(int) libwps::readU8(m_input);
+		if (m_input->tell()+dSz+1>endPos)
+		{
+			WPS_DEBUG_MSG(("LotusStyleManager::readFormatStyle: bad string size\n"));
+			f << "###size=" << std::hex << dSz << std::dec << ",";
+			ok=false;
+			break;
+		}
+		std::string name("");
+		for (int j=0; j<dSz; ++j)
+			name += (char) libwps::readU8(m_input);
+		if (i==0)
+			format.m_prefix=name;
+		else
+			format.m_suffix=name;
+	}
+	if (ok && m_input->tell()+1<=endPos)
+	{
+		val=(int) libwps::readU8(m_input);
+		if (val!=0xc)
+			f << "g0=" << val << ",";
+	}
+	format.m_extra=f.str();
+
+	if (m_state->m_idFormatStyleMap.find(id)!=m_state->m_idFormatStyleMap.end())
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFormatStyle: the format style %d already exists\n", id));
+		f << "###";
+	}
+	else
+		m_state->m_idFormatStyleMap[id]=format;
+
+	f.str("");
+	f << "Entries(FormatStyle):Fo" << id << "," << format;
+	ascii().addPos(pos-6);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusStyleManager::readCellStyle(long endPos)
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	if (endPos-pos!=21 && endPos-pos!=33)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readCellStyle: the zone size seems bad\n"));
+		ascii().addPos(pos-6);
+		ascii().addNote("Entries(CellStyle):###");
+		return true;
+	}
+	int id=(int) libwps::readU8(m_input);
+	int val=(int) libwps::readU8(m_input); // always 50?
+	if (endPos-pos==33)   // wk6...wk9
+	{
+		static bool first=true;
+		if (first)
+		{
+			first=false;
+			WPS_DEBUG_MSG(("LotusStyleManager::readCellStyle: sorry, reading cell style is not implemented\n"));
+		}
+		f << "Entries(CellStyle):Ce" << id << ",";
+		if (val!=0x50)
+			f << "fl=" << std::hex << val << std::dec << ",";
+		ascii().addPos(pos-6);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+
+	LotusStyleManagerInternal::CellStyle cell;
+	if (val!=0x50)
+		f << "fl=" << std::hex << val << std::dec << ",";
+	for (int i=0; i<2; ++i)   // always 0?
+	{
+		val=(int) libwps::readU8(m_input);
+		if (val)
+			f << "f" << i << "=" << val << ",";
+	}
+	for (int i=0; i<8; ++i)
+	{
+		val=(int) libwps::readU8(m_input);
+		int fl=(int) libwps::readU8(m_input);
+		if (!val) continue;
+		if (i<4)
+		{
+			if (fl!=0x10) f << "#fl[border" << i << "]=" << std::hex << fl << std::dec << ",";
+			if (m_state->m_idLineStyleMap.find(val)==m_state->m_idLineStyleMap.end())
+			{
+				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the line style %d does not exists\n", val));
+				f << "###borderId" << i << "=" << val << ",";
+			}
+			else
+				cell.m_bordersId[i]=val;
+		}
+		else if (i==4 || i==7)
+		{
+			int wh=i==4 ? 0 : 1;
+			if (fl!=0x20) f << "#fl[color" << wh << "]=" << std::hex << fl << std::dec << ",";
+			if (m_state->m_idColorStyleMap.find(val)==m_state->m_idColorStyleMap.end())
+			{
+				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the color style %d does not exists\n", val));
+				f << "###colorId[" << wh << "]=" << val << ",";
+			}
+			else
+				cell.m_colorsId[wh]=val;
+		}
+		else if (i==5)
+		{
+			if (fl) f << "#fl[font]=" << std::hex << fl << std::dec << ",";
+			if (m_state->m_idFontStyleMap.find(val)==m_state->m_idFontStyleMap.end())
+			{
+				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the font style %d does not exists\n", val));
+				f << "###fontId=" << val << ",";
+			}
+			else
+				cell.m_fontId=val;
+		}
+		else
+		{
+			if (fl!=0x30) f << "#fl[format]=" << std::hex << fl << std::dec << ",";
+			if (m_state->m_idFormatStyleMap.find(val)==m_state->m_idFormatStyleMap.end())
+			{
+				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the format style %d does not exists\n", val));
+				f << "###formatId=" << val << ",";
+			}
+			else
+				cell.m_formatId=val;
+		}
+	}
+	val=(int) libwps::readU8(m_input); // small number 0|1|4|f
+	if (val) f << "f2=" << val << ",";
+	cell.m_extra=f.str();
+	f.str("");
+	f << "Entries(CellStyle):Ce" << id << "," << cell;
+
+	if (m_state->m_idCellStyleMap.find(id)!=m_state->m_idCellStyleMap.end())
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readCellStyle: the cell style %d already exists\n", id));
+		f << "###";
+	}
+	else
+		m_state->m_idCellStyleMap[id]=cell;
+	ascii().addPos(pos-6);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
