@@ -195,10 +195,6 @@ struct State
 	State() :  m_eof(-1), m_version(-1), m_actualSheetId(-1), m_sheetIdZoneMap(), m_actualZone()
 	{
 	}
-	//! returns a color corresponding to an id
-	bool getColor(int id, WPSColor &color) const;
-	//! returns the pattern percent corresponding to a pattern id
-	bool getPatternPercent(int id, float &percent) const;
 
 	//! the last file position
 	long m_eof;
@@ -211,73 +207,6 @@ struct State
 	//! a pointer to the actual zone
 	shared_ptr<Zone> m_actualZone;
 };
-
-bool State::getColor(int id, WPSColor &color) const
-{
-	if (id<0||id>=256)
-	{
-		WPS_DEBUG_MSG(("LotusGraphInteranl::State::getColor(): unknown color id: %d\n",id));
-		return false;
-	}
-	static uint32_t colorMap[]=
-	{
-		0xffffff, 0xffcc99, 0xffffcc, 0xccff99, 0x99ff33, 0x99ff66, 0x99ff99, 0xccffcc,
-		0xccffff, 0x99ccff, 0x6699ff, 0xccccff, 0xcc99ff, 0xffccff, 0xff99cc, 0xffffff,
-		0xffcccc, 0xffcc66, 0xffff99, 0xccff66, 0x99ff00, 0x66ff33, 0x66ff99, 0x99ffcc,
-		0x99ffff, 0x3399ff, 0x6666ff, 0x9999ff, 0xcc66ff, 0xff99ff, 0xff66cc, 0xeeeeee,
-		0xff9999, 0xff9966, 0xffff66, 0xccff33, 0x66ff00, 0x66ff66, 0x33ff99, 0x66ffcc,
-		0x66ffff, 0x0099ff, 0x3366ff, 0x9966ff, 0xcc66cc, 0xff66ff, 0xff6699, 0xdddddd,
-		0xff6666, 0xff9933, 0xffff33, 0xccff00, 0x33ff00, 0x33ff66, 0x00ff99, 0x33ffcc,
-		0x33ffff, 0x0066ff, 0x0066cc, 0x9966cc, 0xcc33ff, 0xff33ff, 0xff3399, 0xcccccc,
-		0xff3333, 0xff6633, 0xffff00, 0xcccc33, 0x00ff00, 0x00ff66, 0x66cc99, 0x00ffcc,
-		0x00ffff, 0x0033ff, 0x3366cc, 0x9933ff, 0xcc00ff, 0xff33cc, 0xff3366, 0xbbbbbb,
-		0xff0000, 0xff6600, 0xffcc33, 0xcccc00, 0x00ee00, 0x33ff33, 0x33cc99, 0x66cccc,
-		0x66ccff, 0x0000ee, 0x3333ff, 0x9900ff, 0xcc00cc, 0xff00cc, 0xff0066, 0xaaaaaa,
-		0xcc0000, 0xff3300, 0xffcc00, 0x99cc33, 0x00dd00, 0x00ff33, 0x00cc99, 0x33cccc,
-		0x33ccff, 0x0000dd, 0x3300ff, 0x6666cc, 0x9933cc, 0xcc33cc, 0xff0033, 0x999999,
-		0xbb0000, 0xee0000, 0xff9900, 0x99cc00, 0x00bb00, 0x33cc00, 0x33cc66, 0x00cccc,
-		0x00ccff, 0x0000bb, 0x0000ff, 0x6633ff, 0x993399, 0xcc3399, 0xcc0033, 0x888888,
-		0xaa0000, 0xdd0000, 0xcc9933, 0x999933, 0x00aa00, 0x33cc33, 0x00cc66, 0x009999,
-		0x0099cc, 0x0000aa, 0x0033cc, 0x6633cc, 0x9900cc, 0xcc0099, 0xcc0066, 0x777777,
-		0x990000, 0xcc3333, 0xcc9900, 0x999900, 0x008800, 0x00cc00, 0x339966, 0x339999,
-		0x3399cc, 0x000088, 0x0000cc, 0x6600ff, 0x663399, 0x993366, 0xcc3366, 0x666666,
-		0x660000, 0xcc3300, 0xcc6633, 0x669900, 0x007700, 0x339933, 0x009966, 0x336666,
-		0x336699, 0x000077, 0x3300cc, 0x3333cc, 0x663366, 0x990066, 0x990033, 0x555555,
-		0x550000, 0x993300, 0xcc6600, 0x669933, 0x005500, 0x339900, 0x336633, 0x006666,
-		0x006699, 0x000055, 0x000099, 0x333399, 0x6600cc, 0x990099, 0x880000, 0x444444,
-		0x330000, 0x663300, 0x996633, 0x336600, 0x004400, 0x009900, 0x006633, 0x333333,
-		0x003399, 0x000044, 0x000066, 0x330099, 0x660099, 0x660066, 0x770000, 0x333333,
-		0x220000, 0x440000, 0x996600, 0x333300, 0x002200, 0x006600, 0x003300, 0x003333,
-		0x003366, 0x000022, 0x000033, 0x330066, 0x330033, 0x660033, 0x440000, 0x222222,
-		0xcc9966, 0xcc6666, 0xcccc99, 0xcccc66, 0x99cc66, 0x66cc66, 0x99cc99, 0x99ffcc,
-		0x99cccc, 0x999999, 0x6699cc, 0x9999cc, 0xcc99cc, 0xcc9999, 0xcc6699, 0x111111,
-		0x996666, 0x993333, 0x999966, 0x666633, 0x66cc33, 0x009933, 0x669966, 0x66cc99,
-		0x669999, 0x666666, 0x666699, 0x333366, 0x996699, 0x663333, 0x663366, 0x000000
-	};
-	color=WPSColor(colorMap[id]);
-	return true;
-}
-
-bool State::getPatternPercent(int id, float &percent) const
-{
-	if (id<=0 || id>=49)
-	{
-		WPS_DEBUG_MSG(("LotusGraphInteranl::State::getPatternPercent(): unknown pattern id: %d\n",id));
-		return false;
-	}
-	static float const(percentValues[])=
-	{
-		1.000000, 0.000000, 0.250000, 0.375000, 0.250000, 0.125000, 0.250000, 0.750000,
-		0.500000, 0.250000, 0.250000, 0.375000, 0.250000, 0.125000, 0.500000, 0.250000,
-		0.375000, 0.218750, 0.468750, 0.250000, 0.437500, 0.234375, 0.125000, 0.515625,
-		0.875000, 0.750000, 0.500000, 0.250000, 0.125000, 0.125000, 0.062500, 0.093750,
-		0.093750, 0.015625, 0.375000, 0.343750, 0.203125, 0.234375, 0.250000, 0.203125,
-		0.281250, 0.312500, 0.593750, 0.250000, 0.500000, 0.500000,
-		0.218750/* or gradient0*/, 0.218750 /*or gradient 1*/
-	};
-	percent=percentValues[id-1];
-	return true;
-}
 
 //! Internal: the subdocument of a LotusGraphc
 class SubDocument : public WKSSubDocument
@@ -362,6 +291,10 @@ bool LotusGraph::checkFilePosition(long pos)
 	return pos <= m_state->m_eof;
 }
 
+bool LotusGraph::hasGraphics(int sheetId) const
+{
+	return m_state->m_sheetIdZoneMap.find(sheetId)!=m_state->m_sheetIdZoneMap.end();
+}
 
 ////////////////////////////////////////////////////////////
 // low level
@@ -838,9 +771,9 @@ void LotusGraph::sendTextBox(WPSEntry const &entry)
 			f << "[";
 			if (!newFlag) f << "/";
 			f << wh[mod-1] << "]";
-			static uint32_t const(attrib[])= { WPS_BOLD_BIT, WPS_ITALICS_BIT, WPS_OUTLINE_BIT, WPS_UNDERLINE_BIT, WPS_SHADOW_BIT };
 			if (mod<=5)
 			{
+				static uint32_t const(attrib[])= { WPS_BOLD_BIT, WPS_ITALICS_BIT, WPS_UNDERLINE_BIT, WPS_OUTLINE_BIT, WPS_SHADOW_BIT };
 				if (newFlag)
 					font.m_attributes |= attrib[mod-1];
 				else

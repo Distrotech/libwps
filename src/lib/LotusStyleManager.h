@@ -53,11 +53,17 @@ public:
 	~LotusStyleManager();
 	//! clean internal state
 	void cleanState();
-	//! update the state (need to be called one time before asking for style)
+	//! update the state (need to be called before asking for style)
 	void updateState();
 
 	//! returns if possible the color
 	bool getColor(int cId, WPSColor &color) const;
+
+	//! update a cell format using the cell id
+	bool updateCellStyle(int cellId, WPSCellFormat &format,
+	                     WPSFont &font, libwps_tools_win::Font::Type &fontType);
+	//! update a font using the font id
+	bool updateFontStyle(int fontId, WPSFont &font, libwps_tools_win::Font::Type &fontType);
 	//! update style using line id
 	bool updateLineStyle(int lineId, WPSGraphicStyle &style) const;
 	//! update style using color id

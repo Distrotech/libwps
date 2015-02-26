@@ -82,6 +82,8 @@ protected:
 	// interface with LotusGraph
 	//
 
+	//! return true if the sheet sheetId has some graphic
+	bool hasGraphics(int sheetId) const;
 	//! send the graphics corresponding to a sheetId
 	void sendGraphics(int sheetId);
 

@@ -219,6 +219,11 @@ bool LotusParser::getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &t
 	return true;
 }
 
+bool LotusParser::hasGraphics(int sheetId) const
+{
+	return m_graphParser->hasGraphics(sheetId);
+}
+
 void LotusParser::sendGraphics(int sheetId)
 {
 	m_graphParser->sendGraphics(sheetId);
@@ -331,13 +336,19 @@ bool LotusParser::checkHeader(WPSHeader *header, bool strict)
 		return false;
 	}
 	val=(int) libwps::readU16(input);
-	if (val>=0x1000 && val<=0x1005)
+	if (val>=0x1000 && val<=0x1002)
 	{
 		WPS_DEBUG_MSG(("LotusParser::checkHeader: find lotus123 file\n"));
 		m_state->m_version=(val-0x1000)+1;
 		f << "lotus123[" << m_state->m_version << "],";
 	}
 #ifdef DEBUG
+	else if (val>0x1002 && val<=0x1005)
+	{
+		WPS_DEBUG_MSG(("LotusParser::checkHeader: find lotus123 file\n"));
+		m_state->m_version=(val-0x1000)+1;
+		f << "lotus123[" << m_state->m_version << "],";
+	}
 	else if (val==0x8007)
 	{
 		WPS_DEBUG_MSG(("LotusParser::checkHeader: find lotus file format, sorry parsing this file is only implemented for debugging, not output will be created\n"));
@@ -940,6 +951,9 @@ bool LotusParser::readDataZone()
 			f << "###";
 			break;
 		}
+		// time to update the style manager state
+		m_styleManager->updateState();
+
 		val=(int) libwps::readU8(input);
 		if (val) f << "sheet[id]=" << val << ",";
 		// then always 0a3fff00ffff508451ff ?

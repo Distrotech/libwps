@@ -70,6 +70,8 @@ protected:
 	//! return the file version
 	int version() const;
 
+	//! return true if the sheet sheetId has some graphic
+	bool hasGraphics(int sheetId) const;
 	//! send the graphics corresponding to a sheetId
 	void sendGraphics(int sheetId);
 	//! try to send a picture
