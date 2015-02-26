@@ -449,6 +449,8 @@ bool WKS4Spreadsheet::readSheetSize()
 	f << "nRow=" << nRow << ",";
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
+	// empty spreadsheet
+	if (nRow==-1 && nCol==0) return true;
 	if (nRow < 0 || nCol <= 0) return false;
 
 	m_state->getActualSheet().setRowHeight(nRow-1);

@@ -1,5 +1,20 @@
 CHANGES:
 
+26/02/2015:
+- add classes to create shape and more complex graphic styles: WPSGraphicShape, WPSGraphicStyle,
+- enhance the WPSBorder class and add a WPSColor class to store color,
+- accept to convert Lotus's Wk3-Wk4 files, ie. file with signatures:
+  00001a000[0-2]10
+- only active in debug mode, first work to convert Wk5-... file, must be able to
+  retrieve the main sheets' content with no formatting, to be continued...
+
+04/02/2015:
+- change API to allow user to give default caracters' encoding (and potentially password).
+- accept to convert Lotus's and Symphony's Wk1 file, ie. file with signatures :
+  000002000[4-6]04
+  
+-------- begin of version 0.4 ---------
+
 27/04/2014:
 - create first code to read the main database in a WDB file and convert then as spreadsheet
 
