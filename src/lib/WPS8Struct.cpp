@@ -53,10 +53,10 @@ std::string FileData::createErrorString(RVNGInputStreamPtr input, long endPos)
 	return f.str();
 }
 
-bool FileData::getBorderStyles(WPSBorder::Style &style, WPSBorder::Type &type, std::string &mess) const
+bool FileData::getBorderStyles(WPSBorder::Style &style, WPSBorder::Type &borderType, std::string &mess) const
 {
 	style = WPSBorder::Simple;
-	type = WPSBorder::Single;
+	borderType = WPSBorder::Single;
 	libwps::DebugStream f;
 	switch (m_value)
 	{
@@ -66,15 +66,15 @@ bool FileData::getBorderStyles(WPSBorder::Style &style, WPSBorder::Type &type, s
 	case 1: // normal
 		break;
 	case 2: // double normal
-		type  = WPSBorder::Double;
+		borderType  = WPSBorder::Double;
 		break;
 	case 3:
 		f << "ext=2,int=1,";
-		type  = WPSBorder::Double;
+		borderType  = WPSBorder::Double;
 		break;
 	case 4:
 		f << "ext=1,int=2,";
-		type  = WPSBorder::Double;
+		borderType  = WPSBorder::Double;
 		break;
 	case 5:
 		style  = WPSBorder::Dash;
@@ -95,7 +95,7 @@ bool FileData::getBorderStyles(WPSBorder::Style &style, WPSBorder::Type &type, s
 		break;
 	case 0xa:
 		f << "triple,";
-		type  = WPSBorder::Triple;
+		borderType  = WPSBorder::Triple;
 		break;
 	default:
 		f << "#style=" << std::hex << m_value << std::dec << ",";
