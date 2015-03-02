@@ -126,7 +126,7 @@ struct State
 	{
 		if (m_fontType != libwps_tools_win::Font::UNKNOWN)
 			return m_fontType;
-		return m_version<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
+		return libwps_tools_win::Font::WIN3_WEUROPE;
 	}
 
 	//! returns a default font (Courier12) with file's version to define the default encoding */

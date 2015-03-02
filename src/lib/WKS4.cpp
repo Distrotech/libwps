@@ -123,7 +123,9 @@ struct State
 	{
 		if (m_fontType != libwps_tools_win::Font::UNKNOWN)
 			return m_fontType;
-		return m_version<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
+		if (m_version>2)
+			return libwps_tools_win::Font::WIN3_WEUROPE;
+		return m_application==libwps::WPS_MSWORKS ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::CP_437;
 	}
 
 	//! returns a default font (Courier12) with file's version to define the default encoding */
@@ -1329,7 +1331,7 @@ void WKS4Parser::sendHeaderFooter(bool header)
 	}
 
 	m_listener->setFont(m_state->getDefaultFont());
-	libwps_tools_win::Font::Type fontType=version()<=2 ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::WIN3_WEUROPE;
+	libwps_tools_win::Font::Type fontType=m_state->getDefaultFontType();
 
 	std::string const &text=header ? m_state->m_headerString : m_state->m_footerString;
 	bool hasLICS=hasLICSCharacters();

@@ -44,18 +44,24 @@ class Font
 {
 public:
 	//! enum Type \brief the knowned DOS© and Windows3© fonts
-	enum Type { CP_424, CP_437, CP_737, CP_775,
+	enum Type { CP_037, CP_424, CP_437, CP_500, CP_737, CP_775,
 	            DOS_850, CP_852, CP_855, CP_856, CP_857,
 	            CP_860, CP_861, CP_862, CP_863, CP_864, CP_865,
-	            CP_866, CP_869, CP_874, CP_1006,
+	            CP_866, CP_869, CP_874, CP_875, CP_1006, CP_1026,
 	            WIN3_ARABIC, WIN3_BALTIC, WIN3_CEUROPE, WIN3_CYRILLIC,
 	            WIN3_GREEK, WIN3_HEBREW, WIN3_TURKISH,
 	            WIN3_VIETNAMESE, WIN3_WEUROPE,
 
-	            MAC_ROMAN, MAC_SYMBOL,
+	            MAC_ARABIC, MAC_CELTIC, MAC_CEUROPE, MAC_CROATIAN,
+	            MAC_CYRILLIC, MAC_DEVANAGA, MAC_FARSI, MAC_GAELIC,
+	            MAC_GREEK, MAC_GUJARATI, MAC_GURMUKHI, MAC_HEBREW,
+	            MAC_ICELAND, MAC_INUIT, MAC_ROMAN, MAC_ROMANIAN,
+	            MAC_THAI, MAC_TURKISH,
+
+	            MAC_SYMBOL,
 	            UNKNOWN
 	          };
-
+	// CP_10006, CP_10007, CP_10029, CP_10079, CP_10081
 	//! converts a character in unicode, knowing the character and the font type
 	static unsigned long unicode(unsigned char c, Type type);
 	//! converts a LICS character in unicode, knowing the character and the font type

@@ -749,6 +749,7 @@ void LotusGraph::sendTextBox(WPSEntry const &entry)
 			}
 			WPS_DEBUG_MSG(("LotusGraph::sendTextBox: something when bad when reading param\n"));
 			f << "[##e:" << std::hex << mod << ":" << param << std::dec << "]";
+			ok=false;
 		}
 		if (!ok)
 		{
