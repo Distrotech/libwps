@@ -112,7 +112,7 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 struct State
 {
 	//! constructor
-	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_application(libwps::WPS_MSWORKS), m_isSpreadsheet(true), m_fontType(fontType), m_version(-1), m_hasLICSCharacters(false), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
+	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_creator(libwps::WPS_MSWORKS), m_isSpreadsheet(true), m_fontType(fontType), m_version(-1), m_hasLICSCharacters(false), m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0),
 		m_headerString(""), m_footerString("")
 	{
 	}
@@ -125,7 +125,7 @@ struct State
 			return m_fontType;
 		if (m_version>2)
 			return libwps_tools_win::Font::WIN3_WEUROPE;
-		return m_application==libwps::WPS_MSWORKS ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::CP_437;
+		return m_creator==libwps::WPS_MSWORKS ? libwps_tools_win::Font::DOS_850 : libwps_tools_win::Font::CP_437;
 	}
 
 	//! returns a default font (Courier12) with file's version to define the default encoding */
@@ -143,7 +143,7 @@ struct State
 	//! the last file position
 	long m_eof;
 	//! the application
-	libwps::WPSCreator m_application;
+	libwps::WPSCreator m_creator;
 	//! boolean to know if the file is a spreadsheet file or a database file
 	bool m_isSpreadsheet;
 	//! the user font type
@@ -236,6 +236,11 @@ bool WKS4Parser::checkFilePosition(long pos)
 libwps_tools_win::Font::Type WKS4Parser::getDefaultFontType() const
 {
 	return m_state->getDefaultFontType();
+}
+
+libwps::WPSCreator WKS4Parser::getCreator() const
+{
+	return m_state->m_creator;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -404,6 +409,18 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 				f << "lotus,";
 				creator=libwps::WPS_LOTUS;
 			}
+			else if (val==0x5120)
+			{
+				m_state->m_version=1;
+				f << "quattropro[wb1],";
+				creator=libwps::WPS_QUATTRO_PRO;
+			}
+			else if (val==0x5121)
+			{
+				m_state->m_version=2;
+				f << "quattropro[wb2],";
+				creator=libwps::WPS_QUATTRO_PRO;
+			}
 			else if (val==0x8006)
 			{
 				WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find lotus file format, sorry parsing this format is not implemented\n"));
@@ -412,7 +429,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 #ifdef DEBUG
 			else if (val==0x1002)
 			{
-				WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find a quattro pro file, sorry parsing this format is not implemented\n"));
+				WPS_DEBUG_MSG(("WKS4Parser::checkHeader: find a quattro pro windows file, sorry parsing this format is not implemented\n"));
 				m_state->m_version=1000;
 				f << "quattropro,";
 				creator=libwps::WPS_QUATTRO_PRO;
@@ -449,7 +466,7 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 	ascii().addNote(f.str().c_str());
 
 	m_state->m_isSpreadsheet=isSpreadsheet;
-	m_state->m_application=creator;
+	m_state->m_creator=creator;
 	if (header)
 	{
 		header->setMajorVersion((uint8_t) m_state->m_version);
@@ -464,7 +481,7 @@ bool WKS4Parser::readZones()
 {
 	RVNGInputStreamPtr input = getInput();
 	input->seek(0, librevenge::RVNG_SEEK_SET);
-	if (m_state->m_application==libwps::WPS_QUATTRO_PRO)
+	if (version()>=1000)
 	{
 		// error ok, we do no known how to parsed this structure
 		while (!input->isEnd())
@@ -731,13 +748,14 @@ bool WKS4Parser::readZone()
 			readChartDef();
 			isParsed = true;
 			break;
-		case 0x2f: // iteration count
+		case 0x2f: // iteration count: only in dos file Wk1, Wks(dos), Wq[12] ?
 			if (sz!=1) break;
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-			WPS_DEBUG_MSG(("WKS4Parser::readZone: arggh a WKS1 file?\n"));
 			f.str("");
-			f << "Entries(ItCount):vers=" << (int) libwps::readU8(input);
-			if (m_state->m_version==2)
+			val=(int) libwps::readU8(input);
+			f << "Entries(ItCount):dos";
+			if (val!=1) f << "=" << val << ",";
+			if (m_state->m_version==2 && getCreator()!=libwps::WPS_QUATTRO_PRO)
 				m_state->m_version=1;
 			isParsed = needWriteInAscii = true;
 			break;
@@ -1507,7 +1525,7 @@ bool WKS4Parser::readFieldName()
 		return false;
 	}
 	long sz = (long) libwps::readU16(input);
-	if (sz != 0x18)
+	if (sz != 0x18 && sz != 0x1e)
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readFieldName: size seems bad\n"));
 		ascii().addPos(pos);
@@ -1516,18 +1534,51 @@ bool WKS4Parser::readFieldName()
 	}
 	f << "Entries(FldNames):";
 	std::string name("");
-	for (int i=0; i < 26; ++i)
+	if (getCreator()==libwps::WPS_QUATTRO_PRO)
 	{
-		char c=(char) libwps::read8(input);
-		if (c=='\0') break;
-		name+= c;
+		int sSz=(int) libwps::readU8(input);
+		if (sSz<=0 || sSz>15)
+		{
+			f << "##sSz=" << sSz << ",";
+			WPS_DEBUG_MSG(("WKS4Parser::readFieldName: name's size seems bad\n"));
+		}
+		else
+		{
+			for (int i=0; i < sSz; ++i)
+			{
+				char c=(char) libwps::read8(input);
+				name+= c;
+			}
+		}
+	}
+	else
+	{
+		for (int i=0; i < 16; ++i)
+		{
+			char c=(char) libwps::read8(input);
+			if (c=='\0') break;
+			name+= c;
+		}
 	}
 	f << name << ',';
 
 	input->seek(pos+20, librevenge::RVNG_SEEK_SET);
 	// the position
 	int dim[4];
-	for (int i=0; i<4; ++i) dim[i]=(int) libwps::read16(input);
+	if (sz==0x18)
+	{
+		for (int i=0; i<4; ++i) dim[i]=(int) libwps::read16(input);
+	}
+	else
+	{
+		for (int i=0; i<7; ++i)
+		{
+			int val=(int) libwps::read16(input);
+			if (i<2) dim[i]=val;
+			else if (i>=3 && i<5) dim[i-1]=val;
+			else if (val) f << "f" << i << "=" << val << ",";
+		}
+	}
 	// in a spreadsheet, the cell or the cells corresponding to the field
 	// in a database, col,0,col,0xFFF
 	if (m_state->m_isSpreadsheet || dim[1] || dim[0]!= dim[2] || dim[3]!=0xFFF)
@@ -1981,16 +2032,17 @@ bool WKS4Parser::readUnknown1()
 
 	long pos = input->tell();
 	long type = (long) libwps::read16(input);
+	bool isQuattro=getCreator()==libwps::WPS_QUATTRO_PRO;
 	int expectedSize=0, extraSize=0;
 	switch (type)
 	{
 	case 0x18:
 	case 0x19:
-		expectedSize=0x19;
+		expectedSize=(isQuattro && version()>=2) ? 0x25 : 0x19;
 		break;
 	case 0x20:
 	case 0x2a:
-		expectedSize=0x10;
+		expectedSize=(isQuattro && version()>=2) ? 0x18 : 0x10;
 		break;
 	case 0x27:
 		expectedSize=0x19;
@@ -2005,7 +2057,14 @@ bool WKS4Parser::readUnknown1()
 	f << "Entries(Flags" << std::hex << type << std::dec << ")]:";
 	if (sz != expectedSize+extraSize)
 	{
-		// find also 2700010001 in a fuzzy file, so ...
+		// find also 270001000[01]
+		if (type==0x27 && sz==1)
+		{
+			f << "f0=" << (int) libwps::read8(input) << ",";
+			ascii().addPos(pos);
+			ascii().addNote(f.str().c_str());
+			return true;
+		}
 		WPS_DEBUG_MSG(("WKS4Parser::readUnknown1: the zone size seems too bad\n"));
 		f << "###";
 		ascii().addPos(pos);

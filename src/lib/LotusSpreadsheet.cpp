@@ -678,7 +678,7 @@ bool LotusSpreadsheet::readRowFormats()
 	}
 	case 1: // the last row definition, maybe the actual row style ?
 		f << "last,";
-		if (sz!=12)
+		if (sz<12)
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the size seems bad\n"));
 			f << "###sz,";

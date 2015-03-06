@@ -45,7 +45,10 @@ namespace libwps
 {
 
 enum WPSConfidence { WPS_CONFIDENCE_NONE=0, WPS_CONFIDENCE_EXCELLENT, WPS_CONFIDENCE_SUPPORTED_ENCRYPTION };
-enum WPSCreator { WPS_MSWORKS=0, WPS_LOTUS, WPS_QUATTRO_PRO, WPS_SYMPHONY,
+enum WPSCreator { WPS_MSWORKS=0 /**< Microsoft Works documents (all wps, wks and wdb) */,
+                  WPS_LOTUS /**Lotus DOS(Wk1), Apple(Lotus 123 v1), Windows(Wk3,Wk4) spreadsheets*/,
+                  WPS_QUATTRO_PRO /**Quattro Pro Wq1 and Wq2 spreadsheets(minimum filter)*/,
+                  WPS_SYMPHONY /**Lotus Symphony files(untested, probably DOS documents)*/,
                   WPS_RESERVED_0, WPS_RESERVED_1, WPS_RESERVED_2,
                   WPS_RESERVED_3, WPS_RESERVED_4, WPS_RESERVED_5,
                   WPS_RESERVED_6, WPS_RESERVED_7, WPS_RESERVED_8

@@ -69,7 +69,14 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		uint16_t thirdVal=libwps::readU16(input);
 		if ((firstOffset == 0xFF || firstOffset == 00) && secondOffset == 0x0 && thirdVal==2)
 		{
-			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works wks detected\n"));
+			if (firstOffset==0xFF)
+			{
+				WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works wks detected\n"));
+			}
+			else
+			{
+				WPS_DEBUG_MSG(("WPSHeader::constructHeader: potential Lotus|Microsft Works|Quattro Pro spreadsheet detected\n"));
+			}
 			return new WPSHeader(input, input, 2, WPS_SPREADSHEET);
 		}
 		if (firstOffset == 00 && secondOffset == 0x0 && thirdVal==0x1a)

@@ -231,15 +231,43 @@ std::ostream &operator<<(std::ostream &o, Cell const &cell)
 //! the spreadsheet of a WPS4Spreadsheet
 class Spreadsheet
 {
+protected:
+	//! a comparaison structure used to sort cell by rows and and columns
+	struct ComparePosition
+	{
+		//! constructor
+		ComparePosition() {}
+		//! comparaison function
+		bool operator()(Vec2i const &c1, Vec2i const &c2) const
+		{
+			if (c1[1]!=c2[1])
+				return c1[1]<c2[1];
+			return c1[0]<c2[0];
+		}
+	};
+
 public:
 	//! a constructor
-	Spreadsheet() : m_numCols(0), m_numRows(0), m_widthCols(), m_heightRows(), m_cellsList(),
+	Spreadsheet() : m_numCols(0), m_numRows(0), m_LBPosition(-1,-1), m_widthCols(), m_heightRows(), m_positionToCellMap(), m_lastCellPos(),
 		m_rowPageBreaksList() {}
+	//! return a cell corresponding to a spreadsheet, create one if needed
+	Cell &getCell(Vec2i const &pos)
+	{
+		if (m_positionToCellMap.find(pos)==m_positionToCellMap.end())
+		{
+			Cell cell;
+			cell.setPosition(pos);
+			m_positionToCellMap[pos]=cell;
+		}
+		m_lastCellPos=pos;
+		return m_positionToCellMap.find(pos)->second;
+	}
 	//! returns the last cell
 	Cell *getLastCell()
 	{
-		if (m_cellsList.size()) return &m_cellsList[size_t(m_cellsList.size()-1)];
-		return 0;
+		if (m_positionToCellMap.find(m_lastCellPos)==m_positionToCellMap.end())
+			return 0;
+		return &m_positionToCellMap.find(m_lastCellPos)->second;
 	}
 	//! set the columns size
 	void setColumnWidth(int col, int w=-1)
@@ -272,38 +300,41 @@ public:
 		}
 		return res;
 	}
+	/** compute the last Right Bottom cell position */
+	void computeRightBottomPosition()
+	{
+		int maxX = -1, maxY = -1;
+		for (std::map<Vec2i, Cell>::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
+		{
+			Vec2i const &p = it->second.position();
+			if (p[0] > maxX) maxX = p[0];
+			if (p[1] > maxY) maxY = p[1];
+		}
+		m_LBPosition=Vec2i(maxX, maxY);
+	}
 	//! returns true if the spreedsheet is empty
 	bool empty() const
 	{
-		return m_cellsList.size() == 0;
+		return m_positionToCellMap.empty();
 	}
 	/** the number of columns */
 	int m_numCols;
 	/** the number of rows */
 	int m_numRows;
+	/** the final Right Bottom position, computed by updateState */
+	Vec2i m_LBPosition;
 
 	/** the column size in TWIP (?) */
 	std::vector<int> m_widthCols;
 	/** the row size in TWIP (?) */
 	std::vector<int> m_heightRows;
-	/** the list of not empty cells */
-	std::vector<Cell> m_cellsList;
+	/** a map cell to not empty cells */
+	std::map<Vec2i, Cell, ComparePosition> m_positionToCellMap;
+	/** the last cell position */
+	Vec2i m_lastCellPos;
 	/** the list of row page break */
 	std::vector<int> m_rowPageBreaksList;
 
-	/** returns the last Right Bottom cell position */
-	Vec2i getRightBottomPosition() const
-	{
-		int maxX = 0, maxY = 0;
-		size_t numCell = m_cellsList.size();
-		for (size_t i = 0; i < numCell; i++)
-		{
-			Vec2i const &p = m_cellsList[i].position();
-			if (p[0] > maxX) maxX = p[0];
-			if (p[1] > maxY) maxY = p[1];
-		}
-		return Vec2i(maxX, maxY);
-	}
 };
 
 //! the state of WKS4Spreadsheet
@@ -411,7 +442,7 @@ bool WKS4Spreadsheet::checkFilePosition(long pos)
 
 bool WKS4Spreadsheet::hasSomeSpreadsheetData() const
 {
-	return !m_state->getSheet(0).m_cellsList.empty();
+	return !m_state->getSheet(0).empty();
 }
 
 ////////////////////////////////////////////////////////////
@@ -1251,7 +1282,6 @@ bool WKS4Spreadsheet::readDOSCellExtraProperty()
 
 bool WKS4Spreadsheet::readCell()
 {
-	WKS4SpreadsheetInternal::Cell cell;
 	libwps::DebugStream f;
 
 	long pos = m_input->tell();
@@ -1269,21 +1299,33 @@ bool WKS4Spreadsheet::readCell()
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: cell def is too short\n"));
 		return false;
 	}
-
-	bool dosFile = version() < 3;
+	bool isQuattro=m_mainParser.getCreator()==libwps::WPS_QUATTRO_PRO;
+	bool dosFile = version() < 3 && (!isQuattro || version()<=1);
 	int unkn1 = 0;
 	if (dosFile)
 		unkn1 = (int) libwps::readU8(m_input);
 	int cellPos[2];
 	for (int i=0; i<2; i++)
 		cellPos[i]=(int) libwps::read16(m_input);
-
-	cell.setPosition(Vec2i(cellPos[0],cellPos[1]));
-	if (!dosFile) cell.m_styleId = (int) libwps::read16(m_input);
 	if (cellPos[0] < 0 || cellPos[1] < 0)
 	{
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: cell pos is bad\n"));
 		return false;
+	}
+
+	WKS4SpreadsheetInternal::Cell &cell=m_state->getActualSheet().getCell(Vec2i(cellPos[0],cellPos[1]));
+	if (!dosFile)
+	{
+		if (isQuattro)
+		{
+			for (int i=0; i<2; ++i)   // related to style and format?
+			{
+				int val=(int) libwps::readU8(m_input);
+				if (val) f << "f" << i << "=" << val << ",";
+			}
+		}
+		else
+			cell.m_styleId = (int) libwps::read16(m_input);
 	}
 
 	if (type & 0xFF00)
@@ -1346,29 +1388,69 @@ bool WKS4Spreadsheet::readCell()
 		cell.m_content.m_contentType=WKSContentListener::CellContent::C_TEXT;
 		long begText=m_input->tell(), endText=begText+dataSz;
 		std::string s("");
-		for (int i = 0; i < dataSz; i++)
+		if (isQuattro)
 		{
-			char c = (char) libwps::read8(m_input);
-			if (c=='\0')
+			// pascal string
+			char align=(char) libwps::readU8(m_input);
+			if (align=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT;
+			else if (align=='\\') cell.m_hAlign=WPSCellFormat::HALIGN_LEFT;
+			else if (align=='^') cell.m_hAlign=WPSCellFormat::HALIGN_CENTER;
+			else if (align=='\"') cell.m_hAlign=WPSCellFormat::HALIGN_RIGHT;
+			else f << "#align=" << (int) align << ",";
+
+			int sSz=(int) libwps::readU8(m_input);
+			if (2+sSz>dataSz)
 			{
-				endText=m_input->tell()-1;
-				if (i == dataSz-1) break;
-				WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: cell content seem bad\n"));
-				f << "###";
+				WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: the string's size seems bad\n"));
+				f << "###sz=" << sSz << ",";
 				break;
 			}
-			s += c;
+			else if (2+sSz!=dataSz)
+			{
+				f << "#sz=" << sSz << ",";
+				endText=begText+2+sSz;
+			}
+			begText=m_input->tell();
+			for (int i = 0; i < sSz; i++)
+			{
+				char c = (char) libwps::read8(m_input);
+				if (c=='\0')
+				{
+					WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: find 0 in data\n"));
+					f << "###[0]";
+					break;
+				}
+				s += c;
+			}
+			f << s << ",";
 		}
-		f << s << ",";
-		if (dosFile && s.length())
+		else
 		{
-			if (s[0]=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT;
-			else if (s[0]=='\\') cell.m_hAlign=WPSCellFormat::HALIGN_LEFT;
-			else if (s[0]=='^') cell.m_hAlign=WPSCellFormat::HALIGN_CENTER;
-			else if (s[0]=='\"') cell.m_hAlign=WPSCellFormat::HALIGN_RIGHT;
-			else
-				--begText;
-			++begText;
+			// other c string
+			for (int i = 0; i < dataSz; i++)
+			{
+				char c = (char) libwps::read8(m_input);
+				if (c=='\0')
+				{
+					endText=m_input->tell()-1;
+					if (i == dataSz-1) break;
+					WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: cell content seems bad\n"));
+					f << "###";
+					break;
+				}
+				s += c;
+			}
+			f << s << ",";
+			if (dosFile && s.length())
+			{
+				if (s[0]=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT;
+				else if (s[0]=='\\') cell.m_hAlign=WPSCellFormat::HALIGN_LEFT;
+				else if (s[0]=='^') cell.m_hAlign=WPSCellFormat::HALIGN_CENTER;
+				else if (s[0]=='\"') cell.m_hAlign=WPSCellFormat::HALIGN_RIGHT;
+				else
+					--begText;
+				++begText;
+			}
 		}
 		cell.m_content.m_textEntry.setBegin(begText);
 		cell.m_content.m_textEntry.setEnd(endText);
@@ -1380,6 +1462,21 @@ bool WKS4Spreadsheet::readCell()
 		bool isNaN;
 		if (dataSz >= 8 && libwps::readDouble8(m_input, val, isNaN))
 		{
+			if (isQuattro)
+			{
+				cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
+				cell.m_content.setValue(val);
+
+				static bool first=true;
+				if (first)
+				{
+					first=false;
+					WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: do not know how to read formula\n"));
+				}
+				f << "###formula,";
+				ascii().addDelimiter(m_input->tell(), '|');
+				break;
+			}
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_FORMULA;
 			cell.m_content.setValue(val);
 			std::string error;
@@ -1452,7 +1549,6 @@ bool WKS4Spreadsheet::readCell()
 		style.setDigits(unkn1 & 0xF);
 		cell.m_styleId=m_state->m_styleManager.add(style, true);
 	}
-	m_state->getActualSheet().m_cellsList.push_back(cell);
 	m_input->seek(pos+sz, librevenge::RVNG_SEEK_SET);
 
 	std::string extra=f.str();
@@ -1487,7 +1583,7 @@ bool WKS4Spreadsheet::readCellFormulaResult()
 	}
 	long endPos = pos+4+sz;
 
-	bool dosFile=version()<=2;
+	bool dosFile = version() < 3 && (m_mainParser.getCreator()!=libwps::WPS_QUATTRO_PRO || version()<=1);
 	// skip format for dosFile
 	m_input->seek(dosFile ? pos+5 : pos+4, librevenge::RVNG_SEEK_SET);
 	f << "CellContent[res]:";
@@ -2070,31 +2166,22 @@ void WKS4Spreadsheet::sendSpreadsheet()
 		return;
 	}
 	WKS4SpreadsheetInternal::Spreadsheet &sheet = m_state->getSheet(0);
-	size_t numCell = sheet.m_cellsList.size();
+	sheet.computeRightBottomPosition();
 
-	int prevRow = -1;
 	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthCols,76), librevenge::RVNG_POINT);
 	std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
-	for (size_t i = 0; i < numCell; i++)
+	for (int r=0; r<=sheet.m_LBPosition[1]; ++r)
 	{
-		WKS4SpreadsheetInternal::Cell const &cell= sheet.m_cellsList[i];
-		// FIXME: openSheetRow/openSheetCell must do that
-		if (cell.position()[1] != prevRow)
+		m_listener->openSheetRow(r < int(rowHeight.size()) ? rowHeight[size_t(r)] : 16, librevenge::RVNG_POINT);
+		for (int c=0; c<=sheet.m_LBPosition[0]; ++c)
 		{
-			while (cell.position()[1] > prevRow)
-			{
-				if (prevRow != -1)
-					m_listener->closeSheetRow();
-				prevRow++;
-				if (prevRow < int(rowHeight.size()))
-					m_listener->openSheetRow(rowHeight[size_t(prevRow)], librevenge::RVNG_POINT);
-				else
-					m_listener->openSheetRow(16, librevenge::RVNG_POINT);
-			}
+			if (sheet.m_positionToCellMap.find(Vec2i(c,r))==sheet.m_positionToCellMap.end())
+				continue;
+			WKS4SpreadsheetInternal::Cell const &cell= sheet.m_positionToCellMap.find(Vec2i(c,r))->second;
+			sendCellContent(cell);
 		}
-		sendCellContent(cell);
+		m_listener->closeSheetRow();
 	}
-	if (prevRow!=-1) m_listener->closeSheetRow();
 	m_listener->closeSheet();
 }
 
@@ -2109,7 +2196,19 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 	WKS4SpreadsheetInternal::Style cellStyle(m_mainParser.getDefaultFontType());
 	if (cell.m_styleId<0 || !m_state->m_styleManager.get(cell.m_styleId,cellStyle))
 	{
-		WPS_DEBUG_MSG(("WKS4Spreadsheet::sendCellContent: I can not find the cell style\n"));
+		if (m_mainParser.getCreator()==libwps::WPS_QUATTRO_PRO)
+		{
+			static bool first=true;
+			if (first)   // do not kow how to retrieve the style in Wq2 file, so normal:-~
+			{
+				first=false;
+				WPS_DEBUG_MSG(("WKS4Spreadsheet::sendCellContent: I can not find some cell styles\n"));
+			}
+		}
+		else
+		{
+			WPS_DEBUG_MSG(("WKS4Spreadsheet::sendCellContent: I can not find the cell style\n"));
+		}
 	}
 	if (version()<=2 && cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
 		cellStyle.setHAlignement(cell.m_hAlign);

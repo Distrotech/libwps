@@ -3,6 +3,7 @@
 - add potential support for converting Lotus, ... documents,
 - accept to convert all Lotus Wk1 files and Symphony Wk1 files,
 - add support for Lotus Wk3 and Wk4 documents,
+- add minimum support for Quattro Pro Wq1 and Wq2 documents,
 - only in debug mode, add pre-support for Lotus Wk5..., must allow to
   retrieve the main sheets content's with no formatting,
 - add potential support for asking the document's password ( but do nothing )

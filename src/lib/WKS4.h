@@ -25,6 +25,8 @@
 #include <vector>
 
 #include <librevenge-stream/librevenge-stream.h>
+#include "libwps/libwps.h"
+
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
 
@@ -68,6 +70,8 @@ protected:
 	libwps_tools_win::Font::Type getDefaultFontType() const;
 	//! returns the true if the file has LICS characters
 	bool hasLICSCharacters() const;
+	//! returns the creator
+	libwps::WPSCreator getCreator() const;
 
 	//
 	// interface with WKS4Spreadsheet

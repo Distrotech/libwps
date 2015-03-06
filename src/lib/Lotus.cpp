@@ -635,7 +635,7 @@ bool LotusParser::readZone()
 			isParsed=needWriteInAscii=true;
 			break;
 		case 0xe:
-			if (sz<32)
+			if (sz<30)
 			{
 				ok=false;
 				break;
@@ -646,8 +646,11 @@ bool LotusParser::readZone()
 				val=(int) libwps::read8(input);
 				if (val) f << "f" << i << "=" << val << ",";
 			}
-			val=(int) libwps::read16(input); // always 1?
-			if (val!=1) f << "f30=" << val << ",";
+			if (sz>=32)
+			{
+				val=(int) libwps::read16(input); // always 1?
+				if (val!=1) f << "f30=" << val << ",";
+			}
 			isParsed=needWriteInAscii=true;
 			break;
 		case 0xf:
