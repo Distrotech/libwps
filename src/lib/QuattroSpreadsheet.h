@@ -19,8 +19,8 @@
  * applicable instead of those above.
  */
 
-#ifndef WKS4_SPREADSHEET_H
-#define WKS4_SPREADSHEET_H
+#ifndef QUATTRO_SPREADSHEET_H
+#define QUATTRO_SPREADSHEET_H
 
 #include <ostream>
 #include <vector>
@@ -32,28 +32,28 @@
 #include "WPSDebug.h"
 #include "WKSContentListener.h"
 
-namespace WKS4SpreadsheetInternal
+namespace QuattroSpreadsheetInternal
 {
 class Cell;
 class SpreadSheet;
 struct State;
 }
 
-class WKS4Parser;
+class QuattroParser;
 
 /**
- * This class parses Microsoft Works spreadsheet file
+ * This class parses Quattro Pro DOS spreadsheet file
  *
  */
-class WKS4Spreadsheet
+class QuattroSpreadsheet
 {
 public:
-	friend class WKS4Parser;
+	friend class QuattroParser;
 
 	//! constructor
-	WKS4Spreadsheet(WKS4Parser &parser);
+	QuattroSpreadsheet(QuattroParser &parser);
 	//! destructor
-	~WKS4Spreadsheet();
+	~QuattroSpreadsheet();
 	//! sets the listener
 	void setListener(WKSContentListenerPtr &listen)
 	{
@@ -74,19 +74,14 @@ protected:
 	void sendSpreadsheet(int sId);
 
 	//! send the cell data
-	void sendCellContent(WKS4SpreadsheetInternal::Cell const &cell);
+	void sendCellContent(QuattroSpreadsheetInternal::Cell const &cell);
 
 	//////////////////////// open/close //////////////////////////////
 
-	//! reads the report's header zone 17:54
-	bool readReportOpen();
-	//! reads the report's end zone 18:54
-	bool readReportClose();
-
-	//! reads the filter's header zone 10:54
-	bool readFilterOpen();
-	//! reads the filter's end zone 11:54
-	bool readFilterClose();
+	//! reads a sheet header zone 0:dc (Quattro Pro wq2)
+	bool readSpreadsheetOpen();
+	//! reads a sheet header zone 0:dd (Quattro Pro wq2)
+	bool readSpreadsheetClose();
 
 	//
 	// low level
@@ -104,33 +99,22 @@ protected:
 	//! reads the list of hidden columns zone ( unused )
 	bool readHiddenColumns();
 
-	//! reads a field property
-	bool readMsWorksDOSFieldProperty();
-	//! reads actualCell properties
-	bool readMsWorksDOSCellProperty();
-	//! reads the actual cell addendum properties ( contains at least the color)
-	bool readMsWorksDOSCellExtraProperty();
-	//! reads a page break (in a dos file)
-	bool readMsWorksDOSPageBreak();
-
-	//! reads the column size ( in ???)
-	bool readMsWorksColumnSize();
-	//! reads the row size ( in ???)
-	bool readMsWorksRowSize();
-	//! reads a page break
-	bool readMsWorksPageBreak();
-	//! reads a style
-	bool readMsWorksStyle();
+	//! reads a Quattro Pro property (zone 0x9d)
+	bool readCellProperty();
+	//! reads a Quattro Pro cell styles (zone 0xd8)
+	bool readCellStyle();
+	//! reads a Quattro Pro style ( zone 0xc9)
+	bool readUserStyle();
 
 	/* reads a cell */
-	bool readCell(Vec2i actPos, WKSContentListener::FormulaInstruction &instr);
+	bool readCell(Vec2i actPos, WKSContentListener::FormulaInstruction &instr, bool hasSheetId=false, int sheetId=0);
 	/* reads a formula */
-	bool readFormula(long endPos, Vec2i const &pos,
+	bool readFormula(long endPos, Vec2i const &pos,	int sheetId,
 	                 std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error);
 
 private:
-	WKS4Spreadsheet(WKS4Spreadsheet const &orig);
-	WKS4Spreadsheet &operator=(WKS4Spreadsheet const &orig);
+	QuattroSpreadsheet(QuattroSpreadsheet const &orig);
+	QuattroSpreadsheet &operator=(QuattroSpreadsheet const &orig);
 	//! returns the debug file
 	libwps::DebugFile &ascii()
 	{
@@ -140,9 +124,9 @@ private:
 	RVNGInputStreamPtr m_input;
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the main parser
-	WKS4Parser &m_mainParser;
+	QuattroParser &m_mainParser;
 	//! the internal state
-	shared_ptr<WKS4SpreadsheetInternal::State> m_state;
+	shared_ptr<QuattroSpreadsheetInternal::State> m_state;
 	//! the ascii file
 	libwps::DebugFile &m_asciiFile;
 };

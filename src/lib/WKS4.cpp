@@ -165,23 +165,6 @@ struct State
 
 bool State::getColor(int id, WPSColor &color) const
 {
-	if (m_creator==libwps::WPS_QUATTRO_PRO)
-	{
-		static const uint32_t quattroColorMap[]=
-		{
-			0x000000, 0x0000FF, 0x00FF00, 0x00FFFF,
-			0xFF0000, 0xFF00FF, 0x996633/*brown*/, 0xFFFFFF,
-			0x808080 /* gray */, 0x0000C0, 0x00C000, 0x00C0C0,
-			0xC00000, 0xC000C0, 0xFFFF00, 0xC0C0C0 /* bright white */
-		};
-		if (id < 0 || id >= 16)
-		{
-			WPS_DEBUG_MSG(("WKS4ParserInternal::State::getColor(): unknown Quattro Pro color id: %d\n",id));
-			return false;
-		}
-		color = WPSColor(quattroColorMap[id]);
-		return true;
-	}
 	if (m_version<=2)
 	{
 		static const uint32_t colorDosMap[]=
@@ -429,17 +412,10 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 				f << "lotus,";
 				creator=libwps::WPS_LOTUS;
 			}
-			else if (val==0x5120)
+			else if (val==0x5120 || val==0x5121)
 			{
-				m_state->m_version=1;
-				f << "quattropro[wb1],";
-				creator=libwps::WPS_QUATTRO_PRO;
-			}
-			else if (val==0x5121)
-			{
-				m_state->m_version=2;
-				f << "quattropro[wb2],";
-				creator=libwps::WPS_QUATTRO_PRO;
+				WPS_DEBUG_MSG(("WKS4Parser::checkHeader: must not be called with a DOS Quattro file\n"));
+				return false;
 			}
 			else if (val==0x8006)
 			{
@@ -556,7 +532,6 @@ bool WKS4Parser::readZone()
 	int id = (int) libwps::readU8(input);
 	int type = (int) libwps::read8(input);
 	long sz = (long) libwps::readU16(input);
-	bool isQuattro=getCreator()==libwps::WPS_QUATTRO_PRO;
 	if (sz<0 || !checkFilePosition(pos+4+sz))
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readZone: size is bad\n"));
@@ -776,7 +751,7 @@ bool WKS4Parser::readZone()
 			val=(int) libwps::readU8(input);
 			f << "Entries(ItCount):dos";
 			if (val!=1) f << "=" << val << ",";
-			if (m_state->m_version==2 && !isQuattro)
+			if (m_state->m_version==2)
 				m_state->m_version=1;
 			isParsed = needWriteInAscii = true;
 			break;
@@ -801,60 +776,6 @@ bool WKS4Parser::readZone()
 			isParsed = m_spreadsheetParser->readHiddenColumns();
 			break;
 
-		//
-		// ONLY IN QUATTRO PRO
-		//
-		case 0x9b: // list of fonts in Quattro Pro wq1 file
-			if (!isQuattro) break;
-			readQuattroProUserFonts();
-			isParsed=true;
-			break;
-		case 0x9c:
-		{
-			if (!isQuattro) break;
-			f.str("");
-			f << "Entries(Zone9d):";
-			if ((sz%6)!=0) break;
-			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-			int N=int(sz/6);
-			f << "num=[";
-			for (int i=0; i<N; ++i)
-			{
-				int row=(int) libwps::readU16(input);
-				int col=(int) libwps::readU16(input);
-				f << "C" << col << "x" << row << ":";
-				int num=(int) libwps::readU16(input);
-				f << num << ",";
-			}
-			f << "],";
-			isParsed=needWriteInAscii=true;
-			break;
-		}
-		case 0x9d:
-			if (!isQuattro) break;
-			m_spreadsheetParser->readQuattroProCellProperty();
-			isParsed = true;
-			break;
-		case 0xc9:
-			if (!isQuattro) break;
-			m_spreadsheetParser->readQuattroProUserStyle();
-			isParsed = true;
-			break;
-		case 0xd8:
-			if (!isQuattro) break;
-			m_spreadsheetParser->readQuattroProCellStyle();
-			isParsed = true;
-			break;
-		case 0xdc:
-			if (!isQuattro) break;
-			m_spreadsheetParser->readSpreadsheetOpen();
-			isParsed = true;
-			break;
-		case 0xdd:
-			if (!isQuattro) break;
-			m_spreadsheetParser->readSpreadsheetClose();
-			isParsed = true;
-			break;
 		default:
 			break;
 		}
@@ -1413,72 +1334,6 @@ bool WKS4Parser::readFont()
 	return true;
 }
 
-bool WKS4Parser::readQuattroProUserFonts()
-{
-	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
-	long pos = input->tell();
-	int type = (int)libwps::read16(input);
-
-	if (type != 0x9b)
-	{
-		WPS_DEBUG_MSG(("WKS4Parser::readQuattroProUserFonts: not a font zone\n"));
-		return false;
-	}
-	long sz = (long)libwps::readU16(input);
-	f << "Entries(UserFont)[qpro]:";
-	if ((sz%8)!=0)
-	{
-		WPS_DEBUG_MSG(("WKS4Parser::readQuattroProUserFonts: seems very short\n"));
-		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
-		return true;
-	}
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
-	int N=int(sz/8);
-	for (int i=0; i<N; ++i)
-	{
-		pos=input->tell();
-		f.str("");
-
-		WKS4ParserInternal::Font font(getDefaultFontType());
-		int flags = (int)libwps::readU16(input);
-		uint32_t attributes = 0;
-		if (flags & 1) attributes |= WPS_BOLD_BIT;
-		if (flags & 2) attributes |= WPS_ITALICS_BIT;
-		if (flags & 8) attributes |= WPS_UNDERLINE_BIT;
-
-		font.m_attributes=attributes;
-		if (flags & 0xFFF4)
-			f << "fl=" << std::hex << (flags & 0xFFF4) << std::dec << ",";
-		int fId=(int) libwps::readU16(input);
-		f << "fId=" << fId << ",";
-		int fSize = (int) libwps::readU16(input);
-		if (fSize >= 1 && fSize <= 50)
-			font.m_size=double(fSize);
-		else
-			f << "###fSize=" << fSize << ",";
-		int color = (int) libwps::readU16(input);
-		if (color && !m_state->getColor(color, font.m_color))
-		{
-			WPS_DEBUG_MSG(("WKS4Parser::readQuattroProUserFonts: unknown color\n"));
-			f << "##color=" << color << ",";
-		}
-
-		font.m_extra=f.str();
-
-		f.str("");
-		f << "UserFont-" << i+1 << ":" << font;
-
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
-		input->seek(pos+8, librevenge::RVNG_SEEK_SET);
-	}
-	return true;
-}
-
 // ----------------------------------------------------------------------
 // Header/Footer
 // ----------------------------------------------------------------------
@@ -1678,31 +1533,11 @@ bool WKS4Parser::readFieldName()
 		return true;
 	}
 	std::string name("");
-	if (getCreator()==libwps::WPS_QUATTRO_PRO)
+	for (int i=0; i < 16; ++i)
 	{
-		int sSz=(int) libwps::readU8(input);
-		if (sSz<=0 || sSz>15)
-		{
-			f << "##sSz=" << sSz << ",";
-			WPS_DEBUG_MSG(("WKS4Parser::readFieldName: name's size seems bad\n"));
-		}
-		else
-		{
-			for (int i=0; i < sSz; ++i)
-			{
-				char c=(char) libwps::read8(input);
-				name+= c;
-			}
-		}
-	}
-	else
-	{
-		for (int i=0; i < 16; ++i)
-		{
-			char c=(char) libwps::read8(input);
-			if (c=='\0') break;
-			name+= c;
-		}
+		char c=(char) libwps::read8(input);
+		if (c=='\0') break;
+		name+= c;
 	}
 	f << name << ',';
 
@@ -2176,17 +2011,16 @@ bool WKS4Parser::readUnknown1()
 
 	long pos = input->tell();
 	long type = (long) libwps::read16(input);
-	bool isQuattro=getCreator()==libwps::WPS_QUATTRO_PRO;
 	int expectedSize=0, extraSize=0;
 	switch (type)
 	{
 	case 0x18:
 	case 0x19:
-		expectedSize=(isQuattro && version()>=2) ? 0x25 : 0x19;
+		expectedSize=0x19;
 		break;
 	case 0x20:
 	case 0x2a:
-		expectedSize=(isQuattro && version()>=2) ? 0x18 : 0x10;
+		expectedSize=0x10;
 		break;
 	case 0x27:
 		expectedSize=0x19;

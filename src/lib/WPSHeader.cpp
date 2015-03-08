@@ -52,34 +52,36 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 	if (!input->isStructured())
 	{
 		input->seek(0, librevenge::RVNG_SEEK_SET);
-		uint8_t firstOffset = libwps::readU8(input);
-		uint8_t secondOffset = libwps::readU8(input);
+		uint8_t val[6];
+		for (int i=0; i<6; ++i) val[i] = libwps::readU8(input);
 
-		if (firstOffset < 6 && secondOffset == 0xFE)
+		if (val[0] < 6 && val[1] == 0xFE)
 		{
 			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works v2 format detected\n"));
 			return new WPSHeader(input, input, 2);
 		}
 		// works1 dos file begin by 2054
-		if ((firstOffset == 0xFF || firstOffset == 0x20) && secondOffset==0x54)
+		if ((val[0] == 0xFF || val[0] == 0x20) && val[1]==0x54)
 		{
 			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works wks database\n"));
 			return new WPSHeader(input, input, 1, WPS_DATABASE);
 		}
-		uint16_t thirdVal=libwps::readU16(input);
-		if ((firstOffset == 0xFF || firstOffset == 00) && secondOffset == 0x0 && thirdVal==2)
+		if (val[0] == 0xFF && val[1] == 0 && val[2]==2)
 		{
-			if (firstOffset==0xFF)
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works wks detected\n"));
+			return new WPSHeader(input, input, 3, WPS_SPREADSHEET);
+		}
+		if (val[0] == 00 && val[1] == 0 && val[2]==2)
+		{
+			if (val[3]==0 && (val[4]==0x20 || val[4]==0x21) && val[5]==0x51)
 			{
-				WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Works wks detected\n"));
+				WPS_DEBUG_MSG(("WPSHeader::constructHeader: Quattro Pro wq1 or wq2 detected\n"));
+				return new WPSHeader(input, input, 2, WPS_SPREADSHEET, WPS_QUATTRO_PRO);
 			}
-			else
-			{
-				WPS_DEBUG_MSG(("WPSHeader::constructHeader: potential Lotus|Microsft Works|Quattro Pro spreadsheet detected\n"));
-			}
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: potential Lotus|Microsft Works|Quattro Pro spreadsheet detected\n"));
 			return new WPSHeader(input, input, 2, WPS_SPREADSHEET);
 		}
-		if (firstOffset == 00 && secondOffset == 0x0 && thirdVal==0x1a)
+		if (val[0] == 00 && val[1] == 0x0 && val[2]==0x1a)
 		{
 			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Lotus spreadsheet detected\n"));
 			return new WPSHeader(input, input, 101, WPS_SPREADSHEET, WPS_LOTUS);

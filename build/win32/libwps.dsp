@@ -111,6 +111,14 @@ SOURCE=..\..\src\lib\LotusStyleManager.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\Quattro.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\QuattroSpreadsheet.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WKS4.cpp
 # End Source File
 # Begin Source File
@@ -264,6 +272,14 @@ SOURCE=..\..\src\lib\LotusSpreadsheet.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\LotusStyleManager.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\Quattro.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\QuattroSpreadsheet.h
 # End Source File
 # Begin Source File
 

@@ -293,6 +293,46 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\Quattro.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\QuattroSpreadsheet.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\WKS4.cpp"
 				>
 				<FileConfiguration
@@ -943,6 +983,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\LotusStyleManager.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\Quattro.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\QuattroSpreadsheet.h"
 				>
 			</File>
 			<File

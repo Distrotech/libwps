@@ -19,8 +19,8 @@
  * applicable instead of those above.
  */
 
-#ifndef WKS4_H
-#define WKS4_H
+#ifndef QUATTRO_H
+#define QUATTRO_H
 
 #include <vector>
 
@@ -32,28 +32,28 @@
 
 #include "WKSParser.h"
 
-namespace WKS4ParserInternal
+namespace QuattroParserInternal
 {
 class SubDocument;
 struct State;
 }
 
-class WKS4Spreadsheet;
+class QuattroSpreadsheet;
 
 /**
- * This class parses Microsoft Works spreadsheet or a database file
+ * This class parses Quattro Pro spreadsheet: .wq1 and wq2
  *
  */
-class WKS4Parser : public WKSParser
+class QuattroParser : public WKSParser
 {
-	friend class WKS4ParserInternal::SubDocument;
-	friend class WKS4Spreadsheet;
+	friend class QuattroParserInternal::SubDocument;
+	friend class QuattroSpreadsheet;
 public:
 	//! constructor
-	WKS4Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
-	           libwps_tools_win::Font::Type encoding=libwps_tools_win::Font::UNKNOWN);
+	QuattroParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
+	              libwps_tools_win::Font::Type encoding=libwps_tools_win::Font::UNKNOWN);
 	//! destructor
-	~WKS4Parser();
+	~QuattroParser();
 	//! called by WPSDocument to parse the file
 	void parse(librevenge::RVNGSpreadsheetInterface *documentInterface);
 	//! checks if the document header is correct (or not)
@@ -70,18 +70,13 @@ protected:
 	libwps_tools_win::Font::Type getDefaultFontType() const;
 	//! returns the true if the file has LICS characters
 	bool hasLICSCharacters() const;
-	//! returns the creator
-	libwps::WPSCreator getCreator() const;
 
 	//
-	// interface with WKS4Spreadsheet
+	// interface with QuattroSpreadsheet
 	//
 
 	//! returns the color corresponding to an id
 	bool getColor(int id, WPSColor &color) const;
-	//! returns the font corresponding to an id
-	bool getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &type) const;
-
 
 	/** creates the main listener */
 	shared_ptr<WKSContentListener> createListener(librevenge::RVNGSpreadsheetInterface *interface);
@@ -96,19 +91,11 @@ protected:
 	bool readZones();
 	//! reads a zone
 	bool readZone();
-	//! reads a Quattro Pro zone
-	bool readZoneQuattro();
 
 	//////////////////////// generic ////////////////////////////////////
 
-	//! reads a mswork font
-	bool readFont();
-
-	//! reads a printer data ?
-	bool readPrnt();
-
-	//! reads another printer data. Seem simillar to ZZPrnt
-	bool readPrn2();
+	//! reads the user fonts
+	bool readUserFonts();
 
 	//! reads the header/footer
 	bool readHeaderFooter(bool header);
@@ -124,21 +111,6 @@ protected:
 	//! reads a structure which seems to define a chart
 	bool readChartDef();
 
-	//! reads a structure which seems to define two chart font (only present in windows file)
-	bool readChartFont();
-
-	//! reads a structure which seems to define four chart font (only present in windows file)
-	bool readChart2Font();
-
-	//! reads end/begin of chart (only present in windows file)
-	bool readChartLimit();
-
-	//! reads a list of int/cellule which seems relative to a chart : CHECKME
-	bool readChartList();
-
-	//! reads an unknown structure which seems relative to a chart : CHECKME
-	bool readChartUnknown();
-
 	//////////////////////// unknown zone //////////////////////////////
 
 	//! reads windows record 0:7|0:9
@@ -151,9 +123,9 @@ protected:
 
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the internal state
-	shared_ptr<WKS4ParserInternal::State> m_state;
+	shared_ptr<QuattroParserInternal::State> m_state;
 	//! the spreadsheet manager
-	shared_ptr<WKS4Spreadsheet> m_spreadsheetParser;
+	shared_ptr<QuattroSpreadsheet> m_spreadsheetParser;
 };
 
 #endif /* WPS4_H */

@@ -28,6 +28,7 @@
 #include "libwps_tools_win.h"
 
 #include "Lotus.h"
+#include "Quattro.h"
 #include "WKS4.h"
 #include "WPS4.h"
 #include "WPS8.h"
@@ -85,6 +86,15 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 		{
 			// create a Lotus to check the header validity
 			LotusParser parser(header->getInput(), header);
+			if (!parser.checkHeader(header.get(), true))
+				return WPS_CONFIDENCE_NONE;
+			needEncoding=header->getNeedEncoding();
+			return WPS_CONFIDENCE_EXCELLENT;
+		}
+		else if (kind==WPS_SPREADSHEET && creator==WPS_QUATTRO_PRO && header->getMajorVersion()<=2)
+		{
+			// create a Quattro to check the header validity
+			QuattroParser parser(header->getInput(), header);
 			if (!parser.checkHeader(header.get(), true))
 				return WPS_CONFIDENCE_NONE;
 			needEncoding=header->getNeedEncoding();
@@ -221,6 +231,14 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 		{
 			parser.reset(new LotusParser(header->getInput(), header,
 			                             libwps_tools_win::Font::getTypeForString(encoding)));
+			if (!parser) return WPS_UNKNOWN_ERROR;
+			parser->parse(documentInterface);
+		}
+		else if (header->getKind() == WPS_SPREADSHEET && header->getCreator() == WPS_QUATTRO_PRO &&
+		         header->getMajorVersion()<=2)
+		{
+			parser.reset(new QuattroParser(header->getInput(), header,
+			                               libwps_tools_win::Font::getTypeForString(encoding)));
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
 		}
