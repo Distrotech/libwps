@@ -101,8 +101,11 @@ protected:
 
 	//////////////////////// generic ////////////////////////////////////
 
-	//! reads the fonts
+	//! reads a mswork font
 	bool readFont();
+
+	//! reads the QuattroPro fonts
+	bool readQuattroProUserFonts();
 
 	//! reads a printer data ?
 	bool readPrnt();

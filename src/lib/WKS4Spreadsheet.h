@@ -67,16 +67,21 @@ protected:
 	int version() const;
 	//! returns the true if the file has LICS characters
 	bool hasLICSCharacters() const;
-	//! returns true if some spreadshet are defined
-	bool hasSomeSpreadsheetData() const;
 
-	//! send the data
-	void sendSpreadsheet();
+	//! returns the number of spreadsheet
+	int getNumSpreadsheets() const;
+	//! send the sId'th spreadsheet
+	void sendSpreadsheet(int sId);
 
 	//! send the cell data
 	void sendCellContent(WKS4SpreadsheetInternal::Cell const &cell);
 
-	//////////////////////// report //////////////////////////////
+	//////////////////////// open/close //////////////////////////////
+
+	//! reads a sheet header zone 0:dc (Quattro Pro wq2)
+	bool readSpreadsheetOpen();
+	//! reads a sheet header zone 0:dd (Quattro Pro wq2)
+	bool readSpreadsheetClose();
 
 	//! reads the report's header zone 17:54
 	bool readReportOpen();
@@ -97,42 +102,43 @@ protected:
 	bool readCell();
 	//! reads the result of a text formula
 	bool readCellFormulaResult();
-
-	//! reads a style
-	bool readStyle();
-
-	//! reads a field property
-	bool readDOSFieldProperty();
-
-	//! reads actualCell properties
-	bool readDOSCellProperty();
-
-	//! reads the actual cell addendum properties ( contains at least the color)
-	bool readDOSCellExtraProperty();
-
-	//! reads a page break (in a dos file)
-	bool readDOSPageBreak();
-
 	//! reads sheet size
 	bool readSheetSize();
-
-	//! reads a page break
-	bool readPageBreak();
-
 	//! reads the column size ( in ??? )
 	bool readColumnSize();
-	//! reads the column size ( in ???)
-	bool readColumnSize2();
 	//! reads the list of hidden columns zone ( unused )
 	bool readHiddenColumns();
 
+	//! reads a field property
+	bool readMsWorksDOSFieldProperty();
+	//! reads actualCell properties
+	bool readMsWorksDOSCellProperty();
+	//! reads the actual cell addendum properties ( contains at least the color)
+	bool readMsWorksDOSCellExtraProperty();
+	//! reads a page break (in a dos file)
+	bool readMsWorksDOSPageBreak();
+
+	//! reads the column size ( in ???)
+	bool readMsWorksColumnSize();
 	//! reads the row size ( in ???)
-	bool readRowSize2();
+	bool readMsWorksRowSize();
+	//! reads a page break
+	bool readMsWorksPageBreak();
+	//! reads a style
+	bool readMsWorksStyle();
+
+	//! reads a Quattro Pro property (zone 0x9d)
+	bool readQuattroProCellProperty();
+	//! reads a Quattro Pro cell styles (zone 0xd8)
+	bool readQuattroProCellStyle();
+	//! reads a Quattro Pro style ( zone 0xc9)
+	bool readQuattroProUserStyle();
 
 	/* reads a cell */
-	bool readCell(Vec2i actPos, WKSContentListener::FormulaInstruction &instr);
+	bool readCell(Vec2i actPos, WKSContentListener::FormulaInstruction &instr, bool hasSheetId=false, int sheetId=0);
 	/* reads a formula */
-	bool readFormula(long endPos, Vec2i const &pos,	std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error);
+	bool readFormula(long endPos, Vec2i const &pos,	int sheetId,
+	                 std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error);
 
 private:
 	WKS4Spreadsheet(WKS4Spreadsheet const &orig);

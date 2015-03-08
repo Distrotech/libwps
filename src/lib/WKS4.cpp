@@ -165,6 +165,23 @@ struct State
 
 bool State::getColor(int id, WPSColor &color) const
 {
+	if (m_creator==libwps::WPS_QUATTRO_PRO)
+	{
+		static const uint32_t quattroColorMap[]=
+		{
+			0x000000, 0x0000FF, 0x00FF00, 0x00FFFF,
+			0xFF0000, 0xFF00FF, 0x996633/*brown*/, 0xFFFFFF,
+			0x808080 /* gray */, 0x0000C0, 0x00C000, 0x00C0C0,
+			0xC00000, 0xC000C0, 0xFFFF00, 0xC0C0C0 /* bright white */
+		};
+		if (id < 0 || id >= 16)
+		{
+			WPS_DEBUG_MSG(("WKS4ParserInternal::State::getColor(): unknown Quattro Pro color id: %d\n",id));
+			return false;
+		}
+		color = WPSColor(quattroColorMap[id]);
+		return true;
+	}
 	if (m_version<=2)
 	{
 		static const uint32_t colorDosMap[]=
@@ -296,7 +313,10 @@ void WKS4Parser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 			m_spreadsheetParser->setListener(m_listener);
 
 			m_listener->startDocument();
-			m_spreadsheetParser->sendSpreadsheet();
+			int numSheet=m_spreadsheetParser->getNumSpreadsheets();
+			if (numSheet==0) ++numSheet;
+			for (int i=0; i<numSheet; ++i)
+				m_spreadsheetParser->sendSpreadsheet(i);
 			m_listener->endDocument();
 			m_listener.reset();
 			ok = true;
@@ -504,7 +524,7 @@ bool WKS4Parser::readZones()
 	if (!checkFilePosition(pos+4))
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readZones: cell header is too short\n"));
-		return m_spreadsheetParser->hasSomeSpreadsheetData();
+		return m_spreadsheetParser->getNumSpreadsheets()>0;
 	}
 	int type = (int) libwps::readU16(input); // 1
 	int length = (int) libwps::readU16(input);
@@ -513,7 +533,7 @@ bool WKS4Parser::readZones()
 		WPS_DEBUG_MSG(("WKS4Parser::readZones: parse breaks before ending\n"));
 		ascii().addPos(pos);
 		ascii().addNote("Entries(BAD):###");
-		return m_spreadsheetParser->hasSomeSpreadsheetData();
+		return m_spreadsheetParser->getNumSpreadsheets()>0;
 	}
 
 	ascii().addPos(pos);
@@ -536,6 +556,7 @@ bool WKS4Parser::readZone()
 	int id = (int) libwps::readU8(input);
 	int type = (int) libwps::read8(input);
 	long sz = (long) libwps::readU16(input);
+	bool isQuattro=getCreator()==libwps::WPS_QUATTRO_PRO;
 	if (sz<0 || !checkFilePosition(pos+4+sz))
 	{
 		WPS_DEBUG_MSG(("WKS4Parser::readZone: size is bad\n"));
@@ -755,7 +776,7 @@ bool WKS4Parser::readZone()
 			val=(int) libwps::readU8(input);
 			f << "Entries(ItCount):dos";
 			if (val!=1) f << "=" << val << ",";
-			if (m_state->m_version==2 && getCreator()!=libwps::WPS_QUATTRO_PRO)
+			if (m_state->m_version==2 && !isQuattro)
 				m_state->m_version=1;
 			isParsed = needWriteInAscii = true;
 			break;
@@ -778,6 +799,61 @@ bool WKS4Parser::readZone()
 			break;
 		case 0x64: // hidden column
 			isParsed = m_spreadsheetParser->readHiddenColumns();
+			break;
+
+		//
+		// ONLY IN QUATTRO PRO
+		//
+		case 0x9b: // list of fonts in Quattro Pro wq1 file
+			if (!isQuattro) break;
+			readQuattroProUserFonts();
+			isParsed=true;
+			break;
+		case 0x9c:
+		{
+			if (!isQuattro) break;
+			f.str("");
+			f << "Entries(Zone9d):";
+			if ((sz%6)!=0) break;
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			int N=int(sz/6);
+			f << "num=[";
+			for (int i=0; i<N; ++i)
+			{
+				int row=(int) libwps::readU16(input);
+				int col=(int) libwps::readU16(input);
+				f << "C" << col << "x" << row << ":";
+				int num=(int) libwps::readU16(input);
+				f << num << ",";
+			}
+			f << "],";
+			isParsed=needWriteInAscii=true;
+			break;
+		}
+		case 0x9d:
+			if (!isQuattro) break;
+			m_spreadsheetParser->readQuattroProCellProperty();
+			isParsed = true;
+			break;
+		case 0xc9:
+			if (!isQuattro) break;
+			m_spreadsheetParser->readQuattroProUserStyle();
+			isParsed = true;
+			break;
+		case 0xd8:
+			if (!isQuattro) break;
+			m_spreadsheetParser->readQuattroProCellStyle();
+			isParsed = true;
+			break;
+		case 0xdc:
+			if (!isQuattro) break;
+			m_spreadsheetParser->readSpreadsheetOpen();
+			isParsed = true;
+			break;
+		case 0xdd:
+			if (!isQuattro) break;
+			m_spreadsheetParser->readSpreadsheetClose();
+			isParsed = true;
 			break;
 		default:
 			break;
@@ -876,7 +952,7 @@ bool WKS4Parser::readZone()
 			break;
 		}
 		case 0x2:
-			ok = m_spreadsheetParser->readDOSCellProperty();
+			ok = m_spreadsheetParser->readMsWorksDOSCellProperty();
 			isParsed = true;
 			break;
 		case 0x5:
@@ -887,7 +963,7 @@ bool WKS4Parser::readZone()
 			isParsed = needWriteInAscii = true;
 			break;
 		case 0x6:
-			ok = m_spreadsheetParser->readDOSFieldProperty();
+			ok = m_spreadsheetParser->readMsWorksDOSFieldProperty();
 			isParsed = true;
 			break;
 		case 0x8: // only in database?, checkme: the structure may be different in dosfile
@@ -927,7 +1003,7 @@ bool WKS4Parser::readZone()
 			isParsed = true;
 			break;
 		case 0x13:
-			ok = m_spreadsheetParser->readPageBreak();
+			ok = m_spreadsheetParser->readMsWorksPageBreak();
 			isParsed = true;
 			break;
 		case 0x14:
@@ -981,7 +1057,7 @@ bool WKS4Parser::readZone()
 		/* case 1b: 000000000000000000000000000000000000010000000000020000000000000000000000000000000000
 		   database v1 */
 		case 0x1c:
-			m_spreadsheetParser->readDOSCellExtraProperty();
+			m_spreadsheetParser->readMsWorksDOSCellExtraProperty();
 			isParsed = true;
 			break;
 		case 0x1f:
@@ -1018,7 +1094,7 @@ bool WKS4Parser::readZone()
 			isParsed=needWriteInAscii=true;
 			break;
 		case 0x27:
-			ok = m_spreadsheetParser->readDOSPageBreak();
+			ok = m_spreadsheetParser->readMsWorksDOSPageBreak();
 			isParsed = true;
 			break;
 		case 0x33:
@@ -1093,7 +1169,7 @@ bool WKS4Parser::readZone()
 			break;
 		}
 		case 0x5a:
-			ok = m_spreadsheetParser->readStyle();
+			ok = m_spreadsheetParser->readMsWorksStyle();
 			isParsed = true;
 			break;
 		case 0x5b:
@@ -1160,7 +1236,7 @@ bool WKS4Parser::readZone()
 			break;
 		}
 		case 0x65:
-			ok = m_spreadsheetParser->readRowSize2();
+			ok = m_spreadsheetParser->readMsWorksRowSize();
 			isParsed = true;
 			break;
 		// case 66: ff|12c|13B|1d1, dim/flag? (database)
@@ -1170,7 +1246,7 @@ bool WKS4Parser::readZone()
 			isParsed = true;
 			break;
 		case 0x6b:
-			ok = m_spreadsheetParser->readColumnSize2();
+			ok = m_spreadsheetParser->readMsWorksColumnSize();
 			isParsed = true;
 			break;
 		case 0x6e: // field(series)
@@ -1334,6 +1410,72 @@ bool WKS4Parser::readFont()
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
 
+	return true;
+}
+
+bool WKS4Parser::readQuattroProUserFonts()
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+	long pos = input->tell();
+	int type = (int)libwps::read16(input);
+
+	if (type != 0x9b)
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::readQuattroProUserFonts: not a font zone\n"));
+		return false;
+	}
+	long sz = (long)libwps::readU16(input);
+	f << "Entries(UserFont)[qpro]:";
+	if ((sz%8)!=0)
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::readQuattroProUserFonts: seems very short\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	int N=int(sz/8);
+	for (int i=0; i<N; ++i)
+	{
+		pos=input->tell();
+		f.str("");
+
+		WKS4ParserInternal::Font font(getDefaultFontType());
+		int flags = (int)libwps::readU16(input);
+		uint32_t attributes = 0;
+		if (flags & 1) attributes |= WPS_BOLD_BIT;
+		if (flags & 2) attributes |= WPS_ITALICS_BIT;
+		if (flags & 8) attributes |= WPS_UNDERLINE_BIT;
+
+		font.m_attributes=attributes;
+		if (flags & 0xFFF4)
+			f << "fl=" << std::hex << (flags & 0xFFF4) << std::dec << ",";
+		int fId=(int) libwps::readU16(input);
+		f << "fId=" << fId << ",";
+		int fSize = (int) libwps::readU16(input);
+		if (fSize >= 1 && fSize <= 50)
+			font.m_size=double(fSize);
+		else
+			f << "###fSize=" << fSize << ",";
+		int color = (int) libwps::readU16(input);
+		if (color && !m_state->getColor(color, font.m_color))
+		{
+			WPS_DEBUG_MSG(("WKS4Parser::readQuattroProUserFonts: unknown color\n"));
+			f << "##color=" << color << ",";
+		}
+
+		font.m_extra=f.str();
+
+		f.str("");
+		f << "UserFont-" << i+1 << ":" << font;
+
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		input->seek(pos+8, librevenge::RVNG_SEEK_SET);
+	}
 	return true;
 }
 
@@ -1525,14 +1667,16 @@ bool WKS4Parser::readFieldName()
 		return false;
 	}
 	long sz = (long) libwps::readU16(input);
+	f << "Entries(FldNames):";
 	if (sz != 0x18 && sz != 0x1e)
 	{
+		// find also 0x85 a zone with 4 fldnames ?
 		WPS_DEBUG_MSG(("WKS4Parser::readFieldName: size seems bad\n"));
+		f << "###";
 		ascii().addPos(pos);
-		ascii().addNote("Entries(ZoneB):###");
+		ascii().addNote(f.str().c_str());
 		return true;
 	}
-	f << "Entries(FldNames):";
 	std::string name("");
 	if (getCreator()==libwps::WPS_QUATTRO_PRO)
 	{
