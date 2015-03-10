@@ -195,6 +195,8 @@ protected:
 	};
 
 public:
+	typedef std::map<Vec2i, Cell, ComparePosition> PositionToCellMap_t;
+
 	//! a constructor
 	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_LBPosition(-1,-1), m_boundsColsMap(), m_widthColsInChar(), m_heightRows(),
 		m_rowPageBreaksList(), m_positionToCellMap() {}
@@ -269,7 +271,7 @@ public:
 	void computeRightBottomPosition()
 	{
 		int maxX = -1, maxY = -1;
-		for (std::map<Vec2i, Cell>::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
+		for (PositionToCellMap_t::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
 		{
 			Vec2i const &p = it->second.position();
 			if (p[0] > maxX) maxX = p[0];
@@ -294,7 +296,7 @@ public:
 	/** the list of row page break */
 	std::vector<int> m_rowPageBreaksList;
 	/** a map cell to not empty cells */
-	std::map<Vec2i, Cell, ComparePosition> m_positionToCellMap;
+	PositionToCellMap_t m_positionToCellMap;
 };
 
 //! the state of LotusSpreadsheet
