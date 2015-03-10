@@ -112,8 +112,8 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 struct State
 {
 	//! constructor
-	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1), m_hasLICSCharacters(false), m_pageSpan(), m_actPage(0), m_numPages(0),
-		m_headerString(""), m_footerString("")
+	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1), m_hasLICSCharacters(false),
+		m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0), m_headerString(""), m_footerString("")
 	{
 	}
 	//! returns a color corresponding to an id
@@ -148,6 +148,8 @@ struct State
 	int m_version;
 	//! flag to know if the character
 	bool m_hasLICSCharacters;
+	//! the fonts list
+	std::vector<Font> m_fontsList;
 	//! the actual document size
 	WPSPageSpan m_pageSpan;
 	int m_actPage /** the actual page*/, m_numPages /* the number of pages */;
@@ -220,6 +222,19 @@ libwps_tools_win::Font::Type QuattroParser::getDefaultFontType() const
 bool QuattroParser::getColor(int id, WPSColor &color) const
 {
 	return m_state->getColor(id, color);
+}
+
+bool QuattroParser::getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &type) const
+{
+	if (id < 0 || id>=(int)m_state->m_fontsList.size())
+	{
+		WPS_DEBUG_MSG(("QuattroParser::getFont: can not find font %d\n", id));
+		return false;
+	}
+	QuattroParserInternal::Font const &ft=m_state->m_fontsList[size_t(id)];
+	font=ft;
+	type=ft.m_type;
+	return true;
 }
 
 bool QuattroParser::hasLICSCharacters() const
@@ -749,14 +764,14 @@ bool QuattroParser::readUserFonts()
 
 	if (type != 0x9b)
 	{
-		WPS_DEBUG_MSG(("QuattroParser::readQuattroProUserFonts: not a font zone\n"));
+		WPS_DEBUG_MSG(("QuattroParser::readUserFonts: not a font zone\n"));
 		return false;
 	}
 	long sz = (long)libwps::readU16(input);
 	f << "Entries(UserFont)[qpro]:";
 	if ((sz%8)!=0)
 	{
-		WPS_DEBUG_MSG(("QuattroParser::readQuattroProUserFonts: seems very short\n"));
+		WPS_DEBUG_MSG(("QuattroParser::readUserFonts: seems very short\n"));
 		f << "###";
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
@@ -790,14 +805,15 @@ bool QuattroParser::readUserFonts()
 		int color = (int) libwps::readU16(input);
 		if (color && !m_state->getColor(color, font.m_color))
 		{
-			WPS_DEBUG_MSG(("QuattroParser::readQuattroProUserFonts: unknown color\n"));
+			WPS_DEBUG_MSG(("QuattroParser::readUserFonts: unknown color\n"));
 			f << "##color=" << color << ",";
 		}
 
 		font.m_extra=f.str();
+		m_state->m_fontsList.push_back(font);
 
 		f.str("");
-		f << "UserFont-" << i+1 << ":" << font;
+		f << "UserFont:Fo" << i << "," << font;
 
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());

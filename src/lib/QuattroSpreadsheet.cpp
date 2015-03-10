@@ -49,9 +49,8 @@ namespace QuattroSpreadsheetInternal
 struct Style : public WPSCellFormat
 {
 	//! construtor
-	Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_font(), m_fontType(type), m_extra("")
+	Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_fontType(type), m_fileFormat(0xFF), m_extra("")
 	{
-		for (int i = 0; i < 10; i++) m_unknFlags[i] = 0;
 	}
 
 	//! operator<<
@@ -63,12 +62,10 @@ struct Style : public WPSCellFormat
 	{
 		return !(*this==st);
 	}
-	/** the font */
-	WPSFont m_font;
 	//! font encoding type
 	libwps_tools_win::Font::Type m_fontType;
-	/** some flag */
-	int m_unknFlags[10];
+	//! the file format
+	int m_fileFormat;
 	/** extra data */
 	std::string m_extra;
 };
@@ -76,43 +73,20 @@ struct Style : public WPSCellFormat
 //! operator<<
 std::ostream &operator<<(std::ostream &o, Style const &style)
 {
-	o << "font=[" << style.m_font << "],";
 	o << static_cast<WPSCellFormat const &>(style) << ",";
-
-	bool hasUnkn = false;
-	for (int i = 0; i < 10; i++)
-	{
-		if (!style.m_unknFlags[i]) continue;
-		hasUnkn=true;
-		break;
-	}
-	if (hasUnkn)
-	{
-		o << "unkn=[" << std::hex;
-		for (int i = 0; i < 10; i++)
-		{
-			if (style.m_unknFlags[i]) o << "fS" << i << "=" << std::hex << style.m_unknFlags[i] << std::dec << ",";
-		}
-		o << std::dec << "]";
-	}
+	if (style.m_fileFormat!=0xFF)
+		o << "format=" << std::hex << style.m_fileFormat << std::dec << ",";
 	if (style.m_extra.length())
-		o << ", extra=[" << style.m_extra << "]";
+		o << "extra=[" << style.m_extra << "],";
 
 	return o;
 }
 
 bool Style::operator==(Style const &st) const
 {
-	if (m_font!=st.m_font) return false;
-	if (m_format!=st.m_format || m_subFormat!=st.m_subFormat || m_digits!=st.m_digits || m_protected !=st.m_protected)
-		return false;
+	if (m_fontType!=st.m_fontType || m_fileFormat!=st.m_fileFormat) return false;
 	int diff = WPSCellFormat::compare(st);
 	if (diff) return false;
-	for (int i = 0; i < 10; i++)
-	{
-		if (m_unknFlags[i]!=st.m_unknFlags[i])
-			return false;
-	}
 	return m_extra==st.m_extra;
 }
 
@@ -121,42 +95,33 @@ bool Style::operator==(Style const &st) const
 class StyleManager
 {
 public:
-	StyleManager() : m_stylesList() {}
+	StyleManager() : m_idStyleMap() {}
 	//! add a new style and returns its id
-	int add(Style const &st, bool dosFile)
+	void add(int id, Style const &st)
 	{
-		if (dosFile)
+		if (m_idStyleMap.find(id)!=m_idStyleMap.end())
 		{
-			for (size_t i=0; i < m_stylesList.size(); ++i)
-			{
-				if (m_stylesList[i]==st) return int(i);
-			}
+			WPS_DEBUG_MSG(("QuattroParserInternal::StyleManager::add style %d already exists\n", id));
+			return;
 		}
-		m_stylesList.push_back(st);
-		return int(m_stylesList.size())-1;
+		m_idStyleMap.insert(std::map<int, Style>::value_type(id,st));
 	}
 	//! returns the style with id
 	bool get(int id, Style &style) const
 	{
-		if (id<0|| id >= (int) m_stylesList.size())
+		if (m_idStyleMap.find(id)==m_idStyleMap.end())
 		{
 			WPS_DEBUG_MSG(("QuattroParserInternal::StyleManager::get can not find style %d\n", id));
 			return false;
 		}
-		style=m_stylesList[size_t(id)];
+		style=m_idStyleMap.find(id)->second;
 		return true;
-	}
-	//! returns the number of style
-	int size() const
-	{
-		return (int) m_stylesList.size();
 	}
 	//! print a style
 	void print(int id, std::ostream &o) const
 	{
-		if (id < 0) return;
-		if (id < int(m_stylesList.size()))
-			o << ", style=" << m_stylesList[size_t(id)];
+		if (m_idStyleMap.find(id)!=m_idStyleMap.end())
+			o << ", style=" << m_idStyleMap.find(id)->second;
 		else
 		{
 			WPS_DEBUG_MSG(("QuattroParserInternal::StyleManager::print: can not find a style\n"));
@@ -166,7 +131,7 @@ public:
 
 protected:
 	//! the styles
-	std::vector<Style> m_stylesList;
+	std::map<int, Style> m_idStyleMap;
 };
 
 //! a cellule of a Quattro spreadsheet
@@ -174,7 +139,7 @@ class Cell : public WPSCell
 {
 public:
 	/// constructor
-	Cell() : m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content() { }
+	Cell(libwps_tools_win::Font::Type type) : m_fontType(type), m_fileFormat(0xFF), m_content() { }
 
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
@@ -193,10 +158,90 @@ public:
 		return false;
 	}
 
-	//! the style
-	int m_styleId;
-	//! the horizontal align (in dos file)
-	WPSCellFormat::HorizontalAlignment m_hAlign;
+	//! update the cell format using file format
+	void updateFormat()
+	{
+		switch ((m_fileFormat>>4)&7)
+		{
+		case 0: // fixed
+			setFormat(F_NUMBER, 1);
+			setDigits(m_fileFormat&0xF);
+			break;
+		case 1: // scientific
+			setFormat(F_NUMBER, 2);
+			setDigits(m_fileFormat&0xF);
+			break;
+		case 2: // currency
+			setFormat(F_NUMBER, 4);
+			setDigits(m_fileFormat&0xF);
+			break;
+		case 3: // percent
+			setFormat(F_NUMBER, 3);
+			setDigits(m_fileFormat&0xF);
+			break;
+		case 4: // decimal
+			setFormat(F_NUMBER, 1);
+			setDigits(m_fileFormat&0xF);
+			break;
+		case 7:
+			switch (m_fileFormat&0xF)
+			{
+			case 0: // +/- : kind of bool
+				setFormat(F_BOOLEAN);
+				break;
+			case 1:
+				setFormat(F_NUMBER, 0);
+				break;
+			case 2:
+				setDTFormat(F_DATE, "%d %B %y");
+				break;
+			case 3:
+				setDTFormat(F_DATE, "%d %B");
+				break;
+			case 4:
+				setDTFormat(F_DATE, "%B %y");
+				break;
+			case 5:
+				setFormat(F_TEXT);
+				break;
+			case 6:
+				setFormat(F_TEXT);
+				break;
+			case 7:
+				setDTFormat(F_TIME, "%I:%M:%S%p");
+				break;
+			case 8:
+				setDTFormat(F_TIME, "%I:%M%p");
+				break;
+			case 9:
+				setDTFormat(F_DATE, "%m/%d/%y");
+				break;
+			case 0xa:
+				setDTFormat(F_DATE, "%m/%d");
+				break;
+			case 0xb:
+				setDTFormat(F_TIME, "%H:%M:%S");
+				break;
+			case 0xc:
+				setDTFormat(F_TIME, "%H:%M");
+				break;
+			case 0xd:
+				setFormat(F_TEXT);
+				break;
+			case 0xf: // automatic
+				break;
+			default:
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	//! font encoding type
+	libwps_tools_win::Font::Type m_fontType;
+	//! the file format
+	int m_fileFormat;
 	//! the content
 	WKSContentListener::CellContent m_content;
 };
@@ -204,26 +249,9 @@ public:
 //! operator<<
 std::ostream &operator<<(std::ostream &o, Cell const &cell)
 {
-	o << reinterpret_cast<WPSCell const &>(cell)
-	  << cell.m_content << ",style=" << cell.m_styleId << ",";
-	switch (cell.m_hAlign)
-	{
-	case WPSCellFormat::HALIGN_LEFT:
-		o << "left,";
-		break;
-	case WPSCellFormat::HALIGN_CENTER:
-		o << "centered,";
-		break;
-	case WPSCellFormat::HALIGN_RIGHT:
-		o << "right,";
-		break;
-	case WPSCellFormat::HALIGN_FULL:
-		o << "full,";
-		break;
-	case WPSCellFormat::HALIGN_DEFAULT:
-	default:
-		break; // default
-	}
+	o << reinterpret_cast<WPSCell const &>(cell) << cell.m_content << ",";
+	if (cell.m_fileFormat!=0xFF)
+		o << "format=" << std::hex << cell.m_fileFormat << std::dec << ",";
 	return o;
 }
 
@@ -255,13 +283,14 @@ public:
 		m_widthCols(), m_heightRows(), m_positionToCellMap(), m_lastCellPos(),
 		m_rowPageBreaksList() {}
 	//! return a cell corresponding to a spreadsheet, create one if needed
-	Cell &getCell(Vec2i const &pos)
+	Cell &getCell(Vec2i const &pos, libwps_tools_win::Font::Type type)
 	{
 		if (m_positionToCellMap.find(pos)==m_positionToCellMap.end())
 		{
-			Cell cell;
+			Cell cell(type);
 			cell.setPosition(pos);
-			m_positionToCellMap[pos]=cell;
+			m_positionToCellMap.insert
+			(std::map<Vec2i, Cell, ComparePosition>::value_type(pos,cell));
 		}
 		m_lastCellPos=pos;
 		return m_positionToCellMap.find(pos)->second;
@@ -636,8 +665,42 @@ bool QuattroSpreadsheet::readCellStyle()
 	for (int i=0; i<N; ++i)
 	{
 		pos=m_input->tell();
+		QuattroSpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
 		f.str("");
-		f << "CellStyle-" << i << ":";
+		int id=(int) libwps::readU16(m_input);
+
+		WPSFont font;
+		int flags = (int)libwps::readU16(m_input);
+		uint32_t attributes = 0;
+		if (flags & 1) attributes |= WPS_BOLD_BIT;
+		if (flags & 2) attributes |= WPS_ITALICS_BIT;
+		if (flags & 8) attributes |= WPS_UNDERLINE_BIT;
+
+		font.m_attributes=attributes;
+		if (flags & 0xFFF4)
+			f << "fl=" << std::hex << (flags & 0xFFF4) << std::dec << ",";
+		int fId=(int) libwps::readU16(m_input);
+		f << "fId=" << fId << ",";
+		int fSize = (int) libwps::readU16(m_input);
+		if (fSize >= 1 && fSize <= 50)
+			font.m_size=double(fSize);
+		else
+			f << "###fSize=" << fSize << ",";
+		int color = (int) libwps::readU16(m_input);
+		if (color && !m_mainParser.getColor(color, font.m_color))
+		{
+			WPS_DEBUG_MSG(("QuattroParser::readCellStyle: unknown color\n"));
+			f << "##color=" << color << ",";
+		}
+		style.setFont(font);
+		int val=(int) libwps::readU16(m_input);
+		f << "f0=" << std::hex << val << std::dec << ",";
+
+		style.m_extra=f.str();
+		m_state->m_styleManager.add(id, style);
+		f.str("");
+		f << "CellStyle-" << i << ":Ce" << id << "," << style << ",";
+
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
 		m_input->seek(pos+12, librevenge::RVNG_SEEK_SET);
@@ -650,6 +713,7 @@ bool QuattroSpreadsheet::readCellProperty()
 	libwps::DebugStream f;
 	long pos = m_input->tell();
 	long type = libwps::read16(m_input);
+	libwps_tools_win::Font::Type defFontType=m_mainParser.getDefaultFontType();
 
 	if (type != 0x9d)
 	{
@@ -666,35 +730,119 @@ bool QuattroSpreadsheet::readCellProperty()
 		ascii().addNote(f.str().c_str());
 		return true;
 	}
-	int val=(int) libwps::readU8(m_input);
-	if (val!=0xFF) f << "f0=" << std::hex << val << std::dec << ",";
+	int format=(int) libwps::readU8(m_input);
 	int col=(int) libwps::read16(m_input);
 	int row=(int) libwps::read16(m_input);
+	QuattroSpreadsheetInternal::Cell emptyCell(defFontType);
+	QuattroSpreadsheetInternal::Cell *cell=&emptyCell;
 	if (col<0 || row<0)
 	{
 		WPS_DEBUG_MSG(("QuattroSpreadsheet::readCellProperty: the position seems bad\n"));
 		f << "###";
 	}
+	else
+		cell = &m_state->getActualSheet().getCell(Vec2i(col,row),defFontType);
 	f << "C" << Vec2i(col,row) << ",";
-	val=(int) libwps::readU8(m_input);
-	switch (val>>6)
+	int flag=(int) libwps::readU8(m_input);
+	int id=(int) libwps::readU8(m_input);
+	if (id&0x80)
+	{
+		f << "Ce" << (id&0x7f) << ",";
+		QuattroSpreadsheetInternal::Style style(cell->m_fontType);
+		if (!m_state->m_styleManager.get((id&0x7f), style))
+		{
+			WPS_DEBUG_MSG(("QuattroSpreadsheet::readCellProperty: can not find a style\n"));
+			f << "###";
+		}
+		else
+		{
+			if (style.m_fileFormat==0xFF)
+				cell->m_fileFormat=style.m_fileFormat;
+			cell->m_fontType=style.m_fontType;
+			cell->setFont(style.getFont());
+			cell->setBackgroundColor(style.backgroundColor());
+			if (style.hasBorders())
+				cell->setBorders(style.borders());
+		}
+	}
+	else if (id)
+	{
+		if (id&0x7c)
+			f << "Fo" << (id>>2) << ",";
+		WPSFont font;
+		if (!m_mainParser.getFont(id>>2, font, cell->m_fontType))
+		{
+			WPS_DEBUG_MSG(("QuattroSpreadsheet::readCellProperty: can not find a font\n"));
+			f << "###";
+		}
+		else
+			cell->setFont(font);
+		if (id&0x3)
+			f << "f0=" << (id&3) << ",";
+	}
+	if (format!=0xFF)
+	{
+		cell->m_fileFormat=format;
+		f << "form=" << std::hex << format << std::dec << ",";
+	}
+	switch (flag>>6)
 	{
 	case 1:
+		cell->setHAlignement(WPSCellFormat::HALIGN_LEFT);
 		f << "left,";
 		break;
 	case 2:
+		cell->setHAlignement(WPSCellFormat::HALIGN_RIGHT);
 		f << "right,";
 		break;
 	case 3:
+		cell->setHAlignement(WPSCellFormat::HALIGN_CENTER);
 		f << "center,";
 		break;
 	default:
 	case 0:
 		break;
 	}
-	val &= 0x3F;
-	if (val) f << "f0=" << std::hex << val << std::dec << ",";
-	ascii().addDelimiter(m_input->tell(), '|');
+	for (int i=0; i<2; ++i)
+	{
+		int bd=(flag>>(2*i))&0x3;
+		if (!bd) continue;
+		f << "bord" << (i==0 ? "T" : "L");
+		WPSBorder border;
+		switch (bd)
+		{
+		case 2:
+			border.m_type = WPSBorder::Double;
+			f << "[double]";
+			break;
+		case 3:
+			border.m_width=2;
+			f << "[w=2]";
+			break;
+		default:
+		case 1: // normal
+			break;
+		}
+		f << ",";
+		cell->setBorders(i==0 ? WPSBorder::TopBit : WPSBorder::LeftBit, border);
+	}
+	switch ((flag>>4)&3)
+	{
+	case 1:
+		cell->setBackgroundColor(WPSColor(0x80,0x80,0x80));
+		f << "back[grey],";
+		break;
+	case 2:
+		cell->setBackgroundColor(WPSColor::black());
+		f << "back[black],";
+		break;
+	case 3:
+		f << "#back[color]=3";
+		break;
+	case 0:
+	default:
+		break;
+	}
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
 	return true;
@@ -728,8 +876,9 @@ bool QuattroSpreadsheet::readUserStyle()
 		return true;
 	}
 
-	int val=(int) libwps::readU16(m_input); // between 6e and 77 ?
-	f << "id=" << val << ",";
+	QuattroSpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
+	int id=(int) libwps::readU16(m_input);
+	f.str("");
 	int flags = (int)libwps::readU16(m_input);
 
 	WPSFont font;
@@ -754,8 +903,8 @@ bool QuattroSpreadsheet::readUserStyle()
 		WPS_DEBUG_MSG(("QuattroSpreadsheet::readUserStyle: unknown color\n"));
 		f << "##font[color]=" << color << ",";
 	}
-	f << "font=[" << font << "],";
-	val=(int) libwps::read16(m_input);
+	style.setFont(font);
+	int val=(int) libwps::read16(m_input);
 	if (val!=-1) f << "f1=" << val << ",";
 	int sSz=(int) libwps::readU8(m_input);
 	if (sSz>15)
@@ -777,23 +926,23 @@ bool QuattroSpreadsheet::readUserStyle()
 	{
 		val=(int) libwps::readU8(m_input);
 		if (!val) continue;
-		static char const *(wh[])= {"T", "L", "B", "R"};
-		f << "bord" << wh[i] << "=";
+		WPSBorder border;
 		switch (val)
 		{
-		case 1:
-			f << "norm,";
+		case 1: // normal
 			break;
 		case 2:
-			f << "double,";
+			border.m_type = WPSBorder::Double;
 			break;
 		case 3:
-			f << "thick,";
+			border.m_width=2;
 			break;
 		default:
-			f << "#" << val << ",";
+			f << "#border" << i << "=" << val << ",";
 			break;
 		}
+		int const wh[]= {WPSBorder::TopBit, WPSBorder::LeftBit, WPSBorder::BottomBit, WPSBorder::RightBit};
+		style.setBorders(wh[i], border);
 	}
 	val=(int) libwps::readU8(m_input);
 	switch (val)
@@ -801,10 +950,10 @@ bool QuattroSpreadsheet::readUserStyle()
 	case 0:
 		break;
 	case 1:
-		f << "back[color]=grey,";
+		style.setBackgroundColor(WPSColor(0x80,0x80,0x80));
 		break;
 	case 2:
-		f << "back[color]=black,";
+		style.setBackgroundColor(WPSColor::black());
 		break;
 	default:
 		f << "#back[color]=" << val << ",";
@@ -816,13 +965,13 @@ bool QuattroSpreadsheet::readUserStyle()
 	case 0:
 		break;
 	case 1:
-		f << "left,";
+		style.setHAlignement(WPSCellFormat::HALIGN_LEFT);
 		break;
 	case 2:
-		f << "right,";
+		style.setHAlignement(WPSCellFormat::HALIGN_RIGHT);
 		break;
 	case 3:
-		f << "center,";
+		style.setHAlignement(WPSCellFormat::HALIGN_CENTER);
 		break;
 	default:
 		f << "#align=" << val << ",";
@@ -843,11 +992,15 @@ bool QuattroSpreadsheet::readUserStyle()
 		f << "#input=" << val << ",";
 		break;
 	}
-	val=(int) libwps::readU8(m_input);
-	if (val) f << "format=" << std::hex << val << std::dec << ",";
+	style.m_fileFormat=(int) libwps::readU8(m_input);
 	int dim[2];
 	for (int i=0; i<2; ++i) dim[i]=(int) libwps::read16(m_input);
 	if (dim[0]||dim[1]) f << "dim=" << Vec2i(dim[0],dim[1]) << ",";
+
+	style.m_extra=f.str();
+	m_state->m_styleManager.add(id, style);
+	f.str("");
+	f << "Entries(UserStyle):Ce" << id << "," << style << ",";
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
 	return true;
@@ -863,7 +1016,7 @@ bool QuattroSpreadsheet::readCell()
 
 	long pos = m_input->tell();
 	long type = libwps::read16(m_input);
-	if ((type != 0x545b) && (type < 0xc || type > 0x10))
+	if (type < 0xc || type > 0x10)
 	{
 		WPS_DEBUG_MSG(("QuattroSpreadsheet::readCell: not a cell property\n"));
 		return false;
@@ -877,10 +1030,11 @@ bool QuattroSpreadsheet::readCell()
 		return false;
 	}
 	int const vers=version();
+	libwps_tools_win::Font::Type defFontType=m_mainParser.getDefaultFontType();
 	bool dosFile = vers<=1;
-	int unkn1 = 0;
+	int format=0xFF;
 	if (dosFile)
-		unkn1 = (int) libwps::readU8(m_input);
+		format = (int) libwps::readU8(m_input);
 	int cellPos[2];
 	cellPos[0]=(int) libwps::readU8(m_input);
 	int sheetId=(int) libwps::readU8(m_input);
@@ -900,7 +1054,8 @@ bool QuattroSpreadsheet::readCell()
 		f << "sheet[id]=" << sheetId << ",";
 	}
 
-	QuattroSpreadsheetInternal::Cell &cell=m_state->getActualSheet().getCell(Vec2i(cellPos[0],cellPos[1]));
+	QuattroSpreadsheetInternal::Cell &cell=m_state->getActualSheet().getCell(Vec2i(cellPos[0],cellPos[1]), defFontType);
+	cell.m_fileFormat=format;
 	if (!dosFile)
 	{
 		for (int i=0; i<2; ++i)   // related to style and format?
@@ -908,21 +1063,6 @@ bool QuattroSpreadsheet::readCell()
 			int val=(int) libwps::readU8(m_input);
 			if (val) f << "f" << i << "=" << val << ",";
 		}
-	}
-
-	if (type & 0xFF00)
-	{
-		if (dosFile)
-		{
-			static bool first = true;
-			if (first)
-			{
-				first = false;
-				WPS_DEBUG_MSG(("QuattroSpreadsheet::readCell: find type=%ld in dos version\n", type));
-			}
-			f << "###";
-		}
-		f << "win[version],";
 	}
 
 	long dataPos = m_input->tell();
@@ -972,10 +1112,10 @@ bool QuattroSpreadsheet::readCell()
 		std::string s("");
 		// pascal string
 		char align=(char) libwps::readU8(m_input);
-		if (align=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT;
-		else if (align=='\\') cell.m_hAlign=WPSCellFormat::HALIGN_LEFT;
-		else if (align=='^') cell.m_hAlign=WPSCellFormat::HALIGN_CENTER;
-		else if (align=='\"') cell.m_hAlign=WPSCellFormat::HALIGN_RIGHT;
+		if (align=='\'') cell.setHAlignement(WPSCellFormat::HALIGN_DEFAULT);
+		else if (align=='\\') cell.setHAlignement(WPSCellFormat::HALIGN_LEFT);
+		else if (align=='^') cell.setHAlignement(WPSCellFormat::HALIGN_CENTER);
+		else if (align=='\"') cell.setHAlignement(WPSCellFormat::HALIGN_RIGHT);
 		else f << "#align=" << (int) align << ",";
 
 		int sSz=(int) libwps::readU8(m_input);
@@ -1027,19 +1167,6 @@ bool QuattroSpreadsheet::readCell()
 		ok = false;
 		break;
 	}
-	case 0x545b:   // CHECKME: sometime we do not read the good number
-	{
-		double val;
-		bool isNaN;
-		if (dataSz == 4 && libwps::readDouble4(m_input, val, isNaN))
-		{
-			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
-			cell.m_content.setValue(val);
-			break;
-		}
-		ok = false;
-		break;
-	}
 	default:
 		WPS_DEBUG_MSG(("QuattroSpreadsheet::readCell: unknown type=%ld\n", type));
 		ok = false;
@@ -1049,53 +1176,27 @@ bool QuattroSpreadsheet::readCell()
 
 	if (dosFile)
 	{
-		QuattroSpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
 		switch (cell.m_content.m_contentType)
 		{
 		case WKSContentListener::CellContent::C_NONE:
 			break;
 		case WKSContentListener::CellContent::C_TEXT:
-			style.setFormat(WPSCell::F_TEXT);
+			cell.setFormat(WPSCell::F_TEXT);
 			break;
 		case WKSContentListener::CellContent::C_NUMBER:
 		case WKSContentListener::CellContent::C_FORMULA:
 		case WKSContentListener::CellContent::C_UNKNOWN:
 		default:
-			style.setFormat(WPSCell::F_NUMBER);
+			cell.setFormat(WPSCell::F_NUMBER);
 			break;
 		}
 
-		int styleID = (unkn1>>4) & 0x7;
-		switch (styleID)
-		{
-		case 0:
-		case 1:
-		case 2:
-		case 3:
-		case 4:
-		{
-			if (styleID == 2) styleID = 3;
-			else if (styleID == 3) styleID = 2;
-			style.setFormat(WPSCell::F_NUMBER,1+styleID);
-			break;
-		}
-		case 0x7:
-			break;
-		default:
-			f << "type=" << styleID << ",";
-		}
-		if ((unkn1&0x80)==0) f << "style80=0,";
-		style.setDigits(unkn1 & 0xF);
-		cell.m_styleId=m_state->m_styleManager.add(style, true);
 	}
 	m_input->seek(pos+sz, librevenge::RVNG_SEEK_SET);
 
 	std::string extra=f.str();
 	f.str("");
 	f << "Entries(CellContent):" << cell << "," << extra;
-#ifdef DEBUG_WITH_FILES
-	m_state->m_styleManager.print(cell.m_styleId, f);
-#endif
 
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
@@ -1747,27 +1848,12 @@ void QuattroSpreadsheet::sendCellContent(QuattroSpreadsheetInternal::Cell const 
 		return;
 	}
 
-	QuattroSpreadsheetInternal::Style cellStyle(m_mainParser.getDefaultFontType());
-	if (cell.m_styleId<0 || !m_state->m_styleManager.get(cell.m_styleId,cellStyle))
-	{
-		static bool first=true;
-		if (first)   // do not kow how to retrieve the style in Wq2 file, so normal:-~
-		{
-			first=false;
-			WPS_DEBUG_MSG(("QuattroSpreadsheet::sendCellContent: I can not find some cell styles\n"));
-		}
-	}
-	if (version()<=2 && cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
-		cellStyle.setHAlignement(cell.m_hAlign);
-
 	librevenge::RVNGPropertyList propList;
-	libwps_tools_win::Font::Type fontType = cellStyle.m_fontType;
-	m_listener->setFont(cellStyle.m_font);
+	libwps_tools_win::Font::Type fontType = cell.m_fontType;
+	m_listener->setFont(cell.getFont());
 
 	QuattroSpreadsheetInternal::Cell finalCell(cell);
-	finalCell.WPSCellFormat::operator=(cellStyle);
-	finalCell.setFont(cellStyle.m_font);
-	WKSContentListener::CellContent content(cell.m_content);
+	WKSContentListener::CellContent &content=finalCell.m_content;
 	bool hasLICS=hasLICSCharacters();
 	for (size_t f=0; f < content.m_formula.size(); ++f)
 	{
@@ -1786,6 +1872,7 @@ void QuattroSpreadsheet::sendCellContent(QuattroSpreadsheetInternal::Cell const 
 		}
 		text=finalString.cstr();
 	}
+	finalCell.updateFormat();
 	m_listener->openSheetCell(finalCell, content, propList);
 
 	if (cell.m_content.m_textEntry.valid())

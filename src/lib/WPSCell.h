@@ -185,6 +185,11 @@ public:
 
 	//! sets the cell border: wh=WPSBorder::LeftBit|...
 	void setBorders(int wh, WPSBorder const &border);
+	//! sets the cell borders
+	void setBorders(std::vector<WPSBorder> const &newBorders)
+	{
+		m_bordersList=newBorders;
+	}
 
 	//! returns the background color
 	WPSColor backgroundColor() const

@@ -77,6 +77,8 @@ protected:
 
 	//! returns the color corresponding to an id
 	bool getColor(int id, WPSColor &color) const;
+	//! returns the font corresponding to an id
+	bool getFont(int id, WPSFont &font, libwps_tools_win::Font::Type &type) const;
 
 	/** creates the main listener */
 	shared_ptr<WKSContentListener> createListener(librevenge::RVNGSpreadsheetInterface *interface);
