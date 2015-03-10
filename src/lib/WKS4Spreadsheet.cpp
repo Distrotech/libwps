@@ -250,6 +250,8 @@ public:
 	//! the spreadsheet type
 	enum Type { T_Spreadsheet, T_Filter, T_Report };
 
+	typedef std::map<Vec2i, Cell, ComparePosition> PositionToCellMap_t;
+
 	//! a constructor
 	Spreadsheet(Type type=T_Spreadsheet, int id=0) : m_type(type), m_id(id), m_numCols(0), m_numRows(0), m_LBPosition(-1,-1),
 		m_widthCols(), m_heightRows(), m_positionToCellMap(), m_lastCellPos(),
@@ -308,7 +310,7 @@ public:
 	void computeRightBottomPosition()
 	{
 		int maxX = -1, maxY = -1;
-		for (std::map<Vec2i, Cell>::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
+		for (PositionToCellMap_t::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
 		{
 			Vec2i const &p = it->second.position();
 			if (p[0] > maxX) maxX = p[0];
@@ -337,7 +339,7 @@ public:
 	/** the row size in TWIP (?) */
 	std::vector<int> m_heightRows;
 	/** a map cell to not empty cells */
-	std::map<Vec2i, Cell, ComparePosition> m_positionToCellMap;
+	PositionToCellMap_t m_positionToCellMap;
 	/** the last cell position */
 	Vec2i m_lastCellPos;
 	/** the list of row page break */
