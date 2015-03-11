@@ -565,12 +565,57 @@ bool QuattroSpreadsheet::readSheetSize()
 
 }
 
+bool QuattroSpreadsheet::readRowSize()
+{
+	libwps::DebugStream f;
+	long pos = m_input->tell();
+	long type = libwps::read16(m_input);
+	if (type != 0xe0)
+	{
+		WPS_DEBUG_MSG(("QuattroSpreadsheet::readRowSize: not a row size zone\n"));
+		return false;
+	}
+	long sz = libwps::readU16(m_input);
+	if (sz < 3)
+	{
+		WPS_DEBUG_MSG(("QuattroSpreadsheet::readRowSize: block is too short\n"));
+		return false;
+	}
+
+	int row = libwps::read16(m_input);
+	int height = libwps::readU8(m_input);
+
+	bool ok = row >= 0 && row < m_state->getActualSheet().m_numRows+20;
+	f << "Entries(Row):Row" << row << "";
+	if (!ok) f << "###";
+	f << ":height=" << height << ",";
+
+	if (ok)
+	{
+		if (row >= m_state->getActualSheet().m_numRows)
+		{
+			static bool first = true;
+			if (first)
+			{
+				first = false;
+				WPS_DEBUG_MSG(("QuattroSpreadsheet::readRowSize: I must increase the number of rows\n"));
+			}
+			f << "#row[inc],";
+		}
+		m_state->getActualSheet().setRowHeight(row, 20*height); // point to TWIP
+	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+
+	return ok;
+}
+
 bool QuattroSpreadsheet::readColumnSize()
 {
 	libwps::DebugStream f;
 	long pos = m_input->tell();
 	long type = libwps::read16(m_input);
-	if (type != 0x8)
+	if (type != 0x8 && type != 0xe2)
 	{
 		WPS_DEBUG_MSG(("QuattroSpreadsheet::readColumnSize: not a column size zone\n"));
 		return false;

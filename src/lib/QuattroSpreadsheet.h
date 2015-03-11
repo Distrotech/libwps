@@ -98,6 +98,8 @@ protected:
 	bool readSpreadsheetName();
 	//! reads the column size ( in ??? )
 	bool readColumnSize();
+	//! reads the column size ( in points )
+	bool readRowSize();
 	//! reads the list of hidden columns zone ( unused )
 	bool readHiddenColumns();
 

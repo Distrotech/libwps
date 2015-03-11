@@ -727,6 +727,14 @@ bool QuattroParser::readZone()
 		m_spreadsheetParser->readSpreadsheetName();
 		isParsed = true;
 		break;
+	case 0xe0:
+		m_spreadsheetParser->readRowSize();
+		isParsed = true;
+		break;
+	case 0xe2:
+		m_spreadsheetParser->readColumnSize();
+		isParsed = true;
+		break;
 	default:
 		break;
 	}
