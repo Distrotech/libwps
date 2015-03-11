@@ -329,7 +329,6 @@ bool QuattroParser::checkHeader(WPSHeader *header, bool strict)
 	input->seek(0,librevenge::RVNG_SEEK_SET);
 	int firstOffset = (int) libwps::readU8(input);
 	int type = (int) libwps::read8(input);
-	bool needEncoding=true;
 	f << "FileHeader:";
 	if (firstOffset == 0 && type == 0)
 		m_state->m_version=1;
@@ -386,7 +385,7 @@ bool QuattroParser::checkHeader(WPSHeader *header, bool strict)
 		header->setMajorVersion((uint8_t) m_state->m_version);
 		header->setCreator(libwps::WPS_QUATTRO_PRO);
 		header->setKind(libwps::WPS_SPREADSHEET);
-		header->setNeedEncoding(needEncoding);
+		header->setNeedEncoding(true);
 	}
 	return true;
 }
@@ -722,6 +721,10 @@ bool QuattroParser::readZone()
 		break;
 	case 0xdd:
 		m_spreadsheetParser->readSpreadsheetClose();
+		isParsed = true;
+		break;
+	case 0xde:
+		m_spreadsheetParser->readSpreadsheetName();
 		isParsed = true;
 		break;
 	default:

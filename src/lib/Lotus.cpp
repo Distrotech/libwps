@@ -323,7 +323,6 @@ bool LotusParser::checkHeader(WPSHeader *header, bool strict)
 	int firstOffset = (int) libwps::readU8(input);
 	int type = (int) libwps::read8(input);
 	int val=(int) libwps::read16(input);
-	bool needEncoding=true;
 	f << "FileHeader:";
 	if (firstOffset == 0 && type == 0 && val==0x1a)
 	{
@@ -377,7 +376,7 @@ bool LotusParser::checkHeader(WPSHeader *header, bool strict)
 		header->setMajorVersion(uint8_t(100+m_state->m_version));
 		header->setCreator(libwps::WPS_LOTUS);
 		header->setKind(libwps::WPS_SPREADSHEET);
-		header->setNeedEncoding(needEncoding);
+		header->setNeedEncoding(true);
 	}
 	return true;
 }

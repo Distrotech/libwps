@@ -183,6 +183,23 @@ public:
 			setFormat(F_NUMBER, 1);
 			setDigits(m_fileFormat&0xF);
 			break;
+		case 5:
+			switch (m_fileFormat&0xF)
+			{
+			case 4: // a date but no sure which format is good
+				setDTFormat(F_DATE, "%m/%d/%y");
+				break;
+			case 5:
+				setDTFormat(F_DATE, "%m/%d");
+				break;
+			default:
+				WPS_DEBUG_MSG(("QuattroSpreadsheetInternal::Cell::updateFormat: unknown format %x\n", (unsigned) m_fileFormat));
+				break;
+			}
+			break;
+		case 6:
+			WPS_DEBUG_MSG(("QuattroSpreadsheetInternal::Cell::updateFormat: unknown format %x\n", (unsigned) m_fileFormat));
+			break;
 		case 7:
 			switch (m_fileFormat&0xF)
 			{
@@ -206,6 +223,7 @@ public:
 				break;
 			case 6:
 				setFormat(F_TEXT);
+				m_font.m_attributes |= WPS_HIDDEN_BIT;
 				break;
 			case 7:
 				setDTFormat(F_TIME, "%I:%M:%S%p");
@@ -655,8 +673,108 @@ bool QuattroSpreadsheet::readCellStyle()
 		ascii().addNote(f.str().c_str());
 		return true;
 	}
-	if (vers>1)   // TODO
+	if (vers>1)
 	{
+		int pId=(int) libwps::readU16(m_input);
+		QuattroSpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
+		int id=(int) libwps::readU16(m_input);
+		f.str("");
+		if (!m_state->m_styleManager.get(pId, style))
+			f << "###";
+		if (pId!=0xFF0F)
+		{
+			f << "Ce" << (pId>>8);
+			if (pId&0xFF) f << "-" << (pId&0xFF);
+			f << "[parent],";
+		}
+		int val;
+		for (int i=0; i<4; ++i)   // small int, unknown
+		{
+			val=(int) libwps::readU8(m_input);
+			if (val) f << "f" << i << "=" << val << ",";
+		}
+		WPSFont font;
+		int flags = (int)libwps::readU16(m_input);
+		uint32_t attributes = 0;
+		if (flags & 1) attributes |= WPS_BOLD_BIT;
+		if (flags & 2) attributes |= WPS_ITALICS_BIT;
+		if (flags & 8) attributes |= WPS_UNDERLINE_BIT;
+
+		font.m_attributes=attributes;
+		if (flags & 0xFFF4)
+			f << "fl=" << std::hex << (flags & 0xFFF4) << std::dec << ",";
+		int fId=(int) libwps::readU16(m_input);
+		f << "fId=" << fId << ",";
+		int fSize = (int) libwps::readU16(m_input);
+		if (fSize >= 1 && fSize <= 50)
+			font.m_size=double(fSize);
+		else
+			f << "###fSize=" << fSize << ",";
+		int color = (int) libwps::readU16(m_input);
+		if (color && !m_mainParser.getColor(color, font.m_color))
+		{
+			WPS_DEBUG_MSG(("QuattroParser::readCellStyle: unknown color\n"));
+			f << "##color=" << color << ",";
+		}
+		style.setFont(font);
+
+		val=(int) libwps::readU8(m_input);
+		if (val)
+		{
+			for (int i=0, depl=0; i<4; ++i, depl+=2)
+			{
+				int bd=(val>>depl)&3;
+				if (!bd) continue;
+				WPSBorder border;
+				switch (bd)
+				{
+				case 1: // normal
+					break;
+				case 2:
+					border.m_type = WPSBorder::Double;
+					break;
+				case 3:
+					border.m_width=2;
+					break;
+				default:
+					break;
+				}
+				int const wh[]= {WPSBorder::TopBit, WPSBorder::LeftBit, WPSBorder::BottomBit, WPSBorder::RightBit};
+				style.setBorders(wh[i], border);
+			}
+		}
+		val=(int) libwps::readU8(m_input); // 8|10|18
+		if (val) f << "g0=" << val << ",";
+		val=(int) libwps::readU8(m_input);
+		switch (val)
+		{
+		case 0:
+			break;
+		case 1:
+			style.setBackgroundColor(WPSColor(0x80,0x80,0x80));
+			break;
+		case 2:
+			style.setBackgroundColor(WPSColor::black());
+			break;
+		default:
+			f << "##background=" << val << ",";
+			break;
+		}
+		style.m_fileFormat=(int) libwps::readU8(m_input);
+		for (int i=0; i<2; ++i)   // g1=0|f8
+		{
+			val=(int) libwps::readU8(m_input);
+			if (val) f << "g" << i+1 << "=" << val << ",";
+		}
+
+		style.m_extra=f.str();
+		m_state->m_styleManager.add(id, style);
+		f.str("");
+		f << "Entries(CellStyle):Ce" << (id>>8);
+		if (id&0xFF)
+			f << "-" << (id&0xFF) << "#";
+		f << "," << style << ",";
+
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
 		return true;
@@ -871,8 +989,117 @@ bool QuattroSpreadsheet::readUserStyle()
 		ascii().addNote(f.str().c_str());
 		return true;
 	}
-	if (vers>1)   // TODO
+	if (vers>1)
 	{
+		f.str("");
+		int sSz=(int) libwps::readU8(m_input);
+		if (sSz>15)
+		{
+			WPS_DEBUG_MSG(("QuattroSpreadsheet::readUserStyle: the name size seems bad\n"));
+			f << "###sz[name]=" << sSz << ",";
+		}
+		else
+		{
+			std::string name("");
+			for (int i=0; i<sSz; ++i) name += (char) libwps::readU8(m_input);
+			f << name << ",";
+		}
+		m_input->seek(pos+20, librevenge::RVNG_SEEK_SET);
+
+		QuattroSpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
+		int id=(int) libwps::readU16(m_input);
+		int val;
+		for (int i=0; i<4; ++i)   // small int, unknown
+		{
+			val=(int) libwps::readU8(m_input);
+			if (val) f << "f" << i << "=" << val << ",";
+		}
+
+		WPSFont font;
+		int flags = (int)libwps::readU16(m_input);
+		uint32_t attributes = 0;
+		if (flags & 1) attributes |= WPS_BOLD_BIT;
+		if (flags & 2) attributes |= WPS_ITALICS_BIT;
+		if (flags & 8) attributes |= WPS_UNDERLINE_BIT;
+
+		font.m_attributes=attributes;
+		if (flags & 0xFFF4)
+			f << "fl=" << std::hex << (flags & 0xFFF4) << std::dec << ",";
+		int fId=(int) libwps::readU16(m_input);
+		f << "fId=" << fId << ",";
+		int fSize = (int) libwps::readU16(m_input);
+		if (fSize >= 1 && fSize <= 50)
+			font.m_size=double(fSize);
+		else
+			f << "###fSize=" << fSize << ",";
+		int color = (int) libwps::readU16(m_input);
+		if (color && !m_mainParser.getColor(color, font.m_color))
+		{
+			WPS_DEBUG_MSG(("QuattroParser::readCellStyle: unknown color\n"));
+			f << "##color=" << color << ",";
+		}
+		style.setFont(font);
+		val=(int) libwps::readU8(m_input);
+		if (val)
+		{
+			for (int i=0, depl=0; i<4; ++i, depl+=2)
+			{
+				int bd=(val>>depl)&3;
+				if (!bd) continue;
+				WPSBorder border;
+				switch (bd)
+				{
+				case 1: // normal
+					break;
+				case 2:
+					border.m_type = WPSBorder::Double;
+					break;
+				case 3:
+					border.m_width=2;
+					break;
+				default:
+					break;
+				}
+				int const wh[]= {WPSBorder::TopBit, WPSBorder::LeftBit, WPSBorder::BottomBit, WPSBorder::RightBit};
+				style.setBorders(wh[i], border);
+			}
+		}
+		val=(int) libwps::readU8(m_input); // 8|10|18
+		if (val) f << "g0=" << val << ",";
+		val=(int) libwps::readU8(m_input);
+		switch (val)
+		{
+		case 0:
+			break;
+		case 1:
+			style.setBackgroundColor(WPSColor(0x80,0x80,0x80));
+			break;
+		case 2:
+			style.setBackgroundColor(WPSColor::black());
+			break;
+		default:
+			f << "##background=" << val << ",";
+			break;
+		}
+		style.m_fileFormat=(int) libwps::readU8(m_input);
+		for (int i=0; i<2; ++i)   // g1=0|f8
+		{
+			val=(int) libwps::readU8(m_input);
+			if (val) f << "g" << i+1 << "=" << val << ",";
+		}
+
+		style.m_extra=f.str();
+		m_state->m_styleManager.add(id, style);
+		f.str("");
+		f << "Entries(UserStyle):";
+		if (id!=0xFF0F)
+		{
+			f << "Ce" << (id>>8) << "-" << (id&0xFF);
+			if ((id&0xFF)!=8)
+				f  << "#";
+		}
+		f << "," << style << ",";
+
 		ascii().addPos(pos);
 		ascii().addNote(f.str().c_str());
 		return true;
@@ -1060,10 +1287,24 @@ bool QuattroSpreadsheet::readCell()
 	cell.m_fileFormat=format;
 	if (!dosFile)
 	{
-		for (int i=0; i<2; ++i)   // related to style and format?
+		int id=(int) libwps::readU16(m_input);
+		if (id!=0xFF0F)
 		{
-			int val=(int) libwps::readU8(m_input);
-			if (val) f << "f" << i << "=" << val << ",";
+			f << "Ce" << (id>>8);
+			if (id&0xFF) f << "-" << (id&0xFF);
+			f << ",";
+		}
+		QuattroSpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
+		if (!m_state->m_styleManager.get(id, style))
+			f << "###";
+		else
+		{
+			cell.m_fileFormat=style.m_fileFormat;
+			cell.m_fontType=style.m_fontType;
+			cell.setFont(style.getFont());
+			cell.setBackgroundColor(style.backgroundColor());
+			if (style.hasBorders())
+				cell.setBorders(style.borders());
 		}
 	}
 
@@ -1251,6 +1492,42 @@ bool QuattroSpreadsheet::readCellFormulaResult()
 ////////////////////////////////////////////////////////////
 // Data
 ////////////////////////////////////////////////////////////
+bool QuattroSpreadsheet::readSpreadsheetName()
+{
+	libwps::DebugStream f;
+
+	long pos = m_input->tell();
+	long type = (long) libwps::readU16(m_input);
+	if (type != 0xde)
+	{
+		WPS_DEBUG_MSG(("QuattroSpreadsheet::readSpreadsheetName: not a spreadsheet header\n"));
+		return false;
+	}
+	int sz = (int) libwps::readU16(m_input);
+	f << "Entries(SheetName):";
+	int sSz=(int) libwps::readU8(m_input);
+	if (sSz+1!=sz)
+	{
+		WPS_DEBUG_MSG(("QuattroSpreadsheet::readSpreadsheetName: the string size seems bad\n"));
+		f << "###";
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+		return true;
+	}
+	std::string name("");
+	for (int i=0; i<sSz; ++i)
+		name += (char) libwps::readU8(m_input);
+	/* TODO: store the name and use it to define the spreadsheet name
+
+	   note: this will imply that we reconstruct the formula to set
+	   the final name before sending them to the listener.
+	 */
+	f << name;
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
+	return true;
+}
+
 bool QuattroSpreadsheet::readSpreadsheetOpen()
 {
 	libwps::DebugStream f;
@@ -1382,6 +1659,8 @@ bool QuattroSpreadsheet::readCell
 		}
 		return false;
 	}
+	if (pos[0]>255) // can happens in some list cell, so...
+		pos[0]&=0xFF;
 	instr.m_position[0]=Vec2i(pos[0],pos[1]);
 	instr.m_positionRelative[0]=Vec2b(!absolute[0],!absolute[1]);
 	if (hasSheetId && pos[2]!=sheetId)

@@ -101,9 +101,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	WPSResult error=WPS_OK;
 	librevenge::RVNGRawSpreadsheetGenerator listenerImpl(printIndentLevel);
-	error= WPSDocument::parse(&input, &listenerImpl, password);
+	WPSResult error= WPSDocument::parse(&input, &listenerImpl, password);
 
 	if (error == WPS_ENCRYPTION_ERROR)
 		fprintf(stderr, "ERROR: Encrypted file, bad Password!\n");

@@ -94,6 +94,8 @@ protected:
 	bool readCellFormulaResult();
 	//! reads sheet size
 	bool readSheetSize();
+	//! reads a sheet name (zone 0xde), unused...
+	bool readSpreadsheetName();
 	//! reads the column size ( in ??? )
 	bool readColumnSize();
 	//! reads the list of hidden columns zone ( unused )
