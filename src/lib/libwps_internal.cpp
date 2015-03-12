@@ -23,6 +23,8 @@
 #include <stdlib.h>
 
 #include <cmath>
+#include <cstdarg>
+#include <cstdio>
 #include <iomanip>
 #include <limits>
 #include <sstream>
@@ -570,5 +572,22 @@ std::ostream &operator<< (std::ostream &o, WPSBorder const &border)
 	}
 	o << border.m_extra;
 	return o;
+}
+
+////////////////////////////////////////////////////////////
+// debug
+////////////////////////////////////////////////////////////
+
+namespace libwps
+{
+#ifdef DEBUG
+void printDebugMsg(const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	std::vfprintf(stderr, format, args);
+	va_end(args);
+}
+#endif
 }
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

@@ -111,7 +111,11 @@ typedef shared_ptr<WKSSubDocument> WKSSubDocumentPtr;
 
 /* ---------- debug  --------------- */
 #ifdef DEBUG
-#define WPS_DEBUG_MSG(M) printf M
+namespace libwps
+{
+void printDebugMsg(const char *format, ...) __attribute__((format(printf, 1, 2)));
+}
+#define WPS_DEBUG_MSG(M) libwps::printDebugMsg M
 #else
 #define WPS_DEBUG_MSG(M)
 #endif
