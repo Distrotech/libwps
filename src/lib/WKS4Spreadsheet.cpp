@@ -1340,9 +1340,9 @@ bool WKS4Spreadsheet::readCell()
 	}
 	int const vers=version();
 	bool dosFile = vers < 3;
-	int unkn1 = 0;
+	int format = 0xFF;
 	if (dosFile)
-		unkn1 = (int) libwps::readU8(m_input);
+		format = (int) libwps::readU8(m_input);
 	int cellPos[2];
 	cellPos[0]=(int) libwps::readU8(m_input);
 	int sheetId=(int) libwps::readU8(m_input);
@@ -1508,7 +1508,7 @@ bool WKS4Spreadsheet::readCell()
 			break;
 		}
 
-		int styleID = (unkn1>>4) & 0x7;
+		int styleID = (format>>4) & 0x7;
 		switch (styleID)
 		{
 		case 0:
@@ -1516,19 +1516,115 @@ bool WKS4Spreadsheet::readCell()
 		case 2:
 		case 3:
 		case 4:
-		{
+			if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+				break;
 			if (styleID == 2) styleID = 3;
 			else if (styleID == 3) styleID = 2;
 			style.setFormat(WPSCell::F_NUMBER,1+styleID);
 			break;
-		}
+		// unsure find in some Quattro Pro File
+		case 5:
+			if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+				break;
+			switch (format&0xF)
+			{
+			case 4: // a date but no sure which format is good
+				style.setDTFormat(WPSCell::F_DATE, "%m/%d/%y");
+				break;
+			case 5:
+				style.setDTFormat(WPSCell::F_DATE, "%m/%d");
+				break;
+			default:
+				WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell::updateFormat: unknown format %x\n", (unsigned) format));
+				break;
+			}
+			break;
+		// LotusSymphony format
 		case 0x7:
+			switch (format&0xF)
+			{
+			case 0: // +/- : kind of bool
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setFormat(WPSCell::F_BOOLEAN);
+				break;
+			case 1:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setFormat(WPSCell::F_NUMBER, 0);
+				break;
+			case 2:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setDTFormat(WPSCell::F_DATE, "%d %B %y");
+				break;
+			case 3:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setDTFormat(WPSCell::F_DATE, "%d %B");
+				break;
+			case 4:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setDTFormat(WPSCell::F_DATE, "%B %y");
+				break;
+			case 5:
+				if (cell.m_content.m_contentType!=WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setFormat(WPSCell::F_TEXT);
+				break;
+			case 6:
+				if (cell.m_content.m_contentType!=WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setFormat(WPSCell::F_TEXT);
+				style.m_font.m_attributes |= WPS_HIDDEN_BIT;
+				break;
+			case 7:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setDTFormat(WPSCell::F_TIME, "%I:%M:%S%p");
+				break;
+			case 8:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setDTFormat(WPSCell::F_TIME, "%I:%M%p");
+				break;
+			case 9:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setDTFormat(WPSCell::F_DATE, "%m/%d/%y");
+				break;
+			case 0xa:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setDTFormat(WPSCell::F_DATE, "%m/%d");
+				break;
+			case 0xb:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setDTFormat(WPSCell::F_TIME, "%H:%M:%S");
+				break;
+			case 0xc:
+				if (cell.m_content.m_contentType==WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setDTFormat(WPSCell::F_TIME, "%H:%M");
+				break;
+			case 0xd:
+				if (cell.m_content.m_contentType!=WKSContentListener::CellContent::C_TEXT)
+					break;
+				style.setFormat(WPSCell::F_TEXT);
+				break;
+			case 0xf: // automatic
+				break;
+			default:
+				break;
+			}
 			break;
 		default:
 			f << "type=" << styleID << ",";
 		}
-		if ((unkn1&0x80)==0) f << "style80=0,";
-		style.setDigits(unkn1 & 0xF);
+		if ((format&0x80)==0) f << "protected=0,";
+		style.setDigits(format & 0xF);
 		cell.m_styleId=m_state->m_styleManager.add(style, true);
 	}
 	m_input->seek(pos+sz, librevenge::RVNG_SEEK_SET);

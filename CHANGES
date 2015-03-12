@@ -1,8 +1,8 @@
 CHANGES:
 
-04/03/2015:
-- add a minimal filter to convert Quattro Pro's Wq1-Wq2 files: ie. only retrieved text and number/float
- (but not formula and format )
+10/03/2015:
+- add a filter to convert Quattro Pro's Wq1-Wq2 files: the main spreadsheet's content
+  with cells' properties.
 
 26/02/2015:
 - add classes to create shape and more complex graphic styles: WPSGraphicShape, WPSGraphicStyle,
