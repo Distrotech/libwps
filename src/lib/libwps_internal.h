@@ -109,11 +109,16 @@ typedef shared_ptr<WKSContentListener> WKSContentListenerPtr;
 /** shared pointer to WKSSubDocument */
 typedef shared_ptr<WKSSubDocument> WKSSubDocumentPtr;
 
+#if defined(__clang__) || defined(__GNUC__)
+#  define WPS_ATTRIBUTE_PRINTF(fmt, arg) __attribute__((__format__(__printf__, fmt, arg)))
+#else
+#  define WPS_ATTRIBUTE_PRINTF(fmt, arg)
+#endif
 /* ---------- debug  --------------- */
 #ifdef DEBUG
 namespace libwps
 {
-void printDebugMsg(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void printDebugMsg(const char *format, ...) WPS_ATTRIBUTE_PRINTF(1, 2);
 }
 #define WPS_DEBUG_MSG(M) libwps::printDebugMsg M
 #else
