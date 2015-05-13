@@ -31,7 +31,6 @@
 #ifndef WPS_WIN
 #  define WPS_WIN
 
-#  include <assert.h>
 #  include <string>
 
 #  include "libwps_internal.h"

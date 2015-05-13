@@ -612,7 +612,11 @@ int WPS8Text::getNumTextZones() const
 }
 int WPS8Text::getTextZoneType(int strsId) const
 {
-	assert(strsId >= 0 && strsId < int(m_state->m_textZones.size()));
+	if (strsId < 0 || strsId >= int(m_state->m_textZones.size()))
+	{
+		WPS_DEBUG_MSG(("WPS8Text::getTextZoneType: call with unkown id=%d\n", strsId));
+		return -1;
+	}
 	return m_state->m_textZones[size_t(strsId)].id();
 }
 

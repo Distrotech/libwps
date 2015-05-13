@@ -468,13 +468,13 @@ public:
 	//! operator[]
 	T operator[](int c) const
 	{
-		assert(c >= 0 && c <= 1);
+		if (c<0 || c>1) throw libwps::GenericException();
 		return (c==0) ? m_x : m_y;
 	}
 	//! operator[]
 	T &operator[](int c)
 	{
-		assert(c >= 0 && c <= 1);
+		if (c<0 || c>1) throw libwps::GenericException();
 		return (c==0) ? m_x : m_y;
 	}
 
@@ -673,7 +673,7 @@ public:
 	 */
 	Vec2<T> const &operator[](int c) const
 	{
-		assert(c >= 0 && c <= 1);
+		if (c<0 || c>1) throw libwps::GenericException();
 		return m_pt[c];
 	}
 	//! the box size

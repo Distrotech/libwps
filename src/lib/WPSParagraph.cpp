@@ -143,7 +143,7 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 		o << "just=fullAllLines, ";
 		break;
 	default:
-		assert(false); // unhandled Justification enum value
+		WPS_DEBUG_MSG(("WPSParagraph:operator<<: called with unknown justification\n"));
 		o << "just=" << static_cast<unsigned>(pp.m_justify) << ", ";
 		break;
 	}

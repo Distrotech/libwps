@@ -1652,7 +1652,7 @@ bool LotusSpreadsheet::readFormula(long endPos, int sheetId, bool newFormula,
 	bool ok = true;
 	while (long(m_input->tell()) != endPos)
 	{
-		double val;
+		double val = 0.0;
 		bool isNaN;
 		pos = m_input->tell();
 		if (pos > endPos) return false;

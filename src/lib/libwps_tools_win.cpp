@@ -1771,7 +1771,7 @@ unsigned long Font::unicode(unsigned char c, Font::Type type)
 		return unicodeFromMacSymbol(c);
 	case UNKNOWN:
 	default:
-		assert(0);
+		WPS_DEBUG_MSG(("Font::unicode: called with unimplented type\n"));
 		return c;
 	}
 }

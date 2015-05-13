@@ -26,7 +26,6 @@
 #ifndef WPS_FONT
 #  define WPS_FONT
 
-#include <assert.h>
 #include <iostream>
 
 #include <string>

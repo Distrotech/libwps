@@ -337,11 +337,6 @@ bool QuattroParser::checkHeader(WPSHeader *header, bool strict)
 		WPS_DEBUG_MSG(("QuattroParser::checkHeader: find unexpected first data\n"));
 		return false;
 	}
-	if (type != 0)
-	{
-		WPS_DEBUG_MSG(("QuattroParser::checkHeader: find unexpected type file\n"));
-		return false;
-	}
 	int val=(int) libwps::read16(input);
 	if (val==2)
 	{

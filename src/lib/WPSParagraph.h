@@ -26,7 +26,6 @@
 #ifndef WPS_PARAGRAPH
 #  define WPS_PARAGRAPH
 
-#include <assert.h>
 #include <iostream>
 
 #include <vector>
