@@ -9,8 +9,7 @@
 - add potential support for asking the document's password ( but do nothing )
 - correct some compiler warnings when compiling in debug mode.
 
-libwps-0.3.1
-
+0.3.0 -> 0.3.1
 - Fix parsing of floating-point numbers in specific cases.
 - Fix several minor issues reported by Coverity and Clang.
 - Check arguments of public functions. Passing NULL no longer causes
