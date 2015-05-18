@@ -28,6 +28,7 @@
 #include <stdio.h>
 #endif
 
+#include <cmath>
 #include <iostream>
 #include <map>
 #include <string>
@@ -35,6 +36,10 @@
 
 #include <librevenge-stream/librevenge-stream.h>
 #include <librevenge/librevenge.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #if defined(_MSC_VER) || defined(__DJGPP__)
 typedef signed char int8_t;
