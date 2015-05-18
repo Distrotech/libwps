@@ -143,7 +143,7 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 }
 
 WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGTextInterface *documentInterface,
-                                    char const */*password*/, char const *encoding)
+                                    char const * /*password*/, char const *encoding)
 {
 	if (!ip || !documentInterface)
 		return WPS_UNKNOWN_ERROR;
@@ -209,7 +209,7 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 }
 
 WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge::RVNGSpreadsheetInterface *documentInterface,
-                                    char const */*password*/, char const *encoding)
+                                    char const * /*password*/, char const *encoding)
 {
 	if (!ip || !documentInterface)
 		return WPS_UNKNOWN_ERROR;
