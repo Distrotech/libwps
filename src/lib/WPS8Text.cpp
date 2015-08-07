@@ -1988,17 +1988,17 @@ bool WPS8Text::readPLC
 	}
 
 	input->seek(page_offset, librevenge::RVNG_SEEK_SET);
-	int nPLC = (int) libwps::readU32(input);
-	int dataSz = (int) libwps::read32(input);
+	unsigned nPLC = libwps::readU32(input);
+	unsigned dataSz = libwps::read32(input);
 	libwps::DebugStream f;
 	f << "PLC: N=" << nPLC << ", dSize=" << dataSz;
 	WPS8PLCInternal::PLC plcType = m_state->m_knownPLC.get(entry.name());
 
-	if (plcType.m_contentType == WPS8PLCInternal::PLC::T_UNKNOWN && 4*nPLC+16 + dataSz *nPLC == length)
+	if (plcType.m_contentType == WPS8PLCInternal::PLC::T_UNKNOWN && long(4ul*nPLC+16 + dataSz *nPLC) == length)
 		plcType.m_contentType = WPS8PLCInternal::PLC::T_CST;
 	else if (plcType.m_contentType == WPS8PLCInternal::PLC::T_CST)
 	{
-		if (4*nPLC+16 + dataSz *nPLC != length)
+		if (long(4ul*nPLC+16 + dataSz *nPLC) != length)
 		{
 			WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: unknown data size\n"));
 			dataSz = 0;
@@ -2007,9 +2007,9 @@ bool WPS8Text::readPLC
 	}
 	else dataSz = 0;
 
-	if (4*nPLC+16 + dataSz*nPLC > length)
+	if (4ul*nPLC+16 + dataSz*nPLC > static_cast<unsigned long>(length))
 	{
-		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC length=0x%lx, N=%d\n", (unsigned long) length, nPLC));
+		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC length=0x%lx, N=%u\n", (unsigned long) length, nPLC));
 		return false;
 	}
 	entry.setParsed();
@@ -2041,7 +2041,7 @@ bool WPS8Text::readPLC
 	textPtrs.resize(0);
 	long lastPtr = textZone.begin();
 	f << ",pos = (";
-	for (int i = 0; i <= nPLC; i++)
+	for (unsigned i = 0; i <= nPLC; i++)
 	{
 		long pos = (long) libwps::readU32(input);
 		switch (plcType.m_pos)
@@ -2108,7 +2108,7 @@ bool WPS8Text::readPLC
 			if (dataSz > 4 || dataSz==3)
 			{
 				f2.str("");
-				for (int j = 0; j < dataSz; j++)
+				for (unsigned j = 0; j < dataSz; j++)
 					f2 << std::hex << int(libwps::readU8(input)) << ",";
 				plc.m_error = f2.str();
 			}
