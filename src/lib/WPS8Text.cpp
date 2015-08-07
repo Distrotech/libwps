@@ -677,7 +677,7 @@ void WPS8Text::readText(WPSEntry const &entry)
 		if (pos+1 >= entry.end())
 			break;
 		long finalPos = entry.end();
-		while (plcIt != m_FODList.end())
+		for (; plcIt != m_FODList.end(); ++plcIt)
 		{
 			DataFOD const &plc = *plcIt;
 			if (plc.m_pos < pos)
@@ -745,7 +745,6 @@ void WPS8Text::readText(WPSEntry const &entry)
 			default:
 				break;
 			}
-			++plcIt;
 		}
 		if (lastCId >= -1)
 		{
