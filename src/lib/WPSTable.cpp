@@ -146,12 +146,15 @@ bool WPSTable::buildStructures()
 		}
 		m_cellsList[c]->m_position = Vec2i(cellPos[0], cellPos[1]);
 		m_cellsList[c]->m_numberCellSpanned = Vec2i(spanCell[0], spanCell[1]);
-		for (int x = cellPos[0]; x < cellPos[0]+spanCell[0]; x++)
+		if (spanCell[1] > 0)
 		{
-			if (m_cellsList[c]->isVerticalSet())
-				numYSet[size_t(cellPos[1]+spanCell[1]-1)]++;
-			else
-				numYUnset[size_t(cellPos[1]+spanCell[1]-1)]++;
+			for (int x = cellPos[0]; x < cellPos[0]+spanCell[0]; x++)
+			{
+				if (m_cellsList[c]->isVerticalSet())
+					numYSet[size_t(cellPos[1]+spanCell[1]-1)]++;
+				else
+					numYUnset[size_t(cellPos[1]+spanCell[1]-1)]++;
+			}
 		}
 	}
 	// finally update the row/col size
