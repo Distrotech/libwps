@@ -348,7 +348,7 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 	int nTables = (int) libwps::read32(input);
 
 	f << "maxUnknown=" << mZone << ", nTables= " << nTables;
-	if ((6+nTables) * 4 > length) return false;
+	if ((6+long(nTables)) * 4 > length) return false;
 
 	f << ", ids=(";
 	std::vector<int> listIds;
