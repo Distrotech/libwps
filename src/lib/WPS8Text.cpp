@@ -2007,7 +2007,7 @@ bool WPS8Text::readPLC
 	}
 	else dataSz = 0;
 
-	if (4ul*nPLC+16 + dataSz*nPLC > static_cast<unsigned long>(length))
+	if (4ul*nPLC+16 + static_cast<unsigned long>(dataSz)*nPLC > static_cast<unsigned long>(length))
 	{
 		WPS_DEBUG_MSG(("WPS8Text::readPLC: warning: PLC length=0x%lx, N=%u\n", (unsigned long) length, nPLC));
 		return false;
