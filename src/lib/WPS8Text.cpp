@@ -1145,7 +1145,7 @@ bool WPS8Text::readNotes(WPSEntry const &entry)
 
 	// CHECK ME, it is the number of notes or only an unknow field
 	int nNotes = (int) libwps::read32(input);
-	if (nNotes < 0 || 16+4*(3*nNotes+1) > length)
+	if (nNotes < 0 || 16+4*(3*long(nNotes)+1) > length)
 	{
 		WPS_DEBUG_MSG(("WPS8Text::readNotes: warning: readNotes number=%d\n", nNotes));
 		return false;
