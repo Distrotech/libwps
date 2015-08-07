@@ -2137,7 +2137,7 @@ bool WPS8Text::readPLC
 			if (parser)
 			{
 				std::string mess;
-				if (!(this->*parser)(textPtrs[i], textPtrs[i+1], int(i), mainData, mess))
+				if (!((i + 1 < textPtrs.size()) && (this->*parser)(textPtrs[i], textPtrs[i+1], int(i), mainData, mess)))
 				{
 					ok = false;
 					break;
