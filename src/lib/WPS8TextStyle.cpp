@@ -269,6 +269,11 @@ bool WPS8TextStyle::readFontNames(WPSEntry const &entry)
 		WPS_DEBUG_MSG(("WPS8TextStyle::readFontNames: number=%d\n", int(n_fonts)));
 		return false;
 	}
+	if (len > entry.length() - 20)
+	{
+		WPS_DEBUG_MSG(("WPS8TextStyle::readFontNames: invalid lenth=%ld\n", len));
+		return false;
+	}
 	libwps::DebugStream f;
 
 	entry.setParsed();
