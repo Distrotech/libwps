@@ -1623,7 +1623,7 @@ bool WPS8Parser::readSYID(WPSEntry const &entry, std::vector<int> &listId)
 
 	int unk = libwps::read32(input);
 	int numID = libwps::read32(input);
-	if (numID < 0 || 4*(numID+2) != length)
+	if (numID < 0 || 4*(long(numID)+2) != length)
 	{
 		WPS_DEBUG_MSG(("WPS8Parser::readSYID: invalid length=%ld, num=%d\n", length, numID));
 		return false;
