@@ -1988,7 +1988,7 @@ bool WPS8Text::readPLC
 
 	input->seek(page_offset, librevenge::RVNG_SEEK_SET);
 	unsigned nPLC = libwps::readU32(input);
-	unsigned dataSz = libwps::read32(input);
+	unsigned dataSz = libwps::readU32(input);
 	libwps::DebugStream f;
 	f << "PLC: N=" << nPLC << ", dSize=" << dataSz;
 	WPS8PLCInternal::PLC plcType = m_state->m_knownPLC.get(entry.name());
