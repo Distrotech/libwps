@@ -561,7 +561,7 @@ bool WPS8Text::readParagraph(long endPos, int &id, std::string &mess)
 ////////////////////////////////////////////////////////////
 WPSEntry WPS8Text::getEntry(int strsId) const
 {
-	if (strsId >= int(m_state->m_textZones.size())) return WPSEntry();
+	if (strsId < 0 || strsId >= int(m_state->m_textZones.size())) return WPSEntry();
 	return m_state->m_textZones[size_t(strsId)];
 }
 
