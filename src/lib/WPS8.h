@@ -22,6 +22,7 @@
 #ifndef WPS8_H
 #define WPS8_H
 
+#include <deque>
 #include <vector>
 
 #include <librevenge/librevenge.h>
@@ -162,6 +163,9 @@ protected:
 	shared_ptr<WPS8Text> m_textParser;
 	//! the internal state
 	shared_ptr<WPS8ParserInternal::State> m_state;
+
+private:
+	std::deque<int> m_sendingTables;
 };
 
 #endif /* WPS8_H */

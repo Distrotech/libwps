@@ -285,12 +285,37 @@ void State::initTypeMaps()
 		m_frameTypes[frameTypes[i]] = frameTypes[i+1];
 
 }
+
+class TableRecursionGuard
+{
+	// disable copying
+	TableRecursionGuard(const TableRecursionGuard &);
+	TableRecursionGuard &operator=(const TableRecursionGuard &);
+
+public:
+	TableRecursionGuard(std::deque<int> &stack, const int id)
+		: m_stack(stack)
+	{
+		m_stack.push_front(id);
+	}
+
+	~TableRecursionGuard()
+	{
+		m_stack.pop_front();
+	}
+
+private:
+	std::deque<int> &m_stack;
+};
+
+
 }
 
 // constructor, destructor
 WPS8Parser::WPS8Parser(RVNGInputStreamPtr &input, WPSHeaderPtr &header) :
 	WPSParser(input, header),
-	m_listener(), m_graphParser(), m_tableParser(), m_textParser(), m_state()
+	m_listener(), m_graphParser(), m_tableParser(), m_textParser(), m_state(),
+	m_sendingTables()
 {
 	if (version()<5) setVersion(5);
 	m_state.reset(new WPS8ParserInternal::State);
@@ -450,6 +475,12 @@ bool WPS8Parser::sendObject(Vec2f const &size, int objectId, bool ole)
 
 bool WPS8Parser::sendTable(Vec2f const &size, int objectId)
 {
+	if (find(m_sendingTables.begin(), m_sendingTables.end(), objectId) != m_sendingTables.end())
+	{
+		WPS_DEBUG_MSG(("WPS8Parser::sendTable table %d is contained in itself\n", objectId));
+		return false;
+	}
+
 	std::map<int, int>::iterator pos = m_state->m_object2FrameMap.find(objectId);
 	if (pos == m_state->m_object2FrameMap.end())
 	{
@@ -475,6 +506,7 @@ bool WPS8Parser::sendTable(Vec2f const &size, int objectId)
 		return true;
 	}
 	frame.m_parsed = true;
+	WPS8ParserInternal::TableRecursionGuard guard(m_sendingTables, objectId);
 	return m_tableParser->sendTable(size, frame.m_idTable, frame.m_idStrs);
 }
 
