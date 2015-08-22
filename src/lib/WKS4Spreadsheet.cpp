@@ -2275,15 +2275,22 @@ void WKS4Spreadsheet::sendSpreadsheet(int sId)
 	m_listener->openSheet(sheet->convertInPoint(sheet->m_widthCols,76), librevenge::RVNG_POINT,
 	                      m_state->getSheetName(sId));
 	std::vector<float> rowHeight = sheet->convertInPoint(sheet->m_heightRows,16);
-	for (int r=0; r<=sheet->m_LBPosition[1]; ++r)
+
+	typedef std::map<int, const WKS4SpreadsheetInternal::Cell *> SparseRow_t;
+	typedef std::map<int, SparseRow_t> SparseTable_t;
+	SparseTable_t table;
+	for (WKS4SpreadsheetInternal::Spreadsheet::PositionToCellMap_t::const_iterator it = sheet->m_positionToCellMap.begin(); it != sheet->m_positionToCellMap.end(); ++it)
+		table[it->first[1]][it->first[0]] = &it->second;
+
+	SparseTable_t::const_iterator rIt = table.begin();
+	for (int r=0; r<=sheet->m_LBPosition[1] && rIt != table.end(); ++r)
 	{
 		m_listener->openSheetRow(r < int(rowHeight.size()) ? rowHeight[size_t(r)] : 16, librevenge::RVNG_POINT);
-		for (int c=0; c<=sheet->m_LBPosition[0]; ++c)
+		if (r == rIt->first) // a row with at least one non-empty cell
 		{
-			if (sheet->m_positionToCellMap.find(Vec2i(c,r))==sheet->m_positionToCellMap.end())
-				continue;
-			WKS4SpreadsheetInternal::Cell const &cell= sheet->m_positionToCellMap.find(Vec2i(c,r))->second;
-			sendCellContent(cell);
+			for (SparseRow_t::const_iterator cIt = rIt->second.begin(); cIt != rIt->second.end(); ++cIt)
+				sendCellContent(*cIt->second);
+			++rIt;
 		}
 		m_listener->closeSheetRow();
 	}
