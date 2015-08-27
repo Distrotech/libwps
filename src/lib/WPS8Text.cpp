@@ -1104,7 +1104,7 @@ bool WPS8Text::readString(RVNGInputStreamPtr input, long page_size,
 		if (!val) break;
 
 		long unicode = readUTF16LE(input, endString, val);
-		if (unicode != 0xfffd) WPSContentListener::appendUnicode(val, res);
+		if (unicode != 0xfffd) libwps::appendUnicode(val, res);
 	}
 	return true;
 }

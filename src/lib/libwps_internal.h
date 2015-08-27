@@ -203,8 +203,12 @@ bool readDouble2Inv(RVNGInputStreamPtr &input, double &res, bool &isNaN);
 //! read a double store with 4 bytes: exponent 3.5 bytes, mantisse 0.5 bytes
 bool readDouble4Inv(RVNGInputStreamPtr &input, double &res, bool &isNaN);
 
+//! try to read sz bytes from input and store them in a librevenge::RVNGBinaryData
 bool readData(RVNGInputStreamPtr &input, unsigned long sz, librevenge::RVNGBinaryData &data);
+//! try to read the last bytes from input and store them in a librevenge::RVNGBinaryData
 bool readDataToEnd(RVNGInputStreamPtr &input, librevenge::RVNGBinaryData &data);
+//! adds an unicode character to a string ( with correct encoding ).
+void appendUnicode(uint32_t val, librevenge::RVNGString &buffer);
 }
 
 #define WPS_LE_GET_GUINT16(p)				  			\

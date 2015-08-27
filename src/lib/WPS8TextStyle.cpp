@@ -714,7 +714,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 				para.m_listLevelIndex = 1;
 				para.m_listLevel.m_type = libwps::BULLET;
 				para.m_listLevel.m_bullet.clear();
-				WPSContentListener::appendUnicode(0x2022, para.m_listLevel.m_bullet);
+				libwps::appendUnicode(0x2022, para.m_listLevel.m_bullet);
 				break;
 			default:
 				f << "###bullet=" << data.m_value << ",";
@@ -829,7 +829,7 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 				}
 				else if (code >= 0x10000)
 					code = 0x2022; // this unicode char may not print ok
-				WPSContentListener::appendUnicode(code, para.m_listLevel.m_bullet);
+				libwps::appendUnicode(code, para.m_listLevel.m_bullet);
 			}
 			else
 				f << "##bullet/numb=" << std::hex << data.m_value << "," << std::dec;

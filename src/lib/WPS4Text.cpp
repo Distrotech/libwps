@@ -1820,9 +1820,9 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				0x2713, 0x261e, 0x2704, 0x2611, 0x2612, 0x270e /* 18-24 */
 			};
 			if (arg <= 24 && bulletList[arg-1])
-				WPSContentListener::appendUnicode(bulletList[arg-1], pp.m_listLevel.m_bullet);
+				libwps::appendUnicode(bulletList[arg-1], pp.m_listLevel.m_bullet);
 			else
-				WPSContentListener::appendUnicode(0x2022, pp.m_listLevel.m_bullet);
+				libwps::appendUnicode(0x2022, pp.m_listLevel.m_bullet);
 			break;
 		}
 		case 0x1b:
@@ -2140,7 +2140,7 @@ bool WPS4Text::footNotesDataParser(long /*bot*/, long /*eot*/, int id,
 		for (int i=0; i < numC; ++i)
 		{
 			unsigned char c = libwps::readU8(m_input);
-			WPSContentListener::appendUnicode(uint32_t(libwps_tools_win::Font::unicode(c, actType)),label);
+			libwps::appendUnicode(uint32_t(libwps_tools_win::Font::unicode(c, actType)),label);
 			if (c < 0x20)
 				f << "#(" << std::hex << int(c) << std::dec << ")";
 		}

@@ -2197,10 +2197,10 @@ void QuattroSpreadsheet::sendCellContent(QuattroSpreadsheetInternal::Cell const 
 		for (size_t c=0; c < text.length(); ++c)
 		{
 			if (!hasLICS)
-				WPSListener::appendUnicode
+				libwps::appendUnicode
 				((uint32_t)libwps_tools_win::Font::unicode((unsigned char)text[c],fontType), finalString);
 			else
-				WPSListener::appendUnicode
+				libwps::appendUnicode
 				((uint32_t)libwps_tools_win::Font::LICSunicode((unsigned char)text[c],fontType), finalString);
 		}
 		text=finalString.cstr();

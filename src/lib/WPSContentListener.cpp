@@ -221,7 +221,7 @@ void WPSContentListener::insertUnicode(uint32_t val)
 	if (val == 0xfffd) return;
 	_flushDeferredTabs();
 	if (!m_ps->m_isSpanOpened) _openSpan();
-	appendUnicode(val, m_ps->m_textBuffer);
+	libwps::appendUnicode(val, m_ps->m_textBuffer);
 }
 
 void WPSContentListener::insertUnicodeString(librevenge::RVNGString const &str)

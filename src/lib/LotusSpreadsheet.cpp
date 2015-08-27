@@ -1007,7 +1007,7 @@ bool LotusSpreadsheet::readSheetName()
 	{
 		unsigned char c = libwps::readU8(m_input);
 		if (c == '\0') break;
-		WPSListener::appendUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType), name);
+		libwps::appendUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType), name);
 	}
 	f << name.cstr() << ",";
 	if (m_input->tell()!=pos+4+sz && m_input->tell()+1!=pos+4+sz)
@@ -1491,7 +1491,7 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 		librevenge::RVNGString finalString("");
 		for (size_t c=0; c < text.length(); ++c)
 		{
-			WPSListener::appendUnicode
+			libwps::appendUnicode
 			((uint32_t)libwps_tools_win::Font::unicode((unsigned char)text[c],fontType), finalString);
 		}
 		text=finalString.cstr();

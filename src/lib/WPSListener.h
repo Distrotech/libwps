@@ -52,56 +52,6 @@ public:
 	//! adds a unicode string
 	virtual void insertUnicodeString(librevenge::RVNGString const &str)=0;
 	//! adds an unicode character to a string ( with correct encoding ).
-	static void appendUnicode(uint32_t val, librevenge::RVNGString &buffer)
-	{
-		if (val < 0x20)
-		{
-			WPS_DEBUG_MSG(("WPSListener::appendUnicode: find an old char %x, skip it\n", val));
-			return;
-		}
-		uint8_t first;
-		int len;
-		if (val < 0x80)
-		{
-			first = 0;
-			len = 1;
-		}
-		else if (val < 0x800)
-		{
-			first = 0xc0;
-			len = 2;
-		}
-		else if (val < 0x10000)
-		{
-			first = 0xe0;
-			len = 3;
-		}
-		else if (val < 0x200000)
-		{
-			first = 0xf0;
-			len = 4;
-		}
-		else if (val < 0x4000000)
-		{
-			first = 0xf8;
-			len = 5;
-		}
-		else
-		{
-			first = 0xfc;
-			len = 6;
-		}
-
-		uint8_t outbuf[6] = { 0, 0, 0, 0, 0, 0 };
-		int i;
-		for (i = len - 1; i > 0; --i)
-		{
-			outbuf[i] = uint8_t((val & 0x3f) | 0x80);
-			val >>= 6;
-		}
-		outbuf[0] = uint8_t(val | first);
-		for (i = 0; i < len; i++) buffer.append(char(outbuf[i]));
-	}
 
 	virtual void insertTab()=0;
 	virtual void insertEOL(bool softBreak=false)=0;
