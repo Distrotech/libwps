@@ -1298,12 +1298,12 @@ bool WKS4Parser::readFont()
 
 	int val=(int)libwps::readU8(input);
 	if (val) f << "f0=" << std::hex << val << std::dec << ",";
-	std::string name("");
+	librevenge::RVNGString name("");
 	while (int(input->tell()) < endPos-4)
 	{
 		char c = (char) libwps::readU8(input);
 		if (c == '\0') break;
-		name+= c;
+		name.append(c);
 	}
 
 	font.m_type=libwps_tools_win::Font::getFontType(name);

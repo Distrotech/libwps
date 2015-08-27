@@ -93,25 +93,25 @@ struct FontName
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, FontName const &ft);
 	/** returns the default dos name corresponding to \a id th font */
-	static std::string getDosName(int id);
+	static librevenge::RVNGString getDosName(int id);
 
 	//! font name
-	std::string m_name;
+	librevenge::RVNGString m_name;
 	//! font encoding type
 	libwps_tools_win::Font::Type m_type;
 };
 //! operator<< for a font name
 std::ostream &operator<<(std::ostream &o, FontName const &ft)
 {
-	if (!ft.m_name.empty()) o << "name='" << ft.m_name << "'";
+	if (!ft.m_name.empty()) o << "name='" << ft.m_name.cstr() << "'";
 	else o << "name='Unknown'";
 	if (ft.m_type!=libwps_tools_win::Font::WIN3_WEUROPE &&
 	        ft.m_type!=libwps_tools_win::Font::DOS_850)
-		o << ",type=" << libwps_tools_win::Font::getTypeName(ft.m_type) << ",";
+		o << ",type=" << libwps_tools_win::Font::getTypeName(ft.m_type).cstr() << ",";
 	return o;
 }
 
-std::string FontName::getDosName(int id)
+librevenge::RVNGString FontName::getDosName(int id)
 {
 	switch (id)
 	{
@@ -1319,7 +1319,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 		uint8_t unknown_byte = libwps::readU8(m_input);
 		f << "unk=" << (int)unknown_byte << ", ";
 
-		std::string s;
+		librevenge::RVNGString s;
 		uint8_t nChar = libwps::readU8(m_input);
 		for (uint8_t i = nChar; i>0; i--)
 		{
@@ -1331,7 +1331,7 @@ bool WPS4Text::readFontNames(WPSEntry const &entry)
 			}
 			unsigned char val = libwps::readU8(m_input);
 			// sanity check (because sometimes contains char > 0x80 .. )
-			if (val >= ' ' && val <= 'z') s.append(1,char(val));
+			if (val >= ' ' && val <= 'z') s.append(char(val));
 			else
 			{
 				static bool first = true;

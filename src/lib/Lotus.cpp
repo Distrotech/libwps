@@ -1192,7 +1192,7 @@ bool LotusParser::readMacFontName(long endPos)
 		val=(int) libwps::read16(input); // find -1, 30 (Geneva), 60 (Helvetica)
 		if (val)
 			f << "f1=" << val << ",";
-		std::string name("");
+		librevenge::RVNGString name("");
 		bool nameOk=true;
 		for (int i=0; i<sz-6; ++i)
 		{
@@ -1204,9 +1204,9 @@ bool LotusParser::readMacFontName(long endPos)
 				WPS_DEBUG_MSG(("LotusParser::readMacFontName: find odd character in name\n"));
 				f << "#";
 			}
-			name += c;
+			name.append(c);
 		}
-		f << name << ",";
+		f << name.cstr() << ",";
 		if (m_state->m_fontsMap.find(id)!=m_state->m_fontsMap.end())
 		{
 			WPS_DEBUG_MSG(("LotusParser::readMacFontName: a font with id=%d already exists\n", id));

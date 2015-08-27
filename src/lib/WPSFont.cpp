@@ -28,13 +28,14 @@
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
 
+#include "WPSListener.h"
 #include "WPSFont.h"
 
 std::ostream &operator<<(std::ostream &o, WPSFont const &ft)
 {
 	uint32_t flags = ft.m_attributes;
 	if (!ft.m_name.empty())
-		o << "nam='" << ft.m_name << "',";
+		o << "nam='" << ft.m_name.cstr() << "',";
 	if (ft.m_size > 0) o << "sz=" << ft.m_size << ",";
 
 	if (flags) o << "fl=";
@@ -72,7 +73,7 @@ bool WPSFont::operator==(WPSFont const &ft) const
 	        m_spacing < ft.m_spacing || m_spacing > ft.m_spacing ||
 	        m_languageId != ft.m_languageId)
 		return false;
-	if (m_name.compare(ft.m_name) || m_extra.compare(ft.m_extra))
+	if (m_name != ft.m_name || m_extra.compare(ft.m_extra))
 		return false;
 	return true;
 }
@@ -136,7 +137,7 @@ void WPSFont::addTo(librevenge::RVNGPropertyList &propList) const
 		propList.insert("style:font-relief", "engraved");
 
 	if (!m_name.empty())
-		propList.insert("style:font-name", m_name.c_str());
+		propList.insert("style:font-name", m_name);
 	if (m_size>0)
 		propList.insert("fo:font-size", fontSizeChange*m_size, librevenge::RVNG_POINT);
 	if (m_spacing < 0 || m_spacing > 0)

@@ -97,7 +97,7 @@ struct State
 	//! convert Wingdings to unicode, returns 0 if problems
 	static uint32_t wingdingsToUnicode(int val);
 	//! the font names
-	std::vector<std::string> m_fontNames;
+	std::vector<librevenge::RVNGString> m_fontNames;
 
 	//! the default font
 	Font m_defaultFont;
@@ -300,12 +300,12 @@ bool WPS8TextStyle::readFontNames(WPSEntry const &entry)
 		int string_size = (int) libwps::readU16(m_input);
 		if (debPos+2*string_size+6 > long(pageEnd)) break;
 
-		std::string s;
-		for (; string_size>0; string_size--)
-			s.append(1, (char) libwps::readU16(m_input));
+		librevenge::RVNGString s;
+		for (; string_size>0; string_size--) // checkme
+			s.append((char) libwps::readU16(m_input));
 
 		f.str("");
-		f << "FONT("<<m_state->m_fontNames.size()<<"): " << s;
+		f << "FONT("<<m_state->m_fontNames.size()<<"): " << s.cstr();
 		f << ", unkn=(";
 		for (int i = 0; i < 4; i++) f << (int) libwps::read8(m_input) << ", ";
 		f << ")";

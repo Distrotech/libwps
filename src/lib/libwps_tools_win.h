@@ -74,9 +74,9 @@ public:
 	 *
 	 * \note \a name can be modified to suppress an extension
 	 */
-	static Type getFontType(std::string &name);
+	static Type getFontType(librevenge::RVNGString &name);
 	//! return the type name
-	static std::string getTypeName(Type type);
+	static librevenge::RVNGString getTypeName(Type type);
 protected:
 };
 

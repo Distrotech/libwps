@@ -69,7 +69,7 @@ public:
 	}
 
 	//! font name
-	std::string m_name;
+	librevenge::RVNGString m_name;
 	//! font size
 	double m_size;
 	//! the font attributes defined as a set of bits

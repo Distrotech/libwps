@@ -631,7 +631,7 @@ bool WPS4Parser::findZones()
 		if (type != libwps_tools_win::Font::UNKNOWN)
 		{
 			m_state->m_OEMFontType = type;
-			f << "codePage=" << libwps_tools_win::Font::getTypeName(type) << ",";
+			f << "codePage=" << libwps_tools_win::Font::getTypeName(type).cstr() << ",";
 		}
 		else
 			f << "#codePage=" << std::hex << ((oem>>4)&0x7ff) << std::dec << ",";

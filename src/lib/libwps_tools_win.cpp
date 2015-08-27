@@ -36,8 +36,9 @@ namespace libwps_tools_win
 //
 ////////////////////////////////////////////////////////////
 
-Font::Type Font::getFontType(std::string &fName)
+Font::Type Font::getFontType(librevenge::RVNGString &name)
 {
+	std::string fName(name.cstr());
 	size_t len = fName.length();
 	if (len && fName[len-1] != ')')
 	{
@@ -47,35 +48,35 @@ Font::Type Font::getFontType(std::string &fName)
 		                fName.find(" Cyr", len-4) != std::string::npos ||
 		                fName.find(" cyr", len-4) != std::string::npos))
 		{
-			fName.resize(len-4);
+			name=fName.substr(0,len-4).c_str();
 			return WIN3_CYRILLIC;
 		}
 		if (len > 3 && (fName.find(" CE", len-3) != std::string::npos ||
 		                fName.find(" Ce", len-3) != std::string::npos ||
 		                fName.find(" ce", len-3) != std::string::npos))
 		{
-			fName.resize(len-3);
+			name=fName.substr(0,len-3).c_str();
 			return WIN3_CEUROPE;
 		}
 		if (len > 6 && (fName.find(" GREEK", len-6) != std::string::npos ||
 		                fName.find(" Greek", len-6) != std::string::npos ||
 		                fName.find(" greek", len-6) != std::string::npos))
 		{
-			fName.resize(len-6);
+			name=fName.substr(0,len-6).c_str();
 			return WIN3_GREEK;
 		}
 		if (len > 4 && (fName.find(" TUR", len-4) != std::string::npos ||
 		                fName.find(" Tur", len-4) != std::string::npos ||
 		                fName.find(" tur", len-4) != std::string::npos))
 		{
-			fName.resize(len-4);
+			name=fName.substr(0,len-4).c_str();
 			return WIN3_TURKISH;
 		}
 		if (len > 7 && (fName.find(" BALTIC", len-7) != std::string::npos ||
 		                fName.find(" Baltic", len-7) != std::string::npos ||
 		                fName.find(" baltic", len-7) != std::string::npos))
 		{
-			fName.resize(len-7);
+			name=fName.substr(0,len-7).c_str();
 			return WIN3_BALTIC;
 		}
 	}
@@ -85,21 +86,21 @@ Font::Type Font::getFontType(std::string &fName)
 		        fName.find(" (Hebrew)", len-9) != std::string::npos ||
 		        fName.find(" (hebrew)", len-9) != std::string::npos)
 		{
-			fName.resize(len-9);
+			name=fName.substr(0,len-9).c_str();
 			return WIN3_HEBREW;
 		}
 		if (fName.find(" (ARABIC)", len-9) != std::string::npos ||
 		        fName.find(" (Arabic)", len-9) != std::string::npos ||
 		        fName.find(" (arabic)", len-9) != std::string::npos)
 		{
-			fName.resize(len-9);
+			name=fName.substr(0,len-9).c_str();
 			return WIN3_ARABIC;
 		}
 		if (len > 13 && (fName.find(" (VIETNAMESE)", len-13) != std::string::npos ||
 		                 fName.find(" (Vietnamese)", len-13) != std::string::npos ||
 		                 fName.find(" (vietnamese)", len-13) != std::string::npos))
 		{
-			fName.resize(len-13);
+			name=fName.substr(0,len-13).c_str();
 			return WIN3_VIETNAMESE;
 		}
 	}
@@ -248,7 +249,7 @@ Font::Type Font::getTypeForString(char const *encoding)
 	return getTypeForOEM(val);
 }
 
-std::string Font::getTypeName(Type type)
+librevenge::RVNGString Font::getTypeName(Type type)
 {
 	switch (type)
 	{
