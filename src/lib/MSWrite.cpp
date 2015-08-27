@@ -40,8 +40,6 @@ namespace MSWriteParserInternal
 class SubDocument : public WPSTextSubDocument
 {
 public:
-	//! type of an entry stored in textId
-	enum Type { Unknown, MN };
 	//! constructor for a text entry
 	SubDocument(RVNGInputStreamPtr input, MSWriteParser &pars, WPSEntry const &entry) :
 		WPSTextSubDocument(input, &pars), m_entry(entry) {}
@@ -101,10 +99,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 
 	if (!m_entry.valid())
 	{
-		if (subDocumentType != libwps::DOC_COMMENT_ANNOTATION)
-		{
-			WPS_DEBUG_MSG(("MSWriteParserInternal::SubDocument::parse: empty document found...\n"));
-		}
+		WPS_DEBUG_MSG(("MSWriteParserInternal::SubDocument::parse: empty document found...\n"));
 		listen->insertCharacter(' ');
 		return;
 	}
@@ -136,7 +131,7 @@ struct SEP
 	double m_yaFooter;
 };
 
-struct PAP // CHECKME: does we need packed here
+struct PAP
 {
 	uint8_t	m_reserved1;
 	uint8_t	m_justification;
@@ -151,9 +146,9 @@ struct PAP // CHECKME: does we need packed here
 		uint8_t	    m_jcTab;
 		uint8_t	    m_chAlign;
 	} m_TBD[14];
-} __attribute__((packed));
+};
 
-struct CHP // CHECKME: does we need packed here
+struct CHP
 {
 	uint8_t	m_reserved1;
 	uint8_t	m_fBold;
@@ -161,12 +156,12 @@ struct CHP // CHECKME: does we need packed here
 	uint8_t	m_fUline;
 	uint8_t	m_ftcXtra;
 	uint8_t	m_hpsPos;
-} __attribute__((packed));
+};
 
 struct Paragraph :  public WPSParagraph
 {
-	enum Location { NORMAL, HEADER, FOOTER };
-	Paragraph() : WPSParagraph(), m_fcFirst(0), m_fcLim(0), m_Location(NORMAL),
+	enum Location { MAIN, HEADER, FOOTER };
+	Paragraph() : WPSParagraph(), m_fcFirst(0), m_fcLim(0), m_Location(MAIN),
 		m_graphics(false), m_firstpage(false)  { }
 	uint32_t m_fcFirst, m_fcLim;
 	Location m_Location;
@@ -183,49 +178,91 @@ struct Font : public WPSFont
 // the file header offsets
 enum HeaderOffset
 {
-	HEADER_W_WIDENT	= 0,
-	HEADER_W_DTY	= 2,
-	HEADER_W_WTOOL	= 4,
-	HEADER_D_FCMAC	= 14,
-	HEADER_W_PNPARA	= 18,
-	HEADER_W_PNFNTB	= 20,
-	HEADER_W_PNSEP	= 22,
-	HEADER_W_PNSETB	= 24,
-	HEADER_W_PNBFTB	= 26,
-	HEADER_W_PNFFNTB	= 28,
-	HEADER_W_PNMAC	= 96
+	HEADER_W_WIDENT = 0,
+	HEADER_W_DTY = 2,
+	HEADER_W_WTOOL = 4,
+	HEADER_D_FCMAC = 14,
+	HEADER_W_PNPARA = 18,
+	HEADER_W_PNFNTB = 20,
+	HEADER_W_PNSEP = 22,
+	HEADER_W_PNSETB = 24,
+	HEADER_W_PNBFTB = 26,
+	HEADER_W_PNFFNTB = 28,
+	HEADER_W_PNMAC = 96
 };
 
 // pictures in Write 3.0, either DDB of WMF
 enum PicOffset
 {
-	PIC_W_MM		= 0,
-	PIC_W_XEXT		= 2,
-	PIC_W_YEXT		= 4,
-	PIC_W_DXAOFFSET	= 8,
-	PIC_W_DXASIZE	= 10,
-	PIC_W_DYASIZE	= 12,
-	PIC_W_BMWIDTH	= 18,
-	PIC_W_BMHEIGHT	= 20,
-	PIC_W_BMWIDTHBYTES	= 22,
-	PIC_B_BMPLANES	= 24,
-	PIC_B_BMBITSPIXEL	= 25,
-	PIC_D_CBSIZE	= 32,
-	PIC_W_MX		= 36,
-	PIC_W_MY		= 38
+	PIC_W_MM = 0,
+	PIC_W_XEXT = 2,
+	PIC_W_YEXT = 4,
+	PIC_W_DXAOFFSET = 8,
+	PIC_W_DXASIZE = 10,
+	PIC_W_DYASIZE = 12,
+	PIC_W_BMWIDTH = 18,
+	PIC_W_BMHEIGHT = 20,
+	PIC_W_BMWIDTHBYTES = 22,
+	PIC_B_BMPLANES = 24,
+	PIC_B_BMBITSPIXEL = 25,
+	PIC_D_CBSIZE = 32,
+	PIC_W_MX = 36,
+	PIC_W_MY = 38
 };
 
 // OLE objects in Write 3.1
 enum OleOffset
 {
-	OLE_W_MM		= 0,
-	OLE_W_OBJECTTYPE	= 6,
-	OLE_W_DXAOFFSET	= 8,
-	OLE_W_DXASIZE	= 10,
-	OLE_W_DYASIZE	= 12,
-	OLE_D_DWDATASIZE	= 16,
-	OLE_W_MX		= 36,
-	OLE_W_MY		= 38
+	OLE_W_MM = 0,
+	OLE_W_OBJECTTYPE = 6,
+	OLE_W_DXAOFFSET = 8,
+	OLE_W_DXASIZE = 10,
+	OLE_W_DYASIZE = 12,
+	OLE_D_DWDATASIZE = 16,
+	OLE_W_MX = 36,
+	OLE_W_MY = 38
+};
+
+struct BitmapMagic
+{
+	uint8_t m_magic[2];
+};
+
+struct BitmapFileHeader
+{
+	uint32_t m_size;
+	uint16_t m_reserved1;
+	uint16_t m_reserved2;
+	uint32_t m_offset;
+};
+
+struct BitmapInfoHeaderV2
+{
+	uint32_t m_size;
+	uint16_t m_width;
+	uint16_t m_height;
+	uint16_t m_planes;
+	uint16_t m_bits_pixel;
+};
+
+struct BitmapInfoHeaderV3
+{
+	uint32_t m_size;
+	uint32_t m_width;
+	uint32_t m_height;
+	uint16_t m_planes;
+	uint16_t m_bits_pixel;
+	uint32_t m_compresson;
+	uint32_t m_bitmap_size;
+	uint32_t m_horz_res;
+	uint32_t m_vert_res;
+	uint32_t m_colors_used;
+	uint32_t m_colors_important;
+};
+
+struct BitmapPalette
+{
+	uint8_t m_r, m_g, m_b;
 };
 
 }
@@ -234,7 +271,7 @@ MSWriteParser::MSWriteParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
                              libwps_tools_win::Font::Type encoding):
 	WPSParser(input, header),
 	m_fileLength(0), m_fcMac(0), m_paragraphList(0), m_fontList(0),
-	m_fonts(0), m_span(), m_fontType(encoding),
+	m_fonts(0), m_pageSpan(), m_fontType(encoding),
 	m_listener(), m_Main(), m_Header(), m_Footer(),
 	m_HeaderPage1(false), m_FooterPage1(false)
 {
@@ -302,8 +339,11 @@ void MSWriteParser::readFFNTB()
 			// Read font name
 			unsigned long fnlen = cbFfn - 1, read_bytes;
 			const unsigned char *fn = input->read(fnlen, read_bytes);
-			if (read_bytes != fnlen) // CHECKME: better to print a message before throwing....
+			if (read_bytes != fnlen)
+			{
+				WPS_DEBUG_MSG(("MSWriteParser::readFFNTB failed to read font name\n"));
 				throw (libwps::ParseException());
+			}
 
 			// FIXME: some Japanese fonts have non-ascii font names
 			std::string fontname((const char *)fn, (size_t)fnlen);
@@ -343,8 +383,7 @@ void MSWriteParser::readSECT()
 			uint8_t headerSize = libwps::readU8(input);
 			if (headerSize<22 || !checkFilePosition(fcSep+2+headerSize))
 			{
-				WPS_DEBUG_MSG(("MSWriteParser::readSECT: can not read the structure, stop\n"));
-				// CHECKME: no need to throw ?
+				WPS_DEBUG_MSG(("MSWriteParser::readSECT: can not read the structure, using default\n"));
 			}
 			else
 			{
@@ -364,14 +403,14 @@ void MSWriteParser::readSECT()
 		}
 	}
 
-	m_span.setFormLength(sep.m_yaMac);
-	m_span.setFormWidth(sep.m_xaMac);
+	m_pageSpan.setFormLength(sep.m_yaMac);
+	m_pageSpan.setFormWidth(sep.m_xaMac);
 
 	if (sep.m_yaTop < sep.m_yaMac && sep.m_yaMac - sep.m_yaTop - sep.m_dyaText >= 0 &&
 	        sep.m_yaMac - sep.m_dyaText < sep.m_yaMac)
 	{
-		m_span.setMarginTop(sep.m_yaTop);
-		m_span.setMarginBottom(sep.m_yaMac - sep.m_yaTop - sep.m_dyaText);
+		m_pageSpan.setMarginTop(sep.m_yaTop);
+		m_pageSpan.setMarginBottom(sep.m_yaMac - sep.m_yaTop - sep.m_dyaText);
 	}
 	else
 	{
@@ -380,8 +419,8 @@ void MSWriteParser::readSECT()
 	if (sep.m_xaLeft < sep.m_xaMac && sep.m_xaMac - sep.m_xaLeft - sep.m_dxaText >= 0 &&
 	        sep.m_xaMac - sep.m_dxaText < sep.m_xaMac)
 	{
-		m_span.setMarginLeft(sep.m_xaLeft);
-		m_span.setMarginRight(sep.m_xaMac - sep.m_xaLeft - sep.m_dxaText);
+		m_pageSpan.setMarginLeft(sep.m_xaLeft);
+		m_pageSpan.setMarginRight(sep.m_xaMac - sep.m_xaLeft - sep.m_dxaText);
 	}
 	else
 	{
@@ -389,7 +428,7 @@ void MSWriteParser::readSECT()
 	}
 
 	if (sep.m_startPageNumber != 0xffff)
-		m_span.setPageNumber(sep.m_startPageNumber);
+		m_pageSpan.setPageNumber(sep.m_startPageNumber);
 }
 
 void MSWriteParser::readPAP()
@@ -404,6 +443,9 @@ void MSWriteParser::readPAP()
 	{
 		input->seek(pnPara * 0x80 + 0x7f, librevenge::RVNG_SEEK_SET);
 		unsigned cfod = libwps::readU8(input);
+
+		if (cfod > 20)
+			cfod = 20;
 
 		for (unsigned fod = 0; fod < cfod; fod++)
 		{
@@ -425,14 +467,16 @@ void MSWriteParser::readPAP()
 					unsigned long read_bytes;
 					const unsigned char *p = input->read(cch, read_bytes);
 					if (read_bytes != cch)
+					{
+						WPS_DEBUG_MSG(("MSWriteParser::readPAP failed to read PAP\n"));
 						throw (libwps::ParseException());
+					}
 
 					memcpy(&pap, p, cch);
 				}
 				else
 				{
-					// CHECKME: better to add the function name in the message (to retrieve the position)
-					WPS_DEBUG_MSG(("pap entry %d on page %d invalid\n", fod, pnPara));
+					WPS_DEBUG_MSG(("MSWriteParser::readPAP pap entry %d on page %d invalid\n", fod, pnPara));
 				}
 			}
 
@@ -509,7 +553,10 @@ void MSWriteParser::readPAP()
 	}
 
 	if (m_paragraphList.empty())
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::readPAP: failed to read any PAP entries\n"));
 		throw (libwps::ParseException());
+	}
 
 }
 
@@ -551,6 +598,9 @@ void MSWriteParser::readCHP()
 		input->seek(pageBegin + 0x7f, librevenge::RVNG_SEEK_SET);
 		uint8_t cfod = libwps::readU8(input);
 
+		if (cfod > 20)
+			cfod = 20;
+
 		for (unsigned fod = 0; fod < cfod; ++fod)
 		{
 			if (!checkFilePosition(uint32_t(pageBegin) + fod*6+8))
@@ -577,13 +627,16 @@ void MSWriteParser::readCHP()
 					unsigned long read_bytes;
 					const unsigned char *p = input->read(cch, read_bytes);
 					if (read_bytes != cch)
+					{
+						WPS_DEBUG_MSG(("MSWriteParser::readCHP failed to read CHP entry\n"));
 						throw (libwps::ParseException());
+					}
 
 					memcpy(&chp, p, cch);
 				}
 				else
 				{
-					WPS_DEBUG_MSG(("chp entry %d on page %d invalid\n", fod, page));
+					WPS_DEBUG_MSG(("MSWriteParser::readCHP chp entry %d on page %d invalid\n", fod, page));
 				}
 			}
 
@@ -624,7 +677,10 @@ void MSWriteParser::readCHP()
 	}
 
 	if (m_fontList.empty())
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::readCHP failed to read any CHP entries\n"));
 		throw (libwps::ParseException());
+	}
 }
 
 void MSWriteParser::findZones()
@@ -632,7 +688,7 @@ void MSWriteParser::findZones()
 	MSWriteParserInternal::Paragraph::Location location;
 
 	location = m_paragraphList[0].m_Location;
-	if (location == MSWriteParserInternal::Paragraph::NORMAL)
+	if (location == MSWriteParserInternal::Paragraph::MAIN)
 	{
 		m_Main.setBegin(m_paragraphList[0].m_fcFirst);
 		m_Main.setEnd(m_fcMac);
@@ -667,7 +723,7 @@ void MSWriteParser::findZones()
 			first = i;
 		}
 
-		if (location == MSWriteParserInternal::Paragraph::NORMAL)
+		if (location == MSWriteParserInternal::Paragraph::MAIN)
 		{
 			m_Main.setBegin(p.m_fcFirst);
 			m_Main.setEnd(m_fcMac);
@@ -680,7 +736,7 @@ void MSWriteParser::findZones()
 shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTextInterface *interface)
 {
 	std::vector<WPSPageSpan> pageList;
-	WPSPageSpan page1(m_span), ps(m_span);
+	WPSPageSpan page1(m_pageSpan), ps(m_pageSpan);
 
 	if (m_Header.valid())
 	{
@@ -725,7 +781,10 @@ void MSWriteParser::readText(WPSEntry e)
 		{
 			paps++;
 			if (paps == m_paragraphList.end())
+			{
+				WPS_DEBUG_MSG(("MSWriteParser::readText PAP not found for offset %u\n", fc));
 				throw (libwps::ParseException());
+			}
 		}
 
 		input->seek(fc, librevenge::RVNG_SEEK_SET);
@@ -736,7 +795,10 @@ void MSWriteParser::readText(WPSEntry e)
 			unsigned long read_bytes;
 			const uint8_t *p = input->read(size, read_bytes);
 			if (read_bytes != size)
+			{
+				WPS_DEBUG_MSG(("MSWriteParser::readText failed to read object at offset %u\n", fc));
 				throw (libwps::ParseException());
+			}
 
 			WPSPosition pos;
 			WPSPosition::XPos align;
@@ -751,7 +813,7 @@ void MSWriteParser::readText(WPSEntry e)
 				break;
 			case libwps::JustificationCenter:
 			case libwps::JustificationFull:
-			case libwps::JustificationFullAllLines: // CHECKME
+			case libwps::JustificationFullAllLines:
 			default:
 				align = WPSPosition::XCenter;
 				break;
@@ -769,7 +831,10 @@ void MSWriteParser::readText(WPSEntry e)
 		{
 			chps++;
 			if (chps == m_fontList.end())
+			{
+				WPS_DEBUG_MSG(("MSWriteParser::readText CHP not found for offset %u\n", fc));
 				throw (libwps::ParseException());
+			}
 		}
 
 		m_listener->setFont(*chps);
@@ -822,7 +887,7 @@ void MSWriteParser::processObject(WPSPosition &pos, const uint8_t *data, size_t 
 
 	if (size < 40)
 	{
-		WPS_DEBUG_MSG(("object too small, ignoring\n"));
+		WPS_DEBUG_MSG(("MSWriteParser::processObject object too small, ignoring\n"));
 		return;
 	}
 
@@ -831,17 +896,30 @@ void MSWriteParser::processObject(WPSPosition &pos, const uint8_t *data, size_t 
 	if (mm == 0x88)   // Windows metafile (.wmf)
 	{
 		uint32_t cbsize = WPS_LE_GET_GUINT32(data + MSWriteParserInternal::PIC_D_CBSIZE);
+		if (cbsize >= size - 40)
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::processObject: bad size for wmf\n"));
+		}
 
 		processWMF(pos, data + 40, data, cbsize);
 	}
 	else if (mm == 0xe3)     // this is a picture
 	{
 		uint32_t cbsize = WPS_LE_GET_GUINT32(data + MSWriteParserInternal::PIC_D_CBSIZE);
+		if (cbsize >= size - 40)
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::processObject: bad size for ddb\n"));
+		}
 
 		processDDB(pos, data + 16, data + 40, cbsize);
 	}
 	else if (mm == 0xe4)     // OLE object
 	{
+		if (size <= 51)
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::processObject: bad size for ole\n"));
+		}
+
 		unsigned ole_id = WPS_LE_GET_GUINT32(data + 40);
 		unsigned type = WPS_LE_GET_GUINT32(data + 44);
 		unsigned len = WPS_LE_GET_GUINT32(data + 48);
@@ -849,6 +927,10 @@ void MSWriteParser::processObject(WPSPosition &pos, const uint8_t *data, size_t 
 		{
 			WPS_DEBUG_MSG(("MSWriteParser::processObject: Unknown ole identifier %x\n", ole_id));
 			return;
+		}
+		if (size <= 51 + len)
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::processObject: bad size for ole\n"));
 		}
 		if (data[51 + len])
 		{
@@ -859,20 +941,9 @@ void MSWriteParser::processObject(WPSPosition &pos, const uint8_t *data, size_t 
 		switch (type)
 		{
 		case 3: // static OLE
-			if (size<48 || size!=unsigned(size-48)+48)
-			{
-				WPS_DEBUG_MSG(("MSWriteParser::processObject:unknown bad size for type %d\n", type));
-				return;
-			}
 			processStaticOLE(pos, data + 48, data, unsigned(size - 48));
 			return;
 		case 2: // Embedded OLE
-			// CHECKME: is it really size-18 or size-48 ?
-			if (size!=unsigned(size-18)+18)
-			{
-				WPS_DEBUG_MSG(("MSWriteParser::processObject:unknown bad size for type %d\n", type));
-				return;
-			}
 			processEmbeddedOLE(pos, data + 48, data, unsigned(size - 18));
 			return;
 		case 1:
@@ -889,141 +960,106 @@ void MSWriteParser::processObject(WPSPosition &pos, const uint8_t *data, size_t 
 	}
 }
 
-// CHECKME: capitalize class, put them in a name space, is packed needed...
-struct bitmapfileheader
-{
-	uint8_t type[2];
-	uint32_t size;
-	uint16_t reserved1;
-	uint16_t reserved2;
-	uint32_t offset;
-} __attribute__((packed));
-
-struct bitmapinfoheaderv2
-{
-	uint32_t size;
-	uint16_t width;
-	uint16_t height;
-	uint16_t planes;
-	uint16_t bits_pixel;
-} __attribute__((packed));
-
-struct bitmapinfoheaderv3
-{
-	uint32_t size;
-	uint32_t width;
-	uint32_t height;
-	uint16_t planes;
-	uint16_t bits_pixel;
-	uint32_t compresson;
-	uint32_t bitmap_size;
-	uint32_t horz_res;
-	uint32_t vert_res;
-	uint32_t colors_used;
-	uint32_t colors_important;
-} __attribute__((packed));
-
-struct palette
-{
-	uint8_t r, g, b;
-} __attribute__((packed));
-
-static const palette pal1[2] = { { 0,0,0 }, { 255,255,255 } };
-static const palette pal4[16] =
-{
-	{ 0,0,0 }, // black
-	{ 0,0,255 }, // Blue
-	{ 0,128,0 },	// Cyan
-	{ 0,255,0 }, // Green
-	{ 192,0,192 }, // Magenta
-	{ 255,0,0 }, // Red
-	{ 255,255,0 }, // Yellow
-	{ 255,255,255 }, // White
-
-	{ 0,0,128 }, // Dark blue
-	{ 0,128,128 }, // Dark cyan
-	{ 0,128,0 }, // Dark green
-	{ 128,0,128 }, // Dark magenta
-	{ 128,0,0  }, // Dark red
-	{ 192,192,0 }, // Dark yellow
-	{ 192,192,192 }, // Light gray
-	{ 128,128,128 }, // Dark gray
-};
-static const palette pal8[256] =
-{
-	{ 0,0,0 }, { 128,0,0 }, { 0,128,0 }, { 128,128,0 },
-	{ 0,0,128 }, { 128,0,128 }, { 0,128,128 }, { 192,192,192 },
-	{ 192,220,192 }, { 166,202,240 }, { 42,63,170 }, { 42,63,255 },
-	{ 42,95,0 }, { 42,95,85 }, { 42,95,170 }, { 42,95,255 },
-	{ 42,127,0 }, { 42,127,85 }, { 42,127,170 }, { 42,127,255 },
-	{ 42,159,0 }, { 42,159,85 }, { 42,159,170 }, { 42,159,255 },
-	{ 42,191,0 }, { 42,191,85 }, { 42,191,170 }, { 42,191,255 },
-	{ 42,223,0 }, { 42,223,85 }, { 42,223,170 }, { 42,223,255 },
-	{ 42,255,0 }, { 42,255,85 }, { 42,255,170 }, { 42,255,255 },
-	{ 85,0,0 }, { 85,0,85 }, { 85,0,170 }, { 85,0,255 },
-	{ 85,31,0 }, { 85,31,85 }, { 85,31,170 }, { 85,31,255 },
-	{ 85,63,0 }, { 85,63,85 }, { 85,63,170 }, { 85,63,255 },
-	{ 85,95,0 }, { 85,95,85 }, { 85,95,170 }, { 85,95,255 },
-	{ 85,127,0 }, { 85,127,85 }, { 85,127,170 }, { 85,127,255 },
-	{ 85,159,0 }, { 85,159,85 }, { 85,159,170 }, { 85,159,255 },
-	{ 85,191,0 }, { 85,191,85 }, { 85,191,170 }, { 85,191,255 },
-	{ 85,223,0 }, { 85,223,85 }, { 85,223,170 }, { 85,223,255 },
-	{ 85,255,0 }, { 85,255,85 }, { 85,255,170 }, { 85,255,255 },
-	{ 127,0,0 }, { 127,0,85 }, { 127,0,170 }, { 127,0,255 },
-	{ 127,31,0 }, { 127,31,85 }, { 127,31,170 }, { 127,31,255 },
-	{ 127,63,0 }, { 127,63,85 }, { 127,63,170 }, { 127,63,255 },
-	{ 127,95,0 }, { 127,95,85 }, { 127,95,170 }, { 127,95,255 },
-	{ 127,127,0 }, { 127,127,85 }, { 127,127,170 }, { 127,127,255 },
-	{ 127,159,0 }, { 127,159,85 }, { 127,159,170 }, { 127,159,255 },
-	{ 127,191,0 }, { 127,191,85 }, { 127,191,170 }, { 127,191,255 },
-	{ 127,223,0 }, { 127,223,85 }, { 127,223,170 }, { 127,223,255 },
-	{ 127,255,0 }, { 127,255,85 }, { 127,255,170 }, { 127,255,255 },
-	{ 170,0,0 }, { 170,0,85 }, { 170,0,170 }, { 170,0,255 },
-	{ 170,31,0 }, { 170,31,85 }, { 170,31,170 }, { 170,31,255 },
-	{ 170,63,0 }, { 170,63,85 }, { 170,63,170 }, { 170,63,255 },
-	{ 170,95,0 }, { 170,95,85 }, { 170,95,170 }, { 170,95,255 },
-	{ 170,127,0 }, { 170,127,85 }, { 170,127,170 }, { 170,127,255 },
-	{ 170,159,0 }, { 170,159,85 }, { 170,159,170 }, { 170,159,255 },
-	{ 170,191,0 }, { 170,191,85 }, { 170,191,170 }, { 170,191,255 },
-	{ 170,223,0 }, { 170,223,85 }, { 170,223,170 }, { 170,223,255 },
-	{ 170,255,0 }, { 170,255,85 }, { 170,255,170 }, { 170,255,255 },
-	{ 212,0,0 }, { 212,0,85 }, { 212,0,170 }, { 212,0,255 },
-	{ 212,31,0 }, { 212,31,85 }, { 212,31,170 }, { 212,31,255 },
-	{ 212,63,0 }, { 212,63,85 }, { 212,63,170 }, { 212,63,255 },
-	{ 212,95,0 }, { 212,95,85 }, { 212,95,170 }, { 212,95,255 },
-	{ 212,127,0 }, { 212,127,85 }, { 212,127,170 }, { 212,127,255 },
-	{ 212,159,0 }, { 212,159,85 }, { 212,159,170 }, { 212,159,255 },
-	{ 212,191,0 }, { 212,191,85 }, { 212,191,170 }, { 212,191,255 },
-	{ 212,223,0 }, { 212,223,85 }, { 212,223,170 }, { 212,223,255 },
-	{ 212,255,0 }, { 212,255,85 }, { 212,255,170 }, { 212,255,255 },
-	{ 255,0,85 }, { 255,0,170 }, { 255,31,0 }, { 255,31,85 },
-	{ 255,31,170 }, { 255,31,255 }, { 255,63,0 }, { 255,63,85 },
-	{ 255,63,170 }, { 255,63,255 }, { 255,95,0 }, { 255,95,85 },
-	{ 255,95,170 }, { 255,95,255 }, { 255,127,0 }, { 255,127,85 },
-	{ 255,127,170 }, { 255,127,255 }, { 255,159,0 }, { 255,159,85 },
-	{ 255,159,170 }, { 255,159,255 }, { 255,191,0 }, { 255,191,85 },
-	{ 255,191,170 }, { 255,191,255 }, { 255,223,0 }, { 255,223,85 },
-	{ 255,223,170 }, { 255,223,255 }, { 255,255,85 }, { 255,255,170 },
-	{ 204,204,255 }, { 255,204,255 }, { 51,255,255 }, { 102,255,255 },
-	{ 153,255,255 }, { 204,255,255 }, { 0,127,0 }, { 0,127,85 },
-	{ 0,127,170 }, { 0,127,255 }, { 0,159,0 }, { 0,159,85 },
-	{ 0,159,170 }, { 0,159,255 }, { 0,191,0 }, { 0,191,85 },
-	{ 0,191,170 }, { 0,191,255 }, { 0,223,0 }, { 0,223,85 },
-	{ 0,223,170 }, { 0,223,255 }, { 0,255,85 }, { 0,255,170 },
-	{ 42,0,0 }, { 42,0,85 }, { 42,0,170 }, { 42,0,255 },
-	{ 42,31,0 }, { 42,31,85 }, { 42,31,170 }, { 42,31,255 },
-	{ 42,63,0 }, { 42,63,85 }, { 255,251,240 }, { 160,160,164 },
-	{ 128,128,128 }, { 255,0,0 }, { 0,255,0 }, { 255,255,0 },
-	{ 0,0,255 }, { 255,0,255 }, { 0,255,255 }, { 255,255,255 }
-};
-
 void MSWriteParser::processDDB(WPSPosition &pos, const uint8_t *bm, const uint8_t *data, unsigned size)
 {
+
 	/* A ddb image has no color palette; it is BMP Version 1, but this format
 	   is not widely supported. Create BMP version 2 file with a color palette.
 	 */
-	bitmapfileheader file;
-	bitmapinfoheaderv2 info;
+	static const MSWriteParserInternal::BitmapPalette pal1[2] =
+	{
+		{ 0,0,0 }, { 255,255,255 }
+	};
+	static const MSWriteParserInternal::BitmapPalette pal4[16] =
+	{
+		{ 0,0,0 }, // black
+		{ 0,0,255 }, // Blue
+		{ 0,128,0 },	// Cyan
+		{ 0,255,0 }, // Green
+		{ 192,0,192 }, // Magenta
+		{ 255,0,0 }, // Red
+		{ 255,255,0 }, // Yellow
+		{ 255,255,255 }, // White
+
+		{ 0,0,128 }, // Dark blue
+		{ 0,128,128 }, // Dark cyan
+		{ 0,128,0 }, // Dark green
+		{ 128,0,128 }, // Dark magenta
+		{ 128,0,0  }, // Dark red
+		{ 192,192,0 }, // Dark yellow
+		{ 192,192,192 }, // Light gray
+		{ 128,128,128 }, // Dark gray
+	};
+	static const MSWriteParserInternal::BitmapPalette pal8[256] =
+	{
+		{ 0,0,0 }, { 128,0,0 }, { 0,128,0 }, { 128,128,0 },
+		{ 0,0,128 }, { 128,0,128 }, { 0,128,128 }, { 192,192,192 },
+		{ 192,220,192 }, { 166,202,240 }, { 42,63,170 }, { 42,63,255 },
+		{ 42,95,0 }, { 42,95,85 }, { 42,95,170 }, { 42,95,255 },
+		{ 42,127,0 }, { 42,127,85 }, { 42,127,170 }, { 42,127,255 },
+		{ 42,159,0 }, { 42,159,85 }, { 42,159,170 }, { 42,159,255 },
+		{ 42,191,0 }, { 42,191,85 }, { 42,191,170 }, { 42,191,255 },
+		{ 42,223,0 }, { 42,223,85 }, { 42,223,170 }, { 42,223,255 },
+		{ 42,255,0 }, { 42,255,85 }, { 42,255,170 }, { 42,255,255 },
+		{ 85,0,0 }, { 85,0,85 }, { 85,0,170 }, { 85,0,255 },
+		{ 85,31,0 }, { 85,31,85 }, { 85,31,170 }, { 85,31,255 },
+		{ 85,63,0 }, { 85,63,85 }, { 85,63,170 }, { 85,63,255 },
+		{ 85,95,0 }, { 85,95,85 }, { 85,95,170 }, { 85,95,255 },
+		{ 85,127,0 }, { 85,127,85 }, { 85,127,170 }, { 85,127,255 },
+		{ 85,159,0 }, { 85,159,85 }, { 85,159,170 }, { 85,159,255 },
+		{ 85,191,0 }, { 85,191,85 }, { 85,191,170 }, { 85,191,255 },
+		{ 85,223,0 }, { 85,223,85 }, { 85,223,170 }, { 85,223,255 },
+		{ 85,255,0 }, { 85,255,85 }, { 85,255,170 }, { 85,255,255 },
+		{ 127,0,0 }, { 127,0,85 }, { 127,0,170 }, { 127,0,255 },
+		{ 127,31,0 }, { 127,31,85 }, { 127,31,170 }, { 127,31,255 },
+		{ 127,63,0 }, { 127,63,85 }, { 127,63,170 }, { 127,63,255 },
+		{ 127,95,0 }, { 127,95,85 }, { 127,95,170 }, { 127,95,255 },
+		{ 127,127,0 }, { 127,127,85 }, { 127,127,170 }, { 127,127,255 },
+		{ 127,159,0 }, { 127,159,85 }, { 127,159,170 }, { 127,159,255 },
+		{ 127,191,0 }, { 127,191,85 }, { 127,191,170 }, { 127,191,255 },
+		{ 127,223,0 }, { 127,223,85 }, { 127,223,170 }, { 127,223,255 },
+		{ 127,255,0 }, { 127,255,85 }, { 127,255,170 }, { 127,255,255 },
+		{ 170,0,0 }, { 170,0,85 }, { 170,0,170 }, { 170,0,255 },
+		{ 170,31,0 }, { 170,31,85 }, { 170,31,170 }, { 170,31,255 },
+		{ 170,63,0 }, { 170,63,85 }, { 170,63,170 }, { 170,63,255 },
+		{ 170,95,0 }, { 170,95,85 }, { 170,95,170 }, { 170,95,255 },
+		{ 170,127,0 }, { 170,127,85 }, { 170,127,170 }, { 170,127,255 },
+		{ 170,159,0 }, { 170,159,85 }, { 170,159,170 }, { 170,159,255 },
+		{ 170,191,0 }, { 170,191,85 }, { 170,191,170 }, { 170,191,255 },
+		{ 170,223,0 }, { 170,223,85 }, { 170,223,170 }, { 170,223,255 },
+		{ 170,255,0 }, { 170,255,85 }, { 170,255,170 }, { 170,255,255 },
+		{ 212,0,0 }, { 212,0,85 }, { 212,0,170 }, { 212,0,255 },
+		{ 212,31,0 }, { 212,31,85 }, { 212,31,170 }, { 212,31,255 },
+		{ 212,63,0 }, { 212,63,85 }, { 212,63,170 }, { 212,63,255 },
+		{ 212,95,0 }, { 212,95,85 }, { 212,95,170 }, { 212,95,255 },
+		{ 212,127,0 }, { 212,127,85 }, { 212,127,170 }, { 212,127,255 },
+		{ 212,159,0 }, { 212,159,85 }, { 212,159,170 }, { 212,159,255 },
+		{ 212,191,0 }, { 212,191,85 }, { 212,191,170 }, { 212,191,255 },
+		{ 212,223,0 }, { 212,223,85 }, { 212,223,170 }, { 212,223,255 },
+		{ 212,255,0 }, { 212,255,85 }, { 212,255,170 }, { 212,255,255 },
+		{ 255,0,85 }, { 255,0,170 }, { 255,31,0 }, { 255,31,85 },
+		{ 255,31,170 }, { 255,31,255 }, { 255,63,0 }, { 255,63,85 },
+		{ 255,63,170 }, { 255,63,255 }, { 255,95,0 }, { 255,95,85 },
+		{ 255,95,170 }, { 255,95,255 }, { 255,127,0 }, { 255,127,85 },
+		{ 255,127,170 }, { 255,127,255 }, { 255,159,0 }, { 255,159,85 },
+		{ 255,159,170 }, { 255,159,255 }, { 255,191,0 }, { 255,191,85 },
+		{ 255,191,170 }, { 255,191,255 }, { 255,223,0 }, { 255,223,85 },
+		{ 255,223,170 }, { 255,223,255 }, { 255,255,85 }, { 255,255,170 },
+		{ 204,204,255 }, { 255,204,255 }, { 51,255,255 }, { 102,255,255 },
+		{ 153,255,255 }, { 204,255,255 }, { 0,127,0 }, { 0,127,85 },
+		{ 0,127,170 }, { 0,127,255 }, { 0,159,0 }, { 0,159,85 },
+		{ 0,159,170 }, { 0,159,255 }, { 0,191,0 }, { 0,191,85 },
+		{ 0,191,170 }, { 0,191,255 }, { 0,223,0 }, { 0,223,85 },
+		{ 0,223,170 }, { 0,223,255 }, { 0,255,85 }, { 0,255,170 },
+		{ 42,0,0 }, { 42,0,85 }, { 42,0,170 }, { 42,0,255 },
+		{ 42,31,0 }, { 42,31,85 }, { 42,31,170 }, { 42,31,255 },
+		{ 42,63,0 }, { 42,63,85 }, { 255,251,240 }, { 160,160,164 },
+		{ 128,128,128 }, { 255,0,0 }, { 0,255,0 }, { 255,255,0 },
+		{ 0,0,255 }, { 255,0,255 }, { 0,255,255 }, { 255,255,255 }
+	};
+	MSWriteParserInternal::BitmapMagic  magic;
+	MSWriteParserInternal::BitmapFileHeader file;
+	MSWriteParserInternal::BitmapInfoHeaderV2 info;
 
 	unsigned width = WPS_LE_GET_GUINT16(bm + 2);
 	unsigned height = WPS_LE_GET_GUINT16(bm + 4);
@@ -1033,17 +1069,17 @@ void MSWriteParser::processDDB(WPSPosition &pos, const uint8_t *bm, const uint8_
 
 	if (size < byte_width * height)
 	{
-		WPS_DEBUG_MSG(("DDB image data missing, skipping\n"));
+		WPS_DEBUG_MSG(("MSWriteParser::processDDB DDB image data missing, skipping\n"));
 		return;
 	}
 
 	if (planes != 1)
 	{
-		WPS_DEBUG_MSG(("DDB image has planes %d, must be 1\n", planes));
+		WPS_DEBUG_MSG(("MSWriteParser::processDDB DDB image has planes %d, must be 1\n", planes));
 		return;
 	}
 
-	WPS_DEBUG_MSG(("DDB size %ux%ux%u, byte width %u\n", width, height,
+	WPS_DEBUG_MSG(("MSWriteParser::processDDB DDB size %ux%ux%u, byte width %u\n", width, height,
 	               bits_pixel, byte_width));
 
 	unsigned colors = 0;
@@ -1060,23 +1096,24 @@ void MSWriteParser::processDDB(WPSPosition &pos, const uint8_t *bm, const uint8_
 		break;
 	}
 
-	WPS_LE_PUT_GUINT32(&info.size, 12);
-	WPS_LE_PUT_GUINT16(&info.width, width);
-	WPS_LE_PUT_GUINT16(&info.height, height);
-	WPS_LE_PUT_GUINT16(&info.planes, planes);
-	WPS_LE_PUT_GUINT16(&info.bits_pixel, bits_pixel);
+	WPS_LE_PUT_GUINT32(&info.m_size, 12);
+	WPS_LE_PUT_GUINT16(&info.m_width, width);
+	WPS_LE_PUT_GUINT16(&info.m_height, height);
+	WPS_LE_PUT_GUINT16(&info.m_planes, planes);
+	WPS_LE_PUT_GUINT16(&info.m_bits_pixel, bits_pixel);
 
-	unsigned offset = sizeof(file) + sizeof(info) + colors * sizeof(palette);
+	unsigned offset = sizeof(magic) + sizeof(file) + sizeof(info) + colors * sizeof(MSWriteParserInternal::BitmapPalette);
 
-	file.type[0] = 'B';
-	file.type[1] = 'M';
-	file.reserved1 = 0;
-	file.reserved2 = 0;
-	WPS_LE_PUT_GUINT32(&file.offset, offset);
-	WPS_LE_PUT_GUINT32(&file.size, offset + height * byte_width);
+	magic.m_magic[0] = 'B';
+	magic.m_magic[1] = 'M';
+	file.m_reserved1 = 0;
+	file.m_reserved2 = 0;
+	WPS_LE_PUT_GUINT32(&file.m_offset, offset);
+	WPS_LE_PUT_GUINT32(&file.m_size, offset + height * byte_width);
 
 	librevenge::RVNGBinaryData bmpdata;
 
+	bmpdata.append((const unsigned char *)&magic, sizeof(magic));
 	bmpdata.append((const unsigned char *)&file, sizeof(file));
 	bmpdata.append((const unsigned char *)&info, sizeof(info));
 	switch (bits_pixel)
@@ -1095,7 +1132,8 @@ void MSWriteParser::processDDB(WPSPosition &pos, const uint8_t *bm, const uint8_
 	}
 
 	// Scanlines must be on 4-byte boundary, but some DDB images have
-	// byte_width which is not on a 4-byte boundary. Also mirror the image
+	// byte_width which is not on a 4-byte boundary. Also flip the image
+	// vertically, DDB are stored upside down
 	for (unsigned i=0; i<height; i++)
 	{
 		bmpdata.append(data + byte_width * (height - i - 1), byte_width);
@@ -1111,42 +1149,44 @@ void MSWriteParser::processDDB(WPSPosition &pos, const uint8_t *bm, const uint8_
 
 void MSWriteParser::processDIB(WPSPosition &pos, const uint8_t *data, unsigned size)
 {
-	if (size < sizeof(bitmapinfoheaderv3))
+	if (size < sizeof(MSWriteParserInternal::BitmapInfoHeaderV3))
 	{
-		WPS_DEBUG_MSG(("DIB image missing data, skipping\n"));
+		WPS_DEBUG_MSG(("MSWriteParser::processDIB DIB image missing data, skipping\n"));
 		return;
 	}
 
-	bitmapinfoheaderv3 *info = (bitmapinfoheaderv3 *)data;
+	MSWriteParserInternal::BitmapInfoHeaderV3 *info = (MSWriteParserInternal::BitmapInfoHeaderV3 *)data;
 
-	if (WPS_LE_GET_GUINT32(&info->size) != sizeof(bitmapinfoheaderv3))
+	if (WPS_LE_GET_GUINT32(&info->m_size) != sizeof(MSWriteParserInternal::BitmapInfoHeaderV3))
 	{
-		WPS_DEBUG_MSG(("DIB header incorrect size, skipping\n"));
+		WPS_DEBUG_MSG(("MSWriteParser::processDIB DIB header incorrect size, skipping\n"));
 		return;
 	}
 
-	unsigned width = WPS_LE_GET_GUINT32(&info->width);
-	unsigned height = WPS_LE_GET_GUINT32(&info->height);
-	unsigned bits_pixel = WPS_LE_GET_GUINT16(&info->bits_pixel);
-	WPS_DEBUG_MSG(("DIB image %ux%ux%u\n", width, height, bits_pixel));
+	unsigned width = WPS_LE_GET_GUINT32(&info->m_width);
+	unsigned height = WPS_LE_GET_GUINT32(&info->m_height);
+	unsigned bits_pixel = WPS_LE_GET_GUINT16(&info->m_bits_pixel);
+	WPS_DEBUG_MSG(("MSWriteParser::processDIB DIB image %ux%ux%u\n", width, height, bits_pixel));
 
 	unsigned colors = 0;
-	if (info->bits_pixel && bits_pixel < 16)
+	if (info->m_bits_pixel && bits_pixel < 16)
 	{
-		colors = info->colors_used ?
-		         WPS_LE_GET_GUINT32(&info->colors_used) : 1 << bits_pixel;
+		colors = info->m_colors_used ?
+		         WPS_LE_GET_GUINT32(&info->m_colors_used) : 1 << bits_pixel;
 	}
-	bitmapfileheader file;
-	file.type[0] = 'B';
-	file.type[1] = 'M';
-	file.reserved1 = 0;
-	file.reserved2 = 0;
-	unsigned offset = sizeof(file) + sizeof(*info) + 4 * colors;
-	WPS_LE_PUT_GUINT32(&file.offset, offset);
-	WPS_LE_PUT_GUINT32(&file.size, size + sizeof(file));
+	MSWriteParserInternal::BitmapMagic magic;
+	MSWriteParserInternal::BitmapFileHeader file;
+	magic.m_magic[0] = 'B';
+	magic.m_magic[1] = 'M';
+	file.m_reserved1 = 0;
+	file.m_reserved2 = 0;
+	unsigned offset = sizeof(magic) + sizeof(file) + sizeof(*info) + 4 * colors;
+	WPS_LE_PUT_GUINT32(&file.m_offset, offset);
+	WPS_LE_PUT_GUINT32(&file.m_size, size + sizeof(file));
 
 	librevenge::RVNGBinaryData bmpdata;
 
+	bmpdata.append((const unsigned char *)&magic, sizeof(magic));
 	bmpdata.append((const unsigned char *)&file, sizeof(file));
 	bmpdata.append(data, size);
 
@@ -1166,7 +1206,7 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, const uint8_t *data, co
 		unsigned strlen = WPS_LE_GET_GUINT32(data + offset);
 		if (offset + 4 + strlen >= size)
 		{
-			WPS_DEBUG_MSG(("Embedded OLE corrupt, skipping\n"));
+			WPS_DEBUG_MSG(("MSWriteParser::processEmbeddedOLE Embedded OLE corrupt, skipping\n"));
 			return;
 		}
 		if (strlen)
@@ -1176,12 +1216,12 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, const uint8_t *data, co
 			{
 				if (strings[i][n] < 0x20 || strings[i][n] >= 127)
 				{
-					WPS_DEBUG_MSG(("Embedded OLE corrupt, skipping\n"));
+					WPS_DEBUG_MSG(("MSWriteParser::processEmbeddedOLE Embedded OLE corrupt, skipping\n"));
 					return;
 				}
 				if (strings[i][strlen - 1])
 				{
-					WPS_DEBUG_MSG(("Embedded OLE corrupt, skipping\n"));
+					WPS_DEBUG_MSG(("MSWriteParser::processEmbeddedOLE Embedded OLE corrupt, skipping\n"));
 					return;
 				}
 			}
@@ -1192,7 +1232,7 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, const uint8_t *data, co
 		offset += strlen + 4;
 	}
 
-	WPS_DEBUG_MSG(("Embedded OLE object %s,filename=%s,parameter=%s\n",
+	WPS_DEBUG_MSG(("MSWriteParser::processEmbeddedOLE Embedded OLE object %s,filename=%s,parameter=%s\n",
 	               strings[0] ? strings[0] : "unknown",
 	               strings[1] ? strings[1] : "none",
 	               strings[2] ? strings[2] : "none"));
@@ -1207,12 +1247,12 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, const uint8_t *data, co
 
 	if (!strcmp(strings[0], "PBrush") || !strcmp(strings[0], "Paint.Picture"))
 	{
-		bitmapinfoheaderv3 *info = (bitmapinfoheaderv3 *)(data + offset + sizeof(bitmapfileheader));
-		if (WPS_LE_GET_GUINT32(&info->size) == sizeof(bitmapinfoheaderv3))
+		MSWriteParserInternal::BitmapInfoHeaderV3 *info = (MSWriteParserInternal::BitmapInfoHeaderV3 *)(data + offset + sizeof(MSWriteParserInternal::BitmapMagic) + sizeof(MSWriteParserInternal::BitmapFileHeader));
+		if (WPS_LE_GET_GUINT32(&info->m_size) == sizeof(MSWriteParserInternal::BitmapInfoHeaderV3))
 		{
 			pos.setUnit(librevenge::RVNG_POINT);
-			pos.setSize(Vec2f(float(WPS_LE_GET_GUINT32(&info->width)),
-			                  float(WPS_LE_GET_GUINT32(&info->height))));
+			pos.setSize(Vec2f(float(WPS_LE_GET_GUINT32(&info->m_width)),
+			                  float(WPS_LE_GET_GUINT32(&info->m_height))));
 		}
 		mimetype = "image/bmp";
 	}
@@ -1236,7 +1276,7 @@ void MSWriteParser::processStaticOLE(WPSPosition &pos, const uint8_t *data, cons
 		unsigned len = WPS_LE_GET_GUINT32(data + 4 + 15);
 		if (len > size - 4 - 19)
 		{
-			WPS_DEBUG_MSG(("Static OLE DDB bitmap too short, skipping\n"));
+			WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE Static OLE DDB bitmap too short, skipping\n"));
 			return;
 		}
 		processDDB(pos, data + 4 + 19, data + 19 + 14, len - 10);
@@ -1247,7 +1287,7 @@ void MSWriteParser::processStaticOLE(WPSPosition &pos, const uint8_t *data, cons
 		unsigned len = WPS_LE_GET_GUINT32(data + 4 + 12);
 		if (len > size - 4 - 16)
 		{
-			WPS_DEBUG_MSG(("Static OLE DIB bitmap too short, skipping\n"));
+			WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE Static OLE DIB bitmap too short, skipping\n"));
 			return;
 		}
 		processDIB(pos, data + 4 + 16, len);
@@ -1257,20 +1297,20 @@ void MSWriteParser::processStaticOLE(WPSPosition &pos, const uint8_t *data, cons
 		unsigned len = WPS_LE_GET_GUINT32(data + 4 + 21);
 		if (len > size - 4 - 25)
 		{
-			WPS_DEBUG_MSG(("Static OLE metafile too short, skipping\n"));
+			WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE Static OLE metafile too short, skipping\n"));
 			return;
 		}
 		processWMF(pos, data + 4 + 25, obj, len);
 	}
 	else
 	{
-		WPS_DEBUG_MSG(("Unknown static OLE object of type %s\n", objtype));
+		WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE Unknown static OLE object of type %s\n", objtype));
 	}
 }
 
 void MSWriteParser::processWMF(WPSPosition &pos, const uint8_t *data, const uint8_t *obj, unsigned size)
 {
-	WPS_DEBUG_MSG(("Windows metafile (wmf)\n"));
+	WPS_DEBUG_MSG(("MSWriteParser::processWMF Windows metafile (wmf)\n"));
 	uint16_t picw = WPS_LE_GET_GUINT16(obj + MSWriteParserInternal::PIC_W_XEXT);
 	uint16_t pich = WPS_LE_GET_GUINT16(obj + MSWriteParserInternal::PIC_W_YEXT);
 	uint16_t mx = WPS_LE_GET_GUINT16(obj + MSWriteParserInternal::PIC_W_MX);
