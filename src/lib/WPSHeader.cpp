@@ -86,6 +86,11 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Lotus spreadsheet detected\n"));
 			return new WPSHeader(input, input, 101, WPS_SPREADSHEET, WPS_LOTUS);
 		}
+		if ((val[0] == 0x31 || val[0] == 0x32) && val[1] == 0xbe && val[2] == 0 && val[3] == 0 && val[4] == 0 && val[5] == 0xab)
+		{
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Write detected\n"));
+			return new WPSHeader(input, input, 3, WPS_TEXT, WPS_MSWRITE);
+		}
 		return 0;
 	}
 

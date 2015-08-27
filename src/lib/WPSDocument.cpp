@@ -32,6 +32,7 @@
 #include "WKS4.h"
 #include "WPS4.h"
 #include "WPS8.h"
+#include "MSWrite.h"
 #include "WPSHeader.h"
 #include "WPSParser.h"
 
@@ -73,7 +74,12 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 		kind = header->getKind();
 
 		WPSConfidence confidence = WPS_CONFIDENCE_NONE;
-		if (kind==WPS_TEXT && header->getMajorVersion()<=4)
+		if (kind==WPS_TEXT && creator==WPS_MSWRITE)
+		{
+			needEncoding=true;
+			return WPS_CONFIDENCE_EXCELLENT;
+		}
+		else if (kind==WPS_TEXT && header->getMajorVersion()<=4)
 		{
 			// create a WPS4Parser to check the header validity
 			WPS4Parser parser(header->getInput(), header);
@@ -160,33 +166,40 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 		if (!header || header->getKind() != WPS_TEXT)
 			return WPS_UNKNOWN_ERROR;
 
-		switch (header->getMajorVersion())
+		if (header->getCreator() == WPS_MSWRITE)
 		{
-		case 8:
-		case 7:
-		case 6:
-		case 5:
-		{
-			parser.reset(new WPS8Parser(header->getInput(), header));
+			parser.reset(new MSWriteParser(header->getInput(), header,
+			                               libwps_tools_win::Font::getTypeForString(encoding)));
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);
-			break;
 		}
+		else switch (header->getMajorVersion())
+			{
+			case 8:
+			case 7:
+			case 6:
+			case 5:
+			{
+				parser.reset(new WPS8Parser(header->getInput(), header));
+				if (!parser) return WPS_UNKNOWN_ERROR;
+				parser->parse(documentInterface);
+				break;
+			}
 
-		case 4:
-		case 3:
-		case 2:
-		case 1:
-		{
-			parser.reset(new WPS4Parser(header->getInput(), header,
-			                            libwps_tools_win::Font::getTypeForString(encoding)));
-			if (!parser) return WPS_UNKNOWN_ERROR;
-			parser->parse(documentInterface);
-			break;
-		}
-		default:
-			break;
-		}
+			case 4:
+			case 3:
+			case 2:
+			case 1:
+			{
+				parser.reset(new WPS4Parser(header->getInput(), header,
+				                            libwps_tools_win::Font::getTypeForString(encoding)));
+				if (!parser) return WPS_UNKNOWN_ERROR;
+				parser->parse(documentInterface);
+				break;
+			}
+			default:
+				break;
+			}
 	}
 	catch (libwps::FileException)
 	{

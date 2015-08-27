@@ -207,14 +207,24 @@ bool readData(RVNGInputStreamPtr &input, unsigned long sz, librevenge::RVNGBinar
 bool readDataToEnd(RVNGInputStreamPtr &input, librevenge::RVNGBinaryData &data);
 }
 
-#define WPS_LE_GET_GUINT16(p)				  \
-        (uint16_t)((((uint8_t const *)(p))[0] << 0)  |    \
+#define WPS_LE_GET_GUINT16(p)				  			\
+        (uint16_t)((((uint8_t const *)(p))[0] << 0)  |	\
                   (((uint8_t const *)(p))[1] << 8))
-#define WPS_LE_GET_GUINT32(p) \
-        (uint32_t)((((uint8_t const *)(p))[0] << 0)  |    \
-                  (((uint8_t const *)(p))[1] << 8)  |    \
-                  (((uint8_t const *)(p))[2] << 16) |    \
+#define WPS_LE_GET_GUINT32(p)				  			\
+        (uint32_t)((((uint8_t const *)(p))[0] << 0) |	\
+                  (((uint8_t const *)(p))[1] << 8)  |	\
+                  (((uint8_t const *)(p))[2] << 16) |	\
                   (((uint8_t const *)(p))[3] << 24))
+
+#define WPS_LE_PUT_GUINT16(p, v)				  		\
+	*((uint8_t*)(p)) = uint8_t(v);				  		\
+	*(((uint8_t*)(p)) + 1) = uint8_t((v) >> 8)
+
+#define WPS_LE_PUT_GUINT32(p, v)				  		\
+	*((uint8_t*)(p)) = uint8_t(v);				  		\
+	*(((uint8_t*)(p)) + 1) = uint8_t((v) >> 8);			\
+	*(((uint8_t*)(p)) + 2) = uint8_t((v) >> 16);		\
+	*(((uint8_t*)(p)) + 3) = uint8_t((v) >> 24)
 
 // Various helper structures for the parser..
 /* ---------- small enum/class ------------- */

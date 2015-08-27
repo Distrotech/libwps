@@ -28,6 +28,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	LotusSpreadsheet.h	\
 	LotusStyleManager.cpp	\
 	LotusStyleManager.h	\
+	MSWrite.cpp		\
+	MSWrite.h		\
 	Quattro.cpp		\
 	Quattro.h		\
 	QuattroSpreadsheet.cpp	\
