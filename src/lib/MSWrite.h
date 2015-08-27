@@ -91,7 +91,7 @@ private:
 
 	std::vector<MSWriteParserInternal::Paragraph> m_paragraphList;
 	std::vector<MSWriteParserInternal::Font> m_fontList;
-	std::vector<std::string> m_fonts;
+	std::vector<librevenge::RVNGString> m_fonts;
 	WPSPageSpan m_span;
 	libwps_tools_win::Font::Type m_fontType;
 

@@ -308,7 +308,7 @@ void MSWriteParser::readFFNTB()
 			// FIXME: some Japanese fonts have non-ascii font names
 			std::string fontname((const char *)fn, (size_t)fnlen);
 
-			m_fonts.push_back(fontname);
+			m_fonts.push_back(fontname.c_str());
 		}
 	}
 	if (m_fonts.empty())
