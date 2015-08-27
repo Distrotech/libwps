@@ -293,6 +293,26 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MSWrite.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\Quattro.cpp"
 				>
 				<FileConfiguration
@@ -983,6 +1003,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\LotusStyleManager.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MSWrite.h"
 				>
 			</File>
 			<File

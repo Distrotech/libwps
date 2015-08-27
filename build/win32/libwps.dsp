@@ -111,6 +111,10 @@ SOURCE=..\..\src\lib\LotusStyleManager.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MSWrite.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\Quattro.cpp
 # End Source File
 # Begin Source File
@@ -272,6 +276,10 @@ SOURCE=..\..\src\lib\LotusSpreadsheet.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\LotusStyleManager.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MSWrite.h
 # End Source File
 # Begin Source File
 
