@@ -617,8 +617,9 @@ void WPSContentListener::_openPageSpan()
 		actPage+=(unsigned) it++->getPageSpan();
 		if (it == m_ds->m_pageList.end())
 		{
-			WPS_DEBUG_MSG(("WPSContentListener::_openPageSpan: can not find current page\n"));
-			throw libwps::ParseException();
+			WPS_DEBUG_MSG(("WPSContentListener::_openPageSpan: can not find current page, revert to last page\n"));
+			--it;
+			break;
 		}
 	}
 	WPSPageSpan &currentPage = *it;
