@@ -123,9 +123,10 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		document_contents->seek(0, librevenge::RVNG_SEEK_SET);
 
 		char fileMagic[8];
-		for (int i=0; i<7 && !document_contents->isEnd(); i++)
+		int i = 0;
+		for (; i<7 && !document_contents->isEnd(); i++)
 			fileMagic[i] = char(libwps::readU8(document_contents.get()));
-		fileMagic[7] = '\0';
+		fileMagic[i] = '\0';
 
 		/* Works 7/8 */
 		if (0 == strcmp(fileMagic, "CHNKWKS"))
