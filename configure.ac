@@ -262,8 +262,6 @@ AS_IF([test "x$with_sharedptr" = "xc++11"], [
 	], [
 		AC_MSG_RESULT([no])
 		AC_MSG_ERROR([Could not find C++11 implementation of shared_ptr])
-	], [
-		[#include <memory>]
 	])
 ])
 AS_IF([test "x$with_sharedptr" = "xtr1"], [
@@ -279,8 +277,6 @@ AS_IF([test "x$with_sharedptr" = "xtr1"], [
 	], [
 		AC_MSG_RESULT([no])
 		AC_MSG_ERROR([Could not find TR1 implementation of shared_ptr])
-	], [
-		[#include <tr1/memory>]
 	])
 ])
 AS_IF([test "x$with_sharedptr" = "xboost"], [
