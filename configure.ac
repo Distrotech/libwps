@@ -251,6 +251,8 @@ AS_CASE([$with_sharedptr],
 
 AS_IF([test "x$with_sharedptr" = "xc++11"], [
 	AC_MSG_CHECKING([for c++11 shared ptr])
+	save_CXXFLAGS="$CXXFLAGS"
+	CXXFLAGS="$CXXFLAGS -std=c++11"
 	AC_COMPILE_IFELSE([
 		AC_LANG_PROGRAM(
 			[[#include <memory>]],
@@ -262,6 +264,19 @@ AS_IF([test "x$with_sharedptr" = "xc++11"], [
 	], [
 		AC_MSG_RESULT([no])
 		AC_MSG_ERROR([Could not find C++11 implementation of shared_ptr])
+	])
+	CXXFLAGS="$save_CXXFLAGS"
+	AC_MSG_CHECKING([whether the compiler needs -std=c++11])
+	AC_COMPILE_IFELSE([
+		AC_LANG_PROGRAM(
+			[[#include <memory>]],
+			[[std::shared_ptr<int> p;]]
+		)
+	], [
+		AC_MSG_RESULT([no])
+	], [
+		AC_MSG_RESULT([yes])
+		CXXFLAGS="$CXXFLAGS -std=c++11"
 	])
 ])
 AS_IF([test "x$with_sharedptr" = "xtr1"], [
