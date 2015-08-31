@@ -64,6 +64,7 @@
  * ------------------------------------------------------------
  */
 
+#include <cstdlib>
 #include <cstring>
 #include <map>
 #include <sstream>
@@ -296,7 +297,7 @@ bool WPSOLEParser::parse(RVNGInputStreamPtr file)
 				std::string::size_type idP = pos-1;
 				while (idP >=1 && dir[idP-1] >= '0' && dir[idP-1] <= '9')
 					idP--;
-				int val = atoi(dir.substr(idP, idP-pos).c_str());
+				int val = std::atoi(dir.substr(idP, idP-pos).c_str());
 				if (id[0] == -1) id[0] = val;
 				else
 				{
