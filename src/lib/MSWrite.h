@@ -70,14 +70,12 @@ private:
 	void findZones();
 	void readText(WPSEntry e);
 	unsigned numPages();
-	void processObject(WPSPosition &pos, const uint8_t *, size_t);
-	void processDDB(WPSPosition &pos, const uint8_t *bm, const uint8_t *data, unsigned size);
-	void processDIB(WPSPosition &pos, const uint8_t *data, unsigned size);
-	void processWMF(WPSPosition &pos, const uint8_t *data, const uint8_t *obj, unsigned size);
-	void processStaticOLE(WPSPosition &pos, const uint8_t *data, const uint8_t *obj, unsigned size);
-	void processEmbeddedOLE(WPSPosition &pos, const uint8_t *data, const uint8_t *obj, unsigned size);
-	unsigned getObjectOffset(const uint8_t *, size_t);
-	shared_ptr<std::string> convert(const uint8_t *text, size_t len);
+	void processObject(WPSPosition &pos, unsigned long lastPos);
+	void processDDB(WPSPosition &pos, unsigned width, unsigned height, unsigned byte_width, unsigned planes, unsigned bits_pixel, unsigned size);
+	void processDIB(WPSPosition &pos, unsigned size);
+	void processWMF(WPSPosition &pos, unsigned xExt, unsigned yExt, unsigned mx, unsigned my, unsigned size);
+	void processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos);
+	bool readString(std::string &res, unsigned long lastPos);
 
 	//! check if the file position is correct or not
 	bool checkFilePosition(uint32_t pos) const
@@ -101,5 +99,5 @@ private:
 	bool m_HeaderPage1, m_FooterPage1;
 };
 
-#endif /* WRITE_H */
+#endif /* MS_WRITE_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
