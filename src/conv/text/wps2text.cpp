@@ -41,7 +41,7 @@ using namespace libwps;
 
 static int printUsage()
 {
-	printf("Usage: wps2text [OPTION] <Works Document>\n");
+	printf("Usage: wps2text [OPTION] <Works or MSWrite Document>\n");
 	printf("\n");
 	printf("Options:\n");
 	printf("\t-e \"encoding\":   Define the file encoding where encoding can be\n");

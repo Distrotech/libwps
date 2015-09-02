@@ -40,7 +40,7 @@
 
 static int printUsage()
 {
-	printf("Usage: wps2raw [OPTION] <Works Document>\n");
+	printf("Usage: wps2raw [OPTION] <Works or MSWrite Document>\n");
 	printf("\n");
 	printf("Options:\n");
 	printf("\t-h, --help:                Shows this help message\n");
