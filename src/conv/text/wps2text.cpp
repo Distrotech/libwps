@@ -41,7 +41,7 @@ using namespace libwps;
 
 static int printUsage()
 {
-	printf("Usage: wps2text [OPTION] <Works or MSWrite Document>\n");
+	printf("Usage: wps2text [OPTION] <Microsoft Works or Microsoft Write text document>\n");
 	printf("\n");
 	printf("Options:\n");
 	printf("\t-e \"encoding\":   Define the file encoding where encoding can be\n");
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 	else if (error == WPS_PARSE_ERROR)
 		fprintf(stderr, "ERROR: Parse Exception!\n");
 	else if (error == WPS_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
+		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Microsoft Works stream!\n");
 	else if (error != WPS_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
 
