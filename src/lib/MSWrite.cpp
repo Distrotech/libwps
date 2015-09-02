@@ -97,7 +97,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 		return;
 	}
 
-	if (!m_entry.valid())
+	if (!m_entry.valid() || !m_input)
 	{
 		WPS_DEBUG_MSG(("MSWriteParserInternal::SubDocument::parse: empty document found...\n"));
 		listen->insertCharacter(' ');
@@ -111,7 +111,9 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 		listen->insertCharacter(' ');
 		return;
 	}
+	long actPos=m_input->tell();
 	mnParser->readText(m_entry);
+	m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 
 struct SEP
@@ -811,8 +813,6 @@ void MSWriteParser::readText(WPSEntry e)
 			}
 		}
 
-		input->seek(fc, librevenge::RVNG_SEEK_SET);
-
 		if (paps->m_graphics)
 		{
 			WPSPosition pos;
@@ -835,6 +835,8 @@ void MSWriteParser::readText(WPSEntry e)
 			}
 			pos.setRelativePosition(WPSPosition::Paragraph, align);
 
+			input->seek(fc, librevenge::RVNG_SEEK_SET);
+
 			processObject(pos, paps->m_fcLim);
 			fc = paps->m_fcLim;
 			continue;
@@ -856,7 +858,9 @@ void MSWriteParser::readText(WPSEntry e)
 
 		while (fc < chps->m_fcLim && fc < paps->m_fcLim && fc < m_fcMac)
 		{
+			input->seek(fc, librevenge::RVNG_SEEK_SET);
 			uint8_t ch = libwps::readU8(input);
+
 			if (chps->m_special)
 			{
 				if (ch == 1)
