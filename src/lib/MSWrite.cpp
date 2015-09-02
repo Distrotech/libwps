@@ -357,10 +357,15 @@ void MSWriteParser::readFFNTB()
 				throw (libwps::ParseException());
 			}
 
-			// FIXME: some Japanese fonts have non-ascii font names
-			std::string fontname((const char *)fn, (size_t)fnlen);
+			librevenge::RVNGString fontname;
 
-			m_fonts.push_back(fontname.c_str());
+			for (unsigned i=0; i<fnlen && fn[i]; i++)
+			{
+				uint32_t ch = uint32_t(libwps_tools_win::Font::unicode(fn[i], m_fontType));
+				libwps::appendUnicode(ch, fontname);
+			}
+
+			m_fonts.push_back(fontname);
 		}
 	}
 	if (m_fonts.empty())
