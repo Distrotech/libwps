@@ -265,16 +265,16 @@ struct BitmapPalette
 
 void appendU16(librevenge::RVNGBinaryData &b, uint16_t val)
 {
-	b.append(val & 0xff);
-	b.append((val >> 8) & 0xff);
+	b.append(char(val));
+	b.append(char(val >> 8));
 }
 
 void appendU32(librevenge::RVNGBinaryData &b, uint32_t val)
 {
-	b.append((val >> 0) & 0xff);
-	b.append((val >> 8) & 0xff);
-	b.append((val >> 16) & 0xff);
-	b.append((val >> 24) & 0xff);
+	b.append(char(val));
+	b.append(char(val >> 8));
+	b.append(char(val >> 16));
+	b.append(char(val >> 24));
 }
 
 }
@@ -309,6 +309,12 @@ void MSWriteParser::readFIB()
 
 	input->seek(MSWriteParserInternal::HEADER_D_FCMAC, librevenge::RVNG_SEEK_SET);
 	m_fcMac = libwps::readU32(input);
+
+	if (!checkFilePosition(m_fcMac))
+	{
+		WPS_DEBUG_MSG(("File is corrupt, position %u beyond end of file\n", m_fcMac));
+		throw (libwps::ParseException());
+	}
 }
 
 void MSWriteParser::readFFNTB()
@@ -394,7 +400,7 @@ void MSWriteParser::readSECT()
 		input->seek(8, librevenge::RVNG_SEEK_CUR);
 
 		uint32_t fcSep = libwps::readU32(input);
-		if (cset > 1 && fcSep != 0xd1d1d1d1 && fcSep != 0xffffffff)
+		if (cset > 1 && checkFilePosition(fcSep + 22))
 		{
 			input->seek(fcSep, librevenge::RVNG_SEEK_SET);
 			uint8_t headerSize = libwps::readU8(input);
@@ -1211,7 +1217,7 @@ void MSWriteParser::processDDB(WPSPosition &pos, unsigned width, unsigned height
 
 	librevenge::RVNGBinaryData bmpdata;
 
-	unsigned offset = MSWriteParserInternal::BM_FILE_STRUCT_SIZE + MSWriteParserInternal::BM_INFO_V2_STRUCT_SIZE + colors * sizeof(MSWriteParserInternal::BitmapPalette);
+	unsigned offset = MSWriteParserInternal::BM_FILE_STRUCT_SIZE + MSWriteParserInternal::BM_INFO_V2_STRUCT_SIZE + colors * unsigned(sizeof(MSWriteParserInternal::BitmapPalette));
 
 	// File header
 	bmpdata.append('B');
