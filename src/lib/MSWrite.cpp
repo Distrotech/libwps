@@ -894,7 +894,7 @@ bool MSWriteParser::readString(std::string &res, unsigned long lastPos)
 	unsigned size = libwps::readU32(input);
 	if ((unsigned long)input->tell() + size > lastPos || !checkFilePosition((uint32_t) lastPos))
 	{
-		WPS_DEBUG_MSG(("MSWriteParser::readText too short\n"));
+		WPS_DEBUG_MSG(("MSWriteParser::readString too short\n"));
 		return false;
 	}
 
@@ -908,7 +908,7 @@ bool MSWriteParser::readString(std::string &res, unsigned long lastPos)
 	const unsigned char *data = input->read(size, read_bytes);
 	if (read_bytes != size)
 	{
-		WPS_DEBUG_MSG(("MSWriteParser::readText failed to read\n"));
+		WPS_DEBUG_MSG(("MSWriteParser::readString failed to read\n"));
 		throw (libwps::ParseException());
 	}
 
@@ -917,7 +917,7 @@ bool MSWriteParser::readString(std::string &res, unsigned long lastPos)
 	{
 		if (data[i] < ' ' || data[i] >= 0x7f)
 		{
-			WPS_DEBUG_MSG(("MSWriteParser::readText non-ascii found\n"));
+			WPS_DEBUG_MSG(("MSWriteParser::readString non-ascii found\n"));
 			return false;
 		}
 	}
@@ -1253,7 +1253,7 @@ void MSWriteParser::processDDB(WPSPosition &pos, unsigned width, unsigned height
 	const unsigned char *data = input->read(size, read_bytes);
 	if (read_bytes != size)
 	{
-		WPS_DEBUG_MSG(("MSWriteParser::readText failed to read object\n"));
+		WPS_DEBUG_MSG(("MSWriteParser::processDDB failed to read object\n"));
 		throw (libwps::ParseException());
 	}
 
