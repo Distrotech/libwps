@@ -265,16 +265,16 @@ struct BitmapPalette
 
 void appendU16(librevenge::RVNGBinaryData &b, uint16_t val)
 {
-	b.append(char(val));
-	b.append(char(val >> 8));
+	b.append((unsigned char)(val));
+	b.append((unsigned char)(val >> 8));
 }
 
 void appendU32(librevenge::RVNGBinaryData &b, uint32_t val)
 {
-	b.append(char(val));
-	b.append(char(val >> 8));
-	b.append(char(val >> 16));
-	b.append(char(val >> 24));
+	b.append((unsigned char)(val));
+	b.append((unsigned char)(val >> 8));
+	b.append((unsigned char)(val >> 16));
+	b.append((unsigned char)(val >> 24));
 }
 
 }
@@ -414,12 +414,12 @@ void MSWriteParser::readSECT()
 				// read section
 				sep.m_yaMac=double(libwps::readU16(input))/1440.;
 				sep.m_xaMac=double(libwps::readU16(input))/1440.;
-				input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved 2
+				sep.m_startPageNumber=libwps::readU16(input);
 				sep.m_yaTop=double(libwps::readU16(input))/1440.;
 				sep.m_dyaText=double(libwps::readU16(input))/1440.;
 				sep.m_xaLeft=double(libwps::readU16(input))/1440.;
 				sep.m_dxaText=double(libwps::readU16(input))/1440.;
-				sep.m_startPageNumber=libwps::readU16(input);
+				input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved 2
 				sep.m_yaHeader=double(libwps::readU16(input))/1440.;
 				sep.m_yaFooter=double(libwps::readU16(input))/1440.;
 			}
@@ -728,20 +728,20 @@ void MSWriteParser::findZones()
 
 		if (p.m_Location != location)
 		{
-			WPSEntry &e = m_Header;
 			if (location == MSWriteParserInternal::Paragraph::HEADER)
 			{
 				m_HeaderPage1 = m_paragraphList[first].m_firstpage;
+				m_Header.setBegin(m_paragraphList[first].m_fcFirst);
+				m_Header.setEnd(m_paragraphList[i - 1].m_fcLim);
+				m_Header.setType("TEXT");
 			}
 			else
 			{
 				m_FooterPage1 = m_paragraphList[first].m_firstpage;
-				e = m_Footer;
+				m_Footer.setBegin(m_paragraphList[first].m_fcFirst);
+				m_Footer.setEnd(m_paragraphList[i - 1].m_fcLim);
+				m_Footer.setType("TEXT");
 			}
-
-			e.setBegin(m_paragraphList[first].m_fcFirst);
-			e.setEnd(m_paragraphList[i - 1].m_fcLim);
-			e.setType("TEXT");
 
 			location = p.m_Location;
 			first = i;
