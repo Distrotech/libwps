@@ -164,10 +164,10 @@ struct Paragraph :  public WPSParagraph
 {
 	enum Location { MAIN, HEADER, FOOTER };
 	Paragraph() : WPSParagraph(), m_fcFirst(0), m_fcLim(0), m_Location(MAIN),
-		m_graphics(false), m_firstpage(false)  { }
+		m_graphics(false), m_firstpage(false), m_skiptab(false)  { }
 	uint32_t m_fcFirst, m_fcLim;
 	Location m_Location;
-	bool m_graphics, m_firstpage;
+	bool m_graphics, m_firstpage, m_skiptab;
 };
 
 struct Font : public WPSFont
@@ -505,6 +505,10 @@ void MSWriteParser::readPAP()
 				}
 			}
 
+			int16_t dxaLeft = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft);
+			int16_t dxaLeft1 = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft1);
+			int16_t dxaRight = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaRight);
+
 			MSWriteParserInternal::Paragraph para;
 			int i;
 
@@ -519,6 +523,9 @@ void MSWriteParser::readPAP()
 				               WPSTabStop::DECIMAL : WPSTabStop::LEFT);
 
 				para.m_tabs.push_back(tab);
+
+				if (dxaLeft + dxaLeft1 == pos)
+					para.m_skiptab = true;
 			}
 
 			switch (pap.m_justification & 3)
@@ -537,10 +544,6 @@ void MSWriteParser::readPAP()
 				para.m_justify = libwps::JustificationFull;
 				break;
 			}
-
-			int16_t dxaLeft = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft);
-			int16_t dxaLeft1 = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft1);
-			int16_t dxaRight = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaRight);
 
 			para.m_margins[0] = dxaLeft1 / 1440.0;
 			para.m_margins[1] = dxaLeft / 1440.0;
@@ -814,6 +817,8 @@ void MSWriteParser::readText(WPSEntry e)
 
 	while (fc < uint32_t(e.end()))
 	{
+		bool skiptab = false;
+
 		while (fc >= paps->m_fcLim)
 		{
 			paps++;
@@ -822,6 +827,7 @@ void MSWriteParser::readText(WPSEntry e)
 				WPS_DEBUG_MSG(("MSWriteParser::readText PAP not found for offset %u\n", fc));
 				throw (libwps::ParseException());
 			}
+			skiptab = paps->m_skiptab;
 		}
 
 		if (paps->m_graphics)
@@ -884,7 +890,8 @@ void MSWriteParser::readText(WPSEntry e)
 				else switch (ch)
 					{
 					case 9:
-						m_listener->insertTab();
+						if (!skiptab)
+							m_listener->insertTab();
 						break;
 					case 10:
 					case 11:
@@ -899,6 +906,7 @@ void MSWriteParser::readText(WPSEntry e)
 					}
 			}
 			fc++;
+			skiptab = false;
 		}
 	}
 }
