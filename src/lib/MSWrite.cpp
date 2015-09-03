@@ -571,6 +571,13 @@ void MSWriteParser::readPAP()
 				}
 			}
 
+			if (para.m_Location != MSWriteParserInternal::Paragraph::MAIN)
+			{
+				// Indents in header/footer are off paper, not margins
+				para.m_margins[1] -= m_pageSpan.getMarginLeft();
+				para.m_margins[2] -= m_pageSpan.getMarginRight();
+			}
+
 			m_paragraphList.push_back(para);
 
 			if (fcLim >= m_fcMac)
