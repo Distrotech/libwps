@@ -538,9 +538,13 @@ void MSWriteParser::readPAP()
 				break;
 			}
 
-			para.m_margins[0] = WPS_LE_GET_GUINT16(&pap.m_dxaLeft1) / 1440.0;
-			para.m_margins[1] = WPS_LE_GET_GUINT16(&pap.m_dxaLeft) / 1440.0;
-			para.m_margins[2] = WPS_LE_GET_GUINT16(&pap.m_dxaRight) / 1440.0;
+			int16_t dxaLeft = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft);
+			int16_t dxaLeft1 = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft1);
+			int16_t dxaRight = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaRight);
+
+			para.m_margins[0] = dxaLeft1 / 1440.0;
+			para.m_margins[1] = dxaLeft / 1440.0;
+			para.m_margins[2] = dxaRight / 1440.0;
 
 			uint16_t dyaLine = WPS_LE_GET_GUINT16(&pap.m_dyaLine);
 			para.m_spacings[0] = dyaLine / 240.0;
