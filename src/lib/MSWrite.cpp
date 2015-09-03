@@ -1290,7 +1290,7 @@ bool MSWriteParser::processDIB(librevenge::RVNGBinaryData &bmpdata, unsigned siz
 	unsigned colors_used = WPS_LE_GET_GUINT16(data + MSWriteParserInternal::BM_INFO_V3_COLORS_USED);
 
 	unsigned colors = 0;
-	if (bits_pixel && bits_pixel < 16)
+	if (bits_pixel && bits_pixel <= 8)
 	{
 		colors = colors_used ? colors_used : 1 << bits_pixel;
 	}
