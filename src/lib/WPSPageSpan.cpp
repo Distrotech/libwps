@@ -114,6 +114,7 @@ void WPSPageSpan::setHeaderFooter(const HeaderFooterType type, const HeaderFoote
 	{
 	case NEVER:
 		_removeHeaderFooter(type, ALL);
+	case FIRST:
 	case ALL:
 		_removeHeaderFooter(type, ODD);
 		_removeHeaderFooter(type, EVEN);
@@ -165,6 +166,9 @@ void WPSPageSpan::sendHeaderFooters(WPSContentListener *listener, librevenge::RV
 		librevenge::RVNGPropertyList propList;
 		switch (hf->getOccurrence())
 		{
+		case WPSPageSpan::FIRST:
+			propList.insert("librevenge:occurrence", "first");
+			break;
 		case WPSPageSpan::ODD:
 			propList.insert("librevenge:occurrence", "odd");
 			break;
@@ -242,6 +246,9 @@ void WPSPageSpan::sendHeaderFooters(WKSContentListener *listener, librevenge::RV
 		librevenge::RVNGPropertyList propList;
 		switch (hf->getOccurrence())
 		{
+		case WPSPageSpan::FIRST:
+			propList.insert("librevenge:occurrence", "first");
+			break;
 		case WPSPageSpan::ODD:
 			propList.insert("librevenge:occurrence", "odd");
 			break;
@@ -446,12 +453,15 @@ int WPSPageSpan::_getHeaderFooterPosition(HeaderFooterType type, HeaderFooterOcc
 	case EVEN:
 		occurrencePos = 2;
 		break;
+	case FIRST:
+		occurrencePos = 3;
+		break;
 	case NEVER:
 	default:
 		WPS_DEBUG_MSG(("WPSPageSpan::getVectorPosition: unknown occurrence\n"));
 		return -1;
 	}
-	int res = typePos*3+occurrencePos;
+	int res = typePos*4+occurrencePos;
 	if (res >= int(m_headerFooterList.size()))
 		m_headerFooterList.resize(size_t(res+1));
 	return res;

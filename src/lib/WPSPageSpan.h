@@ -41,7 +41,7 @@ public:
 	enum FormOrientation { PORTRAIT, LANDSCAPE };
 
 	enum HeaderFooterType { HEADER, FOOTER };
-	enum HeaderFooterOccurrence { ODD, EVEN, ALL, NEVER };
+	enum HeaderFooterOccurrence { ODD, EVEN, ALL, FIRST, NEVER };
 
 	enum PageNumberPosition { None = 0, TopLeft, TopCenter, TopRight, TopLeftAndRight, TopInsideLeftAndRight,
 	                          BottomLeft, BottomCenter, BottomRight, BottomLeftAndRight, BottomInsideLeftAndRight

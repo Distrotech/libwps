@@ -100,7 +100,6 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 	if (!m_entry.valid() || !m_input)
 	{
 		WPS_DEBUG_MSG(("MSWriteParserInternal::SubDocument::parse: empty document found...\n"));
-		listen->insertCharacter(' ');
 		return;
 	}
 
@@ -666,32 +665,6 @@ void MSWriteParser::readPAP()
 
 }
 
-unsigned MSWriteParser::numPages()
-{
-	unsigned numPage = 1;
-
-	RVNGInputStreamPtr input = getInput();
-
-	std::vector<MSWriteParserInternal::Paragraph>::iterator paps;
-
-	for (paps = m_paragraphList.begin(); paps != m_paragraphList.end(); ++paps)
-	{
-		if (paps->m_graphics)
-			continue;
-
-		uint32_t fc = paps->m_fcFirst;
-		input->seek(fc, librevenge::RVNG_SEEK_SET);
-
-		while (fc < paps->m_fcLim && fc < m_fcMac)
-		{
-			if (libwps::readU8(input) == 0x0C) numPage++;
-			fc++;
-		}
-	}
-
-	return numPage;
-}
-
 void MSWriteParser::readCHP()
 {
 	RVNGInputStreamPtr input = getInput();
@@ -847,7 +820,13 @@ void MSWriteParser::findZones()
 shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTextInterface *interface)
 {
 	std::vector<WPSPageSpan> pageList;
-	WPSPageSpan page1(m_pageSpan), ps(m_pageSpan);
+	WPSPageSpan ps(m_pageSpan);
+	WPSEntry empty;
+
+	empty.setType("TEXT");
+
+	WPSSubDocumentPtr subemptydoc(new MSWriteParserInternal::SubDocument
+	                              (getInput(), *this, empty));
 
 	if (m_Header.valid())
 	{
@@ -855,8 +834,8 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 		                         (getInput(), *this, m_Header));
 		ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::ALL, subdoc);
 
-		if (m_HeaderPage1)
-			page1.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::ALL, subdoc);
+		if (!m_HeaderPage1)
+			ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::FIRST, subemptydoc);
 	}
 
 	if (m_Footer.valid())
@@ -865,14 +844,11 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 		                         (getInput(), *this, m_Footer));
 		ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::ALL, subdoc);
 
-		if (m_FooterPage1)
-			page1.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::ALL, subdoc);
+		if (!m_FooterPage1)
+			ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::FIRST, subemptydoc);
 	}
 
-	pageList.push_back(page1);
-	unsigned pages = numPages();
-	for (unsigned i = 1; i < pages; i++) pageList.push_back(ps);
-
+	pageList.push_back(ps);
 	return shared_ptr<WPSContentListener>
 	       (new WPSContentListener(pageList, interface));
 }
