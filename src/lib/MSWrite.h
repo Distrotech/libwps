@@ -75,6 +75,7 @@ private:
 	void processDIB(WPSPosition &pos, unsigned size);
 	void processWMF(WPSPosition &pos, unsigned size);
 	void processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos);
+	void processStaticOLE(WPSPosition &pos, unsigned long lastPos);
 	bool readString(std::string &res, unsigned long lastPos);
 
 	//! check if the file position is correct or not

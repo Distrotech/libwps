@@ -1030,12 +1030,7 @@ void MSWriteParser::processObject(WPSPosition &pos, unsigned long lastPos)
 	else if (mm == 0xe4)     // OLE object
 	{
 		// Step over unused fields
-		input->seek(30, librevenge::RVNG_SEEK_CUR);
-
-		unsigned cbSize = libwps::readU32(input);
-
-		// Step over unused fields
-		input->seek(4, librevenge::RVNG_SEEK_CUR);
+		input->seek(38, librevenge::RVNG_SEEK_CUR);
 
 		unsigned ole_id = libwps::readU32(input);
 		unsigned type = libwps::readU32(input);
@@ -1049,54 +1044,8 @@ void MSWriteParser::processObject(WPSPosition &pos, unsigned long lastPos)
 		switch (type)
 		{
 		case 3: // static OLE
-		{
-			std::string objtype;
-			if (!readString(objtype, lastPos))
-			{
-				return;
-			}
-			WPS_DEBUG_MSG(("MSWriteParser::processObject static OLE object %s\n", objtype.c_str()));
-
-			// Step over unused fields
-			input->seek(8, librevenge::RVNG_SEEK_CUR);
-
-			cbSize = libwps::readU32(input);
-
-			if ((unsigned long)input->tell() + cbSize > lastPos)
-			{
-				WPS_DEBUG_MSG(("MSWriteParser::processObject bad size\n"));
-				return;
-			}
-
-			if (objtype == "BITMAP")
-			{
-				if (cbSize < 10)
-				{
-					WPS_DEBUG_MSG(("MSWriteParser::processObject bad size for DDB\n"));
-					return;
-				}
-				input->seek(2, librevenge::RVNG_SEEK_CUR);
-				unsigned width = libwps::readU16(input);
-				unsigned height = libwps::readU16(input);
-				unsigned byte_width = libwps::readU16(input);
-				unsigned planes = libwps::readU8(input);
-				unsigned bits_pixel = libwps::readU8(input);
-
-
-				processDDB(pos, width, height, byte_width, planes, bits_pixel, cbSize - 10);
-			}
-			else if (objtype == "DIB")
-			{
-				processDIB(pos, cbSize);
-			}
-			else if (objtype == "METAFILEPICT")
-			{
-				// Step over unused fields
-				input->seek(8, librevenge::RVNG_SEEK_CUR);
-				processWMF(pos, cbSize - 8);
-			}
-		}
-		break;
+			processStaticOLE(pos, lastPos);
+			return;
 		case 2: // Embedded OLE
 			processEmbeddedOLE(pos, lastPos);
 			return;
@@ -1343,6 +1292,57 @@ void MSWriteParser::processDIB(WPSPosition &pos, unsigned size)
 	bmpdata.append(data, size);
 
 	m_listener->insertPicture(pos, bmpdata, "image/bmp");
+}
+
+void MSWriteParser::processStaticOLE(WPSPosition &pos, unsigned long lastPos)
+{
+	RVNGInputStreamPtr input = getInput();
+	std::string objtype;
+
+	if (!readString(objtype, lastPos))
+	{
+		return;
+	}
+	WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE object %s\n", objtype.c_str()));
+
+	// Step over unused fields
+	input->seek(8, librevenge::RVNG_SEEK_CUR);
+
+	unsigned cbSize = libwps::readU32(input);
+
+	if ((unsigned long)input->tell() + cbSize > lastPos)
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE bad size\n"));
+		return;
+	}
+
+	if (objtype == "BITMAP")
+	{
+		if (cbSize < 10)
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE bad size for DDB\n"));
+			return;
+		}
+		input->seek(2, librevenge::RVNG_SEEK_CUR);
+		unsigned width = libwps::readU16(input);
+		unsigned height = libwps::readU16(input);
+		unsigned byte_width = libwps::readU16(input);
+		unsigned planes = libwps::readU8(input);
+		unsigned bits_pixel = libwps::readU8(input);
+
+
+		processDDB(pos, width, height, byte_width, planes, bits_pixel, cbSize - 10);
+	}
+	else if (objtype == "DIB")
+	{
+		processDIB(pos, cbSize);
+	}
+	else if (objtype == "METAFILEPICT")
+	{
+		// Step over unused fields
+		input->seek(8, librevenge::RVNG_SEEK_CUR);
+		processWMF(pos, cbSize - 8);
+	}
 }
 
 void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos)
