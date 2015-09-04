@@ -40,7 +40,7 @@ class WPSPosition
 {
 public:
 	//! a list of enum used to defined the anchor
-	enum AnchorTo { Char, CharBaseLine, Paragraph, Page };
+	enum AnchorTo { Char, CharBaseLine, Paragraph, ParagraphContent, Page, PageContent };
 	//! an enum used to define the wrapping
 	enum Wrapping { WNone, WDynamic, WRunThrough }; // Add something for background ?
 	//! an enum used to define the relative X position

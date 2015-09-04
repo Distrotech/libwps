@@ -73,7 +73,7 @@ private:
 	void processObject(WPSPosition &pos, unsigned long lastPos);
 	void processDDB(WPSPosition &pos, unsigned width, unsigned height, unsigned byte_width, unsigned planes, unsigned bits_pixel, unsigned size);
 	void processDIB(WPSPosition &pos, unsigned size);
-	void processWMF(WPSPosition &pos, unsigned xExt, unsigned yExt, unsigned mx, unsigned my, unsigned size);
+	void processWMF(WPSPosition &pos, unsigned size);
 	void processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos);
 	bool readString(std::string &res, unsigned long lastPos);
 

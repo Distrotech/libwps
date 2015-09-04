@@ -1183,8 +1183,10 @@ bool WPSContentListener::_openFrame(WPSPosition const &pos, librevenge::RVNGProp
 	switch (pos.m_anchorTo)
 	{
 	case WPSPosition::Page:
+	case WPSPosition::PageContent:
 		break;
 	case WPSPosition::Paragraph:
+	case WPSPosition::ParagraphContent:
 		if (m_ps->m_isParagraphOpened)
 			_flushText();
 		else
@@ -1247,11 +1249,13 @@ void WPSContentListener::_handleFrameParameters
 	else
 		propList.insert("style:wrap", "none");
 
-	if (pos.m_anchorTo == WPSPosition::Paragraph)
+	if (pos.m_anchorTo == WPSPosition::Paragraph || pos.m_anchorTo == WPSPosition::ParagraphContent)
 	{
 		propList.insert("text:anchor-type", "paragraph");
-		propList.insert("style:vertical-rel", "paragraph");
-		propList.insert("style:horizontal-rel", "paragraph");
+		librevenge::RVNGString posRel(pos.m_anchorTo == WPSPosition::Paragraph ?
+		                              "paragraph" : "paragraph-content");
+		propList.insert("style:vertical-rel", posRel);
+		propList.insert("style:horizontal-rel", posRel);
 		double w = m_ps->m_pageFormWidth - m_ps->m_pageMarginLeft
 		           - m_ps->m_pageMarginRight - m_ps->m_paragraph.m_margins[1]
 		           - m_ps->m_paragraph.m_margins[2];
@@ -1299,7 +1303,7 @@ void WPSContentListener::_handleFrameParameters
 
 		return;
 	}
-	if (pos.m_anchorTo == WPSPosition::Page)
+	if (pos.m_anchorTo == WPSPosition::Page || pos.m_anchorTo == WPSPosition::PageContent)
 	{
 		// Page position seems to do not use the page margin...
 		propList.insert("text:anchor-type", "page");
@@ -1309,8 +1313,9 @@ void WPSContentListener::_handleFrameParameters
 		w *= inchFactor;
 		h *= inchFactor;
 
-		propList.insert("style:vertical-rel", "page");
-		propList.insert("style:horizontal-rel", "page");
+		librevenge::RVNGString posRel(pos.m_anchorTo == WPSPosition::Page ? "page" : "page-content");
+		propList.insert("style:vertical-rel", posRel);
+		propList.insert("style:horizontal-rel", posRel);
 
 		double newPosition;
 		switch (pos.m_yPos)

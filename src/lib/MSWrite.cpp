@@ -557,6 +557,9 @@ void MSWriteParser::readPAP()
 			if (pap.m_rhcPage & 0x10)
 			{
 				para.m_graphics = true;
+				/* MS Write doesn't take first indent into
+				    account for images, but odt does */
+				para.m_margins[0] = 0.0;
 			}
 			else
 			{
@@ -830,6 +833,8 @@ void MSWriteParser::readText(WPSEntry e)
 			skiptab = paps->m_skiptab;
 		}
 
+		m_listener->setParagraph(*paps);
+
 		if (paps->m_graphics)
 		{
 			WPSPosition pos;
@@ -850,7 +855,21 @@ void MSWriteParser::readText(WPSEntry e)
 				align = WPSPosition::XCenter;
 				break;
 			}
-			pos.setRelativePosition(WPSPosition::Paragraph, align);
+
+			pos.setRelativePosition(WPSPosition::ParagraphContent, align);
+
+			input->seek(fc + 8, librevenge::RVNG_SEEK_SET);
+			uint16_t dxaOffset = libwps::readU16(input);
+			uint16_t dxaSize = libwps::readU16(input);
+			uint16_t dyaSize = libwps::readU16(input);
+
+			WPS_DEBUG_MSG(("MSWriteParser::readText object found %utwx%utw, offset %utw\n", dxaSize, dyaSize, dxaOffset));
+
+			pos.setUnit(librevenge::RVNG_INCH);
+			pos.setSize(Vec2f(dxaSize/1440.0f, dyaSize/1440.0f));
+
+			if (dxaOffset)
+				pos.setOrigin(Vec2f(dxaOffset/1440.0f, 0.0f));
 
 			input->seek(fc, librevenge::RVNG_SEEK_SET);
 
@@ -858,8 +877,6 @@ void MSWriteParser::readText(WPSEntry e)
 			fc = paps->m_fcLim;
 			continue;
 		}
-
-		m_listener->setParagraph(*paps);
 
 		while (fc >= chps->m_fcLim)
 		{
@@ -965,27 +982,21 @@ void MSWriteParser::processObject(WPSPosition &pos, unsigned long lastPos)
 	if (mm == 0x88)   // Windows metafile (.wmf)
 	{
 		// Step over unused fields
-		input->seek(8, librevenge::RVNG_SEEK_CUR);
-
-		unsigned xExt = libwps::readU16(input);
-		unsigned yExt = libwps::readU16(input);
-
-		// Step over unused fields
-		input->seek(18, librevenge::RVNG_SEEK_CUR);
+		input->seek(30, librevenge::RVNG_SEEK_CUR);
 
 		unsigned cbSize = libwps::readU32(input);
 
-		unsigned mx = libwps::readU16(input);
-		unsigned my = libwps::readU16(input);
+		// Step over unused fields
+		input->seek(4, librevenge::RVNG_SEEK_CUR);
 
 		if ((unsigned long)input->tell() + cbSize > lastPos)
 		{
 			WPS_DEBUG_MSG(("MSWriteParser::processObject bad size for wmf\n"));
 			return;
 		}
-		WPS_DEBUG_MSG(("MSWriteParser::processObject 3.0 WMF object %ux%u\n", xExt, yExt));
+		WPS_DEBUG_MSG(("MSWriteParser::processObject 3.0 WMF object\n"));
 
-		processWMF(pos, xExt, yExt, mx, my, cbSize);
+		processWMF(pos, cbSize);
 	}
 	else if (mm == 0xe3)     // this is a picture
 	{
@@ -1019,18 +1030,12 @@ void MSWriteParser::processObject(WPSPosition &pos, unsigned long lastPos)
 	else if (mm == 0xe4)     // OLE object
 	{
 		// Step over unused fields
-		input->seek(8, librevenge::RVNG_SEEK_CUR);
-
-		unsigned xExt = libwps::readU16(input);
-		unsigned yExt = libwps::readU16(input);
-
-		// Step over unused fields
-		input->seek(18, librevenge::RVNG_SEEK_CUR);
+		input->seek(30, librevenge::RVNG_SEEK_CUR);
 
 		unsigned cbSize = libwps::readU32(input);
 
-		unsigned mx = libwps::readU16(input);
-		unsigned my = libwps::readU16(input);
+		// Step over unused fields
+		input->seek(4, librevenge::RVNG_SEEK_CUR);
 
 		unsigned ole_id = libwps::readU32(input);
 		unsigned type = libwps::readU32(input);
@@ -1088,7 +1093,7 @@ void MSWriteParser::processObject(WPSPosition &pos, unsigned long lastPos)
 			{
 				// Step over unused fields
 				input->seek(8, librevenge::RVNG_SEEK_CUR);
-				processWMF(pos, xExt, yExt, mx, my, cbSize - 8);
+				processWMF(pos, cbSize - 8);
 			}
 		}
 		break;
@@ -1319,11 +1324,8 @@ void MSWriteParser::processDIB(WPSPosition &pos, unsigned size)
 		return;
 	}
 
-	unsigned width = WPS_LE_GET_GUINT32(data + MSWriteParserInternal::BM_INFO_V3_WIDTH);
-	unsigned height = WPS_LE_GET_GUINT32(data + MSWriteParserInternal::BM_INFO_V3_HEIGHT);
 	unsigned bits_pixel = WPS_LE_GET_GUINT16(data + MSWriteParserInternal::BM_INFO_V3_BITS_PIXEL);
 	unsigned colors_used = WPS_LE_GET_GUINT16(data + MSWriteParserInternal::BM_INFO_V3_COLORS_USED);
-	WPS_DEBUG_MSG(("MSWriteParser::processDIB DIB image %ux%ux%u\n", width, height, bits_pixel));
 
 	unsigned colors = 0;
 	if (bits_pixel && bits_pixel < 16)
@@ -1339,9 +1341,6 @@ void MSWriteParser::processDIB(WPSPosition &pos, unsigned size)
 	MSWriteParserInternal::appendU32(bmpdata, MSWriteParserInternal::BM_FILE_STRUCT_SIZE + MSWriteParserInternal::BM_INFO_V3_STRUCT_SIZE + 4 * colors);
 
 	bmpdata.append(data, size);
-
-	pos.setUnit(librevenge::RVNG_POINT);
-	pos.setSize(Vec2f(float(width), float(height)));
 
 	m_listener->insertPicture(pos, bmpdata, "image/bmp");
 }
@@ -1390,13 +1389,6 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos)
 
 	if (strings[0] == "PBrush" || strings[0] == "Paint.Picture")
 	{
-		const unsigned char *info = data + MSWriteParserInternal::BM_FILE_STRUCT_SIZE;
-		if (WPS_LE_GET_GUINT32(info + MSWriteParserInternal::BM_INFO_V3_SIZE) == MSWriteParserInternal::BM_INFO_V3_STRUCT_SIZE)
-		{
-			pos.setUnit(librevenge::RVNG_POINT);
-			pos.setSize(Vec2f(float(WPS_LE_GET_GUINT32(info + MSWriteParserInternal::BM_INFO_V3_WIDTH)),
-			                  float(WPS_LE_GET_GUINT32(info + MSWriteParserInternal::BM_INFO_V3_HEIGHT))));
-		}
 		mimetype = "image/bmp";
 	}
 	else if (strings[0] == "SoundRec")
@@ -1408,22 +1400,10 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos)
 	// FIXME: Static OLE object / replacement object might follow
 }
 
-void MSWriteParser::processWMF(WPSPosition &pos, unsigned picw, unsigned pich, unsigned mx, unsigned my, unsigned size)
+void MSWriteParser::processWMF(WPSPosition &pos, unsigned size)
 {
-	WPS_DEBUG_MSG(("MSWriteParser::processWMF Windows metafile (wmf) %ux%u\n", picw, pich));
+	WPS_DEBUG_MSG(("MSWriteParser::processWMF Windows metafile (wmf)\n"));
 
-	// RVNG_TWIP doesn't work
-	pos.setUnit(librevenge::RVNG_INCH);
-	pos.setSize(Vec2f(float(picw)/1440.0f, float(pich)/1440.0f));
-
-	WPS_DEBUG_MSG(("MSWriteParser::processWMF Windows metafile mx=%u,my=%u\n", mx, my));
-
-	librevenge::RVNGPropertyList frame;
-	if (mx != 1000 || my != 1000)
-	{
-		frame.insert("style:relative-width", mx / 10.0, librevenge::RVNG_PERCENT);
-		frame.insert("style:relative-height", my / 10.0, librevenge::RVNG_PERCENT);
-	}
 
 	RVNGInputStreamPtr input = getInput();
 	unsigned long read_bytes;
@@ -1435,7 +1415,7 @@ void MSWriteParser::processWMF(WPSPosition &pos, unsigned picw, unsigned pich, u
 	}
 
 	librevenge::RVNGBinaryData wmfdata(data, size);
-	m_listener->insertPicture(pos, wmfdata, "application/x-wmf", frame);
+	m_listener->insertPicture(pos, wmfdata, "application/x-wmf");
 }
 
 void MSWriteParser::parse(librevenge::RVNGTextInterface *document)

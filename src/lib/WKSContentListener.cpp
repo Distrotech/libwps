@@ -657,8 +657,10 @@ bool WKSContentListener::_openFrame(WPSPosition const &pos, WPSGraphicStyle cons
 	switch (pos.m_anchorTo)
 	{
 	case WPSPosition::Page:
+	case WPSPosition::PageContent:
 		break;
 	case WPSPosition::Paragraph:
+	case WPSPosition::ParagraphContent:
 		if (m_ps->m_isParagraphOpened)
 			_flushText();
 		else
@@ -724,7 +726,7 @@ void WKSContentListener::_handleFrameParameters
 	else
 		propList.insert("style:wrap", "none");
 
-	if (pos.m_anchorTo != WPSPosition::Page)
+	if (pos.m_anchorTo != WPSPosition::Page && pos.m_anchorTo != WPSPosition::PageContent)
 	{
 		WPS_DEBUG_MSG(("WKSContentListener::openFrame: only implemented for page anchor\n"));
 		return;
@@ -738,8 +740,9 @@ void WKSContentListener::_handleFrameParameters
 	w *= inchFactor;
 	h *= inchFactor;
 
-	propList.insert("style:vertical-rel", "page");
-	propList.insert("style:horizontal-rel", "page");
+	librevenge::RVNGString relPos(pos.m_anchorTo == WPSPosition::Page ? "page" : "page-content");
+	propList.insert("style:vertical-rel", relPos);
+	propList.insert("style:horizontal-rel", relPos);
 
 	double newPosition;
 	switch (pos.m_yPos)
