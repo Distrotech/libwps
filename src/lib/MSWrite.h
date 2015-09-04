@@ -71,11 +71,11 @@ private:
 	void readText(WPSEntry e);
 	unsigned numPages();
 	void processObject(WPSPosition &pos, unsigned long lastPos);
-	void processDDB(WPSPosition &pos, unsigned width, unsigned height, unsigned byte_width, unsigned planes, unsigned bits_pixel, unsigned size);
-	void processDIB(WPSPosition &pos, unsigned size);
-	void processWMF(WPSPosition &pos, unsigned size);
+	bool processDDB(librevenge::RVNGBinaryData &bmpdata, WPSPosition &pos, unsigned width, unsigned height, unsigned byte_width, unsigned planes, unsigned bits_pixel, unsigned size);
+	bool processDIB(librevenge::RVNGBinaryData &bmpdata, unsigned size);
+	bool processWMF(librevenge::RVNGBinaryData &wmfdata, unsigned size);
 	void processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos);
-	void processStaticOLE(WPSPosition &pos, unsigned long lastPos);
+	bool processStaticOLE(librevenge::RVNGBinaryData &, std::string &mimetype, WPSPosition &pos, unsigned long lastPos);
 	bool readString(std::string &res, unsigned long lastPos);
 
 	//! check if the file position is correct or not

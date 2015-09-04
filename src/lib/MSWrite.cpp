@@ -996,7 +996,11 @@ void MSWriteParser::processObject(WPSPosition &pos, unsigned long lastPos)
 		}
 		WPS_DEBUG_MSG(("MSWriteParser::processObject 3.0 WMF object\n"));
 
-		processWMF(pos, cbSize);
+		librevenge::RVNGBinaryData wmfdata;
+		if (processWMF(wmfdata, cbSize))
+		{
+			m_listener->insertPicture(pos, wmfdata, "application/x-wmf");
+		}
 	}
 	else if (mm == 0xe3)     // this is a picture
 	{
@@ -1025,7 +1029,11 @@ void MSWriteParser::processObject(WPSPosition &pos, unsigned long lastPos)
 
 		WPS_DEBUG_MSG(("MSWriteParser::processObject 3.0 DDB object %ux%u\n", width, height));
 
-		processDDB(pos, width, height, byte_width, planes, bits_pixel, cbSize);
+		librevenge::RVNGBinaryData bmpdata;
+		if (processDDB(bmpdata, pos, width, height, byte_width, planes, bits_pixel, cbSize))
+		{
+			m_listener->insertPicture(pos, bmpdata, "image/bmp");
+		}
 	}
 	else if (mm == 0xe4)     // OLE object
 	{
@@ -1044,8 +1052,15 @@ void MSWriteParser::processObject(WPSPosition &pos, unsigned long lastPos)
 		switch (type)
 		{
 		case 3: // static OLE
-			processStaticOLE(pos, lastPos);
+		{
+			librevenge::RVNGBinaryData staticOle;
+			std::string mimetype;
+			if (processStaticOLE(staticOle, mimetype, pos, lastPos))
+			{
+				m_listener->insertPicture(pos, staticOle, mimetype);
+			}
 			return;
+		}
 		case 2: // Embedded OLE
 			processEmbeddedOLE(pos, lastPos);
 			return;
@@ -1063,7 +1078,7 @@ void MSWriteParser::processObject(WPSPosition &pos, unsigned long lastPos)
 	}
 }
 
-void MSWriteParser::processDDB(WPSPosition &pos, unsigned width, unsigned height, unsigned byte_width, unsigned planes, unsigned bits_pixel, unsigned size)
+bool MSWriteParser::processDDB(librevenge::RVNGBinaryData &bmpdata, WPSPosition &pos, unsigned width, unsigned height, unsigned byte_width, unsigned planes, unsigned bits_pixel, unsigned size)
 {
 	/* A ddb image has no color palette; it is BMP Version 1, but this format
 	   is not widely supported. Create BMP version 2 file with a color palette.
@@ -1163,13 +1178,13 @@ void MSWriteParser::processDDB(WPSPosition &pos, unsigned width, unsigned height
 	if (size < byte_width * height)
 	{
 		WPS_DEBUG_MSG(("MSWriteParser::processDDB DDB image data missing, skipping\n"));
-		return;
+		return false;
 	}
 
 	if (planes != 1)
 	{
 		WPS_DEBUG_MSG(("MSWriteParser::processDDB DDB image has planes %d, must be 1\n", planes));
-		return;
+		return false;
 	}
 
 	WPS_DEBUG_MSG(("MSWriteParser::processDDB DDB size %ux%ux%u, byte width %u\n", width, height,
@@ -1191,8 +1206,6 @@ void MSWriteParser::processDDB(WPSPosition &pos, unsigned width, unsigned height
 		colors = 0;
 		break;
 	}
-
-	librevenge::RVNGBinaryData bmpdata;
 
 	unsigned offset = MSWriteParserInternal::BM_FILE_STRUCT_SIZE + MSWriteParserInternal::BM_INFO_V2_STRUCT_SIZE + colors * unsigned(sizeof(MSWriteParserInternal::BitmapPalette));
 
@@ -1247,15 +1260,15 @@ void MSWriteParser::processDDB(WPSPosition &pos, unsigned width, unsigned height
 	pos.setUnit(librevenge::RVNG_POINT);
 	pos.setSize(Vec2f(float(width), float(height)));
 
-	m_listener->insertPicture(pos, bmpdata, "image/bmp");
+	return true;
 }
 
-void MSWriteParser::processDIB(WPSPosition &pos, unsigned size)
+bool MSWriteParser::processDIB(librevenge::RVNGBinaryData &bmpdata, unsigned size)
 {
 	if (size < MSWriteParserInternal::BM_INFO_V3_STRUCT_SIZE)
 	{
 		WPS_DEBUG_MSG(("MSWriteParser::processDIB DIB image missing data, skipping\n"));
-		return;
+		return false;
 	}
 
 	RVNGInputStreamPtr input = getInput();
@@ -1270,7 +1283,7 @@ void MSWriteParser::processDIB(WPSPosition &pos, unsigned size)
 	if (WPS_LE_GET_GUINT32(data + MSWriteParserInternal::BM_INFO_V3_SIZE) != MSWriteParserInternal::BM_INFO_V3_STRUCT_SIZE)
 	{
 		WPS_DEBUG_MSG(("MSWriteParser::processDIB DIB header incorrect size, skipping\n"));
-		return;
+		return false;
 	}
 
 	unsigned bits_pixel = WPS_LE_GET_GUINT16(data + MSWriteParserInternal::BM_INFO_V3_BITS_PIXEL);
@@ -1282,7 +1295,6 @@ void MSWriteParser::processDIB(WPSPosition &pos, unsigned size)
 		colors = colors_used ? colors_used : 1 << bits_pixel;
 	}
 
-	librevenge::RVNGBinaryData bmpdata;
 	bmpdata.append('B');
 	bmpdata.append('M');
 	MSWriteParserInternal::appendU32(bmpdata, size + MSWriteParserInternal::BM_FILE_STRUCT_SIZE);
@@ -1291,17 +1303,17 @@ void MSWriteParser::processDIB(WPSPosition &pos, unsigned size)
 
 	bmpdata.append(data, size);
 
-	m_listener->insertPicture(pos, bmpdata, "image/bmp");
+	return true;
 }
 
-void MSWriteParser::processStaticOLE(WPSPosition &pos, unsigned long lastPos)
+bool MSWriteParser::processStaticOLE(librevenge::RVNGBinaryData &b, std::string &mimetype, WPSPosition &pos, unsigned long lastPos)
 {
 	RVNGInputStreamPtr input = getInput();
 	std::string objtype;
 
 	if (!readString(objtype, lastPos))
 	{
-		return;
+		return false;
 	}
 	WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE object %s\n", objtype.c_str()));
 
@@ -1313,7 +1325,7 @@ void MSWriteParser::processStaticOLE(WPSPosition &pos, unsigned long lastPos)
 	if ((unsigned long)input->tell() + cbSize > lastPos)
 	{
 		WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE bad size\n"));
-		return;
+		return false;
 	}
 
 	if (objtype == "BITMAP")
@@ -1321,7 +1333,7 @@ void MSWriteParser::processStaticOLE(WPSPosition &pos, unsigned long lastPos)
 		if (cbSize < 10)
 		{
 			WPS_DEBUG_MSG(("MSWriteParser::processStaticOLE bad size for DDB\n"));
-			return;
+			return false;
 		}
 		input->seek(2, librevenge::RVNG_SEEK_CUR);
 		unsigned width = libwps::readU16(input);
@@ -1330,19 +1342,25 @@ void MSWriteParser::processStaticOLE(WPSPosition &pos, unsigned long lastPos)
 		unsigned planes = libwps::readU8(input);
 		unsigned bits_pixel = libwps::readU8(input);
 
+		mimetype = "image/bmp";
 
-		processDDB(pos, width, height, byte_width, planes, bits_pixel, cbSize - 10);
+		return processDDB(b, pos, width, height, byte_width, planes, bits_pixel, cbSize - 10);
 	}
 	else if (objtype == "DIB")
 	{
-		processDIB(pos, cbSize);
+		mimetype = "image/bmp";
+
+		return processDIB(b, cbSize);
 	}
 	else if (objtype == "METAFILEPICT")
 	{
 		// Step over unused fields
 		input->seek(8, librevenge::RVNG_SEEK_CUR);
-		processWMF(pos, cbSize - 8);
+		mimetype = "application/x-wmf";
+		return processWMF(b, cbSize - 8);
 	}
+
+	return true;
 }
 
 void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos)
@@ -1400,7 +1418,7 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos)
 	// FIXME: Static OLE object / replacement object might follow
 }
 
-void MSWriteParser::processWMF(WPSPosition &pos, unsigned size)
+bool MSWriteParser::processWMF(librevenge::RVNGBinaryData &wmfdata, unsigned size)
 {
 	WPS_DEBUG_MSG(("MSWriteParser::processWMF Windows metafile (wmf)\n"));
 
@@ -1414,8 +1432,9 @@ void MSWriteParser::processWMF(WPSPosition &pos, unsigned size)
 		throw (libwps::ParseException());
 	}
 
-	librevenge::RVNGBinaryData wmfdata(data, size);
-	m_listener->insertPicture(pos, wmfdata, "application/x-wmf");
+	wmfdata.append(data, size);
+
+	return true;
 }
 
 void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
