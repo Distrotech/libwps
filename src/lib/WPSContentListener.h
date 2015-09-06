@@ -109,6 +109,10 @@ public:
 	void insertPicture(WPSPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
 	                   std::string type="image/pict",
 	                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+	/** adds an object with replacement picture in given position */
+	void insertObject(WPSPosition const &pos, const WPSEmbeddedObject &obj,
+	                  librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+
 	/** adds a textbox in given position */
 	void insertTextBox(WPSPosition const &pos, WPSSubDocumentPtr subDocument,
 	                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());

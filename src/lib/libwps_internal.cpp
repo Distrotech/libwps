@@ -575,6 +575,54 @@ std::ostream &operator<< (std::ostream &o, WPSBorder const &border)
 }
 
 ////////////////////////////////////////////////////////////
+// object
+////////////////////////////////////////////////////////////
+bool WPSEmbeddedObject::addTo(librevenge::RVNGPropertyList &propList) const
+{
+	bool firstSet=false;
+	librevenge::RVNGPropertyListVector auxiliarVector;
+	for (size_t i=0; i<m_dataList.size(); ++i)
+	{
+		if (m_dataList[i].empty()) continue;
+		std::string type=m_typeList.size() ? m_typeList[i] : "image/pict";
+		if (!firstSet)
+		{
+			propList.insert("librevenge:mime-type", type.c_str());
+			propList.insert("office:binary-data", m_dataList[i]);
+			firstSet=true;
+			continue;
+		}
+		librevenge::RVNGPropertyList auxiList;
+		auxiList.insert("librevenge:mime-type", type.c_str());
+		auxiList.insert("office:binary-data", m_dataList[i]);
+		auxiliarVector.append(auxiList);
+	}
+	if (!auxiliarVector.empty())
+		propList.insert("librevenge:replacement-objects", auxiliarVector);
+	if (!firstSet)
+	{
+		WPS_DEBUG_MSG(("WPSEmbeddedObject::addTo: called without picture\n"));
+		return false;
+	}
+	return true;
+}
+
+std::ostream &operator<<(std::ostream &o, WPSEmbeddedObject const &pict)
+{
+	if (pict.isEmpty()) return o;
+	o << "[";
+	for (size_t i=0; i<pict.m_typeList.size(); ++i)
+	{
+		if (pict.m_typeList[i].empty())
+			o << "_,";
+		else
+			o << pict.m_typeList[i] << ",";
+	}
+	o << "],";
+	return o;
+}
+
+////////////////////////////////////////////////////////////
 // unicode
 ////////////////////////////////////////////////////////////
 namespace libwps

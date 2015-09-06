@@ -1164,6 +1164,19 @@ void WPSContentListener::insertPicture
 	_closeFrame();
 }
 
+void WPSContentListener::insertObject(WPSPosition const &pos, const WPSEmbeddedObject &obj,
+                                      librevenge::RVNGPropertyList frameExtras)
+{
+	if (!_openFrame(pos, frameExtras)) return;
+
+	librevenge::RVNGPropertyList propList;
+	if (obj.addTo(propList))
+		m_documentInterface->insertBinaryObject(propList);
+
+	_closeFrame();
+}
+
+
 ///////////////////
 // frame
 ///////////////////

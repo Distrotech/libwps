@@ -414,6 +414,57 @@ struct WPSBorder
 	std::string m_extra;
 };
 
+/** small class use to define a embedded object
+
+    \note mainly used to store picture
+ */
+struct WPSEmbeddedObject
+{
+	//! empty constructor
+	WPSEmbeddedObject() : m_dataList(), m_typeList()
+	{
+	}
+	//! constructor
+	WPSEmbeddedObject(librevenge::RVNGBinaryData const &binaryData,
+	                  std::string type="image/pict") : m_dataList(), m_typeList()
+	{
+		add(binaryData, type);
+	}
+	//! destructor
+	virtual ~WPSEmbeddedObject()
+	{
+	}
+	//! return true if the picture contains no data
+	bool isEmpty() const
+	{
+		for (size_t i=0; i<m_dataList.size(); ++i)
+		{
+			if (!m_dataList[i].empty())
+				return false;
+		}
+		return true;
+	}
+	//! add a picture
+	void add(librevenge::RVNGBinaryData const &binaryData, std::string type="image/pict")
+	{
+		size_t pos=m_dataList.size();
+		if (pos<m_typeList.size()) pos=m_typeList.size();
+		m_dataList.resize(pos+1);
+		m_dataList[pos]=binaryData;
+		m_typeList.resize(pos+1);
+		m_typeList[pos]=type;
+	}
+	/** add the link property to proplist */
+	bool addTo(librevenge::RVNGPropertyList &propList) const;
+	/** operator<<*/
+	friend std::ostream &operator<<(std::ostream &o, WPSEmbeddedObject const &pict);
+
+	//! the picture content: one data by representation
+	std::vector<librevenge::RVNGBinaryData> m_dataList;
+	//! the picture type: one type by representation
+	std::vector<std::string> m_typeList;
+};
+
 namespace libwps
 {
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };

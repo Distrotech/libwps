@@ -601,6 +601,18 @@ void WKSContentListener::insertPicture
 	_closeFrame();
 }
 
+void WKSContentListener::insertObject
+(WPSPosition const &pos, const WPSEmbeddedObject &obj, WPSGraphicStyle const &style)
+{
+	if (!_openFrame(pos, style)) return;
+
+	librevenge::RVNGPropertyList propList;
+	if (obj.addTo(propList))
+		m_documentInterface->insertBinaryObject(propList);
+
+	_closeFrame();
+}
+
 void WKSContentListener::insertPicture
 (WPSPosition const &pos, const WPSGraphicShape &shape, WPSGraphicStyle const &style)
 {

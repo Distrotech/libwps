@@ -185,6 +185,9 @@ public:
 	/** adds a picture in given position */
 	void insertPicture(WPSPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
 	                   std::string type="image/pict", WPSGraphicStyle const &style=WPSGraphicStyle::emptyStyle());
+	/** adds an object with replacement picture in given position */
+	void insertObject(WPSPosition const &pos, const WPSEmbeddedObject &obj,
+	                  WPSGraphicStyle const &style=WPSGraphicStyle::emptyStyle());
 	/** adds a picture in given position */
 	void insertPicture(WPSPosition const &pos, WPSGraphicShape const &shape, WPSGraphicStyle const &style);
 	/** adds a textbox in given position */

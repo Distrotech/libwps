@@ -1370,9 +1370,29 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos)
 		WPS_DEBUG_MSG(("MSWriteParser::processEmbeddedOLE last position is bad\n"));
 		return;
 	}
+	RVNGInputStreamPtr input = getInput();
+
+	// First read entire Object including ole_id and type
+	long startPos = input->tell();
+	input->seek(-8, librevenge::RVNG_SEEK_CUR);
+
+	unsigned long read_bytes;
+	unsigned long embeddedSize = lastPos - (unsigned long) input->tell();
+	const unsigned char *data = input->read(embeddedSize, read_bytes);
+	if (read_bytes != embeddedSize)
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::processEmbeddedOLE: failed to read object\n"));
+		throw (libwps::ParseException());
+	}
+
+	librevenge::RVNGBinaryData embeddedOle;
+	embeddedOle.append(data, embeddedSize);
+
+	// Seek back to beginning; parse in search of replacement object
+	input->seek(startPos, librevenge::RVNG_SEEK_SET);
+
 	std::string strings[3];
 	unsigned i;
-	RVNGInputStreamPtr input = getInput();
 
 	for (i=0; i<3; i++)
 	{
@@ -1392,30 +1412,35 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos)
 		return;
 	}
 
-	unsigned long read_bytes;
-	const unsigned char *data = input->read(size, read_bytes);
-	if (read_bytes != size)
-	{
-		WPS_DEBUG_MSG(("MSWriteParser::processEmbeddedOLE: failed to read object\n"));
-		throw (libwps::ParseException());
-	}
-
-	librevenge::RVNGBinaryData oledata;
-	oledata.append(data, size);
-
-	std::string mimetype = "object/ole";
-
 	if (strings[0] == "PBrush" || strings[0] == "Paint.Picture")
 	{
-		mimetype = "image/bmp";
-	}
-	else if (strings[0] == "SoundRec")
-	{
-		mimetype = "audio/wav";
+		// fish out the bmp file
+		data = input->read(size, read_bytes);
+		if (read_bytes != size)
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::processEmbeddedOLE: failed to read %s object\n", strings[0].c_str()));
+			throw (libwps::ParseException());
+		}
+
+		librevenge::RVNGBinaryData bmpdata(data, size);
+		m_listener->insertPicture(pos, bmpdata, "image/bmp");
+		return;
 	}
 
-	m_listener->insertPicture(pos, oledata, mimetype);
-	// FIXME: Static OLE object / replacement object might follow
+	input->seek(size, librevenge::RVNG_SEEK_CUR);
+
+	WPSEmbeddedObject obj(embeddedOle, "object/ole");
+	unsigned ole_id = libwps::readU32(input);
+	unsigned type = libwps::readU32(input);
+	librevenge::RVNGBinaryData replacement;
+	std::string mimetype;
+
+	if (ole_id == 0x501 && type == 5 && processStaticOLE(replacement, mimetype, pos, lastPos))
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::processEmbeddedOLE found replacement object of mime %s\n", mimetype.c_str()));
+		obj.add(replacement, mimetype);
+	}
+	m_listener->insertObject(pos, obj);
 }
 
 bool MSWriteParser::processWMF(librevenge::RVNGBinaryData &wmfdata, unsigned size)
