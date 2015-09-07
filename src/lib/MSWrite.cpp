@@ -670,7 +670,7 @@ unsigned MSWriteParser::numPages()
 
 	std::vector<MSWriteParserInternal::Paragraph>::iterator paps;
 
-	for (paps = m_paragraphList.begin(); paps != m_paragraphList.end(); paps++)
+	for (paps = m_paragraphList.begin(); paps != m_paragraphList.end(); ++paps)
 	{
 		if (paps->m_graphics)
 			continue;
@@ -885,8 +885,7 @@ void MSWriteParser::readText(WPSEntry e)
 
 		while (fc >= paps->m_fcLim)
 		{
-			paps++;
-			if (paps == m_paragraphList.end())
+			if (++paps == m_paragraphList.end())
 			{
 				WPS_DEBUG_MSG(("MSWriteParser::readText PAP not found for offset %u\n", fc));
 				throw (libwps::ParseException());
@@ -951,8 +950,7 @@ void MSWriteParser::readText(WPSEntry e)
 
 		while (fc >= chps->m_fcLim)
 		{
-			chps++;
-			if (chps == m_fontList.end())
+			if (++chps == m_fontList.end())
 			{
 				WPS_DEBUG_MSG(("MSWriteParser::readText CHP not found for offset %u\n", fc));
 				throw (libwps::ParseException());
