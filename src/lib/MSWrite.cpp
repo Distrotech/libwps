@@ -309,50 +309,97 @@ void MSWriteParser::readFIB()
 {
 	RVNGInputStreamPtr input = getInput();
 
+	if (!checkFilePosition(0x100))
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::readFIB File is too short to be a MSWrite file\n"));
+		throw (libwps::ParseException());
+	}
+
 	input->seek(MSWriteParserInternal::HEADER_D_FCMAC, librevenge::RVNG_SEEK_SET);
 	m_fcMac = libwps::readU32(input);
 
+	if (m_fcMac <= 0x80)
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::readFIB fcMac %u is impossible\n", m_fcMac));
+		throw (libwps::ParseException());
+	}
+
 	if (!checkFilePosition(m_fcMac))
 	{
-		WPS_DEBUG_MSG(("File is corrupt, position %u beyond end of file\n", m_fcMac));
+		WPS_DEBUG_MSG(("MSWriteParser::readFIB File is corrupt, position %u beyond end of file\n", m_fcMac));
 		throw (libwps::ParseException());
 	}
 }
 
 void MSWriteParser::readFFNTB()
 {
-	int font_count, page, pnFfntb, pnMac;
+	int font_count = 0, pnFfntb, pnMac;
 	RVNGInputStreamPtr input = getInput();
 
 	input->seek(MSWriteParserInternal::HEADER_W_PNFFNTB, librevenge::RVNG_SEEK_SET);
-	page = pnFfntb = libwps::readU16(input);
+	pnFfntb = libwps::readU16(input);
 
 	input->seek(MSWriteParserInternal::HEADER_W_PNMAC, librevenge::RVNG_SEEK_SET);
 	pnMac = libwps::readU16(input);
 
-	if (page == 0 || page == pnMac)
+	if (pnFfntb != 0 && pnFfntb != pnMac)
 	{
-		font_count = 0;
-	}
-	else
-	{
-		input->seek(page * 0x80, librevenge::RVNG_SEEK_SET);
-		font_count = libwps::readU16(input);
+		if (!checkFilePosition(pnFfntb * 0x80 + 2))
+		{
+			WPS_DEBUG_MSG(("Font table is missing\n"));
+		}
+		else
+		{
+			input->seek(pnFfntb * 0x80, librevenge::RVNG_SEEK_SET);
+			font_count = libwps::readU16(input);
+		}
 	}
 
 	if (font_count)
 	{
+		unsigned offset = 0;
+
 		for (;;)
 		{
+			offset += 2;
+			if (!checkFilePosition(pnFfntb * 0x80 + offset))
+			{
+				WPS_DEBUG_MSG(("Font table is truncated\n"));
+				break;
+			}
+
 			unsigned int cbFfn = libwps::readU16(input);
 			if (cbFfn == 0)
 				break;
 
 			if (cbFfn == 0xffff)
 			{
-				input->seek(++page * 0x80, librevenge::RVNG_SEEK_SET);
+				pnFfntb++;
+
+				if (!checkFilePosition(pnFfntb * 0x80 + 2))
+				{
+					WPS_DEBUG_MSG(("Font table is truncated\n"));
+					break;
+				}
+
+				offset = 0;
+				input->seek(pnFfntb * 0x80, librevenge::RVNG_SEEK_SET);
 				continue;
 			}
+
+			offset += cbFfn;
+			if (offset > 0x80)
+			{
+				WPS_DEBUG_MSG(("Font straddles page, file corrupt\n"));
+				break;
+			}
+
+			if (!checkFilePosition(pnFfntb * 0x80 + offset))
+			{
+				WPS_DEBUG_MSG(("Font table is truncated\n"));
+				break;
+			}
+
 			// We're not interested in the font family
 			input->seek(1, librevenge::RVNG_SEEK_CUR);
 
@@ -395,6 +442,12 @@ void MSWriteParser::readSECT()
 
 	if (pnSetb && pnSetb != pnBftb)
 	{
+		if (!checkFilePosition(pnSetb * 0x80 + 14))
+		{
+			WPS_DEBUG_MSG(("Section is truncated\n"));
+			throw (libwps::ParseException());
+		}
+
 		input->seek(pnSetb * 0x80, librevenge::RVNG_SEEK_SET);
 		uint16_t cset = libwps::readU16(input);
 
@@ -466,6 +519,12 @@ void MSWriteParser::readPAP()
 
 	for (;;)
 	{
+		if (!checkFilePosition(pnPara * 0x80 + 0x7f))
+		{
+			WPS_DEBUG_MSG(("PAP list is truncated\n"));
+			break;
+		}
+
 		input->seek(pnPara * 0x80 + 0x7f, librevenge::RVNG_SEEK_SET);
 		unsigned cfod = libwps::readU8(input);
 
@@ -638,6 +697,13 @@ void MSWriteParser::readCHP()
 	for (;;)
 	{
 		long const pageBegin=long(page * 0x80);
+
+		if (!checkFilePosition(page * 0x80 + 0x7f))
+		{
+			WPS_DEBUG_MSG(("CHP list is truncated\n"));
+			break;
+		}
+
 		input->seek(pageBegin + 0x7f, librevenge::RVNG_SEEK_SET);
 		uint8_t cfod = libwps::readU8(input);
 
@@ -646,11 +712,6 @@ void MSWriteParser::readCHP()
 
 		for (unsigned fod = 0; fod < cfod; ++fod)
 		{
-			if (!checkFilePosition(uint32_t(pageBegin) + fod*6+8))
-			{
-				WPS_DEBUG_MSG(("MSWriteParser::readCHP: can not find the chp position for %d\n", int(fod)));
-				break;
-			}
 			input->seek(pageBegin + int(fod) * 6 + 4, librevenge::RVNG_SEEK_SET);
 			fcLim = libwps::readU32(input);
 			uint16_t bfProp = libwps::readU16(input);
@@ -837,6 +898,16 @@ void MSWriteParser::readText(WPSEntry e)
 
 		if (paps->m_graphics)
 		{
+			// The last pap can have m_fcLim of greater than m_fcMac
+			unsigned fcLim = std::min(paps->m_fcLim, m_fcMac);
+
+			if (fcLim - fc < 40)
+			{
+				WPS_DEBUG_MSG(("MSWriteParser::readText object too short\n"));
+				fc = paps->m_fcLim;
+				continue;
+			}
+
 			WPSPosition pos;
 			WPSPosition::XPos align;
 
@@ -873,7 +944,7 @@ void MSWriteParser::readText(WPSEntry e)
 
 			input->seek(fc, librevenge::RVNG_SEEK_SET);
 
-			processObject(pos, paps->m_fcLim);
+			processObject(pos, fcLim);
 			fc = paps->m_fcLim;
 			continue;
 		}
