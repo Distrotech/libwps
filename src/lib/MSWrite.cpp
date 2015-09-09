@@ -933,10 +933,21 @@ void MSWriteParser::readText(WPSEntry e)
 			uint16_t dxaSize = libwps::readU16(input);
 			uint16_t dyaSize = libwps::readU16(input);
 
-			WPS_DEBUG_MSG(("MSWriteParser::readText object found %utwx%utw, offset %utw\n", dxaSize, dyaSize, dxaOffset));
+			input->seek(22, librevenge::RVNG_SEEK_CUR);
+			uint16_t mx = libwps::readU16(input);
+			uint16_t my = libwps::readU16(input);
+
+			WPS_DEBUG_MSG(("MSWriteParser::readText object found %utwx%utw, offset %utw, mx=%u my=%u\n", dxaSize, dyaSize, dxaOffset, mx, my));
+
+			Vec2f size(Vec2f(dxaSize/1440.0f, dyaSize/1440.0f));
+			if ((mx > 10 && my > 10) && !(mx == 1000 && my == 1000))
+			{
+				size[0] *= mx / 1000.0f;
+				size[1] *= my / 1000.0f;
+			}
 
 			pos.setUnit(librevenge::RVNG_INCH);
-			pos.setSize(Vec2f(dxaSize/1440.0f, dyaSize/1440.0f));
+			pos.setSize(size);
 
 			if (dxaOffset && align == WPSPosition::XLeft)
 				pos.setOrigin(Vec2f(dxaOffset/1440.0f, 0.0f));
