@@ -1326,8 +1326,8 @@ bool MSWriteParser::processDDB(librevenge::RVNGBinaryData &bmpdata, WPSPosition 
 			bmpdata.append(data, 4 - byte_width % 4);
 	}
 
-	pos.setUnit(librevenge::RVNG_POINT);
-	pos.setSize(Vec2f(float(width), float(height)));
+	// default is 96 dpi
+	pos.setSize(Vec2f(float(width) / 96.0f, float(height) / 96.0f));
 
 	return true;
 }
