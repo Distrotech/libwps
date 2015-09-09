@@ -878,6 +878,7 @@ void MSWriteParser::readText(WPSEntry e)
 	paps = m_paragraphList.begin();
 	chps = m_fontList.begin();
 	RVNGInputStreamPtr input = getInput();
+	float lastObjectHeight = 0.0;
 
 	while (fc < uint32_t(e.end()))
 	{
@@ -949,15 +950,20 @@ void MSWriteParser::readText(WPSEntry e)
 			pos.setUnit(librevenge::RVNG_INCH);
 			pos.setSize(size);
 
+			Vec2f origin;
 			if (dxaOffset && align == WPSPosition::XLeft)
-				pos.setOrigin(Vec2f(dxaOffset/1440.0f, 0.0f));
-
+				origin[0] = dxaOffset/1440.0f;
+			origin[1] = lastObjectHeight;
+			pos.setOrigin(origin);
 			input->seek(fc, librevenge::RVNG_SEEK_SET);
 
 			processObject(pos, fcLim);
+			lastObjectHeight += pos.size()[1];
 			fc = paps->m_fcLim;
 			continue;
 		}
+
+		lastObjectHeight = 0.0f;
 
 		while (fc >= chps->m_fcLim)
 		{
