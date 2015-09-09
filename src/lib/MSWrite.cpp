@@ -912,16 +912,16 @@ void MSWriteParser::readText(WPSEntry e)
 
 			switch (paps->m_justify)
 			{
+			case libwps::JustificationFull:
+			case libwps::JustificationFullAllLines:
 			case libwps::JustificationLeft:
+			default:
 				align = WPSPosition::XLeft;
 				break;
 			case libwps::JustificationRight:
 				align = WPSPosition::XRight;
 				break;
 			case libwps::JustificationCenter:
-			case libwps::JustificationFull:
-			case libwps::JustificationFullAllLines:
-			default:
 				align = WPSPosition::XCenter;
 				break;
 			}
