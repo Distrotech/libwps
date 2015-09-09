@@ -938,7 +938,7 @@ void MSWriteParser::readText(WPSEntry e)
 			pos.setUnit(librevenge::RVNG_INCH);
 			pos.setSize(Vec2f(dxaSize/1440.0f, dyaSize/1440.0f));
 
-			if (dxaOffset)
+			if (dxaOffset && align == WPSPosition::XLeft)
 				pos.setOrigin(Vec2f(dxaOffset/1440.0f, 0.0f));
 
 			input->seek(fc, librevenge::RVNG_SEEK_SET);
