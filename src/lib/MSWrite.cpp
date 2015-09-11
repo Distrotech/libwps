@@ -172,9 +172,11 @@ struct Paragraph :  public WPSParagraph
 
 struct Font : public WPSFont
 {
-	Font() : WPSFont(), m_fcFirst(0), m_fcLim(0), m_special(false) { }
+	Font() : WPSFont(), m_fcFirst(0), m_fcLim(0), m_special(false),
+		m_encoding(libwps_tools_win::Font::UNKNOWN) { }
 	uint32_t m_fcFirst, m_fcLim;
 	bool m_special;
+	libwps_tools_win::Font::Type m_encoding;
 };
 
 // the file header offsets
@@ -769,6 +771,9 @@ void MSWriteParser::readCHP()
 
 			font.m_fcFirst = fc;
 			font.m_fcLim = fcLim;
+			font.m_encoding = libwps_tools_win::Font::getFontType(font.m_name);
+			if (font.m_encoding == libwps_tools_win::Font::UNKNOWN)
+				font.m_encoding = m_fontType;
 
 			m_fontList.push_back(font);
 
@@ -989,7 +994,9 @@ void MSWriteParser::readText(WPSEntry e)
 			else
 			{
 				if (ch >= ' ')
-					m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(ch, m_fontType));
+				{
+					m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(ch, chps->m_encoding));
+				}
 				else switch (ch)
 					{
 					case 9:

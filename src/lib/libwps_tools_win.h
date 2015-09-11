@@ -57,7 +57,7 @@ public:
 	            MAC_ICELAND, MAC_INUIT, MAC_ROMAN, MAC_ROMANIAN,
 	            MAC_THAI, MAC_TURKISH,
 
-	            MAC_SYMBOL,
+	            MAC_SYMBOL, WIN3_WINGDINGS,
 	            UNKNOWN
 	          };
 	// CP_10006, CP_10007, CP_10029, CP_10079, CP_10081
