@@ -1010,8 +1010,17 @@ void MSWriteParser::readText(WPSEntry e)
 					case 12:
 						m_listener->insertBreak(WPS_PAGE_BREAK);
 						break;
-					default:
+					case 30:
+						m_listener->insertUnicode(0x20);
+						break;
+					case 0:
+					case 31:
+					case 13:
 						// ignore
+						break;
+					default:
+						// MS Write displays these as boxes
+						m_listener->insertUnicode(0x25af);
 						break;
 					}
 			}
