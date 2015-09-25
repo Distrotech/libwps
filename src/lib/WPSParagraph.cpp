@@ -117,7 +117,18 @@ std::ostream &operator<<(std::ostream &o, WPSParagraph const &pp)
 		o << "rightMarg=" << pp.m_margins[2] << ",";
 
 	if (pp.m_spacings[0] < 1.0 || pp.m_spacings[0] > 1.0)
-		o << "interLineSpacing=" << pp.m_spacings[0] << ",";
+	{
+		o << "interLineSpacing=" << pp.m_spacings[0];
+		if (pp.m_spacingsInterlineUnit==librevenge::RVNG_PERCENT)
+			o << "%";
+		else if (pp.m_spacingsInterlineUnit==librevenge::RVNG_POINT)
+			o << "pt";
+		else if (pp.m_spacingsInterlineUnit==librevenge::RVNG_INCH)
+			o << "in";
+		if (pp.m_spacingsInterlineType==WPSParagraph::AtLeast)
+			o << "[atLeast]";
+		o << ",";
+	}
 	if (pp.m_spacings[1]<0||pp.m_spacings[1]>0)
 		o << "befSpacing=" << pp.m_spacings[1] << ",";
 	if (pp.m_spacings[2]<0||pp.m_spacings[2]>0)
@@ -229,7 +240,40 @@ void WPSParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) c
 	// as we can not use percent, this may give a good approximation
 	propList.insert("fo:margin-top", (10.*m_spacings[1])/72., librevenge::RVNG_INCH);
 	propList.insert("fo:margin-bottom", (10.*m_spacings[2])/72., librevenge::RVNG_INCH);
-	propList.insert("fo:line-height", m_spacings[0] <= 0 ? 1.0 : m_spacings[0], librevenge::RVNG_PERCENT);
+	switch (m_spacingsInterlineType)
+	{
+	case Fixed:
+		propList.insert("fo:line-height", m_spacings[0], m_spacingsInterlineUnit);
+		break;
+	case AtLeast:
+		if (m_spacings[0] <= 0 && m_spacings[0] >= 0)
+			break;
+		if (m_spacings[0] < 0)
+		{
+			static bool first = true;
+			if (first)
+			{
+				WPS_DEBUG_MSG(("WPSParagraph::addTo: interline spacing seems bad\n"));
+				first = false;
+			}
+		}
+		else if (m_spacingsInterlineUnit != librevenge::RVNG_PERCENT)
+			propList.insert("style:line-height-at-least", m_spacings[0], m_spacingsInterlineUnit);
+		else
+		{
+			propList.insert("style:line-height-at-least", m_spacings[0]*12.0, librevenge::RVNG_POINT);
+			static bool first = true;
+			if (first)
+			{
+				first = false;
+				WPS_DEBUG_MSG(("WPSParagraph::addTo: assume height=12 to set line spacing at least with percent type\n"));
+			}
+		}
+		break;
+	default:
+		WPS_DEBUG_MSG(("WPSParagraph::addTo: can not set line spacing type: %d\n",int(m_spacingsInterlineType)));
+		break;
+	}
 	librevenge::RVNGPropertyListVector tabStops;
 	for (size_t i=0; i< m_tabs.size(); i++)
 		m_tabs[i].addTo(tabStops, 0);

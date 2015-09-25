@@ -164,10 +164,12 @@ struct Paragraph :  public WPSParagraph
 {
 	enum Location { MAIN, HEADER, FOOTER };
 	Paragraph() : WPSParagraph(), m_fcFirst(0), m_fcLim(0), m_Location(MAIN),
-		m_graphics(false), m_firstpage(false), m_skiptab(false)  { }
+		m_graphics(false), m_firstpage(false), m_skiptab(false),
+		m_interLine(0.0)  { }
 	uint32_t m_fcFirst, m_fcLim;
 	Location m_Location;
 	bool m_graphics, m_firstpage, m_skiptab;
+	double m_interLine;
 };
 
 struct Font : public WPSFont
@@ -611,7 +613,7 @@ void MSWriteParser::readPAP()
 			para.m_margins[2] = dxaRight / 1440.0;
 
 			uint16_t dyaLine = WPS_LE_GET_GUINT16(&pap.m_dyaLine);
-			para.m_spacings[0] = dyaLine / 240.0;
+			para.m_interLine = dyaLine / 240.0;
 
 			para.m_fcFirst = fc;
 			para.m_fcLim = fcLim;
@@ -899,10 +901,10 @@ void MSWriteParser::readText(WPSEntry e)
 			skiptab = paps->m_skiptab;
 		}
 
-		m_listener->setParagraph(*paps);
-
 		if (paps->m_graphics)
 		{
+			m_listener->setParagraph(*paps);
+
 			// The last pap can have m_fcLim of greater than m_fcMac
 			unsigned fcLim = std::min(paps->m_fcLim, m_fcMac);
 
@@ -979,6 +981,10 @@ void MSWriteParser::readText(WPSEntry e)
 			}
 		}
 
+		WPSParagraph para = *paps;
+		para.setInterline((paps->m_interLine * chps->m_size)/72., librevenge::RVNG_INCH, WPSParagraph::AtLeast);
+
+		m_listener->setParagraph(para);
 		m_listener->setFont(*chps);
 
 		while (fc < chps->m_fcLim && fc < paps->m_fcLim && fc < m_fcMac)

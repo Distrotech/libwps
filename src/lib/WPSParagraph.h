@@ -54,9 +54,11 @@ struct WPSTabStop
 struct WPSParagraph
 {
 	typedef WPSList::Level ListLevel;
+	/** the line spacing type: fixed or at least */
+	enum LineSpacingType { Fixed, AtLeast };
 
 	//! constructor
-	WPSParagraph() : m_tabs(), m_justify(libwps::JustificationLeft),
+	WPSParagraph() : m_spacingsInterlineUnit(librevenge::RVNG_PERCENT), m_spacingsInterlineType(Fixed), m_tabs(), m_justify(libwps::JustificationLeft),
 		m_breakStatus(0), m_listLevelIndex(0), m_listLevel(), m_backgroundColor(WPSColor::white()),
 		m_border(0), m_borderStyle(), m_extra("")
 	{
@@ -67,6 +69,13 @@ struct WPSParagraph
 	virtual ~WPSParagraph() {}
 	//! add to the propList
 	void addTo(librevenge::RVNGPropertyList &propList, bool inTable) const;
+	//! set the interline
+	void setInterline(double value, librevenge::RVNGUnit unit, LineSpacingType type=Fixed)
+	{
+		m_spacings[0]=value;
+		m_spacingsInterlineUnit=unit;
+		m_spacingsInterlineType=type;
+	}
 	//! operator <<
 	friend std::ostream &operator<<(std::ostream &o, WPSParagraph const &ft);
 
@@ -82,6 +91,10 @@ struct WPSParagraph
 	 * - 1: before
 	 * - 2: after */
 	double m_spacings[3]; // 0: interline, 1: before, 2: after
+	/** the interline unit PERCENT or INCH, ... */
+	librevenge::RVNGUnit m_spacingsInterlineUnit;
+	/** the interline type: fixed, atLeast, ... */
+	LineSpacingType m_spacingsInterlineType;
 	//! the tabulations
 	std::vector<WPSTabStop> m_tabs;
 

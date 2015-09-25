@@ -1968,12 +1968,13 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 				break;
 			case 0x15:
 			{
-				pp.m_spacings[0] = arg ? arg/240. : 1.0;
-				if (pp.m_spacings[0] < 1.0 || pp.m_spacings[0] > 2.0)
+				double lines = arg ? arg/240. : 1.0;
+				if (lines < 1.0 || lines > 2.0)
 				{
-					f << "##interLineSpacing=" << pp.m_spacings[0] << ",";
-					pp.m_spacings[0] = (pp.m_spacings[0] < 1.0) ? 1.0 : 2.0;
+					f << "##interLineSpacing=" << lines << ",";
+					lines = (lines < 1.0) ? 1.0 : 2.0;
 				}
+				pp.setInterline(lines, librevenge::RVNG_PERCENT);
 				break;
 			}
 			case 0x16:
