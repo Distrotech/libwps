@@ -1019,10 +1019,8 @@ void MSWriteParser::readText(WPSEntry e)
 					case 30:
 						m_listener->insertUnicode(0x20);
 						break;
-					case 0:
-					case 31:
-					case 13:
-						// ignore
+					case 31: // soft hyphen (ignored by Write)
+					case 13: // carriage return
 						break;
 					default:
 						// MS Write displays these as boxes
