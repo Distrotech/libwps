@@ -44,9 +44,9 @@ class Font
 public:
 	//! enum Type \brief the knowned DOS© and Windows3© fonts
 	enum Type { CP_037, CP_424, CP_437, CP_500, CP_737, CP_775,
-	            DOS_850, CP_852, CP_855, CP_856, CP_857,
-	            CP_860, CP_861, CP_862, CP_863, CP_864, CP_865,
-	            CP_866, CP_869, CP_874, CP_875, CP_1006, CP_1026,
+	            DOS_850, CP_852, CP_855, CP_856, CP_857, CP_860,
+	            CP_861, CP_862, CP_863, CP_864, CP_865, CP_866,
+	            CP_869, CP_874, CP_875, CP_932, CP_1006, CP_1026,
 	            WIN3_ARABIC, WIN3_BALTIC, WIN3_CEUROPE, WIN3_CYRILLIC,
 	            WIN3_GREEK, WIN3_HEBREW, WIN3_TURKISH,
 	            WIN3_VIETNAMESE, WIN3_WEUROPE,
