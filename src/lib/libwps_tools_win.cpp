@@ -1821,6 +1821,18 @@ unsigned long Font::unicode(unsigned char c, Font::Type type)
 	}
 }
 
+librevenge::RVNGString Font::unicodeString(const unsigned char *p, unsigned size, Font::Type type)
+{
+	librevenge::RVNGString str;
+
+	for (unsigned i=0; i<size; i++)
+	{
+		libwps::appendUnicode(unicode(p[i], type), str);
+	}
+
+	return str;
+}
+
 ////////////////////////////////////////////////////////////
 //
 // Other

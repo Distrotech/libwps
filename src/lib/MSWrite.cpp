@@ -417,11 +417,11 @@ void MSWriteParser::readFFNTB()
 
 			librevenge::RVNGString fontname;
 
-			for (unsigned i=0; i<fnlen && fn[i]; i++)
-			{
-				uint32_t ch = uint32_t(libwps_tools_win::Font::unicode(fn[i], m_fontType));
-				libwps::appendUnicode(ch, fontname);
-			}
+			// Remove trailing 0s
+			while (fnlen > 0 && !fn[fnlen - 1])
+				fnlen--;
+
+			fontname = libwps_tools_win::Font::unicodeString(fn, fnlen, m_fontType);
 
 			m_fonts.push_back(fontname);
 		}
@@ -963,51 +963,90 @@ void MSWriteParser::readText(WPSEntry e)
 		m_listener->setParagraph(para);
 		m_listener->setFont(*chps);
 
-		while (fc < chps->m_fcLim && fc < paps->m_fcLim && fc < m_fcMac)
+		uint32_t lim = std::min(chps->m_fcLim, paps->m_fcLim);
+		lim = std::min(lim, m_fcMac);
+
+		while (fc < lim)
 		{
+			unsigned size = lim - fc;
+			unsigned long read_bytes;
+
 			input->seek(fc, librevenge::RVNG_SEEK_SET);
-			uint8_t ch = libwps::readU8(input);
+			const unsigned char *p = input->read(size, read_bytes);
+			if (read_bytes != size)
+			{
+				WPS_DEBUG_MSG(("MSWriteParser::readText failed to read\n"));
+				throw (libwps::ParseException());
+			}
 
 			if (chps->m_special)
 			{
-				if (ch == 1)
+				if (p[0] == 1)
 					m_listener->insertField(WPSContentListener::PageNumber);
+				size = 1;
 			}
 			else
 			{
-				if (ch >= ' ')
+				if (p[0] == 9 && skiptab)
 				{
-					m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(ch, chps->m_encoding));
+					size--;
+					p++;
+					fc++;
 				}
-				else switch (ch)
-					{
-					case 9:
-						if (!skiptab)
-							m_listener->insertTab();
-						break;
-					case 10:
-					case 11:
-						m_listener->insertEOL();
-						break;
-					case 12:
-						m_listener->insertBreak(WPS_PAGE_BREAK);
-						break;
-					case 30:
-						m_listener->insertUnicode(0x20);
-						break;
-					case 31: // soft hyphen (ignored by Write)
-					case 13: // carriage return
-						break;
-					default:
-						// MS Write displays these as boxes
-						m_listener->insertUnicode(0x25af);
-						break;
-					}
+				if (size)
+					size = insertString(p, size, chps->m_encoding);
 			}
-			fc++;
+			fc += size;
+
 			skiptab = false;
 		}
 	}
+}
+
+unsigned MSWriteParser::insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type)
+{
+	unsigned len = 1;
+
+	if (str[0] < ' ')
+	{
+		switch (str[0])
+		{
+		case 9:
+			m_listener->insertTab();
+			break;
+		case 10:
+		case 11:
+			m_listener->insertEOL();
+			break;
+		case 12:
+			m_listener->insertBreak(WPS_PAGE_BREAK);
+			break;
+		case 30:
+			m_listener->insertUnicode(0x20);
+			break;
+		case 31: // soft hyphen (ignored by Write)
+		case 13: // carriage return
+			break;
+		default:
+			// MS Write displays these as boxes
+			m_listener->insertUnicode(0x25af);
+			break;
+		}
+	}
+	else
+	{
+		librevenge::RVNGString convert;
+
+		while (len < size && str[len] >= ' ')
+			len++;
+
+		convert = libwps_tools_win::Font::unicodeString(str, len, type);
+
+		m_listener->insertUnicodeString(convert);
+
+	}
+
+	return len;
 }
 
 bool MSWriteParser::readString(std::string &res, unsigned long lastPos)

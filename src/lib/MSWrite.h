@@ -76,6 +76,7 @@ private:
 	void processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos);
 	bool processStaticOLE(librevenge::RVNGBinaryData &, std::string &mimetype, WPSPosition &pos, unsigned long lastPos);
 	bool readString(std::string &res, unsigned long lastPos);
+	unsigned insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type);
 
 	//! check if the file position is correct or not
 	bool checkFilePosition(uint32_t pos) const
