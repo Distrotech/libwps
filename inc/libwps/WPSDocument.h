@@ -80,7 +80,7 @@ public:
 		- as Dos/Windows 3 File does not seems to contain the char set encoding,
 		the function can accept the following hint encoding CP424, CP437,
 		CP737, CP775, CP850, CP852, CP855, CP856, CP857, CP860, CP861,
-		CP862, CP863, CP864, CP865, CP866, CP869, CP874, CP932, CP1006,
+		CP862, CP863, CP864, CP865, CP866, CP869, CP874, CP932, CP950, CP1006,
 		CP1250, CP1251, CP1252, CP1253, CP1254, CP1255, CP1256, CP1257, CP1258.
 		- If no encoding is given, CP850 or CP1250 will be used.
 	*/
