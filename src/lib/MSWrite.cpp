@@ -336,7 +336,7 @@ void MSWriteParser::readFIB()
 
 void MSWriteParser::readFFNTB()
 {
-	int font_count = 0, pnFfntb, pnMac;
+	unsigned font_count = 0, pnFfntb, pnMac;
 	RVNGInputStreamPtr input = getInput();
 
 	input->seek(MSWriteParserInternal::HEADER_W_PNFFNTB, librevenge::RVNG_SEEK_SET);
@@ -347,13 +347,13 @@ void MSWriteParser::readFFNTB()
 
 	if (pnFfntb != 0 && pnFfntb != pnMac)
 	{
-		if (!checkFilePosition(uint32_t(pnFfntb) * 0x80 + 2))
+		if (!checkFilePosition(pnFfntb * 0x80 + 2))
 		{
 			WPS_DEBUG_MSG(("Font table is missing\n"));
 		}
 		else
 		{
-			input->seek(uint32_t(pnFfntb) * 0x80, librevenge::RVNG_SEEK_SET);
+			input->seek(pnFfntb * 0x80, librevenge::RVNG_SEEK_SET);
 			font_count = libwps::readU16(input);
 		}
 	}
@@ -365,7 +365,7 @@ void MSWriteParser::readFFNTB()
 		for (;;)
 		{
 			offset += 2;
-			if (!checkFilePosition(uint32_t(pnFfntb) * 0x80 + offset))
+			if (!checkFilePosition(pnFfntb * 0x80 + offset))
 			{
 				WPS_DEBUG_MSG(("Font table is truncated\n"));
 				break;
@@ -379,7 +379,7 @@ void MSWriteParser::readFFNTB()
 			{
 				pnFfntb++;
 
-				if (!checkFilePosition(uint32_t(pnFfntb) * 0x80 + 2))
+				if (!checkFilePosition(pnFfntb * 0x80 + 2))
 				{
 					WPS_DEBUG_MSG(("Font table is truncated\n"));
 					break;
@@ -397,7 +397,7 @@ void MSWriteParser::readFFNTB()
 				break;
 			}
 
-			if (!checkFilePosition(uint32_t(pnFfntb) * 0x80 + offset))
+			if (!checkFilePosition(pnFfntb * 0x80 + offset))
 			{
 				WPS_DEBUG_MSG(("Font table is truncated\n"));
 				break;
@@ -407,7 +407,8 @@ void MSWriteParser::readFFNTB()
 			input->seek(1, librevenge::RVNG_SEEK_CUR);
 
 			// Read font name
-			unsigned long fnlen = cbFfn - 1, read_bytes;
+			unsigned fnlen = cbFfn - 1;
+			unsigned long read_bytes;
 			const unsigned char *fn = input->read(fnlen, read_bytes);
 			if (read_bytes != fnlen)
 			{
@@ -421,7 +422,7 @@ void MSWriteParser::readFFNTB()
 			while (fnlen > 0 && !fn[fnlen - 1])
 				fnlen--;
 
-			fontname = libwps_tools_win::Font::unicodeString(fn, (unsigned int)fnlen, m_fontType);
+			fontname = libwps_tools_win::Font::unicodeString(fn, fnlen, m_fontType);
 
 			m_fonts.push_back(fontname);
 		}
@@ -432,7 +433,7 @@ void MSWriteParser::readFFNTB()
 
 void MSWriteParser::readSECT()
 {
-	int pnSetb, pnBftb;
+	unsigned pnSetb, pnBftb;
 	RVNGInputStreamPtr input = getInput();
 
 	input->seek(MSWriteParserInternal::HEADER_W_PNSETB, librevenge::RVNG_SEEK_SET);
@@ -445,7 +446,7 @@ void MSWriteParser::readSECT()
 
 	if (pnSetb && pnSetb != pnBftb)
 	{
-		if (!checkFilePosition(uint32_t(pnSetb) * 0x80 + 14))
+		if (!checkFilePosition(pnSetb * 0x80 + 14))
 		{
 			WPS_DEBUG_MSG(("Section is truncated\n"));
 			throw (libwps::ParseException());
@@ -668,14 +669,14 @@ void MSWriteParser::readPAP()
 void MSWriteParser::readCHP()
 {
 	RVNGInputStreamPtr input = getInput();
-	int page = (m_fcMac + 127) / 128;
+	unsigned page = (m_fcMac + 127) / 128;
 	unsigned fcLim, fc = 0x80;
 
 	for (;;)
 	{
 		long const pageBegin=long(page * 0x80);
 
-		if (!checkFilePosition(uint32_t(page) * 0x80 + 0x7f))
+		if (!checkFilePosition(page * 0x80 + 0x7f))
 		{
 			WPS_DEBUG_MSG(("CHP list is truncated\n"));
 			break;
