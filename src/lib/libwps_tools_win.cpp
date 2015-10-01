@@ -7276,7 +7276,7 @@ librevenge::RVNGString Font::unicodeString(const unsigned char *p, unsigned size
 
 	for (unsigned i=0; i<size; i++)
 	{
-		libwps::appendUnicode(unicode(p[i], type), str);
+		libwps::appendUnicode((uint32_t) unicode(p[i], type), str);
 	}
 
 	return str;

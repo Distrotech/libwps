@@ -347,13 +347,13 @@ void MSWriteParser::readFFNTB()
 
 	if (pnFfntb != 0 && pnFfntb != pnMac)
 	{
-		if (!checkFilePosition(pnFfntb * 0x80 + 2))
+		if (!checkFilePosition(uint32_t(pnFfntb) * 0x80 + 2))
 		{
 			WPS_DEBUG_MSG(("Font table is missing\n"));
 		}
 		else
 		{
-			input->seek(pnFfntb * 0x80, librevenge::RVNG_SEEK_SET);
+			input->seek(uint32_t(pnFfntb) * 0x80, librevenge::RVNG_SEEK_SET);
 			font_count = libwps::readU16(input);
 		}
 	}
@@ -365,7 +365,7 @@ void MSWriteParser::readFFNTB()
 		for (;;)
 		{
 			offset += 2;
-			if (!checkFilePosition(pnFfntb * 0x80 + offset))
+			if (!checkFilePosition(uint32_t(pnFfntb) * 0x80 + offset))
 			{
 				WPS_DEBUG_MSG(("Font table is truncated\n"));
 				break;
@@ -379,7 +379,7 @@ void MSWriteParser::readFFNTB()
 			{
 				pnFfntb++;
 
-				if (!checkFilePosition(pnFfntb * 0x80 + 2))
+				if (!checkFilePosition(uint32_t(pnFfntb) * 0x80 + 2))
 				{
 					WPS_DEBUG_MSG(("Font table is truncated\n"));
 					break;
@@ -397,7 +397,7 @@ void MSWriteParser::readFFNTB()
 				break;
 			}
 
-			if (!checkFilePosition(pnFfntb * 0x80 + offset))
+			if (!checkFilePosition(uint32_t(pnFfntb) * 0x80 + offset))
 			{
 				WPS_DEBUG_MSG(("Font table is truncated\n"));
 				break;
@@ -421,7 +421,7 @@ void MSWriteParser::readFFNTB()
 			while (fnlen > 0 && !fn[fnlen - 1])
 				fnlen--;
 
-			fontname = libwps_tools_win::Font::unicodeString(fn, fnlen, m_fontType);
+			fontname = libwps_tools_win::Font::unicodeString(fn, (unsigned int)fnlen, m_fontType);
 
 			m_fonts.push_back(fontname);
 		}
@@ -445,7 +445,7 @@ void MSWriteParser::readSECT()
 
 	if (pnSetb && pnSetb != pnBftb)
 	{
-		if (!checkFilePosition(pnSetb * 0x80 + 14))
+		if (!checkFilePosition(uint32_t(pnSetb) * 0x80 + 14))
 		{
 			WPS_DEBUG_MSG(("Section is truncated\n"));
 			throw (libwps::ParseException());
@@ -675,7 +675,7 @@ void MSWriteParser::readCHP()
 	{
 		long const pageBegin=long(page * 0x80);
 
-		if (!checkFilePosition(page * 0x80 + 0x7f))
+		if (!checkFilePosition(uint32_t(page) * 0x80 + 0x7f))
 		{
 			WPS_DEBUG_MSG(("CHP list is truncated\n"));
 			break;
@@ -973,7 +973,7 @@ void MSWriteParser::readText(WPSEntry e)
 
 			input->seek(fc, librevenge::RVNG_SEEK_SET);
 			const unsigned char *p = input->read(size, read_bytes);
-			if (read_bytes != size)
+			if (!p || read_bytes != size)
 			{
 				WPS_DEBUG_MSG(("MSWriteParser::readText failed to read\n"));
 				throw (libwps::ParseException());
@@ -1473,7 +1473,7 @@ bool MSWriteParser::processStaticOLE(librevenge::RVNGBinaryData &b, std::string 
 
 		return processDIB(b, cbSize);
 	}
-	else if (objtype == "METAFILEPICT")
+	else if (objtype == "METAFILEPICT" && cbSize>8)
 	{
 		// Step over unused fields
 		input->seek(8, librevenge::RVNG_SEEK_CUR);
