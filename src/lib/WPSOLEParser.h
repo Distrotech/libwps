@@ -144,7 +144,7 @@ protected:
 	static bool readOlePres(RVNGInputStreamPtr &ip, librevenge::RVNGBinaryData &data,
 	                        WPSPosition &pos, libwps::DebugFile &ascii);
 
-	//! theOle10Native : basic Windows� picture, with no size
+	//! theOle10Native : basic Windows' picture, with no size
 	static bool isOle10Native(RVNGInputStreamPtr &ip, std::string const &oleName);
 	/** extracts the picture if it is possible */
 	static bool readOle10Native(RVNGInputStreamPtr &ip, librevenge::RVNGBinaryData &data,
