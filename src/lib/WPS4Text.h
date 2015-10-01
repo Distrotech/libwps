@@ -135,9 +135,9 @@ protected:
 
 	/** definition of the plc data parser (low level)
 	 *
-	 * \param input the file's input
 	 * \param endPos the end of the properties' definition,
-	 * \param bot, \param eot defined the text zone corresponding to these properties
+	 * \param bot defines the begin of the text's zone
+	 * \param eot defines the end of the text's zone
 	 * \param id the number of this properties
 	 * \param mess a string which can be filled to indicate unparsed data */
 	typedef bool (WPS4Text::* DataParser)

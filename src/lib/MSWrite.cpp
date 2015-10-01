@@ -268,13 +268,13 @@ struct BitmapPalette
 	uint8_t m_r, m_g, m_b;
 };
 
-void appendU16(librevenge::RVNGBinaryData &b, uint16_t val)
+static void appendU16(librevenge::RVNGBinaryData &b, uint16_t val)
 {
 	b.append((unsigned char)(val));
 	b.append((unsigned char)(val >> 8));
 }
 
-void appendU32(librevenge::RVNGBinaryData &b, uint32_t val)
+static void appendU32(librevenge::RVNGBinaryData &b, uint32_t val)
 {
 	b.append((unsigned char)(val));
 	b.append((unsigned char)(val >> 8));

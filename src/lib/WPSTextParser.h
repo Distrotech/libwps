@@ -93,9 +93,9 @@ protected:
 
 	/** callback when a new attribute is found in an FDPP/FDPC entry
 	 *
-	 * \param input, endPos: defined the zone in the file
-	 * \return true and filled id if this attribute can be parsed
-	 * \note mess can be filled to add a message in debugFile */
+	 * \param endPos define the end of the data's zone
+	 * \param mess can be used to add a message in debugFile
+	 * \return true and filled id if this attribute can be parsed */
 	typedef bool (WPSTextParser::* FDPParser)(long endPos,
 	                                          int &id, std::string &mess);
 

@@ -738,8 +738,7 @@ public:
 	}
 
 	/*! \brief the two extremum points which defined the box
-	 * \param c value 0 means the minimum
-	 * \param c value 1 means the maximum
+	 * \param c value 0 means the minimum, value 1 means the maximum
 	 */
 	Vec2<T> const &operator[](int c) const
 	{

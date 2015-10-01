@@ -139,9 +139,10 @@ protected:
 
 	/** definition of the plc data parser (low level)
 	 *
-	 * \param endPos the end of the properties' definition,
-	 * \param bot, \param eot defined the text zone corresponding to these properties
+	 * \param bot defines the begin of the text zone corresponding to these properties
+	 * \param eot define the end of the text zone corresponding to these properties
 	 * \param id the number of this properties
+	 * \param data a reference to store the parsed data
 	 * \param mess a string which can be filled to indicate unparsed data */
 	typedef bool (WPS8Text::* DataParser)
 	(long bot, long eot, int id, WPS8Struct::FileData const &data,
