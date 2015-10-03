@@ -134,11 +134,19 @@ struct SEP
 
 struct PAP
 {
+	//! constructor
+	PAP() : m_reserved1(0), m_justification(0),
+		m_dxaRight(0), m_dxaLeft(0), m_dxaLeft1(0), m_dyaLine(0),
+		m_dyaBefore(0), m_dyaAfter(0), m_rhcPage(0)
+	{
+		m_reserved2[0]=m_reserved2[1]=0;
+		for (int i=0; i<5; ++i) m_reserved3[i]=0;
+	}
 	uint8_t	m_reserved1;
 	uint8_t	m_justification;
 	uint8_t	m_reserved2[2];
-	uint16_t	m_dxaRight, m_dxaLeft, m_dxaLeft1, m_dyaLine;
-	uint16_t	m_dyaBefore, m_dyaAfter;
+	uint16_t m_dxaRight, m_dxaLeft, m_dxaLeft1, m_dyaLine;
+	uint16_t m_dyaBefore, m_dyaAfter;
 	uint8_t	m_rhcPage;
 	uint8_t	m_reserved3[5];
 	struct TBD
@@ -547,8 +555,6 @@ void MSWriteParser::readPAP()
 			fcLim = libwps::readU32(input);
 			unsigned bfProp = libwps::readU16(input);
 			struct MSWriteParserInternal::PAP pap;
-
-			memset(&pap, 0, sizeof(pap));
 
 			WPS_LE_PUT_GUINT16(&pap.m_dyaLine, 240);
 
