@@ -1005,12 +1005,11 @@ bool WPS8TextStyle::readParagraph(long endPos, int &id, std::string &mess)
 		case 0x34: // interline line spacing 8*152400 -> normal, sinon *2
 		{
 			float lines = float(data.m_value)/1219200.f;
-			if (lines < 0 ||
-			        (lines > 0 && lines < 0.5))
+			if (lines < 0.5)
 			{
 				// find in one file some bogus line spacing between 0.2 and 0.3
 				f << "###lineSpacing = " << lines << ",";
-				lines = 0.0;
+				lines = 1.0;
 			}
 			para.setInterline(lines, librevenge::RVNG_PERCENT);
 			break;

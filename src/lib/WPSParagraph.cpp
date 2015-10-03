@@ -68,7 +68,7 @@ void WPSTabStop::addTo(librevenge::RVNGPropertyListVector &propList, double deca
 
 	// position
 	double position = m_position+decalX;
-	if (position < 0.00005f && position > -0.00005f)
+	if (position < 0.00005 && position > -0.00005)
 		position = 0.0;
 	tab.insert("style:position", position);
 
@@ -243,7 +243,8 @@ void WPSParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) c
 	switch (m_spacingsInterlineType)
 	{
 	case Fixed:
-		propList.insert("fo:line-height", m_spacings[0], m_spacingsInterlineUnit);
+		if (m_spacings[0] >= 0)
+			propList.insert("fo:line-height", m_spacings[0], m_spacingsInterlineUnit);
 		break;
 	case AtLeast:
 		if (m_spacings[0] <= 0 && m_spacings[0] >= 0)
