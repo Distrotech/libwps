@@ -141,8 +141,11 @@ struct PAP
 	uint16_t	m_dyaBefore, m_dyaAfter;
 	uint8_t	m_rhcPage;
 	uint8_t	m_reserved3[5];
-	struct
+	struct TBD
 	{
+		TBD() : m_dxa(0), m_jcTab(0), m_chAlign(0)
+		{
+		}
 		uint16_t    m_dxa;
 		uint8_t	    m_jcTab;
 		uint8_t	    m_chAlign;
@@ -151,6 +154,9 @@ struct PAP
 
 struct CHP
 {
+	CHP() : m_reserved1(0), m_fBold(0), m_hps(0), m_fUline(0), m_ftcXtra(0), m_hpsPos(0)
+	{
+	}
 	uint8_t	m_reserved1;
 	uint8_t	m_fBold;
 	uint8_t	m_hps;
@@ -694,8 +700,6 @@ void MSWriteParser::readCHP()
 			fcLim = libwps::readU32(input);
 			uint16_t bfProp = libwps::readU16(input);
 			struct MSWriteParserInternal::CHP chp;
-
-			memset(&chp, 0, sizeof(chp));
 
 			chp.m_hps = 24;
 
