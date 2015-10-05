@@ -57,7 +57,7 @@ public:
 	}
 
 	//! the parser function
-	void parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType);
+	virtual void parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType);
 	//! the entry
 	WPSEntry m_entry;
 };
