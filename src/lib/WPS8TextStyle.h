@@ -30,11 +30,6 @@
 
 #include "WPSDebug.h"
 
-namespace WPS8Struct
-{
-struct FileData;
-}
-
 namespace WPS8TextStyleInternal
 {
 struct State;
