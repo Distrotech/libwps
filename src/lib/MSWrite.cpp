@@ -32,6 +32,7 @@
 
 #include "MSWrite.h"
 
+#include <algorithm>
 #include <cstring>
 
 namespace MSWriteParserInternal
