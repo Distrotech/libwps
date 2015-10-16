@@ -183,9 +183,9 @@ bool readDouble8(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 	input->seek(pos, librevenge::RVNG_SEEK_SET);
 	double mantisse = 0;
 	for (int i = 0; i < 6; i++)
-		mantisse = mantisse/256.f + (double)readU8(input);
+		mantisse = mantisse/256 + (double)readU8(input);
 	int mantExp = (int) readU8(input);
-	mantisse = (mantisse/256.f + double(0x10+(mantExp & 0x0F)))/16.f;
+	mantisse = (mantisse/256 + double(0x10+(mantExp & 0x0F)))/16;
 	int exp = ((mantExp&0xF0)>>4)+int(readU8(input)<<4);
 	int sign = 1;
 	if (exp & 0x800)
@@ -194,16 +194,16 @@ bool readDouble8(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 		sign = -1;
 	}
 
-	double const epsilon=1.e-5f;
+	double const epsilon=1.e-5;
 	if (exp == 0)
 	{
-		if (mantisse > 1.f-epsilon && mantisse < 1.f+epsilon)  return true; // ok zero
+		if (mantisse > 1-epsilon && mantisse < 1+epsilon)  return true; // ok zero
 		// fixme find Nan representation
 		return false;
 	}
 	if (exp == 0x7FF)
 	{
-		if (mantisse >= 1.f-epsilon)
+		if (mantisse >= 1-epsilon)
 		{
 			res=std::numeric_limits<double>::quiet_NaN();
 			return true; // ok 0x7FF and 0xFFF are nan
@@ -234,7 +234,7 @@ bool readDouble10(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 	input->seek(pos, librevenge::RVNG_SEEK_SET);
 	double mantisse = 0;
 	for (int i = 0; i < 8; i++)
-		mantisse = mantisse/256.f + (double)readU8(input)/128;
+		mantisse = mantisse/256 + (double)readU8(input)/128;
 	int exp = (int)readU16(input);
 	int sign = 1;
 	if (exp & 0x8000)
@@ -243,7 +243,7 @@ bool readDouble10(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 		sign = -1;
 	}
 
-	double const epsilon=1.e-5f;
+	double const epsilon=1.e-5;
 	if (exp == 0)
 	{
 		if (mantisse < epsilon)  return true; // checkme is this zero or a nan
@@ -252,7 +252,7 @@ bool readDouble10(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 	}
 	if (exp == 0x7FFf)
 	{
-		if (mantisse >= 1.f-epsilon)
+		if (mantisse >= 1-epsilon)
 		{
 			res=std::numeric_limits<double>::quiet_NaN();
 			return true; // ok 0x7FF and 0xFFF are nan
