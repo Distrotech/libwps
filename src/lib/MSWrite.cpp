@@ -680,6 +680,32 @@ void MSWriteParser::readPAP()
 
 }
 
+unsigned MSWriteParser::numPages()
+{
+	unsigned numPage = 1;
+
+	RVNGInputStreamPtr input = getInput();
+
+	std::vector<MSWriteParserInternal::Paragraph>::iterator paps;
+
+	for (paps = m_paragraphList.begin(); paps != m_paragraphList.end(); ++paps)
+	{
+		if (paps->m_graphics)
+			continue;
+
+		uint32_t fc = paps->m_fcFirst;
+		input->seek(fc, librevenge::RVNG_SEEK_SET);
+
+		while (fc < paps->m_fcLim && fc < m_fcMac)
+		{
+			if (libwps::readU8(input) == 0x0C) numPage++;
+			fc++;
+		}
+	}
+
+	return numPage;
+}
+
 void MSWriteParser::readCHP()
 {
 	RVNGInputStreamPtr input = getInput();
@@ -861,6 +887,7 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 			ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::FIRST, subemptydoc);
 	}
 
+	ps.setPageSpan(numPages());
 	pageList.push_back(ps);
 	return shared_ptr<WPSContentListener>
 	       (new WPSContentListener(pageList, interface));
