@@ -181,11 +181,11 @@ bool readDouble8(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 		return false;
 	}
 	input->seek(pos, librevenge::RVNG_SEEK_SET);
-	float mantisse = 0;
+	double mantisse = 0;
 	for (int i = 0; i < 6; i++)
-		mantisse = mantisse/256.f + (float)readU8(input);
+		mantisse = mantisse/256.f + (double)readU8(input);
 	int mantExp = (int) readU8(input);
-	mantisse = (mantisse/256.f + float(0x10+(mantExp & 0x0F)))/16.f;
+	mantisse = (mantisse/256.f + double(0x10+(mantExp & 0x0F)))/16.f;
 	int exp = ((mantExp&0xF0)>>4)+int(readU8(input)<<4);
 	int sign = 1;
 	if (exp & 0x800)
@@ -194,7 +194,7 @@ bool readDouble8(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 		sign = -1;
 	}
 
-	float const epsilon=1.e-5f;
+	double const epsilon=1.e-5f;
 	if (exp == 0)
 	{
 		if (mantisse > 1.f-epsilon && mantisse < 1.f+epsilon)  return true; // ok zero
@@ -232,9 +232,9 @@ bool readDouble10(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 		return false;
 	}
 	input->seek(pos, librevenge::RVNG_SEEK_SET);
-	float mantisse = 0;
+	double mantisse = 0;
 	for (int i = 0; i < 8; i++)
-		mantisse = mantisse/256.f + (float)readU8(input)/128;
+		mantisse = mantisse/256.f + (double)readU8(input)/128;
 	int exp = (int)readU16(input);
 	int sign = 1;
 	if (exp & 0x8000)
@@ -243,7 +243,7 @@ bool readDouble10(RVNGInputStreamPtr &input, double &res, bool &isNaN)
 		sign = -1;
 	}
 
-	float const epsilon=1.e-5f;
+	double const epsilon=1.e-5f;
 	if (exp == 0)
 	{
 		if (mantisse < epsilon)  return true; // checkme is this zero or a nan
