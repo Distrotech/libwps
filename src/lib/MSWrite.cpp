@@ -32,6 +32,7 @@
 
 #include "MSWrite.h"
 
+#include <algorithm>
 #include <cstring>
 
 namespace MSWriteParserInternal
@@ -363,7 +364,7 @@ void MSWriteParser::readFFNTB()
 	{
 		if (!checkFilePosition(pnFfntb * 0x80 + 2))
 		{
-			WPS_DEBUG_MSG(("Font table is missing\n"));
+			WPS_DEBUG_MSG(("MSWriteParser::readFFNTB Font table is missing\n"));
 		}
 		else
 		{
@@ -374,6 +375,7 @@ void MSWriteParser::readFFNTB()
 
 	if (font_count)
 	{
+		// Ignore font_count, some write files have more
 		unsigned offset = 0;
 
 		for (;;)
@@ -381,7 +383,7 @@ void MSWriteParser::readFFNTB()
 			offset += 2;
 			if (!checkFilePosition(pnFfntb * 0x80 + offset))
 			{
-				WPS_DEBUG_MSG(("Font table is truncated\n"));
+				WPS_DEBUG_MSG(("MSWriteParser::readFFNTB Font table is truncated\n"));
 				break;
 			}
 
@@ -395,7 +397,7 @@ void MSWriteParser::readFFNTB()
 
 				if (!checkFilePosition(pnFfntb * 0x80 + 2))
 				{
-					WPS_DEBUG_MSG(("Font table is truncated\n"));
+					WPS_DEBUG_MSG(("MSWriteParser::readFFNTB Font table is truncated\n"));
 					break;
 				}
 
@@ -407,13 +409,13 @@ void MSWriteParser::readFFNTB()
 			offset += cbFfn;
 			if (offset > 0x80)
 			{
-				WPS_DEBUG_MSG(("Font straddles page, file corrupt\n"));
+				WPS_DEBUG_MSG(("MSWriteParser::readFFNTB Font straddles page, file corrupt\n"));
 				break;
 			}
 
 			if (!checkFilePosition(pnFfntb * 0x80 + offset))
 			{
-				WPS_DEBUG_MSG(("Font table is truncated\n"));
+				WPS_DEBUG_MSG(("MSWriteParser::readFFNTB Font table is truncated\n"));
 				break;
 			}
 
