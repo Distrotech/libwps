@@ -1608,11 +1608,11 @@ bool WKS4Spreadsheet::readNumber(long endPos, double &res)
 	int sz = int(endPos - pos);
 	if (sz != 8) return false;
 
-	float mantisse = 0;
+	double mantisse = 0;
 	for (int i = 0; i < 6; i++)
-		mantisse = mantisse/256.f + (float)libwps::readU8(m_input);
+		mantisse = mantisse/256 + (double)libwps::readU8(m_input);
 	int mantExp = (int) libwps::readU8(m_input);
-	mantisse = (mantisse/256.f + float(0x10+(mantExp & 0x0F)))/16.f;
+	mantisse = (mantisse/256 + double(0x10+(mantExp & 0x0F)))/16;
 	int exp = ((mantExp&0xF0)>>4)+int(libwps::readU8(m_input)<<4);
 	int sign = 1;
 	if (exp & 0x800)
@@ -1621,16 +1621,16 @@ bool WKS4Spreadsheet::readNumber(long endPos, double &res)
 		sign = -1;
 	}
 
-	float const epsilon=1.e-5f;
+	double const epsilon=1.e-5;
 	if (exp == 0)
 	{
-		if (mantisse > 1.f-epsilon && mantisse < 1.f+epsilon)  return true; // ok zero
+		if (mantisse > 1-epsilon && mantisse < 1+epsilon)  return true; // ok zero
 		// fixme find Nan representation
 		return false;
 	}
 	if (exp == 0x7FF)
 	{
-		if (mantisse >= 1.f-epsilon)
+		if (mantisse >= 1-epsilon)
 		{
 			res=std::numeric_limits<double>::quiet_NaN();
 			return true; // ok 0x7FF and 0xFFF are nan
@@ -1646,6 +1646,7 @@ bool WKS4Spreadsheet::readNumber(long endPos, double &res)
 	}
 	return true;
 }
+
 struct Functions
 {
 	char const *m_name;
