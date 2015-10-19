@@ -69,7 +69,7 @@ private:
 	void readCHP();
 	void findZones();
 	void readText(WPSEntry e);
-	unsigned numPages();
+	int numPages();
 	void processObject(WPSPosition &pos, unsigned long lastPos);
 	bool processDDB(librevenge::RVNGBinaryData &bmpdata, WPSPosition &pos, unsigned width, unsigned height, unsigned byte_width, unsigned planes, unsigned bits_pixel, unsigned size);
 	bool processDIB(librevenge::RVNGBinaryData &bmpdata, unsigned size);

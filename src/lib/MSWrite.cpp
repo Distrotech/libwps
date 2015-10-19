@@ -680,9 +680,9 @@ void MSWriteParser::readPAP()
 
 }
 
-unsigned MSWriteParser::numPages()
+int MSWriteParser::numPages()
 {
-	unsigned numPage = 1;
+	int numPage = 1;
 
 	RVNGInputStreamPtr input = getInput();
 
