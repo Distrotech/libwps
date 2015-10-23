@@ -590,12 +590,9 @@ void MSWriteParser::readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint3
 			{
 				input->seek(pageBegin + long(bfProp) + 4, librevenge::RVNG_SEEK_SET);
 				cch = libwps::readU8(input);
+
 				// Check length and that it is on the page
-				if (cch <= maxSize && (bfProp + cch + 4) < 0x80)
-				{
-					(this->*parseFOD)(fc, fcLim, cch);
-				}
-				else
+				if (cch > maxSize || (bfProp + cch + 4) >= 0x80)
 				{
 					cch = 0;
 					WPS_DEBUG_MSG(("MSWriteParser::readFOD: entry %d on page %d invalid\n", fod, page));
