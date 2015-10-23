@@ -88,8 +88,17 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		}
 		if ((val[0] == 0x31 || val[0] == 0x32) && val[1] == 0xbe && val[2] == 0 && val[3] == 0 && val[4] == 0 && val[5] == 0xab)
 		{
-			WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Write detected\n"));
-			return new WPSHeader(input, input, 3, WPS_TEXT, WPS_MSWRITE);
+			// This value is always 0 for Word for DOS
+			input->seek(96, librevenge::RVNG_SEEK_SET);
+			if (libwps::readU16(input))
+			{
+				WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Write detected\n"));
+				return new WPSHeader(input, input, 3, WPS_TEXT, WPS_MSWRITE);
+			}
+			else
+			{
+				WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Word for DOS detected, not supported yet\n"));
+			}
 		}
 		return 0;
 	}
