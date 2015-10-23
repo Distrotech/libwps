@@ -62,11 +62,13 @@ private:
 	MSWriteParser &operator=(const MSWriteParser &);
 
 	shared_ptr<WPSContentListener> createListener(librevenge::RVNGTextInterface *interface);
+	void readStructures();
 	void readFIB();
 	void readFFNTB();
 	void readSECT();
-	void readPAP();
-	void readCHP();
+	void readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size), unsigned maxSize);
+	void readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
+	void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	void findZones();
 	void readText(WPSEntry e);
 	int numPages();

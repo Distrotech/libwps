@@ -529,157 +529,6 @@ void MSWriteParser::readSECT()
 		m_pageSpan.setPageNumber(sep.m_startPageNumber);
 }
 
-void MSWriteParser::readPAP()
-{
-	RVNGInputStreamPtr input = getInput();
-
-	input->seek(MSWriteParserInternal::HEADER_W_PNPARA, librevenge::RVNG_SEEK_SET);
-	unsigned pnPara = libwps::readU16(input);
-	unsigned fcLim, fc = 0x80;
-
-	for (;;)
-	{
-		if (!checkFilePosition(pnPara * 0x80 + 0x7f))
-		{
-			WPS_DEBUG_MSG(("PAP list is truncated\n"));
-			break;
-		}
-
-		input->seek(pnPara * 0x80 + 0x7f, librevenge::RVNG_SEEK_SET);
-		unsigned cfod = libwps::readU8(input);
-
-		if (cfod > 20)
-			cfod = 20;
-
-		for (unsigned fod = 0; fod < cfod; fod++)
-		{
-			input->seek(pnPara * 0x80 + fod * 6 + 4, librevenge::RVNG_SEEK_SET);
-			fcLim = libwps::readU32(input);
-			unsigned bfProp = libwps::readU16(input);
-			struct MSWriteParserInternal::PAP pap;
-
-			WPS_LE_PUT_GUINT16(&pap.m_dyaLine, 240);
-
-			if (bfProp < 0x7f - 4)
-			{
-				input->seek(pnPara * 0x80 + bfProp + 4, librevenge::RVNG_SEEK_SET);
-				unsigned cch = libwps::readU8(input);
-				if (cch <= sizeof(pap) && (4 + bfProp + cch < 0x80))
-				{
-					unsigned long read_bytes;
-					const unsigned char *p = input->read(cch, read_bytes);
-					if (read_bytes != cch)
-					{
-						WPS_DEBUG_MSG(("MSWriteParser::readPAP failed to read PAP\n"));
-						throw (libwps::ParseException());
-					}
-
-					memcpy(&pap, p, cch);
-				}
-				else
-				{
-					WPS_DEBUG_MSG(("MSWriteParser::readPAP pap entry %d on page %d invalid\n", fod, pnPara));
-				}
-			}
-
-			int16_t dxaLeft = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft);
-			int16_t dxaLeft1 = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft1);
-			int16_t dxaRight = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaRight);
-
-			MSWriteParserInternal::Paragraph para;
-			int i;
-
-			for (i=0; i<14; i++)
-			{
-				uint16_t pos = WPS_LE_GET_GUINT16(&pap.m_TBD[i].m_dxa);
-
-				if (!pos)
-					break;
-
-				WPSTabStop tab(pos / 1440., (pap.m_TBD[i].m_jcTab & 3) == 3 ?
-				               WPSTabStop::DECIMAL : WPSTabStop::LEFT);
-
-				para.m_tabs.push_back(tab);
-
-				if (dxaLeft + dxaLeft1 == pos)
-					para.m_skiptab = true;
-			}
-
-			switch (pap.m_justification & 3)
-			{
-			default:
-			case 0:
-				para.m_justify = libwps::JustificationLeft;
-				break;
-			case 1:
-				para.m_justify = libwps::JustificationCenter;
-				break;
-			case 2:
-				para.m_justify = libwps::JustificationRight;
-				break;
-			case 3:
-				para.m_justify = libwps::JustificationFull;
-				break;
-			}
-
-			para.m_margins[0] = dxaLeft1 / 1440.0;
-			para.m_margins[1] = dxaLeft / 1440.0;
-			para.m_margins[2] = dxaRight / 1440.0;
-
-			uint16_t dyaLine = WPS_LE_GET_GUINT16(&pap.m_dyaLine);
-			para.m_interLine = dyaLine / 240.0;
-
-			para.m_fcFirst = fc;
-			para.m_fcLim = fcLim;
-			if (pap.m_rhcPage & 0x10)
-			{
-				para.m_graphics = true;
-				/* MS Write doesn't take first indent into
-				    account for images, but odt does */
-				para.m_margins[0] = 0.0;
-			}
-			else
-			{
-				if (pap.m_rhcPage & 6)
-				{
-					if (pap.m_rhcPage & 1)
-					{
-						para.m_Location = MSWriteParserInternal::Paragraph::FOOTER;
-					}
-					else
-					{
-						para.m_Location = MSWriteParserInternal::Paragraph::HEADER;
-					}
-					para.m_firstpage = (pap.m_rhcPage & 0x08) != 0;
-				}
-			}
-
-			if (para.m_Location != MSWriteParserInternal::Paragraph::MAIN)
-			{
-				// Indents in header/footer are off paper, not margins
-				para.m_margins[1] -= m_pageSpan.getMarginLeft();
-				para.m_margins[2] -= m_pageSpan.getMarginRight();
-			}
-
-			m_paragraphList.push_back(para);
-
-			if (fcLim >= m_fcMac)
-				return;
-
-			fc = fcLim;
-		}
-
-		pnPara++;
-	}
-
-	if (m_paragraphList.empty())
-	{
-		WPS_DEBUG_MSG(("MSWriteParser::readPAP: failed to read any PAP entries\n"));
-		throw (libwps::ParseException());
-	}
-
-}
-
 int MSWriteParser::numPages()
 {
 	int numPage = 1;
@@ -706,10 +555,9 @@ int MSWriteParser::numPages()
 	return numPage;
 }
 
-void MSWriteParser::readCHP()
+void MSWriteParser::readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size), unsigned maxSize)
 {
 	RVNGInputStreamPtr input = getInput();
-	unsigned page = (m_fcMac + 127) / 128;
 	unsigned fcLim, fc = 0x80;
 
 	for (;;)
@@ -718,7 +566,7 @@ void MSWriteParser::readCHP()
 
 		if (!checkFilePosition(page * 0x80 + 0x7f))
 		{
-			WPS_DEBUG_MSG(("CHP list is truncated\n"));
+			WPS_DEBUG_MSG(("MSWriteParser::readFOD: FOD list is truncated\n"));
 			break;
 		}
 
@@ -726,70 +574,35 @@ void MSWriteParser::readCHP()
 		uint8_t cfod = libwps::readU8(input);
 
 		if (cfod > 20)
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::readFOD: Too many FODs %d on one page\n", cfod));
 			cfod = 20;
+		}
 
 		for (unsigned fod = 0; fod < cfod; ++fod)
 		{
 			input->seek(pageBegin + int(fod) * 6 + 4, librevenge::RVNG_SEEK_SET);
 			fcLim = libwps::readU32(input);
 			uint16_t bfProp = libwps::readU16(input);
-			struct MSWriteParserInternal::CHP chp;
-
-			chp.m_hps = 24;
+			unsigned cch = 0;
 
 			if (bfProp < 0x7f - 4)
 			{
 				input->seek(pageBegin + long(bfProp) + 4, librevenge::RVNG_SEEK_SET);
-				unsigned cch = libwps::readU8(input);
+				cch = libwps::readU8(input);
 				// Check length and that it is on the page
-				if (cch <= sizeof(chp) && (bfProp + cch + 4) < 0x80)
+				if (cch <= maxSize && (bfProp + cch + 4) < 0x80)
 				{
-					unsigned long read_bytes;
-					const unsigned char *p = input->read(cch, read_bytes);
-					if (read_bytes != cch)
-					{
-						WPS_DEBUG_MSG(("MSWriteParser::readCHP failed to read CHP entry\n"));
-						throw (libwps::ParseException());
-					}
-
-					memcpy(&chp, p, cch);
+					(this->*parseFOD)(fc, fcLim, cch);
 				}
 				else
 				{
-					WPS_DEBUG_MSG(("MSWriteParser::readCHP chp entry %d on page %d invalid\n", fod, page));
+					cch = 0;
+					WPS_DEBUG_MSG(("MSWriteParser::readFOD: entry %d on page %d invalid\n", fod, page));
 				}
 			}
 
-			MSWriteParserInternal::Font font;
-
-			unsigned ftc = (chp.m_fBold / 4) | ((chp.m_ftcXtra & 7) * 64);
-			if (ftc >= m_fonts.size()) ftc = 0;
-
-			font.m_name = m_fonts[ftc];
-			font.m_size = chp.m_hps / 2.0;
-			if (chp.m_fBold & 1)
-				font.m_attributes |= WPS_BOLD_BIT;
-			if (chp.m_fBold & 2)
-				font.m_attributes |= WPS_ITALICS_BIT;
-			if (chp.m_fUline & 1)
-				font.m_attributes |= WPS_UNDERLINE_BIT;
-			if (chp.m_fUline & 0x40)
-				font.m_special = true;
-			if (chp.m_hpsPos)
-			{
-				if (chp.m_hpsPos & 0x80)
-					font.m_attributes |= WPS_SUBSCRIPT_BIT;
-				else
-					font.m_attributes |= WPS_SUPERSCRIPT_BIT;
-			}
-
-			font.m_fcFirst = fc;
-			font.m_fcLim = fcLim;
-			font.m_encoding = libwps_tools_win::Font::getFontType(font.m_name);
-			if (font.m_encoding == libwps_tools_win::Font::UNKNOWN)
-				font.m_encoding = m_fontType;
-
-			m_fontList.push_back(font);
+			(this->*parseFOD)(fc, fcLim, cch);
 
 			if (fcLim >= m_fcMac)
 				return;
@@ -798,12 +611,162 @@ void MSWriteParser::readCHP()
 		}
 		page++;
 	}
+}
 
-	if (m_fontList.empty())
+void MSWriteParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
+{
+	RVNGInputStreamPtr input = getInput();
+
+	struct MSWriteParserInternal::PAP pap;
+
+	WPS_LE_PUT_GUINT16(&pap.m_dyaLine, 240);
+
+	if (cch)
 	{
-		WPS_DEBUG_MSG(("MSWriteParser::readCHP failed to read any CHP entries\n"));
-		throw (libwps::ParseException());
+		unsigned long read_bytes;
+		const unsigned char *p = input->read(cch, read_bytes);
+		if (read_bytes != cch)
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::readPAP failed to read PAP\n"));
+			throw (libwps::ParseException());
+		}
+
+		memcpy(&pap, p, cch);
 	}
+
+	int16_t dxaLeft = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft);
+	int16_t dxaLeft1 = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaLeft1);
+	int16_t dxaRight = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dxaRight);
+
+	MSWriteParserInternal::Paragraph para;
+	int i;
+
+	for (i=0; i<14; i++)
+	{
+		uint16_t pos = WPS_LE_GET_GUINT16(&pap.m_TBD[i].m_dxa);
+
+		if (!pos)
+			break;
+
+		WPSTabStop tab(pos / 1440., (pap.m_TBD[i].m_jcTab & 3) == 3 ?
+		               WPSTabStop::DECIMAL : WPSTabStop::LEFT);
+
+		para.m_tabs.push_back(tab);
+
+		if (dxaLeft + dxaLeft1 == pos)
+			para.m_skiptab = true;
+	}
+
+	switch (pap.m_justification & 3)
+	{
+	default:
+	case 0:
+		para.m_justify = libwps::JustificationLeft;
+		break;
+	case 1:
+		para.m_justify = libwps::JustificationCenter;
+		break;
+	case 2:
+		para.m_justify = libwps::JustificationRight;
+		break;
+	case 3:
+		para.m_justify = libwps::JustificationFull;
+		break;
+	}
+
+	para.m_margins[0] = dxaLeft1 / 1440.0;
+	para.m_margins[1] = dxaLeft / 1440.0;
+	para.m_margins[2] = dxaRight / 1440.0;
+
+	uint16_t dyaLine = WPS_LE_GET_GUINT16(&pap.m_dyaLine);
+	para.m_interLine = dyaLine / 240.0;
+
+	para.m_fcFirst = fcFirst;
+	para.m_fcLim = fcLim;
+	if (pap.m_rhcPage & 0x10)
+	{
+		para.m_graphics = true;
+		/* MS Write doesn't take first indent into
+		    account for images, but odt does */
+		para.m_margins[0] = 0.0;
+	}
+	else
+	{
+		if (pap.m_rhcPage & 6)
+		{
+			if (pap.m_rhcPage & 1)
+			{
+				para.m_Location = MSWriteParserInternal::Paragraph::FOOTER;
+			}
+			else
+			{
+				para.m_Location = MSWriteParserInternal::Paragraph::HEADER;
+			}
+			para.m_firstpage = (pap.m_rhcPage & 0x08) != 0;
+		}
+	}
+
+	if (para.m_Location != MSWriteParserInternal::Paragraph::MAIN)
+	{
+		// Indents in header/footer are off paper, not margins
+		para.m_margins[1] -= m_pageSpan.getMarginLeft();
+		para.m_margins[2] -= m_pageSpan.getMarginRight();
+	}
+
+	m_paragraphList.push_back(para);
+}
+
+void MSWriteParser::readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
+{
+	RVNGInputStreamPtr input = getInput();
+
+	struct MSWriteParserInternal::CHP chp;
+
+	chp.m_hps = 24;
+
+	if (cch)
+	{
+		unsigned long read_bytes;
+		const unsigned char *p = input->read(cch, read_bytes);
+		if (read_bytes != cch)
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::readCHP failed to read CHP entry\n"));
+			throw (libwps::ParseException());
+		}
+
+		memcpy(&chp, p, cch);
+	}
+
+	MSWriteParserInternal::Font font;
+
+	unsigned ftc = (chp.m_fBold / 4) | ((chp.m_ftcXtra & 7) * 64);
+	if (ftc >= m_fonts.size()) ftc = 0;
+
+	font.m_name = m_fonts[ftc];
+	font.m_size = chp.m_hps / 2.0;
+	if (chp.m_fBold & 1)
+		font.m_attributes |= WPS_BOLD_BIT;
+	if (chp.m_fBold & 2)
+		font.m_attributes |= WPS_ITALICS_BIT;
+	if (chp.m_fUline & 1)
+		font.m_attributes |= WPS_UNDERLINE_BIT;
+	if (chp.m_fUline & 0x40)
+		font.m_special = true;
+	if (chp.m_hpsPos)
+	{
+		if (chp.m_hpsPos & 0x80)
+			font.m_attributes |= WPS_SUBSCRIPT_BIT;
+		else
+			font.m_attributes |= WPS_SUPERSCRIPT_BIT;
+	}
+
+	font.m_fcFirst = fcFirst;
+	font.m_fcLim = fcLim;
+	font.m_encoding = libwps_tools_win::Font::getFontType(font.m_name);
+	if (font.m_encoding == libwps_tools_win::Font::UNKNOWN)
+		font.m_encoding = m_fontType;
+
+	m_fontList.push_back(font);
 }
 
 void MSWriteParser::findZones()
@@ -1623,14 +1586,37 @@ bool MSWriteParser::processWMF(librevenge::RVNGBinaryData &wmfdata, unsigned siz
 	return true;
 }
 
-void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
+void MSWriteParser::readStructures()
 {
+	RVNGInputStreamPtr input = getInput();
+
 	readFIB();
 	readFFNTB();
 	readSECT();
-	readPAP();
-	readCHP();
+
+	input->seek(MSWriteParserInternal::HEADER_W_PNPARA, librevenge::RVNG_SEEK_SET);
+	unsigned pnPara = libwps::readU16(input);
+	readFOD(pnPara, &MSWriteParser::readPAP, sizeof(MSWriteParserInternal::PAP));
+
+	if (m_paragraphList.empty())
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::parse: failed to read any PAP entries\n"));
+		throw (libwps::ParseException());
+	}
+
+	readFOD((m_fcMac + 127) / 128, &MSWriteParser::readCHP, sizeof(MSWriteParserInternal::CHP));
+	if (m_fontList.empty())
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::parse: failed to read any CHP entries\n"));
+		throw (libwps::ParseException());
+	}
+
 	findZones();
+}
+
+void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
+{
+	readStructures();
 
 	m_listener = createListener(document);
 	if (!m_listener)
