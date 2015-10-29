@@ -304,8 +304,7 @@ MSWriteParser::MSWriteParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
 	WPSParser(input, header),
 	m_fileLength(0), m_fcMac(0), m_paragraphList(0), m_fontList(0),
 	m_fonts(0), m_pageSpan(), m_fontType(encoding),
-	m_listener(), m_Main(), m_Header(), m_Footer(),
-	m_HeaderPage1(false), m_FooterPage1(false)
+	m_listener(), m_Main()
 {
 	if (!input)
 	{
@@ -766,22 +765,18 @@ void MSWriteParser::readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 	m_fontList.push_back(font);
 }
 
-void MSWriteParser::findZones()
+shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTextInterface *interface)
 {
-	MSWriteParserInternal::Paragraph::Location location;
+	bool headerPage1 = true, footerPage1 = true;
+	std::vector<WPSPageSpan> pageList;
+	WPSPageSpan ps(m_pageSpan);
+	WPSEntry empty, footer, header;
 
-	location = m_paragraphList[0].m_Location;
-	if (location == MSWriteParserInternal::Paragraph::MAIN)
-	{
-		m_Main.setBegin(m_paragraphList[0].m_fcFirst);
-		m_Main.setEnd(m_fcMac);
-		m_Main.setType("TEXT");
-		return;
-	}
+	MSWriteParserInternal::Paragraph::Location location = MSWriteParserInternal::Paragraph::MAIN;
 
 	unsigned first = 0, i;
 
-	for (i = 1; i < m_paragraphList.size(); i++)
+	for (i = 0; i < m_paragraphList.size(); i++)
 	{
 		MSWriteParserInternal::Paragraph &p = m_paragraphList[i];
 
@@ -789,17 +784,17 @@ void MSWriteParser::findZones()
 		{
 			if (location == MSWriteParserInternal::Paragraph::HEADER)
 			{
-				m_HeaderPage1 = m_paragraphList[first].m_firstpage;
-				m_Header.setBegin(m_paragraphList[first].m_fcFirst);
-				m_Header.setEnd(m_paragraphList[i - 1].m_fcLim);
-				m_Header.setType("TEXT");
+				headerPage1 = m_paragraphList[first].m_firstpage;
+				header.setBegin(m_paragraphList[first].m_fcFirst);
+				header.setEnd(m_paragraphList[i - 1].m_fcLim);
+				header.setType("TEXT");
 			}
-			else
+			else if (location == MSWriteParserInternal::Paragraph::FOOTER)
 			{
-				m_FooterPage1 = m_paragraphList[first].m_firstpage;
-				m_Footer.setBegin(m_paragraphList[first].m_fcFirst);
-				m_Footer.setEnd(m_paragraphList[i - 1].m_fcLim);
-				m_Footer.setType("TEXT");
+				footerPage1 = m_paragraphList[first].m_firstpage;
+				footer.setBegin(m_paragraphList[first].m_fcFirst);
+				footer.setEnd(m_paragraphList[i - 1].m_fcLim);
+				footer.setType("TEXT");
 			}
 
 			location = p.m_Location;
@@ -814,36 +809,29 @@ void MSWriteParser::findZones()
 			break;
 		}
 	}
-}
-
-shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTextInterface *interface)
-{
-	std::vector<WPSPageSpan> pageList;
-	WPSPageSpan ps(m_pageSpan);
-	WPSEntry empty;
 
 	empty.setType("TEXT");
 
 	WPSSubDocumentPtr subemptydoc(new MSWriteParserInternal::SubDocument
 	                              (getInput(), *this, empty));
 
-	if (m_Header.valid())
+	if (header.valid())
 	{
 		WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
-		                         (getInput(), *this, m_Header));
+		                         (getInput(), *this, header));
 		ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::ALL, subdoc);
 
-		if (!m_HeaderPage1)
+		if (!headerPage1)
 			ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::FIRST, subemptydoc);
 	}
 
-	if (m_Footer.valid())
+	if (footer.valid())
 	{
 		WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
-		                         (getInput(), *this, m_Footer));
+		                         (getInput(), *this, footer));
 		ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::ALL, subdoc);
 
-		if (!m_FooterPage1)
+		if (!footerPage1)
 			ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::FIRST, subemptydoc);
 	}
 
@@ -1607,8 +1595,6 @@ void MSWriteParser::readStructures()
 		WPS_DEBUG_MSG(("MSWriteParser::parse: failed to read any CHP entries\n"));
 		throw (libwps::ParseException());
 	}
-
-	findZones();
 }
 
 void MSWriteParser::parse(librevenge::RVNGTextInterface *document)

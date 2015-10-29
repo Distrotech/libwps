@@ -69,7 +69,6 @@ private:
 	void readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size), unsigned maxSize);
 	void readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
-	void findZones();
 	void readText(WPSEntry e);
 	int numPages();
 	void processObject(WPSPosition &pos, unsigned long lastPos);
@@ -99,8 +98,7 @@ private:
 
 	shared_ptr<WPSContentListener> m_listener; /* the listener (if set)*/
 
-	WPSEntry m_Main, m_Header, m_Footer;
-	bool m_HeaderPage1, m_FooterPage1;
+	WPSEntry m_Main;
 };
 
 #endif /* MS_WRITE_H */
