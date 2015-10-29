@@ -554,7 +554,7 @@ int MSWriteParser::numPages()
 	return numPage;
 }
 
-void MSWriteParser::readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size), unsigned maxSize)
+void MSWriteParser::readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size))
 {
 	RVNGInputStreamPtr input = getInput();
 	unsigned fcLim, fc = 0x80;
@@ -590,8 +590,8 @@ void MSWriteParser::readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint3
 				input->seek(pageBegin + long(bfProp) + 4, librevenge::RVNG_SEEK_SET);
 				cch = libwps::readU8(input);
 
-				// Check length and that it is on the page
-				if (cch > maxSize || (bfProp + cch + 4) >= 0x80)
+				// Does it fit on the page
+				if ((bfProp + cch + 4) >= 0x80)
 				{
 					cch = 0;
 					WPS_DEBUG_MSG(("MSWriteParser::readFOD: entry %d on page %d invalid\n", fod, page));
@@ -619,6 +619,9 @@ void MSWriteParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 
 	if (cch)
 	{
+		if (cch > sizeof(pap))
+			cch = sizeof(pap);
+
 		unsigned long read_bytes;
 		const unsigned char *p = input->read(cch, read_bytes);
 		if (read_bytes != cch)
@@ -722,6 +725,9 @@ void MSWriteParser::readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 
 	if (cch)
 	{
+		if (cch > sizeof(chp))
+			cch = sizeof(chp);
+
 		unsigned long read_bytes;
 		const unsigned char *p = input->read(cch, read_bytes);
 		if (read_bytes != cch)
@@ -1581,7 +1587,7 @@ void MSWriteParser::readStructures()
 
 	input->seek(MSWriteParserInternal::HEADER_W_PNPARA, librevenge::RVNG_SEEK_SET);
 	unsigned pnPara = libwps::readU16(input);
-	readFOD(pnPara, &MSWriteParser::readPAP, sizeof(MSWriteParserInternal::PAP));
+	readFOD(pnPara, &MSWriteParser::readPAP);
 
 	if (m_paragraphList.empty())
 	{
@@ -1589,7 +1595,7 @@ void MSWriteParser::readStructures()
 		throw (libwps::ParseException());
 	}
 
-	readFOD((m_fcMac + 127) / 128, &MSWriteParser::readCHP, sizeof(MSWriteParserInternal::CHP));
+	readFOD((m_fcMac + 127) / 128, &MSWriteParser::readCHP);
 	if (m_fontList.empty())
 	{
 		WPS_DEBUG_MSG(("MSWriteParser::parse: failed to read any CHP entries\n"));

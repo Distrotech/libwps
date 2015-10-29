@@ -66,7 +66,7 @@ private:
 	void readFIB();
 	void readFFNTB();
 	void readSECT();
-	void readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size), unsigned maxSize);
+	void readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size));
 	void readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	void readText(WPSEntry e);
