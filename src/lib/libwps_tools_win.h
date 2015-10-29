@@ -77,7 +77,7 @@ public:
 	static Type getFontType(librevenge::RVNGString &name);
 	//! return the type name
 	static librevenge::RVNGString getTypeName(Type type);
-	static librevenge::RVNGString unicodeString(const unsigned char *p, unsigned size, Type type);
+	static librevenge::RVNGString unicodeString(const unsigned char *p, unsigned long size, Type type);
 protected:
 };
 

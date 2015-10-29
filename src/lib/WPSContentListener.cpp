@@ -552,6 +552,16 @@ void WPSContentListener::setDocumentLanguage(int lcid)
 	m_ds->m_metaData.insert("librevenge:language", lang.c_str());
 }
 
+void WPSContentListener::setMetaData(const librevenge::RVNGPropertyList &list)
+{
+	librevenge::RVNGPropertyList::Iter i(list);
+
+	for (i.rewind(); i.next();)
+	{
+		m_ds->m_metaData.insert(i.key(), i()->getStr());
+	}
+}
+
 void WPSContentListener::startDocument()
 {
 	if (m_ds->m_isDocumentStarted)

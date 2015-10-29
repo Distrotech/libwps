@@ -30,13 +30,44 @@
 
 #include "WPSParser.h"
 #include "WPSEntry.h"
+#include "WPSFont.h"
 #include "WPSPageSpan.h"
+#include "WPSParagraph.h"
 
 namespace MSWriteParserInternal
 {
 class SubDocument;
-struct Paragraph;
-struct Font;
+
+struct Paragraph :  public WPSParagraph
+{
+	enum Location { MAIN, HEADER, FOOTER, FOOTNOTE };
+	Paragraph() : WPSParagraph(), m_fcFirst(0), m_fcLim(0),
+		m_Location(MAIN), m_graphics(false), m_firstpage(false),
+		m_skiptab(false), m_interLine(0.0),
+		m_HeaderFooterOccurrence(WPSPageSpan::ALL)  { }
+	uint32_t m_fcFirst, m_fcLim;
+	Location m_Location;
+	bool m_graphics, m_firstpage, m_skiptab;
+	double m_interLine;
+	WPSPageSpan::HeaderFooterOccurrence m_HeaderFooterOccurrence;
+};
+
+struct Font : public WPSFont
+{
+	Font() : WPSFont(), m_fcFirst(0), m_fcLim(0), m_special(false),
+		m_footnote(false),
+		m_encoding(libwps_tools_win::Font::UNKNOWN) { }
+	uint32_t m_fcFirst, m_fcLim;
+	bool m_special, m_footnote;
+	libwps_tools_win::Font::Type m_encoding;
+};
+
+struct Footnote
+{
+	Footnote() : fcFtn(0), fcRef(0) { }
+	uint32_t fcFtn, fcRef;
+};
+
 }
 
 /**
@@ -62,13 +93,17 @@ private:
 	MSWriteParser &operator=(const MSWriteParser &);
 
 	shared_ptr<WPSContentListener> createListener(librevenge::RVNGTextInterface *interface);
+protected:
 	void readStructures();
+	virtual libwps_tools_win::Font::Type getFileEncoding(libwps_tools_win::Font::Type hint);
 	void readFIB();
-	void readFFNTB();
+	virtual void readFFNTB();
 	void readSECT();
 	void readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size));
-	void readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
-	void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
+	virtual void readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
+	virtual void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
+	virtual void readSUMD();
+	virtual void readFNTB();
 	void readText(WPSEntry e);
 	int numPages();
 	void processObject(WPSPosition &pos, unsigned long lastPos);
@@ -78,6 +113,8 @@ private:
 	void processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos);
 	bool processStaticOLE(librevenge::RVNGBinaryData &, std::string &mimetype, WPSPosition &pos, unsigned long lastPos);
 	bool readString(std::string &res, unsigned long lastPos);
+	virtual void insertSpecial(uint8_t val, uint32_t fc);
+	void insertFootnote(bool annotation, uint32_t fcPos, librevenge::RVNGString &label);
 	unsigned insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type);
 
 	//! check if the file position is correct or not
@@ -92,6 +129,7 @@ private:
 
 	std::vector<MSWriteParserInternal::Paragraph> m_paragraphList;
 	std::vector<MSWriteParserInternal::Font> m_fontList;
+	std::vector<MSWriteParserInternal::Footnote> m_footnotes;
 	std::vector<librevenge::RVNGString> m_fonts;
 	WPSPageSpan m_pageSpan;
 	libwps_tools_win::Font::Type m_fontType;
@@ -99,6 +137,7 @@ private:
 	shared_ptr<WPSContentListener> m_listener; /* the listener (if set)*/
 
 	WPSEntry m_Main;
+	librevenge::RVNGPropertyList m_metaData;
 };
 
 #endif /* MS_WRITE_H */

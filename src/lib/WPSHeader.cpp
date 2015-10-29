@@ -97,7 +97,8 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 			}
 			else
 			{
-				WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Word for DOS detected, not supported yet\n"));
+				WPS_DEBUG_MSG(("WPSHeader::constructHeader: Microsoft Word for DOS detected\n"));
+				return new WPSHeader(input, input, 0, WPS_TEXT, WPS_DOSWORD);
 			}
 		}
 		return 0;

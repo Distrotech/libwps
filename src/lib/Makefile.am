@@ -20,6 +20,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	libwps_tools_win.h	\
 	libwps_tools_win.cpp	\
 	libwps_internal.h	\
+	DosWord.cpp		\
+	DosWord.h		\
 	Lotus.cpp		\
 	Lotus.h			\
 	LotusGraph.cpp		\

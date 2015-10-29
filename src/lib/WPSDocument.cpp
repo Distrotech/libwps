@@ -27,6 +27,7 @@
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
 
+#include "DosWord.h"
 #include "Lotus.h"
 #include "Quattro.h"
 #include "WKS4.h"
@@ -77,6 +78,15 @@ WPSLIB WPSConfidence WPSDocument::isFileFormatSupported(librevenge::RVNGInputStr
 		if (kind==WPS_TEXT && creator==WPS_MSWRITE)
 		{
 			needEncoding=true;
+			return WPS_CONFIDENCE_EXCELLENT;
+		}
+		else if (kind==WPS_TEXT && creator==WPS_DOSWORD)
+		{
+			// create a DosWordParser to check the header validity
+			DosWordParser parser(header->getInput(), header);
+			if (!parser.checkHeader(header.get(), true))
+				return WPS_CONFIDENCE_NONE;
+			needEncoding=header->getNeedEncoding();
 			return WPS_CONFIDENCE_EXCELLENT;
 		}
 		else if (kind==WPS_TEXT && header->getMajorVersion()<=4)
@@ -169,6 +179,13 @@ WPSLIB WPSResult WPSDocument::parse(librevenge::RVNGInputStream *ip, librevenge:
 		if (header->getCreator() == WPS_MSWRITE)
 		{
 			parser.reset(new MSWriteParser(header->getInput(), header,
+			                               libwps_tools_win::Font::getTypeForString(encoding)));
+			if (!parser) return WPS_UNKNOWN_ERROR;
+			parser->parse(documentInterface);
+		}
+		else if (header->getCreator() == WPS_DOSWORD)
+		{
+			parser.reset(new DosWordParser(header->getInput(), header,
 			                               libwps_tools_win::Font::getTypeForString(encoding)));
 			if (!parser) return WPS_UNKNOWN_ERROR;
 			parser->parse(documentInterface);

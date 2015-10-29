@@ -851,7 +851,7 @@ static unsigned long unicodeFromCP875(unsigned char c)
 }
 
 // From ftp://ftp.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/WINDOWS/CP932.TXT
-static librevenge::RVNGString unicodeFromCP932(const unsigned char *c, unsigned size)
+static librevenge::RVNGString unicodeFromCP932(const unsigned char *c, unsigned long size)
 {
 	static const struct
 	{
@@ -2846,7 +2846,7 @@ static librevenge::RVNGString unicodeFromCP932(const unsigned char *c, unsigned 
 }
 
 // From http://unicode.org/Public/MAPPINGS/VENDORS/MICSFT/WINDOWS/CP950.TXT
-static librevenge::RVNGString unicodeFromCP950(const unsigned char *c, unsigned size)
+static librevenge::RVNGString unicodeFromCP950(const unsigned char *c, unsigned long size)
 {
 	static const struct
 	{
@@ -7265,7 +7265,7 @@ unsigned long Font::unicode(unsigned char c, Font::Type type)
 }
 
 
-librevenge::RVNGString Font::unicodeString(const unsigned char *p, unsigned size, Font::Type type)
+librevenge::RVNGString Font::unicodeString(const unsigned char *p, unsigned long size, Font::Type type)
 {
 	librevenge::RVNGString str;
 
@@ -7274,7 +7274,7 @@ librevenge::RVNGString Font::unicodeString(const unsigned char *p, unsigned size
 	if (type == CP_950)
 		return unicodeFromCP950(p, size);
 
-	for (unsigned i=0; i<size; i++)
+	for (unsigned long i=0; i<size; i++)
 	{
 		libwps::appendUnicode((uint32_t) unicode(p[i], type), str);
 	}

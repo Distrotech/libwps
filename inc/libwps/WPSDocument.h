@@ -52,7 +52,8 @@ enum WPSCreator { WPS_MSWORKS=0 /**< Microsoft Works documents (all wps, wks and
                   WPS_RESERVED_0, WPS_RESERVED_1, WPS_RESERVED_2,
                   WPS_RESERVED_3, WPS_RESERVED_4, WPS_RESERVED_5,
                   WPS_RESERVED_6, WPS_RESERVED_7, WPS_RESERVED_8,
-                  WPS_MSWRITE=WPS_RESERVED_0 /** Microsoft Write documents (wri) */
+                  WPS_MSWRITE=WPS_RESERVED_0 /** Microsoft Write documents (wri) */,
+                  WPS_DOSWORD=WPS_RESERVED_1 /** Microsoft Word for DOS documents (doc) */
                 };
 enum WPSKind { WPS_TEXT=0, WPS_SPREADSHEET, WPS_DATABASE };
 enum WPSResult { WPS_OK, WPS_ENCRYPTION_ERROR, WPS_FILE_ACCESS_ERROR, WPS_PARSE_ERROR, WPS_OLE_ERROR, WPS_UNKNOWN_ERROR };

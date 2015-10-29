@@ -174,27 +174,6 @@ struct CHP
 	uint8_t	m_hpsPos;
 };
 
-struct Paragraph :  public WPSParagraph
-{
-	enum Location { MAIN, HEADER, FOOTER };
-	Paragraph() : WPSParagraph(), m_fcFirst(0), m_fcLim(0), m_Location(MAIN),
-		m_graphics(false), m_firstpage(false), m_skiptab(false),
-		m_interLine(0.0)  { }
-	uint32_t m_fcFirst, m_fcLim;
-	Location m_Location;
-	bool m_graphics, m_firstpage, m_skiptab;
-	double m_interLine;
-};
-
-struct Font : public WPSFont
-{
-	Font() : WPSFont(), m_fcFirst(0), m_fcLim(0), m_special(false),
-		m_encoding(libwps_tools_win::Font::UNKNOWN) { }
-	uint32_t m_fcFirst, m_fcLim;
-	bool m_special;
-	libwps_tools_win::Font::Type m_encoding;
-};
-
 // the file header offsets
 enum HeaderOffset
 {
@@ -301,25 +280,32 @@ static void appendU32(librevenge::RVNGBinaryData &b, uint32_t val)
 
 MSWriteParser::MSWriteParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
                              libwps_tools_win::Font::Type encoding):
-	WPSParser(input, header),
-	m_fileLength(0), m_fcMac(0), m_paragraphList(0), m_fontList(0),
-	m_fonts(0), m_pageSpan(), m_fontType(encoding),
-	m_listener(), m_Main()
+	WPSParser(input, header), m_fileLength(0), m_fcMac(0),
+	m_paragraphList(0), m_fontList(0), m_footnotes(0), m_fonts(0),
+	m_pageSpan(), m_fontType(encoding), m_listener(), m_Main(), m_metaData()
 {
 	if (!input)
 	{
 		WPS_DEBUG_MSG(("MSWriteParser::MSWriteParser: called without input\n"));
 		throw libwps::ParseException();
 	}
+
 	input->seek(0, librevenge::RVNG_SEEK_END);
 	m_fileLength=(uint32_t) input->tell();
 	input->seek(0, librevenge::RVNG_SEEK_SET);
-	if (m_fontType == libwps_tools_win::Font::UNKNOWN)
-		m_fontType = libwps_tools_win::Font::WIN3_WEUROPE;
+	m_fontType = getFileEncoding(encoding);
 }
 
 MSWriteParser::~MSWriteParser()
 {
+}
+
+libwps_tools_win::Font::Type MSWriteParser::getFileEncoding(libwps_tools_win::Font::Type encoding)
+{
+	if (encoding == libwps_tools_win::Font::UNKNOWN)
+		encoding = libwps_tools_win::Font::WIN3_WEUROPE;
+
+	return encoding;
 }
 
 void MSWriteParser::readFIB()
@@ -777,6 +763,8 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 	std::vector<WPSPageSpan> pageList;
 	WPSPageSpan ps(m_pageSpan);
 	WPSEntry empty, footer, header;
+	WPSPageSpan::HeaderFooterOccurrence headerOccurrence = WPSPageSpan::ALL;
+	WPSPageSpan::HeaderFooterOccurrence footerOccurrence = WPSPageSpan::ALL;
 
 	MSWriteParserInternal::Paragraph::Location location = MSWriteParserInternal::Paragraph::MAIN;
 
@@ -786,11 +774,15 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 	{
 		MSWriteParserInternal::Paragraph &p = m_paragraphList[i];
 
+		if (p.m_Location == MSWriteParserInternal::Paragraph::FOOTNOTE)
+			break;
+
 		if (p.m_Location != location)
 		{
 			if (location == MSWriteParserInternal::Paragraph::HEADER)
 			{
 				headerPage1 = m_paragraphList[first].m_firstpage;
+				headerOccurrence = m_paragraphList[first].m_HeaderFooterOccurrence;
 				header.setBegin(m_paragraphList[first].m_fcFirst);
 				header.setEnd(m_paragraphList[i - 1].m_fcLim);
 				header.setType("TEXT");
@@ -798,6 +790,7 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 			else if (location == MSWriteParserInternal::Paragraph::FOOTER)
 			{
 				footerPage1 = m_paragraphList[first].m_firstpage;
+				footerOccurrence = m_paragraphList[first].m_HeaderFooterOccurrence;
 				footer.setBegin(m_paragraphList[first].m_fcFirst);
 				footer.setEnd(m_paragraphList[i - 1].m_fcLim);
 				footer.setType("TEXT");
@@ -806,15 +799,17 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 			location = p.m_Location;
 			first = i;
 		}
-
-		if (location == MSWriteParserInternal::Paragraph::MAIN)
-		{
-			m_Main.setBegin(p.m_fcFirst);
-			m_Main.setEnd(m_fcMac);
-			m_Main.setType("TEXT");
-			break;
-		}
 	}
+
+	if (i < 1)
+	{
+		WPS_DEBUG_MSG(("MSWriteParser::createListener: missing body text\n"));
+		throw (libwps::ParseException());
+	}
+
+	m_Main.setBegin(m_paragraphList[first].m_fcFirst);
+	m_Main.setEnd(m_paragraphList[i - 1].m_fcLim);
+	m_Main.setType("TEXT");
 
 	empty.setType("TEXT");
 
@@ -828,14 +823,14 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 		ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::ALL, subdoc);
 
 		if (!headerPage1)
-			ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::FIRST, subemptydoc);
+			ps.setHeaderFooter(WPSPageSpan::HEADER, headerOccurrence, subemptydoc);
 	}
 
 	if (footer.valid())
 	{
 		WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
 		                         (getInput(), *this, footer));
-		ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::ALL, subdoc);
+		ps.setHeaderFooter(WPSPageSpan::FOOTER, footerOccurrence, subdoc);
 
 		if (!footerPage1)
 			ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::FIRST, subemptydoc);
@@ -975,9 +970,17 @@ void MSWriteParser::readText(WPSEntry e)
 
 			if (chps->m_special)
 			{
-				if (p[0] == 1)
-					m_listener->insertField(WPSContentListener::PageNumber);
+				insertSpecial(p[0], fc);
 				size = 1;
+			}
+			else if (chps->m_footnote)
+			{
+				if (paps->m_Location != MSWriteParserInternal::Paragraph::FOOTNOTE)
+				{
+					librevenge::RVNGString label = libwps_tools_win::Font::unicodeString(p, size, chps->m_encoding);
+					insertFootnote(false, fc, label);
+				}
+
 			}
 			else
 			{
@@ -995,6 +998,12 @@ void MSWriteParser::readText(WPSEntry e)
 			skiptab = false;
 		}
 	}
+}
+
+void MSWriteParser::insertSpecial(uint8_t val, uint32_t /*fc*/)
+{
+	if (val == 1)
+		m_listener->insertField(WPSContentListener::PageNumber);
 }
 
 unsigned MSWriteParser::insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type)
@@ -1577,6 +1586,16 @@ bool MSWriteParser::processWMF(librevenge::RVNGBinaryData &wmfdata, unsigned siz
 	return true;
 }
 
+void MSWriteParser::readSUMD()
+{
+	// no metadata stored in MS Write
+}
+
+void MSWriteParser::readFNTB()
+{
+	// no footnotes supported in MS Write
+}
+
 void MSWriteParser::readStructures()
 {
 	RVNGInputStreamPtr input = getInput();
@@ -1584,6 +1603,8 @@ void MSWriteParser::readStructures()
 	readFIB();
 	readFFNTB();
 	readSECT();
+	readSUMD();
+	readFNTB();
 
 	input->seek(MSWriteParserInternal::HEADER_W_PNPARA, librevenge::RVNG_SEEK_SET);
 	unsigned pnPara = libwps::readU16(input);
@@ -1603,6 +1624,43 @@ void MSWriteParser::readStructures()
 	}
 }
 
+void MSWriteParser::insertFootnote(bool annotation, uint32_t fcPos, librevenge::RVNGString &label)
+{
+	std::vector<MSWriteParserInternal::Footnote>::iterator iter;
+
+	for (iter = m_footnotes.begin(); iter != m_footnotes.end(); ++iter)
+	{
+		if (fcPos == iter->fcRef)
+		{
+			WPSEntry e;
+			e.setBegin(iter->fcFtn);
+			if (++iter == m_footnotes.end())
+			{
+				WPS_DEBUG_MSG(("MSWriteParser::insertFootnote missing sentinel footnote\n"));
+				return;
+			}
+			e.setEnd(iter->fcFtn);
+			e.setType("TEXT");
+
+			if (e.valid() && e.begin() >= m_Main.end() && e.end() <= long(m_fcMac))
+			{
+				WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
+				                         (getInput(), *this, e));
+				if (annotation)
+					m_listener->insertComment(subdoc);
+				else if (label.size())
+					m_listener->insertLabelNote(WPSContentListener::FOOTNOTE, label, subdoc);
+				else
+					m_listener->insertNote(WPSContentListener::FOOTNOTE, subdoc);
+			}
+
+			return;
+		}
+	}
+
+	WPS_DEBUG_MSG(("MSWriteParser::insertFootnote footnote not found!\n"));
+}
+
 void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
 {
 	readStructures();
@@ -1615,6 +1673,7 @@ void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
 		throw (libwps::ParseException());
 	}
 
+	m_listener->setMetaData(m_metaData);
 	m_listener->startDocument();
 	if (m_Main.valid())
 	{

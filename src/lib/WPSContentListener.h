@@ -48,6 +48,7 @@ public:
 	virtual ~WPSContentListener();
 
 	void setDocumentLanguage(int lcid);
+	void setMetaData(const librevenge::RVNGPropertyList &list);
 
 	void startDocument();
 	void endDocument();
