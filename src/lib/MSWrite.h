@@ -86,7 +86,7 @@ public:
 
 
 	~MSWriteParser();
-	void parse(librevenge::RVNGTextInterface *const documentInterface);
+	void parse(librevenge::RVNGTextInterface *documentInterface);
 
 private:
 	MSWriteParser(const MSWriteParser &);
