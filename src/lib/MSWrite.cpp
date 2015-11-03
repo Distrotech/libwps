@@ -1006,47 +1006,52 @@ void MSWriteParser::insertSpecial(uint8_t val, uint32_t /*fc*/)
 		m_listener->insertField(WPSContentListener::PageNumber);
 }
 
+void MSWriteParser::insertControl(uint8_t val)
+{
+	switch (val)
+	{
+	case 9:
+		m_listener->insertTab();
+		break;
+	case 10:
+	case 11:
+		m_listener->insertEOL();
+		break;
+	case 12:
+		m_listener->insertBreak(WPS_PAGE_BREAK);
+		break;
+	case 30:
+		m_listener->insertUnicode(0x20);
+		break;
+	case 31: // soft hyphen (ignored by Write)
+	case 13: // carriage return
+		break;
+	default:
+		// MS Write displays these as boxes
+		m_listener->insertUnicode(0x25af);
+		break;
+	}
+}
+
 unsigned MSWriteParser::insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type)
 {
-	unsigned len = 1;
+	unsigned len = 0;
 
-	if (str[0] < ' ')
+	while (len < size && str[len] >= ' ')
+		len++;
+
+	if (len == 0)
 	{
-		switch (str[0])
-		{
-		case 9:
-			m_listener->insertTab();
-			break;
-		case 10:
-		case 11:
-			m_listener->insertEOL();
-			break;
-		case 12:
-			m_listener->insertBreak(WPS_PAGE_BREAK);
-			break;
-		case 30:
-			m_listener->insertUnicode(0x20);
-			break;
-		case 31: // soft hyphen (ignored by Write)
-		case 13: // carriage return
-			break;
-		default:
-			// MS Write displays these as boxes
-			m_listener->insertUnicode(0x25af);
-			break;
-		}
+		insertControl(str[0]);
+		len = 1;
 	}
 	else
 	{
 		librevenge::RVNGString convert;
 
-		while (len < size && str[len] >= ' ')
-			len++;
-
 		convert = libwps_tools_win::Font::unicodeString(str, len, type);
 
 		m_listener->insertUnicodeString(convert);
-
 	}
 
 	return len;

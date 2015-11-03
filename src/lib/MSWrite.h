@@ -114,6 +114,7 @@ protected:
 	bool processStaticOLE(librevenge::RVNGBinaryData &, std::string &mimetype, WPSPosition &pos, unsigned long lastPos);
 	bool readString(std::string &res, unsigned long lastPos);
 	virtual void insertSpecial(uint8_t val, uint32_t fc);
+	virtual void insertControl(uint8_t val);
 	void insertFootnote(bool annotation, uint32_t fcPos, librevenge::RVNGString &label);
 	unsigned insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type);
 

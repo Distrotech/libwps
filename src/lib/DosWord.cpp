@@ -516,6 +516,38 @@ void DosWordParser::insertSpecial(uint8_t val, uint32_t fc)
 	}
 }
 
+void DosWordParser::insertControl(uint8_t val)
+{
+	// 0xc4 = normal hyphen, 0xff = nbsp, already handled by cp437
+	switch (val)
+	{
+	case 9:
+		m_listener->insertTab();
+		break;
+	case 10:
+	case 11:
+		m_listener->insertEOL();
+		break;
+	case 12:
+		m_listener->insertBreak(WPS_PAGE_BREAK);
+		break;
+	case 13: // carriage return
+		break;
+	case 14: // column break
+		m_listener->insertBreak(WPS_COLUMN_BREAK);
+		break;
+	case 15: // em-hyphen
+		m_listener->insertUnicode(0x8212);
+		break;
+	case 31: // soft hyphen
+		m_listener->insertUnicode(0xad);
+		break;
+	default:
+		WPS_DEBUG_MSG(("DosWordParser::insertControl: unexpected control %u\n", val));
+		break;
+	}
+}
+
 void DosWordParser::readSUMD()
 {
 	RVNGInputStreamPtr input = getInput();
