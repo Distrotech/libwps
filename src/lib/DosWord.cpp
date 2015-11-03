@@ -152,6 +152,10 @@ bool DosWordParser::checkHeader(WPSHeader *header, bool /*strict*/)
 		WPS_DEBUG_MSG(("DosWordParser::checkHeader: version 5\n"));
 		header->setMajorVersion(5);
 		break;
+	case 7:
+		WPS_DEBUG_MSG(("DosWordParser::checkHeader: version 5.5\n"));
+		header->setMajorVersion(5);
+		break;
 	case 9:
 		WPS_DEBUG_MSG(("DosWordParser::checkHeader: version 6.0\n"));
 		header->setMajorVersion(6);
