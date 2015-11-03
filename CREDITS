@@ -11,6 +11,7 @@ of file-format.
 Tomas 'scarabeus' Chvatal <tomas.chvatal@gmail.com>		Build system rewrite
 David Tardon <dtardon@redhat.com>
 Sean Young						Add a parser for MsWrite document
+							Add a parser for Word for DOS
 
 
 Current maintainers and principal authors of librevenge
