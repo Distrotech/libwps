@@ -564,21 +564,28 @@ void DosWordParser::readSUMD()
 		return;
 	}
 
-	uint32_t fc = pnSumd * 0x80 + 0x12;
+	/*
+	 * The page starts with 9 uint16_t values which are offsets. Sometimes
+	 * the page contains garbage; when it does not, the first offset is 0.
+	 */
+	uint32_t fc = pnSumd * 0x80;
 	int i;
 
-	if (!checkFilePosition(fc + 1))
+	if (!checkFilePosition(fc + 20))
 	{
 		WPS_DEBUG_MSG(("DosWordParser::readSUMD: summary missing\n"));
 		return;
 	}
 
 	input->seek(fc, librevenge::RVNG_SEEK_SET);
-	if (libwps::readU8(input) == 0xdc)
+	if (libwps::readU16(input))
 	{
-		WPS_DEBUG_MSG(("DosWordParser::readSUMD: deleted\n"));
+		WPS_DEBUG_MSG(("DosWordParser::readSUMD: garbage\n"));
 		return;
 	}
+
+	// Step over the offsets; it's packed together anyway.
+	fc += 0x12;
 
 	static const char *sum_types[] =
 	{
