@@ -43,11 +43,11 @@ struct Paragraph :  public WPSParagraph
 	enum Location { MAIN, HEADER, FOOTER, FOOTNOTE };
 	Paragraph() : WPSParagraph(), m_fcFirst(0), m_fcLim(0),
 		m_Location(MAIN), m_graphics(false), m_firstpage(false),
-		m_skiptab(false), m_interLine(0.0),
+		m_skiptab(false), m_headerUseMargin(false), m_interLine(0.0),
 		m_HeaderFooterOccurrence(WPSPageSpan::ALL)  { }
 	uint32_t m_fcFirst, m_fcLim;
 	Location m_Location;
-	bool m_graphics, m_firstpage, m_skiptab;
+	bool m_graphics, m_firstpage, m_skiptab, m_headerUseMargin;
 	double m_interLine;
 	WPSPageSpan::HeaderFooterOccurrence m_HeaderFooterOccurrence;
 };

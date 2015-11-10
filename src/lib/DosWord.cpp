@@ -425,12 +425,8 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 		para.m_firstpage = (pap.m_rhc & 0x08) != 0;
 	}
 
-	if (para.m_Location != MSWriteParserInternal::Paragraph::MAIN)
-	{
-		// Indents in header/footer are off paper, not margins
-		para.m_margins[1] -= m_pageSpan.getMarginLeft();
-		para.m_margins[2] -= m_pageSpan.getMarginRight();
-	}
+	if (pap.m_justification & 0x20)
+		para.m_headerUseMargin = true;
 
 	if (pap.m_style & 1)
 	{

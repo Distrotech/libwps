@@ -691,13 +691,6 @@ void MSWriteParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 		}
 	}
 
-	if (para.m_Location != MSWriteParserInternal::Paragraph::MAIN)
-	{
-		// Indents in header/footer are off paper, not margins
-		para.m_margins[1] -= m_pageSpan.getMarginLeft();
-		para.m_margins[2] -= m_pageSpan.getMarginRight();
-	}
-
 	m_paragraphList.push_back(para);
 }
 
@@ -948,8 +941,16 @@ void MSWriteParser::readText(WPSEntry e)
 			}
 		}
 
-		WPSParagraph para = *paps;
+		MSWriteParserInternal::Paragraph para = *paps;
 		para.setInterline((paps->m_interLine * chps->m_size)/72., librevenge::RVNG_INCH, WPSParagraph::AtLeast);
+
+		if (!para.m_headerUseMargin && (para.m_Location == MSWriteParserInternal::Paragraph::HEADER ||
+		                                para.m_Location == MSWriteParserInternal::Paragraph::FOOTER))
+		{
+			// Indents in header/footer are off paper, not margins
+			para.m_margins[1] -= m_pageSpan.getMarginLeft();
+			para.m_margins[2] -= m_pageSpan.getMarginRight();
+		}
 
 		m_listener->setParagraph(para);
 		m_listener->setFont(*chps);
