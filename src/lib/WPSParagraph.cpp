@@ -275,6 +275,10 @@ void WPSParagraph::addTo(librevenge::RVNGPropertyList &propList, bool inTable) c
 		WPS_DEBUG_MSG(("WPSParagraph::addTo: can not set line spacing type: %d\n",int(m_spacingsInterlineType)));
 		break;
 	}
+	if (m_breakStatus & libwps::NoBreakBit)
+		propList.insert("fo:keep-together", "always");
+	if (m_breakStatus & libwps::NoBreakWithNextBit)
+		propList.insert("fo:keep-with-next", "always");
 	librevenge::RVNGPropertyListVector tabStops;
 	for (size_t i=0; i< m_tabs.size(); i++)
 		m_tabs[i].addTo(tabStops, 0);

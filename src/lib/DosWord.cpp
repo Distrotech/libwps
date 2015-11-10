@@ -476,10 +476,14 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 		para.m_borderStyle.m_color = color((pap.m_border / 16) & 7);
 	}
 
+	if (pap.m_justification & 4)
+		para.m_breakStatus |= libwps::NoBreakBit;
+	if (pap.m_justification & 8)
+		para.m_breakStatus |= libwps::NoBreakWithNextBit;
+
 	// FIXME: before/after spacing
 	// FIXME: paragraph shading
 	// FIXME: hidden paragraph
-	// FIXME: keep together etc
 
 	m_paragraphList.push_back(para);
 }
