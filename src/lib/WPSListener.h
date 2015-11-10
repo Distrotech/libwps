@@ -73,7 +73,7 @@ public:
 
 	// ------- fields ----------------
 	/** Defines some basic type for field */
-	enum FieldType { None, PageNumber, Date, Time, Title, Link, Database };
+	enum FieldType { None, PageNumber, NextPageNumber, Date, Time, Title, Link, Database };
 	//! adds a field type
 	virtual void insertField(FieldType type) = 0;
 	//! insert a date/time field with given format (see strftime)

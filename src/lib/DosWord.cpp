@@ -533,7 +533,11 @@ void DosWordParser::insertSpecial(uint8_t val, uint32_t fc)
 	case 8: // sequence reference mark
 		WPS_DEBUG_MSG(("Sequence reference mark\n"));
 		break;
+	case 9: // next page
+		m_listener->insertField(WPSContentListener::NextPageNumber);
+		break;
 	default:
+		WPS_DEBUG_MSG(("DosWordParser::insertSpecial: unknown special %u encountered\n", val));
 		break;
 	}
 }

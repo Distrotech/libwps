@@ -420,6 +420,17 @@ void WPSContentListener::insertField(WPSContentListener::FieldType type)
 		m_documentInterface->insertField(propList);
 		break;
 	}
+	case NextPageNumber:
+	{
+		_flushText();
+		_openSpan();
+		librevenge::RVNGPropertyList propList;
+		propList.insert("style:num-format", libwps::numberingTypeToString(libwps::ARABIC).c_str());
+		propList.insert("text:select-page", "next");
+		propList.insert("librevenge:field-type", "text:page-number");
+		m_documentInterface->insertField(propList);
+		break;
+	}
 	case Database:
 	{
 		librevenge::RVNGString tmp("#DATAFIELD#");
