@@ -815,20 +815,38 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 	{
 		WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
 		                         (getInput(), *this, header));
-		ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::ALL, subdoc);
 
-		if (!headerPage1)
-			ps.setHeaderFooter(WPSPageSpan::HEADER, headerOccurrence, subemptydoc);
+		if (headerOccurrence == WPSPageSpan::NEVER)
+		{
+			if (headerPage1)
+				ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::FIRST, subdoc);
+		}
+		else
+		{
+			ps.setHeaderFooter(WPSPageSpan::HEADER, headerOccurrence, subdoc);
+
+			if (!headerPage1)
+				ps.setHeaderFooter(WPSPageSpan::HEADER, WPSPageSpan::FIRST, subemptydoc);
+		}
 	}
 
 	if (footer.valid())
 	{
 		WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
 		                         (getInput(), *this, footer));
-		ps.setHeaderFooter(WPSPageSpan::FOOTER, footerOccurrence, subdoc);
 
-		if (!footerPage1)
-			ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::FIRST, subemptydoc);
+		if (footerOccurrence == WPSPageSpan::NEVER)
+		{
+			if (footerPage1)
+				ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::FIRST, subdoc);
+		}
+		else
+		{
+			ps.setHeaderFooter(WPSPageSpan::FOOTER, footerOccurrence, subdoc);
+
+			if (!footerPage1)
+				ps.setHeaderFooter(WPSPageSpan::FOOTER, WPSPageSpan::FIRST, subemptydoc);
+		}
 	}
 
 	ps.setPageSpan(numPages());

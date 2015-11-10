@@ -401,7 +401,7 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 	para.m_fcFirst = fcFirst;
 	para.m_fcLim = fcLim;
 
-	if (pap.m_rhc & 6)
+	if (pap.m_rhc & 0xe)
 	{
 		if (pap.m_rhc & 1)
 			para.m_Location = MSWriteParserInternal::Paragraph::FOOTER;
@@ -414,11 +414,14 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 		case 3: // all
 			para.m_HeaderFooterOccurrence = WPSPageSpan::ALL;
 			break;
+		case 2: // even
+			para.m_HeaderFooterOccurrence = WPSPageSpan::EVEN;
+			break;
 		case 1: // odd
 			para.m_HeaderFooterOccurrence = WPSPageSpan::ODD;
 			break;
-		case 2: // even
-			para.m_HeaderFooterOccurrence = WPSPageSpan::EVEN;
+		case 0: // never; however might be on first page
+			para.m_HeaderFooterOccurrence = WPSPageSpan::NEVER;
 			break;
 		}
 
@@ -479,7 +482,7 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 
 	// FIXME: before/after spacing
 	// FIXME: paragraph shading
-	// FIXME: hidden paragraph
+	// FIXME: paragraph position
 
 	m_paragraphList.push_back(para);
 }
