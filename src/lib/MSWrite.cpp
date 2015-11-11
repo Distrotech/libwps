@@ -801,9 +801,7 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 	}
 
 	m_Main.setBegin(m_paragraphList[first].m_fcFirst);
-	m_Main.setEnd(m_paragraphList[i - 1].m_fcLim);
-	if (m_Main.end() > m_fcMac)
-		m_Main.setEnd(m_fcMac);
+	m_Main.setEnd(std::min(m_paragraphList[i - 1].m_fcLim, m_fcMac));
 	m_Main.setType("TEXT");
 
 	empty.setType("TEXT");
