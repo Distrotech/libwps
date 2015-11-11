@@ -274,9 +274,6 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
 	case WPSContentListener::PageNumber:
 		o << "field[page],";
 		break;
-	case WPSContentListener::NextPageNumber:
-		o << "field[nextpage],";
-		break;
 	case WPSContentListener::Date:
 		o << "field[date],";
 		break;
