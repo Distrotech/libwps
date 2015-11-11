@@ -480,8 +480,27 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 	if (pap.m_justification & 8)
 		para.m_breakStatus |= libwps::NoBreakWithNextBit;
 
+	// paragraph shading
+	if (pap.m_shade & 0x7f)
+	{
+		WPSColor c = color((pap.m_pos >> 4) & 7);
+
+		unsigned percent = std::min(pap.m_shade & 0x7fu, 100u);
+
+		// Use percent to increase brightness
+		// 100% means color stays the same
+		// 0% means white
+
+		unsigned add = (255 * (100 - percent)) / 100;
+
+		para.m_backgroundColor = WPSColor(
+		                             (unsigned char)std::min(c.getRed() + add, 255u),
+		                             (unsigned char)std::min(c.getGreen() + add, 255u),
+		                             (unsigned char)std::min(c.getBlue() + add, 255u));
+	}
+
 	// FIXME: before/after spacing
-	// FIXME: paragraph shading
+	// FIXME: side-by-side
 	// FIXME: paragraph position
 
 	m_paragraphList.push_back(para);
