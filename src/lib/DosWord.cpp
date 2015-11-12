@@ -314,7 +314,7 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 
 	DosWordParserInternal::PAP pap;
 
-	WPS_LE_PUT_GUINT16(&pap.m_dyaLine, 192);
+	WPS_LE_PUT_GUINT16(&pap.m_dyaLine, 240);
 
 	if (cch)
 	{
@@ -395,8 +395,15 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 	para.m_margins[1] = dxaLeft / 1440.0;
 	para.m_margins[2] = dxaRight / 1440.0;
 
-	uint16_t dyaLine = WPS_LE_GET_GUINT16(&pap.m_dyaLine);
-	para.m_interLine = dyaLine / 192.0;
+	// spacings
+	int16_t dyaLine = WPS_LE_GET_GUINT16(&pap.m_dyaLine);
+	uint16_t dyaBefore = WPS_LE_GET_GUINT16(&pap.m_dyaBefore);
+	uint16_t dyaAfter = WPS_LE_GET_GUINT16(&pap.m_dyaAfter);
+	// dyaLine = -40 means "auto"
+	if (dyaLine > 0)
+		para.m_spacings[0] = dyaLine / 240.0;
+	para.m_spacings[1] = dyaBefore / 240.0;
+	para.m_spacings[2] = dyaAfter / 240.0;
 
 	para.m_fcFirst = fcFirst;
 	para.m_fcLim = fcLim;
@@ -499,7 +506,6 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 		                             (unsigned char)std::min(c.getBlue() + add, 255u));
 	}
 
-	// FIXME: before/after spacing
 	// FIXME: side-by-side
 	// FIXME: paragraph position
 

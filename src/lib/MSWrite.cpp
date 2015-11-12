@@ -958,7 +958,8 @@ void MSWriteParser::readText(WPSEntry e)
 		}
 
 		MSWriteParserInternal::Paragraph para = *paps;
-		para.setInterline((paps->m_interLine * chps->m_size)/72., librevenge::RVNG_INCH, WPSParagraph::AtLeast);
+		if (paps->m_interLine)
+			para.setInterline((paps->m_interLine * chps->m_size)/72., librevenge::RVNG_INCH, WPSParagraph::AtLeast);
 
 		if (!para.m_headerUseMargin && (para.m_Location == MSWriteParserInternal::Paragraph::HEADER ||
 		                                para.m_Location == MSWriteParserInternal::Paragraph::FOOTER))
