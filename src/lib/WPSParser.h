@@ -77,7 +77,7 @@ protected:
 	}
 
 private:
-	WPSParser(const WPSParser &);
+	explicit WPSParser(const WPSParser &);
 	WPSParser &operator=(const WPSParser &);
 
 	// the main input

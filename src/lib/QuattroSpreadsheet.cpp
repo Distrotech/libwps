@@ -49,7 +49,7 @@ namespace QuattroSpreadsheetInternal
 struct Style : public WPSCellFormat
 {
 	//! construtor
-	Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_fontType(type), m_fileFormat(0xFF), m_extra("")
+	explicit Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_fontType(type), m_fileFormat(0xFF), m_extra("")
 	{
 	}
 
@@ -139,7 +139,7 @@ class Cell : public WPSCell
 {
 public:
 	/// constructor
-	Cell(libwps_tools_win::Font::Type type) : m_fontType(type), m_fileFormat(0xFF), m_content() { }
+	explicit Cell(libwps_tools_win::Font::Type type) : m_fontType(type), m_fileFormat(0xFF), m_content() { }
 
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Cell const &cell);

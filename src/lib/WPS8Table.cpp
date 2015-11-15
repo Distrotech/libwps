@@ -47,7 +47,7 @@ namespace WPS8TableInternal
 struct Cell : public WPSCell
 {
 	//! constructor
-	Cell(WPS8Table &parser) : WPSCell(), m_tableParser(parser), m_id(-1), m_strsId(-1), m_size()
+	explicit Cell(WPS8Table &parser) : WPSCell(), m_tableParser(parser), m_id(-1), m_strsId(-1), m_size()
 	{
 		WPSBorder emptyBorder;
 		emptyBorder.m_style = WPSBorder::None;

@@ -54,7 +54,7 @@ namespace LotusParserInternal
 struct Font : public WPSFont
 {
 	//! constructor
-	Font(libwps_tools_win::Font::Type type) : WPSFont(), m_type(type)
+	explicit Font(libwps_tools_win::Font::Type type) : WPSFont(), m_type(type)
 	{
 	}
 	//! font encoding type
@@ -116,7 +116,7 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 struct State
 {
 	//! constructor
-	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1),
+	explicit State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1),
 		m_inMainContentBlock(false), m_fontsMap(), m_pageSpan(), m_maxSheet(0), m_actPage(0), m_numPages(0),
 		m_headerString(""), m_footerString("")
 	{

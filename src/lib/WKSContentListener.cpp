@@ -47,7 +47,7 @@
 struct WKSDocumentParsingState
 {
 	//! constructor
-	WKSDocumentParsingState(std::vector<WPSPageSpan> const &pageList);
+	explicit WKSDocumentParsingState(std::vector<WPSPageSpan> const &pageList);
 	//! destructor
 	~WKSDocumentParsingState();
 
@@ -306,23 +306,15 @@ void WKSContentListener::insertField(WKSContentListener::FieldType type)
 	case None:
 		break;
 	case PageNumber:
-	{
-		_flushText();
-		_openSpan();
-		librevenge::RVNGPropertyList propList;
-		propList.insert("style:num-format", libwps::numberingTypeToString(libwps::ARABIC).c_str());
-		propList.insert("librevenge:field-type", "text:page-number");
-		m_documentInterface->insertField(propList);
-		break;
-	}
 	case NextPageNumber:
 	{
 		_flushText();
 		_openSpan();
 		librevenge::RVNGPropertyList propList;
 		propList.insert("style:num-format", libwps::numberingTypeToString(libwps::ARABIC).c_str());
-		propList.insert("text:select-page", "next");
 		propList.insert("librevenge:field-type", "text:page-number");
+		if (type==NextPageNumber)
+			propList.insert("text:select-page", "next");
 		m_documentInterface->insertField(propList);
 		break;
 	}

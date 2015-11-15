@@ -62,7 +62,7 @@ protected:
 	}
 
 private:
-	WKSParser(const WKSParser &);
+	explicit WKSParser(const WKSParser &);
 	WKSParser &operator=(const WKSParser &);
 
 	// the main input

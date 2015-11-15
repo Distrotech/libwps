@@ -60,7 +60,7 @@ class WPS8Table
 	friend class WPS8Parser;
 public:
 	//! constructor
-	WPS8Table(WPS8Parser &parser);
+	explicit WPS8Table(WPS8Parser &parser);
 
 	//! destructor
 	~WPS8Table();

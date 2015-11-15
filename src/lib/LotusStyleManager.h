@@ -48,7 +48,7 @@ public:
 	friend class LotusParser;
 
 	//! constructor
-	LotusStyleManager(LotusParser &parser);
+	explicit LotusStyleManager(LotusParser &parser);
 	//! destructor
 	~LotusStyleManager();
 	//! clean internal state

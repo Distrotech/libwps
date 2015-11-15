@@ -98,7 +98,7 @@ class WPSOLEParser
 public:
 	/** constructor
 	    \param mainName name of the main ole, we must avoid to parse */
-	WPSOLEParser(const std::string &mainName);
+	explicit WPSOLEParser(const std::string &mainName);
 
 	/** destructor */
 	~WPSOLEParser();

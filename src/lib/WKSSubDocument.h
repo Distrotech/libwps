@@ -57,7 +57,7 @@ public:
 protected:
 	WKSParser *m_parser;
 private:
-	WKSSubDocument(const WKSSubDocument &);
+	explicit WKSSubDocument(const WKSSubDocument &);
 	WKSSubDocument &operator=(const WKSSubDocument &);
 
 };

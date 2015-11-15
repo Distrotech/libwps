@@ -61,7 +61,7 @@ public:
 protected:
 	WPSParser *m_parser;
 private:
-	WPSTextSubDocument(const WPSTextSubDocument &);
+	explicit WPSTextSubDocument(const WPSTextSubDocument &);
 	WPSTextSubDocument &operator=(const WPSTextSubDocument &);
 };
 #endif

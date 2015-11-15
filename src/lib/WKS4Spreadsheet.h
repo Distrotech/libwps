@@ -51,7 +51,7 @@ public:
 	friend class WKS4Parser;
 
 	//! constructor
-	WKS4Spreadsheet(WKS4Parser &parser);
+	explicit WKS4Spreadsheet(WKS4Parser &parser);
 	//! destructor
 	~WKS4Spreadsheet();
 	//! sets the listener

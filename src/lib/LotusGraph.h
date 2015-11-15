@@ -54,7 +54,7 @@ public:
 	friend class LotusGraphInternal::SubDocument;
 
 	//! constructor
-	LotusGraph(LotusParser &parser);
+	explicit LotusGraph(LotusParser &parser);
 	//! destructor
 	~LotusGraph();
 	//! clean internal state

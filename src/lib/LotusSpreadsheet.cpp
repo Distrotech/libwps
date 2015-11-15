@@ -52,7 +52,7 @@ namespace LotusSpreadsheetInternal
 struct Style : public WPSCellFormat
 {
 	//! construtor
-	Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_fontType(type), m_extra("")
+	explicit Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_fontType(type), m_extra("")
 	{
 		m_font.m_size=10;
 	}

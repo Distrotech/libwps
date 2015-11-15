@@ -127,7 +127,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 //! the state of WPS4
 struct State
 {
-	State(libwps_tools_win::Font::Type fontType) :
+	explicit State(libwps_tools_win::Font::Type fontType) :
 		m_isDosFile(false), m_eof(-1), m_fontType(fontType),
 		m_OEMFontType(libwps_tools_win::Font::UNKNOWN),
 		m_pageSpan(), m_noFirstPageHeader(false), m_noFirstPageFooter(false),

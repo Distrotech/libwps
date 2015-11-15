@@ -60,7 +60,7 @@ class DebugFile
 {
 public:
 	//! constructor given the input file
-	DebugFile(RVNGInputStreamPtr ip=RVNGInputStreamPtr())
+	explicit DebugFile(RVNGInputStreamPtr ip=RVNGInputStreamPtr())
 		: m_file(), m_on(false), m_input(ip), m_actOffset(-1), m_notes(), m_skipZones() { }
 
 	//! resets the input
@@ -196,7 +196,7 @@ public:
 class DebugFile
 {
 public:
-	DebugFile(RVNGInputStreamPtr) {}
+	explicit DebugFile(RVNGInputStreamPtr) {}
 	DebugFile() {}
 	static void setStream(RVNGInputStreamPtr) {  }
 	~DebugFile() { }

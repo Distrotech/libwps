@@ -58,7 +58,7 @@ class WPS4Graph
 	friend class WPS4Parser;
 public:
 	//! constructor given the main parser of the MN0 zone
-	WPS4Graph(WPS4Parser &parser);
+	explicit WPS4Graph(WPS4Parser &parser);
 
 	//! destructor
 	~WPS4Graph();

@@ -85,7 +85,7 @@ struct ColorStyle
 struct FontStyle
 {
 	//! constructor
-	FontStyle(libwps_tools_win::Font::Type fontType) : m_font(), m_fontType(fontType), m_fontId(0), m_extra("")
+	explicit FontStyle(libwps_tools_win::Font::Type fontType) : m_font(), m_fontType(fontType), m_fontId(0), m_extra("")
 	{
 	}
 	//! operator<<

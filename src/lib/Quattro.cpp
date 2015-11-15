@@ -52,7 +52,7 @@ namespace QuattroParserInternal
 struct Font : public WPSFont
 {
 	//! constructor
-	Font(libwps_tools_win::Font::Type type) : WPSFont(), m_type(type)
+	explicit Font(libwps_tools_win::Font::Type type) : WPSFont(), m_type(type)
 	{
 	}
 	//! font encoding type
@@ -112,7 +112,7 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 struct State
 {
 	//! constructor
-	State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1), m_hasLICSCharacters(false),
+	explicit State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1), m_hasLICSCharacters(false),
 		m_fontsList(), m_pageSpan(), m_actPage(0), m_numPages(0), m_headerString(""), m_footerString("")
 	{
 	}

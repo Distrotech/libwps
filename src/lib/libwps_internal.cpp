@@ -394,7 +394,7 @@ WPSColor WPSColor::barycenter(float alpha, WPSColor const &colA,
 		unsigned char comp= (unsigned char)val;
 		res+=uint32_t(comp<<depl);
 	}
-	return res;
+	return WPSColor(res);
 }
 
 std::ostream &operator<< (std::ostream &o, WPSColor const &c)

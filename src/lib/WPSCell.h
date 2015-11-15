@@ -320,7 +320,7 @@ protected:
 	//! a comparaison structure used retrieve the rows and the columns
 	struct Compare
 	{
-		Compare(int dim) : m_coord(dim) {}
+		explicit Compare(int dim) : m_coord(dim) {}
 		//! small structure to define a cell point
 		struct Point
 		{

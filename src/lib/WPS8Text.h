@@ -50,7 +50,7 @@ class WPS8Text : public WPSTextParser
 	friend class WPS8Parser;
 	friend class WPS8TextStyle;
 public:
-	WPS8Text(WPS8Parser &parser);
+	explicit WPS8Text(WPS8Parser &parser);
 	~WPS8Text();
 
 	//! sets the listener

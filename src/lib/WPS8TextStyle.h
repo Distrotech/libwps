@@ -43,7 +43,7 @@ class WPS8TextStyle
 public:
 	struct FontData;
 
-	WPS8TextStyle(WPS8Text &parser);
+	explicit WPS8TextStyle(WPS8Text &parser);
 	~WPS8TextStyle();
 
 	//! sets the listener

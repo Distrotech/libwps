@@ -51,7 +51,7 @@ public:
 	friend class QuattroParser;
 
 	//! constructor
-	QuattroSpreadsheet(QuattroParser &parser);
+	explicit QuattroSpreadsheet(QuattroParser &parser);
 	//! destructor
 	~QuattroSpreadsheet();
 	//! sets the listener

@@ -49,7 +49,7 @@ namespace WKS4SpreadsheetInternal
 struct Style : public WPSCellFormat
 {
 	//! construtor
-	Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_font(), m_fontType(type), m_extra("")
+	explicit Style(libwps_tools_win::Font::Type type) : WPSCellFormat(), m_font(), m_fontType(type), m_extra("")
 	{
 		for (int i = 0; i < 10; i++) m_unknFlags[i] = 0;
 	}

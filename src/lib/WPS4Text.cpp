@@ -87,7 +87,7 @@ enum ZoneType { Z_String=-1, Z_Header=0, Z_Footer=1, Z_Main=2, Z_Note, Z_Bookmar
 struct FontName
 {
 	//! constructor with file's version to define the default encoding */
-	FontName(libwps_tools_win::Font::Type type) : m_name(""), m_type(type)
+	explicit FontName(libwps_tools_win::Font::Type type) : m_name(""), m_type(type)
 	{
 	}
 	//! operator<<
@@ -142,7 +142,7 @@ librevenge::RVNGString FontName::getDosName(int id)
 struct Font : public WPSFont
 {
 	//! constructor with file's version to define the default encoding */
-	Font(libwps_tools_win::Font::Type type) : WPSFont(), m_type(type),
+	explicit Font(libwps_tools_win::Font::Type type) : WPSFont(), m_type(type),
 		m_backColor(WPSColor::white()), m_special(false), m_dlinkId(-1)
 	{
 	}

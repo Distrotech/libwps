@@ -256,7 +256,7 @@ struct WPSColumnProperties
 struct WPSColor
 {
 	//! constructor
-	WPSColor(uint32_t argb=0) : m_value(argb)
+	explicit WPSColor(uint32_t argb=0) : m_value(argb)
 	{
 	}
 	//! constructor from color

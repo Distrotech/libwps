@@ -53,7 +53,7 @@ public:
 	friend class LotusParser;
 
 	//! constructor
-	LotusSpreadsheet(LotusParser &parser);
+	explicit LotusSpreadsheet(LotusParser &parser);
 	//! destructor
 	~LotusSpreadsheet();
 	//! clean internal state

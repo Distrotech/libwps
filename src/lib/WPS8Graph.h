@@ -56,7 +56,7 @@ class WPS8Graph
 	friend class WPS8Parser;
 public:
 	//! constructor
-	WPS8Graph(WPS8Parser &parser);
+	explicit WPS8Graph(WPS8Parser &parser);
 
 	//! destructor
 	~WPS8Graph();
