@@ -396,7 +396,7 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 	para.m_margins[2] = dxaRight / 1440.0;
 
 	// spacings
-	int16_t dyaLine = WPS_LE_GET_GUINT16(&pap.m_dyaLine);
+	int16_t dyaLine = (int16_t) WPS_LE_GET_GUINT16(&pap.m_dyaLine);
 	uint16_t dyaBefore = WPS_LE_GET_GUINT16(&pap.m_dyaBefore);
 	uint16_t dyaAfter = WPS_LE_GET_GUINT16(&pap.m_dyaAfter);
 	// dyaLine = -40 means "auto"
