@@ -56,7 +56,7 @@ private:
 	virtual void readFFNTB();
 	virtual void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	virtual void readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
-	virtual void insertSpecial(uint8_t val, uint32_t fc);
+	virtual void insertSpecial(uint8_t val, uint32_t fc, MSWriteParserInternal::Paragraph::Location location);
 	virtual void insertControl(uint8_t val);
 	virtual void readSUMD();
 	virtual void readFNTB();

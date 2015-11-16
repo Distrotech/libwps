@@ -55,10 +55,10 @@ struct Paragraph :  public WPSParagraph
 struct Font : public WPSFont
 {
 	Font() : WPSFont(), m_fcFirst(0), m_fcLim(0), m_special(false),
-		m_footnote(false),
+		m_footnote(false), m_annotation(false),
 		m_encoding(libwps_tools_win::Font::UNKNOWN) { }
 	uint32_t m_fcFirst, m_fcLim;
-	bool m_special, m_footnote;
+	bool m_special, m_footnote, m_annotation;
 	libwps_tools_win::Font::Type m_encoding;
 };
 
@@ -113,9 +113,9 @@ protected:
 	void processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos);
 	bool processStaticOLE(librevenge::RVNGBinaryData &, std::string &mimetype, WPSPosition &pos, unsigned long lastPos);
 	bool readString(std::string &res, unsigned long lastPos);
-	virtual void insertSpecial(uint8_t val, uint32_t fc);
+	virtual void insertSpecial(uint8_t val, uint32_t fc, MSWriteParserInternal::Paragraph::Location location);
 	virtual void insertControl(uint8_t val);
-	void insertFootnote(bool annotation, uint32_t fcPos, librevenge::RVNGString &label);
+	void insertNote(bool annotation, uint32_t fcPos, librevenge::RVNGString &label);
 	unsigned insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type);
 
 	//! check if the file position is correct or not

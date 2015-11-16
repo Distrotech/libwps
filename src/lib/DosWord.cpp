@@ -243,13 +243,17 @@ void DosWordParser::readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 
 	if (chp.m_fStyled & 1)
 	{
-		if ((chp.m_fStyled / 2) == 13)
+		switch (chp.m_fStyled / 2)
 		{
+		case 13: // footnote reference
 			font.m_footnote = true;
-		}
-		else
-		{
+			break;
+		case 26: // annotation reference
+			font.m_annotation = true;
+			break;
+		default:
 			WPS_DEBUG_MSG(("Style sheet stc=%u %x-%x\n", chp.m_fStyled / 2, fcFirst, fcLim));
+			break;
 		}
 	}
 
@@ -440,13 +444,15 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 
 	if (pap.m_style & 1)
 	{
-		if ((pap.m_style / 2) == 39)
+		switch (pap.m_style / 2)
 		{
+		case 39: // footnote
+		case 87: // annotation
 			para.m_Location = MSWriteParserInternal::Paragraph::FOOTNOTE;
-		}
-		else
-		{
+			break;
+		default:
 			WPS_DEBUG_MSG(("DosWordParser::readPAP pap unknown style stc=%u %x-%x\n", pap.m_style / 2, fcFirst, fcLim));
+			break;
 		}
 	}
 
@@ -512,7 +518,7 @@ void DosWordParser::readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 	m_paragraphList.push_back(para);
 }
 
-void DosWordParser::insertSpecial(uint8_t val, uint32_t fc)
+void DosWordParser::insertSpecial(uint8_t val, uint32_t fc, MSWriteParserInternal::Paragraph::Location location)
 {
 	librevenge::RVNGString empty;
 
@@ -528,10 +534,12 @@ void DosWordParser::insertSpecial(uint8_t val, uint32_t fc)
 		m_listener->insertField(WPSContentListener::Time);
 		break;
 	case 4: // annotation reference
-		insertFootnote(true, fc, empty);
+		if (location == MSWriteParserInternal::Paragraph::MAIN)
+			insertNote(true, fc, empty);
 		break;
 	case 5: // footnote reference
-		insertFootnote(false, fc, empty);
+		if (location == MSWriteParserInternal::Paragraph::MAIN)
+			insertNote(false, fc, empty);
 		break;
 	case 7: // sequence mark
 		WPS_DEBUG_MSG(("Sequence mark\n"));

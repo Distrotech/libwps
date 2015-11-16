@@ -990,17 +990,16 @@ void MSWriteParser::readText(WPSEntry e)
 
 			if (chps->m_special)
 			{
-				insertSpecial(p[0], fc);
+				insertSpecial(p[0], fc, paps->m_Location);
 				size = 1;
 			}
-			else if (chps->m_footnote)
+			else if (chps->m_footnote || chps->m_annotation)
 			{
 				if (paps->m_Location != MSWriteParserInternal::Paragraph::FOOTNOTE)
 				{
 					librevenge::RVNGString label = libwps_tools_win::Font::unicodeString(p, size, chps->m_encoding);
-					insertFootnote(false, fc, label);
+					insertNote(chps->m_annotation, fc, label);
 				}
-
 			}
 			else
 			{
@@ -1020,7 +1019,7 @@ void MSWriteParser::readText(WPSEntry e)
 	}
 }
 
-void MSWriteParser::insertSpecial(uint8_t val, uint32_t /*fc*/)
+void MSWriteParser::insertSpecial(uint8_t val, uint32_t /*fc*/, MSWriteParserInternal::Paragraph::Location /*location*/)
 {
 	if (val == 1)
 		m_listener->insertField(WPSContentListener::PageNumber);
@@ -1649,7 +1648,7 @@ void MSWriteParser::readStructures()
 	}
 }
 
-void MSWriteParser::insertFootnote(bool annotation, uint32_t fcPos, librevenge::RVNGString &label)
+void MSWriteParser::insertNote(bool annotation, uint32_t fcPos, librevenge::RVNGString &label)
 {
 	std::vector<MSWriteParserInternal::Footnote>::iterator iter;
 
@@ -1661,7 +1660,7 @@ void MSWriteParser::insertFootnote(bool annotation, uint32_t fcPos, librevenge::
 			e.setBegin(iter->fcFtn);
 			if (++iter == m_footnotes.end())
 			{
-				WPS_DEBUG_MSG(("MSWriteParser::insertFootnote missing sentinel footnote\n"));
+				WPS_DEBUG_MSG(("MSWriteParser::insertNote missing sentinel footnote\n"));
 				return;
 			}
 			e.setEnd(iter->fcFtn);
@@ -1683,7 +1682,7 @@ void MSWriteParser::insertFootnote(bool annotation, uint32_t fcPos, librevenge::
 		}
 	}
 
-	WPS_DEBUG_MSG(("MSWriteParser::insertFootnote footnote not found!\n"));
+	WPS_DEBUG_MSG(("MSWriteParser::insertNote note not found!\n"));
 }
 
 void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
