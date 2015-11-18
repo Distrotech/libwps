@@ -995,7 +995,7 @@ void MSWriteParser::readText(WPSEntry e)
 			}
 			else if (chps->m_footnote || chps->m_annotation)
 			{
-				if (paps->m_Location != MSWriteParserInternal::Paragraph::FOOTNOTE)
+				if (paps->m_Location == MSWriteParserInternal::Paragraph::MAIN)
 				{
 					librevenge::RVNGString label = libwps_tools_win::Font::unicodeString(p, size, chps->m_encoding);
 					insertNote(chps->m_annotation, fc, label);
