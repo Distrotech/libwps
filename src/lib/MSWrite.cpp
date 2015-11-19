@@ -42,8 +42,8 @@ class SubDocument : public WPSTextSubDocument
 {
 public:
 	//! constructor for a text entry
-	SubDocument(RVNGInputStreamPtr input, MSWriteParser &pars, WPSEntry const &entry) :
-		WPSTextSubDocument(input, &pars), m_entry(entry) {}
+	SubDocument(RVNGInputStreamPtr input, MSWriteParser &pars, WPSEntry const &entry, Paragraph::Location location) :
+		WPSTextSubDocument(input, &pars), m_entry(entry), m_Location(location) {}
 	//! destructor
 	~SubDocument() {}
 
@@ -61,6 +61,7 @@ public:
 	void parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType);
 	//! the entry
 	WPSEntry m_entry;
+	Paragraph::Location m_Location;
 };
 
 void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDocumentType subDocumentType)
@@ -112,7 +113,7 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 		return;
 	}
 	long actPos=m_input->tell();
-	mnParser->readText(m_entry);
+	mnParser->readText(m_entry, m_Location);
 	m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -767,9 +768,6 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 	{
 		MSWriteParserInternal::Paragraph &p = m_paragraphList[i];
 
-		if (p.m_Location == MSWriteParserInternal::Paragraph::FOOTNOTE)
-			break;
-
 		if (p.m_Location != location)
 		{
 			if (location == MSWriteParserInternal::Paragraph::HEADER)
@@ -792,9 +790,21 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 			location = p.m_Location;
 			first = i;
 		}
+
+		if (p.m_Location == MSWriteParserInternal::Paragraph::FOOTNOTE ||
+		        p.m_Location == MSWriteParserInternal::Paragraph::MAIN)
+			break;
 	}
 
-	if (i < 1)
+	for (; i < m_paragraphList.size(); i++)
+	{
+		MSWriteParserInternal::Paragraph &p = m_paragraphList[i];
+
+		if (p.m_Location == MSWriteParserInternal::Paragraph::FOOTNOTE)
+			break;
+	}
+
+	if (i <= first)
 	{
 		WPS_DEBUG_MSG(("MSWriteParser::createListener: missing body text\n"));
 		throw (libwps::ParseException());
@@ -807,12 +817,12 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 	empty.setType("TEXT");
 
 	WPSSubDocumentPtr subemptydoc(new MSWriteParserInternal::SubDocument
-	                              (getInput(), *this, empty));
+	                              (getInput(), *this, empty, MSWriteParserInternal::Paragraph::MAIN));
 
 	if (header.valid())
 	{
 		WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
-		                         (getInput(), *this, header));
+		                         (getInput(), *this, header, MSWriteParserInternal::Paragraph::HEADER));
 
 		if (headerOccurrence == WPSPageSpan::NEVER)
 		{
@@ -831,7 +841,7 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 	if (footer.valid())
 	{
 		WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
-		                         (getInput(), *this, footer));
+		                         (getInput(), *this, footer, MSWriteParserInternal::Paragraph::FOOTER));
 
 		if (footerOccurrence == WPSPageSpan::NEVER)
 		{
@@ -853,7 +863,7 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 	       (new WPSContentListener(pageList, interface));
 }
 
-void MSWriteParser::readText(WPSEntry e)
+void MSWriteParser::readText(WPSEntry e, MSWriteParserInternal::Paragraph::Location location)
 {
 	uint32_t fc = (uint32_t) e.begin();
 	std::vector<MSWriteParserInternal::Paragraph>::iterator paps;
@@ -875,6 +885,13 @@ void MSWriteParser::readText(WPSEntry e)
 				throw (libwps::ParseException());
 			}
 			skiptab = paps->m_skiptab;
+		}
+
+		if (paps->m_Location != location)
+		{
+			// ignore e.g. headers in main body of text
+			fc = paps->m_fcLim;
+			continue;
 		}
 
 		if (paps->m_graphics)
@@ -1669,7 +1686,7 @@ void MSWriteParser::insertNote(bool annotation, uint32_t fcPos, librevenge::RVNG
 			if (e.valid() && e.begin() >= m_Main.end() && e.end() <= long(m_fcMac))
 			{
 				WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
-				                         (getInput(), *this, e));
+				                         (getInput(), *this, e, MSWriteParserInternal::Paragraph::FOOTNOTE));
 				if (annotation)
 					m_listener->insertComment(subdoc);
 				else if (label.size())
@@ -1701,7 +1718,7 @@ void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
 	m_listener->startDocument();
 	if (m_Main.valid())
 	{
-		readText(m_Main);
+		readText(m_Main, MSWriteParserInternal::Paragraph::MAIN);
 	}
 	m_listener->endDocument();
 	m_listener.reset();

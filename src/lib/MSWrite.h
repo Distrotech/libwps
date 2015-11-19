@@ -104,7 +104,7 @@ protected:
 	virtual void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	virtual void readSUMD();
 	virtual void readFNTB();
-	void readText(WPSEntry e);
+	void readText(WPSEntry e, MSWriteParserInternal::Paragraph::Location location);
 	int numPages();
 	void processObject(WPSPosition &pos, unsigned long lastPos);
 	bool processDDB(librevenge::RVNGBinaryData &bmpdata, WPSPosition &pos, unsigned width, unsigned height, unsigned byte_width, unsigned planes, unsigned bits_pixel, unsigned size);
