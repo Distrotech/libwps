@@ -1671,16 +1671,16 @@ void MSWriteParser::insertNote(bool annotation, uint32_t fcPos, librevenge::RVNG
 
 	for (iter = m_footnotes.begin(); iter != m_footnotes.end(); ++iter)
 	{
-		if (fcPos == iter->fcRef)
+		if (fcPos == iter->m_fcRef)
 		{
 			WPSEntry e;
-			e.setBegin(iter->fcFtn);
+			e.setBegin(iter->m_fcFtn);
 			if (++iter == m_footnotes.end())
 			{
 				WPS_DEBUG_MSG(("MSWriteParser::insertNote missing sentinel footnote\n"));
 				return;
 			}
-			e.setEnd(iter->fcFtn);
+			e.setEnd(iter->m_fcFtn);
 			e.setType("TEXT");
 
 			if (e.valid() && e.begin() >= m_Main.end() && e.end() <= long(m_fcMac))

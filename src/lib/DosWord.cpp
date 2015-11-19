@@ -746,11 +746,11 @@ void DosWordParser::readFNTB()
 	input->seek(fc, librevenge::RVNG_SEEK_SET);
 
 	uint16_t noteCount = libwps::readU16(input);
-	uint16_t noteCount2 = libwps::readU16(input);
+	uint16_t noteCountAndDeleted = libwps::readU16(input);
 
-	if (noteCount != noteCount2)
+	if (noteCount > noteCountAndDeleted)
 	{
-		WPS_DEBUG_MSG(("DosWordParser::readFNTB: two counts are different %u %u\n", noteCount, noteCount2));
+		WPS_DEBUG_MSG(("DosWordParser::readFNTB: note counts do not makesense %u %u\n", noteCount, noteCountAndDeleted));
 	}
 
 	for (unsigned note=0; note<noteCount; note++)
@@ -764,8 +764,8 @@ void DosWordParser::readFNTB()
 
 		MSWriteParserInternal::Footnote footnote;
 
-		footnote.fcRef = libwps::readU32(input) + 0x80;
-		footnote.fcFtn = libwps::readU32(input) + 0x80;
+		footnote.m_fcRef = libwps::readU32(input) + 0x80;
+		footnote.m_fcFtn = libwps::readU32(input) + 0x80;
 
 		m_footnotes.push_back(footnote);
 	}

@@ -64,8 +64,8 @@ struct Font : public WPSFont
 
 struct Footnote
 {
-	Footnote() : fcFtn(0), fcRef(0) { }
-	uint32_t fcFtn, fcRef;
+	Footnote() : m_fcFtn(0), m_fcRef(0) { }
+	uint32_t m_fcFtn, m_fcRef;
 };
 
 }
