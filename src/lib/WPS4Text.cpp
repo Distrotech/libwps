@@ -754,16 +754,16 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				break;
 			}
 			case 0x02:
-				m_listener->insertField(WPSContentListener::PageNumber);
+				m_listener->insertField(WPSField(WPSField::PageNumber));
 				break;
 			case 0x03:
-				m_listener->insertField(WPSContentListener::Date);
+				m_listener->insertField(WPSField(WPSField::Date));
 				break;
 			case 0x04:
-				m_listener->insertField(WPSContentListener::Time);
+				m_listener->insertField(WPSField(WPSField::Time));
 				break;
 			case 0x05:
-				m_listener->insertField(WPSContentListener::Title);
+				m_listener->insertField(WPSField(WPSField::Title));
 				break;
 			case 0x07:
 			{
@@ -791,7 +791,11 @@ bool WPS4Text::readText(WPSEntry const &zone)
 					WPS4TextInternal::DateTime const &form = m_state->m_dateTimeMap[actPos];
 					std::string format = form.format();
 					if (format.length())
-						m_listener->insertDateTimeField(format.c_str());
+					{
+						WPSField field(WPSField::Date);
+						field.m_DTFormat=format;
+						m_listener->insertField(field);
+					}
 					else
 					{
 						WPS_DEBUG_MSG(("WPS4Text::readText: unknown date/time format for position : %lX\n", (unsigned long) actPos));
@@ -844,19 +848,19 @@ bool WPS4Text::readText(WPSEntry const &zone)
 					{
 					case 'p':
 					case 'P':
-						m_listener->insertField(WPSContentListener::PageNumber);
+						m_listener->insertField(WPSField(WPSField::PageNumber));
 						break;
 					case 'd':
 					case 'D':
-						m_listener->insertField(WPSContentListener::Date);
+						m_listener->insertField(WPSField(WPSField::Date));
 						break;
 					case 't':
 					case 'T':
-						m_listener->insertField(WPSContentListener::Time);
+						m_listener->insertField(WPSField(WPSField::Time));
 						break;
 					case 'f':
 					case 'F':
-						m_listener->insertField(WPSContentListener::Title);
+						m_listener->insertField(WPSField(WPSField::Title));
 						break;
 					// case '&': check me does '&&'->'&' ?
 					default:

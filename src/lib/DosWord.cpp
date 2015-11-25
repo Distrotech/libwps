@@ -525,13 +525,13 @@ void DosWordParser::insertSpecial(uint8_t val, uint32_t fc, MSWriteParserInterna
 	switch (val)
 	{
 	case 1: // page name
-		m_listener->insertField(WPSContentListener::PageNumber);
+		m_listener->insertField(WPSField(WPSField::PageNumber));
 		break;
 	case 2: // current date
-		m_listener->insertField(WPSContentListener::Date);
+		m_listener->insertField(WPSField(WPSField::Date));
 		break;
 	case 3: // current time
-		m_listener->insertField(WPSContentListener::Time);
+		m_listener->insertField(WPSField(WPSField::Time));
 		break;
 	case 4: // annotation reference
 		if (location == MSWriteParserInternal::Paragraph::MAIN)
@@ -548,7 +548,7 @@ void DosWordParser::insertSpecial(uint8_t val, uint32_t fc, MSWriteParserInterna
 		WPS_DEBUG_MSG(("Sequence reference mark\n"));
 		break;
 	case 9: // next page
-		m_listener->insertField(WPSContentListener::NextPageNumber);
+		m_listener->insertField(WPSField(WPSField::PageNumberNext));
 		break;
 	default:
 		WPS_DEBUG_MSG(("DosWordParser::insertSpecial: unknown special %u encountered\n", val));

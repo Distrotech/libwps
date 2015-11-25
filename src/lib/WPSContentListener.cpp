@@ -403,65 +403,22 @@ shared_ptr<WPSList> WPSContentListener::getCurrentList() const
 ///////////////////
 // field :
 ///////////////////
-#include <time.h>
-void WPSContentListener::insertField(WPSContentListener::FieldType type)
+void WPSContentListener::insertField(WPSField const &field)
 {
-	switch (type)
-	{
-	case None:
-		break;
-	case PageNumber:
-	case NextPageNumber:
+	librevenge::RVNGPropertyList propList;
+	if (field.addTo(propList))
 	{
 		_flushText();
 		_openSpan();
-		librevenge::RVNGPropertyList propList;
-		propList.insert("style:num-format", libwps::numberingTypeToString(libwps::ARABIC).c_str());
-		propList.insert("librevenge:field-type", "text:page-number");
-		if (type==NextPageNumber)
-			propList.insert("text:select-page", "next");
 		m_documentInterface->insertField(propList);
-		break;
-	}
-	case Database:
-	{
-		librevenge::RVNGString tmp("#DATAFIELD#");
-		insertUnicodeString(tmp);
-		break;
-	}
-	case Title:
-	{
-		librevenge::RVNGString tmp("#TITLE#");
-		insertUnicodeString(tmp);
-		break;
-	}
-	case Date:
-		insertDateTimeField("%m/%d/%y");
-		break;
-	case Time:
-		insertDateTimeField("%I:%M:%S %p");
-		break;
-	case Link:
-	default:
-		WPS_DEBUG_MSG(("WPSContentListener::insertField: must not be called with type=%d\n", int(type)));
-		break;
-	}
-}
-
-void WPSContentListener::insertDateTimeField(char const *format)
-{
-	if (!format)
-	{
-		WPS_DEBUG_MSG(("WPSContentListener::insertDateTimeField: oops, can not find the format\n"));
 		return;
 	}
-	time_t now = time(0L);
-	struct tm timeinfo;
-	if (localtime_r(&now, &timeinfo))
+	librevenge::RVNGString text=field.getString();
+	if (!text.empty())
+		WPSContentListener::insertUnicodeString(text);
+	else
 	{
-		char buf[256];
-		strftime(buf, 256, format, &timeinfo);
-		insertUnicodeString(librevenge::RVNGString(buf));
+		WPS_DEBUG_MSG(("WPSContentListener::insertField: must not be called with type=%d\n", int(field.m_type)));
 	}
 }
 

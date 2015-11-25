@@ -72,12 +72,8 @@ public:
 	virtual WPSParagraph const &getParagraph() const=0;
 
 	// ------- fields ----------------
-	/** Defines some basic type for field */
-	enum FieldType { None, PageNumber, NextPageNumber, Date, Time, Title, Link, Database };
-	//! adds a field type
-	virtual void insertField(FieldType type) = 0;
-	//! insert a date/time field with given format (see strftime)
-	virtual void insertDateTimeField(char const *format)=0;
+	//! adds a field
+	virtual void insertField(WPSField const &field) = 0;
 };
 
 #endif

@@ -232,6 +232,16 @@ void appendUnicode(uint32_t val, librevenge::RVNGString &buffer);
 
 // Various helper structures for the parser..
 /* ---------- small enum/class ------------- */
+namespace libwps
+{
+enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
+std::string numberingTypeToString(NumberingType type);
+enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
+enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
+                     JustificationRight, JustificationFullAllLines
+                   };
+enum { NoBreakBit = 0x1, NoBreakWithNextBit=0x2};
+}
 
 struct WPSColumnDefinition
 {
@@ -465,16 +475,29 @@ struct WPSEmbeddedObject
 	std::vector<std::string> m_typeList;
 };
 
-namespace libwps
+//! a field
+struct WPSField
 {
-enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
-std::string numberingTypeToString(NumberingType type);
-enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION };
-enum Justification { JustificationLeft, JustificationFull, JustificationCenter,
-                     JustificationRight, JustificationFullAllLines
-                   };
-enum { NoBreakBit = 0x1, NoBreakWithNextBit=0x2};
-}
+	/** Defines some basic type for field */
+	enum Type { None, Database, Date, Link, PageCount, PageNumber, PageNumberNext, Time, Title };
+
+	/** basic constructor */
+	explicit WPSField(Type type) : m_type(type), m_DTFormat(""), m_numberingType(libwps::ARABIC), m_data("")
+	{
+	}
+	/** add the link property to proplist (if possible) */
+	bool addTo(librevenge::RVNGPropertyList &propList) const;
+	//! returns a string corresponding to the field (if possible) */
+	librevenge::RVNGString getString() const;
+	//! the type
+	Type m_type;
+	//! the date/time format using strftime format if defined (see strftime)
+	std::string m_DTFormat;
+	//! the number type ( for number field )
+	libwps::NumberingType m_numberingType;
+	//! the database/link field ( if defined )
+	std::string m_data;
+};
 
 // ATTRIBUTE bits
 #define WPS_EXTRA_LARGE_BIT 1

@@ -1039,7 +1039,7 @@ void MSWriteParser::readText(WPSEntry e, MSWriteParserInternal::Paragraph::Locat
 void MSWriteParser::insertSpecial(uint8_t val, uint32_t /*fc*/, MSWriteParserInternal::Paragraph::Location /*location*/)
 {
 	if (val == 1)
-		m_listener->insertField(WPSContentListener::PageNumber);
+		m_listener->insertField(WPSField(WPSField::PageNumber));
 }
 
 void MSWriteParser::insertControl(uint8_t val)

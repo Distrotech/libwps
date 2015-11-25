@@ -250,12 +250,12 @@ std::ostream &operator<<(std::ostream &o, Object const &obj)
 struct Token
 {
 	//! constructor
-	Token() : m_type(WPSContentListener::None), m_textLength(-1), m_unknown(-1), m_text(""), m_error("") {}
+	Token() : m_type(WPSField::None), m_textLength(-1), m_unknown(-1), m_text(""), m_error("") {}
 	//! operator <<
 	friend std::ostream &operator<<(std::ostream &o, Token const &tok);
 
 	//! the field type
-	WPSContentListener::FieldType m_type;
+	WPSField::Type m_type;
 	//! the length of the text corresponding to the token
 	int m_textLength;
 	//! an unknown value
@@ -271,26 +271,29 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
 	o << std::dec;
 	switch (tok.m_type)
 	{
-	case WPSContentListener::PageNumber:
+	case WPSField::PageCount:
+		o << "field[pageCount],";
+		break;
+	case WPSField::PageNumber:
 		o << "field[page],";
 		break;
-	case WPSContentListener::NextPageNumber:
+	case WPSField::PageNumberNext:
 		o << "field[nextpage],";
 		break;
-	case WPSContentListener::Date:
+	case WPSField::Date:
 		o << "field[date],";
 		break;
-	case WPSContentListener::Time:
+	case WPSField::Time:
 		o << "field[time],";
 		break;
-	case WPSContentListener::Title:
+	case WPSField::Title:
 		o << "field[title],";
 		break;
-	case WPSContentListener::Link:
+	case WPSField::Link:
 		o << "field[link],";
 		break;
-	case WPSContentListener::Database:
-	case WPSContentListener::None:
+	case WPSField::Database:
+	case WPSField::None:
 	default:
 		o << "##field[unknown]" << ",";
 		break;
@@ -836,14 +839,18 @@ void WPS8Text::readText(WPSEntry const &entry)
 					switch (special.m_fieldType)
 					{
 					case WPS8TextStyle::FontData::F_PageNumber:
-						m_listener->insertField(WPSContentListener::PageNumber);
+						m_listener->insertField(WPSField(WPSField::PageNumber));
 						break;
 					case WPS8TextStyle::FontData::F_Date:
 					case WPS8TextStyle::FontData::F_Time:
 					{
 						std::string format = special.format();
 						if (format.length())
-							m_listener->insertDateTimeField(format.c_str());
+						{
+							WPSField field(WPSField::Date);
+							field.m_DTFormat=format;
+							m_listener->insertField(field);
+						}
 						else
 						{
 							WPS_DEBUG_MSG(("WPS8Text::readText: unknown date/time format for position : %lX\n", (unsigned long) pos));
@@ -1700,10 +1707,10 @@ bool WPS8Text::tokenEndDataParser(long endPage, std::vector<long> const &textPtr
 				switch (dt.m_value)
 				{
 				case -2:
-					tokn.m_type = WPSContentListener::Link;
+					tokn.m_type = WPSField::Link;
 					break;
 				case -5:
-					tokn.m_type = WPSContentListener::PageNumber;
+					tokn.m_type = WPSField::PageNumber;
 					break;
 				// CHECKME: case -6-> strings = SPC, text character = 0xb7
 				// an insecable character or space ?

@@ -174,10 +174,8 @@ public:
 	WPSParagraph const &getParagraph() const;
 
 	// ------- fields ----------------
-	//! adds a field type
-	void insertField(FieldType type);
-	//! insert a date/time field with given format (see strftime)
-	void insertDateTimeField(char const *format);
+	//! adds a field
+	void insertField(WPSField const &field);
 
 	// ------- subdocument -----------------
 	/** adds comment */
