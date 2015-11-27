@@ -24,6 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 
@@ -62,6 +63,8 @@ static int printUsage()
 	printf("\t-o file.csv: Defines the ouput file\n");
 	printf("\t-p password: Password to open the file\n");
 	printf("\t-v:          Output wks2csv version\n");
+	printf("\t-N:          Output the number of sheets \n");
+	printf("\t-n num:      Sets the choose the sheet to convert (1: means first sheet) \n");
 	printf("\t-F:          Sets to output the formula which exists in the file\n");
 	printf("\t-Dformat:    Sets the date format: default \"%%m/%%d/%%y\"\n");
 	printf("\t-Tformat:    Sets the time format: default \"%%H:%%M:%%S\"\n");
@@ -83,15 +86,17 @@ static int printVersion()
 int main(int argc, char *argv[])
 {
 	bool printHelp=false;
+	bool printNumberOfSheet=false;
 	bool generateFormula=false;
 	char const *encoding="";
 	char const *password=0;
 	char const *output = 0;
+	int sheetToConvert=0;
 	int ch;
 	char decSeparator='.', fieldSeparator=',', textSeparator='"';
 	std::string dateFormat("%m/%d/%y"), timeFormat("%H:%M:%S");
 
-	while ((ch = getopt(argc, argv, "e:hvo:d:f:p:t:D:FT:")) != -1)
+	while ((ch = getopt(argc, argv, "e:hvo:d:f:p:t:D:Nn:FT:")) != -1)
 	{
 		switch (ch)
 		{
@@ -100,6 +105,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'F':
 			generateFormula=true;
+			break;
+		case 'N':
+			printNumberOfSheet=true;
 			break;
 		case 'T':
 			timeFormat=optarg;
@@ -113,14 +121,17 @@ int main(int argc, char *argv[])
 		case 'f':
 			fieldSeparator=optarg[0];
 			break;
-		case 't':
-			textSeparator=optarg[0];
+		case 'n':
+			sheetToConvert=std::atoi(optarg);
 			break;
 		case 'o':
 			output=optarg;
 			break;
 		case 'p':
 			password=optarg;
+			break;
+		case 't':
+			textSeparator=optarg[0];
 			break;
 		case 'v':
 			printVersion();
@@ -174,19 +185,29 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
 	else if (error != WPS_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
-	else if (vec.size()!=1)
+	else if (vec.empty())
 	{
 		fprintf(stderr, "ERROR: bad output!\n");
 		error = WPS_PARSE_ERROR;
 	}
+	else if (sheetToConvert>0 && sheetToConvert>(int) vec.size())
+	{
+		fprintf(stderr, "ERROR: Can not find sheet %d\n", sheetToConvert);
+		error = WPS_PARSE_ERROR;
+	}
 	if (error != WPS_OK)
 		return 1;
+	if (printNumberOfSheet)
+	{
+		std::cout << vec.size() << "\n";
+		return 0;
+	}
 	if (!output)
-		std::cout << vec[0].cstr() << std::endl;
+		std::cout << vec[sheetToConvert>0 ? unsigned(sheetToConvert-1) : 0].cstr() << std::endl;
 	else
 	{
 		std::ofstream out(output);
-		out << vec[0].cstr() << std::endl;
+		out << vec[sheetToConvert>0 ? unsigned(sheetToConvert-1) : 0].cstr() << std::endl;
 	}
 	return 0;
 }
