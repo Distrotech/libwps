@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
 	else if (error != WPS_OK)
 		fprintf(stderr, "ERROR: Unknown Error!\n");
-	else if (vec.size()!=1)
+	else if (vec.empty())
 	{
 		fprintf(stderr, "ERROR: bad output!\n");
 		error = WPS_PARSE_ERROR;
@@ -146,11 +146,23 @@ int main(int argc, char *argv[])
 	if (error != WPS_OK)
 		return 1;
 	if (!output)
-		std::cout << vec[0].cstr() << std::endl;
+	{
+		for (unsigned i=0; i<vec.size(); ++i)
+		{
+			if (i)
+				std::cout << "\n\t############# Sheet " << i+1 << " ################\n\n";
+			std::cout << vec[i].cstr() << std::endl;
+		}
+	}
 	else
 	{
 		std::ofstream out(output);
-		out << vec[0].cstr() << std::endl;
+		for (unsigned i=0; i<vec.size(); ++i)
+		{
+			if (i)
+				out << "\n\t############# Sheet " << i+1 << " ################\n\n";
+			out << vec[i].cstr() << std::endl;
+		}
 	}
 	return 0;
 }
