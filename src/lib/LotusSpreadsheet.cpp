@@ -198,7 +198,8 @@ public:
 	typedef std::map<Vec2i, Cell, ComparePosition> PositionToCellMap_t;
 
 	//! a constructor
-	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_LBPosition(-1,-1), m_boundsColsMap(), m_widthColsInChar(), m_heightRows(),
+	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_LBPosition(-1,-1), m_boundsColsMap(),
+		m_widthColsInChar(), m_heightRows(), m_heightDefault(16),
 		m_rowPageBreaksList(), m_positionToCellMap() {}
 	//! return a cell corresponding to a spreadsheet, create one if needed
 	Cell &getCell(Vec2i const &pos)
@@ -247,6 +248,32 @@ public:
 		m_heightRows[size_t(row)] = h;
 		if (row >= m_numRows) m_numRows=row+1;
 	}
+	//! returns the row size in point
+	float getRowHeight(int row) const
+	{
+		if (row>=0&&row<(int) m_heightRows.size() && m_heightRows[size_t(row)]>=0)
+			return (float) m_heightRows[size_t(row)];
+		return (float) m_heightDefault;
+	}
+	//! returns the height of a row in point and updated repeated row
+	float getRowHeight(int row, int &numRepeated) const
+	{
+		float res=getRowHeight(row);
+		numRepeated=1;
+		if (row<0 || row>=(int) m_heightRows.size())
+			numRepeated=1000;
+		else
+		{
+			for (size_t r=size_t(row+1); r<m_heightRows.size(); ++r)
+			{
+				float nextH=getRowHeight(row+1);
+				if (nextH<res || nextH>res)
+					break;
+				++numRepeated;
+			}
+		}
+		return res;
+	}
 
 	//! convert the m_widthColsInChar, m_heightRows in a vector of of point size
 	static std::vector<float> convertInPoint(std::vector<int> const &list,
@@ -291,8 +318,10 @@ public:
 	std::map<int, Vec2i> m_boundsColsMap;
 	/** the column size in char */
 	std::vector<int> m_widthColsInChar;
-	/** the row size in TWIP (?) */
+	/** the row size in points */
 	std::vector<int> m_heightRows;
+	/** the default row size in point */
+	int m_heightDefault;
 	/** the list of row page break */
 	std::vector<int> m_rowPageBreaksList;
 	/** a map cell to not empty cells */
@@ -1416,15 +1445,15 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 	}
 	LotusSpreadsheetInternal::Spreadsheet &sheet = m_state->getSheet(sheetId);
 
-	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,72,8), librevenge::RVNG_POINT, m_state->getSheetName(sheetId));
+	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,72,8), librevenge::RVNG_POINT,
+	                      std::vector<int>(), m_state->getSheetName(sheetId));
 	m_mainParser.sendGraphics(sheetId);
-	std::vector<float> rowHeight = sheet.convertInPoint(sheet.m_heightRows,16);
 	std::vector<LotusSpreadsheetInternal::Style> const *listStyles=0;
 	LotusSpreadsheetInternal::Style defaultStyle(m_mainParser.getDefaultFontType());
 	LotusSpreadsheetInternal::Cell emptyCell;
 	for (int r=0; r<=sheet.m_LBPosition[1]; ++r)
 	{
-		m_listener->openSheetRow(r < int(rowHeight.size()) ? rowHeight[size_t(r)] : 16, librevenge::RVNG_POINT);
+		m_listener->openSheetRow(sheet.getRowHeight(r), librevenge::RVNG_POINT);
 		listStyles=0;
 		if (m_state->m_rowIdToStyleIdMap.find(Vec2i(sheetId,r))!=m_state->m_rowIdToStyleIdMap.end())
 		{
@@ -1475,7 +1504,6 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 	if (cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
 		cellStyle.setHAlignement(cell.m_hAlign);
 
-	librevenge::RVNGPropertyList propList;
 	libwps_tools_win::Font::Type fontType = cellStyle.m_fontType;
 
 	m_listener->setFont(cellStyle.getFont());
@@ -1496,7 +1524,7 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 		}
 		text=finalString.cstr();
 	}
-	m_listener->openSheetCell(finalCell, content, propList);
+	m_listener->openSheetCell(finalCell, content);
 
 	if (cell.m_content.m_textEntry.valid())
 	{

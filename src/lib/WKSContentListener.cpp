@@ -866,7 +866,8 @@ void WKSContentListener::_endSubDocument()
 ///////////////////
 // sheet
 ///////////////////
-void WKSContentListener::openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit, librevenge::RVNGString const &name)
+void WKSContentListener::openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit,
+                                   std::vector<int> const &repeatColWidthNumber, librevenge::RVNGString const &name)
 {
 	if (m_ps->m_isSheetOpened)
 	{
@@ -888,10 +889,17 @@ void WKSContentListener::openSheet(std::vector<float> const &colWidth, libreveng
 	librevenge::RVNGPropertyListVector columns;
 
 	size_t nCols = colWidth.size();
+	bool useRepeated=repeatColWidthNumber.size()==nCols;
+	if (!useRepeated&&!repeatColWidthNumber.empty())
+	{
+		WPS_DEBUG_MSG(("WKSContentListener::openSheet: repeatColWidthNumber seems bad\n"));
+	}
 	for (size_t c = 0; c < nCols; c++)
 	{
 		librevenge::RVNGPropertyList column;
 		column.insert("style:column-width", colWidth[c], unit);
+		if (useRepeated && repeatColWidthNumber[c]>1)
+			column.insert("table:number-columns-repeated", repeatColWidthNumber[c]);
 		columns.append(column);
 	}
 	propList.insert("librevenge:columns", columns);
@@ -916,7 +924,7 @@ void WKSContentListener::closeSheet()
 	_popParsingState();
 }
 
-void WKSContentListener::openSheetRow(float h, librevenge::RVNGUnit unit, bool headerRow)
+void WKSContentListener::openSheetRow(float h, librevenge::RVNGUnit unit, bool headerRow, int numRepeated)
 {
 	if (m_ps->m_isSheetRowOpened)
 	{
@@ -930,6 +938,8 @@ void WKSContentListener::openSheetRow(float h, librevenge::RVNGUnit unit, bool h
 	}
 	librevenge::RVNGPropertyList propList;
 	propList.insert("librevenge:is-header-row", headerRow);
+	if (numRepeated>1)
+		propList.insert("table:number-rows-repeated", numRepeated);
 
 	if (h > 0)
 		propList.insert("style:row-height", h, unit);
@@ -950,7 +960,7 @@ void WKSContentListener::closeSheetRow()
 	m_documentInterface->closeSheetRow();
 }
 
-void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::CellContent const &content, librevenge::RVNGPropertyList const &extras)
+void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::CellContent const &content, int numRepeated)
 {
 	if (!m_ps->m_isSheetRowOpened)
 	{
@@ -963,8 +973,10 @@ void WKSContentListener::openSheetCell(WPSCell const &cell, WKSContentListener::
 		closeSheetCell();
 	}
 
-	librevenge::RVNGPropertyList propList(extras);
+	librevenge::RVNGPropertyList propList;
 	cell.addTo(propList);
+	if (numRepeated>1)
+		propList.insert("table:number-columns-repeated", numRepeated);
 	cell.getFont().addTo(propList);
 	if (!cell.hasBasicFormat())
 	{

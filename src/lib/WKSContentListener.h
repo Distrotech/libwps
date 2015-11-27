@@ -194,18 +194,19 @@ public:
 
 	// ------- sheet -----------------
 	/** open a sheet*/
-	void openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit, librevenge::RVNGString const &name="");
+	void openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit,
+	               std::vector<int> const &repeatColWidthNumber=std::vector<int>(), librevenge::RVNGString const &name="");
 	/** closes this sheet */
 	void closeSheet();
 	/** open a row with given height. If h<0, use min-row-heigth */
-	void openSheetRow(float h, librevenge::RVNGUnit unit, bool headerRow=false);
+	void openSheetRow(float h, librevenge::RVNGUnit unit, bool headerRow=false, int numRepeated=1);
 	/** closes this row */
 	void closeSheetRow();
 	/** low level function to define a cell.
 		\param cell the cell position, alignement, ...
 		\param content the cell content
-		\param extras to be used to pass extra data, for instance spreadsheet data*/
-	void openSheetCell(WPSCell const &cell, CellContent const &content, librevenge::RVNGPropertyList const &extras=librevenge::RVNGPropertyList());
+		\param numRepeated the cell columns repeatition*/
+	void openSheetCell(WPSCell const &cell, CellContent const &content, int numRepeated=1);
 	/** close a cell */
 	void closeSheetCell();
 

@@ -254,7 +254,7 @@ public:
 
 	//! a constructor
 	Spreadsheet(Type type=T_Spreadsheet, int id=0) : m_type(type), m_id(id), m_numCols(0), m_numRows(0), m_LBPosition(-1,-1),
-		m_widthCols(), m_heightRows(), m_positionToCellMap(), m_lastCellPos(),
+		m_widthCols(), m_heightRows(), m_heightDefault(16), m_positionToCellMap(), m_lastCellPos(),
 		m_rowPageBreaksList() {}
 	//! return a cell corresponding to a spreadsheet, create one if needed
 	Cell &getCell(Vec2i const &pos)
@@ -292,6 +292,32 @@ public:
 		if (row >= m_numRows) m_numRows=row+1;
 	}
 
+	//! returns the row size in point
+	float getRowHeight(int row) const
+	{
+		if (row>=0&&row<(int) m_heightRows.size() && m_heightRows[size_t(row)]>=0)
+			return (float) m_heightRows[size_t(row)]/20.f;
+		return (float) m_heightDefault;
+	}
+	//! returns the height of a row in point and updated repeated row
+	float getRowHeight(int row, int &numRepeated) const
+	{
+		float res=getRowHeight(row);
+		numRepeated=1;
+		if (row<0 || row>=(int) m_heightRows.size())
+			numRepeated=1000;
+		else
+		{
+			for (size_t r=size_t(row+1); r<m_heightRows.size(); ++r)
+			{
+				float nextH=getRowHeight(row+1);
+				if (nextH<res || nextH>res)
+					break;
+				++numRepeated;
+			}
+		}
+		return res;
+	}
 	//! convert the m_widthCols, m_heightRows in a vector of of point size
 	static std::vector<float> convertInPoint(std::vector<int> const &list,
 	                                         float defSize)
@@ -338,6 +364,8 @@ public:
 	std::vector<int> m_widthCols;
 	/** the row size in TWIP (?) */
 	std::vector<int> m_heightRows;
+	/** the default row size in point */
+	int m_heightDefault;
 	/** a map cell to not empty cells */
 	PositionToCellMap_t m_positionToCellMap;
 	/** the last cell position */
@@ -2273,7 +2301,7 @@ void WKS4Spreadsheet::sendSpreadsheet(int sId)
 	sheet->computeRightBottomPosition();
 
 	m_listener->openSheet(sheet->convertInPoint(sheet->m_widthCols,76), librevenge::RVNG_POINT,
-	                      m_state->getSheetName(sId));
+	                      std::vector<int>(), m_state->getSheetName(sId));
 	std::vector<float> rowHeight = sheet->convertInPoint(sheet->m_heightRows,16);
 
 	typedef std::map<int, const WKS4SpreadsheetInternal::Cell *> SparseRow_t;
@@ -2282,18 +2310,33 @@ void WKS4Spreadsheet::sendSpreadsheet(int sId)
 	for (WKS4SpreadsheetInternal::Spreadsheet::PositionToCellMap_t::const_iterator it = sheet->m_positionToCellMap.begin(); it != sheet->m_positionToCellMap.end(); ++it)
 		table[it->first[1]][it->first[0]] = &it->second;
 
-	SparseTable_t::const_iterator rIt = table.begin();
-	for (int r=0; r<=sheet->m_LBPosition[1] && rIt != table.end(); ++r)
+	int prevRow = -1;
+	for (SparseTable_t::const_iterator rIt = table.begin(); rIt != table.end(); ++rIt)
 	{
-		m_listener->openSheetRow(r < int(rowHeight.size()) ? rowHeight[size_t(r)] : 16, librevenge::RVNG_POINT);
-		if (r == rIt->first) // a row with at least one non-empty cell
+		int row=rIt->first;
+		if (row>prevRow+1)
 		{
-			for (SparseRow_t::const_iterator cIt = rIt->second.begin(); cIt != rIt->second.end(); ++cIt)
-				sendCellContent(*cIt->second);
-			++rIt;
+			while (row > prevRow+1)
+			{
+				if (prevRow != -1) m_listener->closeSheetRow();
+				int numRepeat;
+				float h=sheet->getRowHeight(prevRow+1, numRepeat);
+				if (row<prevRow+1+numRepeat)
+					numRepeat=row-1-prevRow;
+				m_listener->openSheetRow(h, librevenge::RVNG_POINT, false, numRepeat);
+				prevRow+=numRepeat;
+			}
 		}
-		m_listener->closeSheetRow();
+		if (row > prevRow)
+		{
+			if (prevRow != -1) m_listener->closeSheetRow();
+			m_listener->openSheetRow(sheet->getRowHeight(++prevRow), librevenge::RVNG_POINT);
+		}
+
+		for (SparseRow_t::const_iterator cIt = rIt->second.begin(); cIt != rIt->second.end(); ++cIt)
+			sendCellContent(*cIt->second);
 	}
+	if (prevRow!=-1) m_listener->closeSheetRow();
 	m_listener->closeSheet();
 }
 
@@ -2313,7 +2356,6 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 	if (version()<=2 && cell.m_hAlign!=WPSCellFormat::HALIGN_DEFAULT)
 		cellStyle.setHAlignement(cell.m_hAlign);
 
-	librevenge::RVNGPropertyList propList;
 	libwps_tools_win::Font::Type fontType = cellStyle.m_fontType;
 	m_listener->setFont(cellStyle.m_font);
 
@@ -2339,7 +2381,7 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 		}
 		text=finalString.cstr();
 	}
-	m_listener->openSheetCell(finalCell, content, propList);
+	m_listener->openSheetCell(finalCell, content);
 
 	if (cell.m_content.m_textEntry.valid())
 	{
