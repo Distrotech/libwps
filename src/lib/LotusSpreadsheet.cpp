@@ -175,6 +175,35 @@ std::ostream &operator<<(std::ostream &o, Cell const &cell)
 	return o;
 }
 
+//! small struct use to keep trace of cell with style or content used by LotusSpreadsheet::sendSpreadsheet
+struct CellPLC
+{
+	//! constructor
+	CellPLC() : m_pos(0,0), m_cell(0), m_style(0)
+	{
+	}
+	//! copy constructor
+	CellPLC(CellPLC const &orig) : m_pos(orig.m_pos), m_cell(orig.m_cell), m_style(orig.m_style)
+	{
+	}
+	//! operator=
+	CellPLC &operator=(CellPLC const &orig)
+	{
+		if (this==&orig)
+			return *this;
+		m_pos=orig.m_pos;
+		m_cell=orig.m_cell;
+		m_style=orig.m_style;
+		return *this;
+	}
+	//! the cell position
+	Vec2i m_pos;
+	//! a pointer to the cell content
+	Cell const *m_cell;
+	//! a pointer to the cell style
+	Style const *m_style;
+};
+
 ///////////////////////////////////////////////////////////////////
 //! the spreadsheet of a WPS4Spreadsheet
 class Spreadsheet
@@ -333,7 +362,7 @@ struct State
 {
 	//! constructor
 	State() :  m_eof(-1), m_version(-1), m_spreadsheetList(), m_nameToCellsMap(),
-		m_rowStylesList(), m_rowIdToStyleIdMap(), m_rowIdToChildRowIdMap()
+		m_rowStylesList(), m_rowSheetIdToStyleIdMap(), m_rowSheetIdToChildRowIdMap()
 	{
 		m_spreadsheetList.resize(1);
 	}
@@ -372,10 +401,10 @@ struct State
 	std::map<std::string, CellsList> m_nameToCellsMap;
 	//! the list of row styles
 	std::vector<std::vector<Style> > m_rowStylesList;
-	//! map sheet x row to row style id
-	std::map<Vec2i,size_t> m_rowIdToStyleIdMap;
-	//! map sheet x row to child style
-	std::multimap<Vec2i,Vec2i> m_rowIdToChildRowIdMap;
+	//! map Vec2i(row, sheetId) to row style id
+	std::map<Vec2i,size_t> m_rowSheetIdToStyleIdMap;
+	//! map Vec2i(row, sheetId) to child style
+	std::multimap<Vec2i,Vec2i> m_rowSheetIdToChildRowIdMap;
 };
 
 }
@@ -404,12 +433,12 @@ void LotusSpreadsheet::updateState()
 	for (size_t i=0; i< numSheets; ++i)
 		m_state->m_spreadsheetList[i].computeRightBottomPosition();
 	// update the state correspondance between row and row's styles
-	if (!m_state->m_rowIdToChildRowIdMap.empty())
+	if (!m_state->m_rowSheetIdToChildRowIdMap.empty())
 	{
 		std::set<Vec2i> seens;
 		std::stack<Vec2i> toDo;
-		for (std::map<Vec2i,size_t>::const_iterator it=m_state->m_rowIdToStyleIdMap.begin();
-		        it!=m_state->m_rowIdToStyleIdMap.end(); ++it)
+		for (std::map<Vec2i,size_t>::const_iterator it=m_state->m_rowSheetIdToStyleIdMap.begin();
+		        it!=m_state->m_rowSheetIdToStyleIdMap.end(); ++it)
 			toDo.push(it->first);
 		while (!toDo.empty())
 		{
@@ -421,19 +450,19 @@ void LotusSpreadsheet::updateState()
 				continue;
 			}
 			seens.insert(pos);
-			std::multimap<Vec2i,Vec2i>::const_iterator cIt=m_state->m_rowIdToChildRowIdMap.lower_bound(pos);
-			if (cIt==m_state->m_rowIdToChildRowIdMap.end() || cIt->first!=pos)
+			std::multimap<Vec2i,Vec2i>::const_iterator cIt=m_state->m_rowSheetIdToChildRowIdMap.lower_bound(pos);
+			if (cIt==m_state->m_rowSheetIdToChildRowIdMap.end() || cIt->first!=pos)
 				continue;
-			if (m_state->m_rowIdToStyleIdMap.find(pos)==m_state->m_rowIdToStyleIdMap.end())
+			if (m_state->m_rowSheetIdToStyleIdMap.find(pos)==m_state->m_rowSheetIdToStyleIdMap.end())
 			{
 				WPS_DEBUG_MSG(("LotusSpreadsheet::updateState: something is bad\n"));
 				continue;
 			}
-			size_t finalPos=m_state->m_rowIdToStyleIdMap.find(pos)->second;
-			while (cIt!=m_state->m_rowIdToChildRowIdMap.end() && cIt->first==pos)
+			size_t finalPos=m_state->m_rowSheetIdToStyleIdMap.find(pos)->second;
+			while (cIt!=m_state->m_rowSheetIdToChildRowIdMap.end() && cIt->first==pos)
 			{
 				Vec2i const &cPos=cIt++->second;
-				m_state->m_rowIdToStyleIdMap[cPos]=finalPos;
+				m_state->m_rowSheetIdToStyleIdMap[cPos]=finalPos;
 				toDo.push(cPos);
 			}
 		}
@@ -452,8 +481,8 @@ void LotusSpreadsheet::updateState()
 		if (lastCol>255) lastCol=255; // dubious
 		stylesToLastColMap[i]=lastCol;
 	}
-	for (std::map<Vec2i,size_t>::const_iterator it=m_state->m_rowIdToStyleIdMap.begin();
-	        it!=m_state->m_rowIdToStyleIdMap.end(); ++it)
+	for (std::map<Vec2i,size_t>::const_iterator it=m_state->m_rowSheetIdToStyleIdMap.begin();
+	        it!=m_state->m_rowSheetIdToStyleIdMap.end(); ++it)
 	{
 		Vec2i const &pos=it->first;
 		size_t styleId=it->second;
@@ -461,10 +490,10 @@ void LotusSpreadsheet::updateState()
 		        stylesToLastColMap.find(styleId)->second<0) continue;
 		if (pos[1]>8192) continue; // dubious
 		int col=stylesToLastColMap.find(styleId)->second;
-		if (pos[0]<0 || pos[0]>=(int)numSheets) continue;
-		LotusSpreadsheetInternal::Spreadsheet &sheet=m_state->m_spreadsheetList[size_t(pos[0])];
+		if (pos[1]<0 || pos[1]>=(int)numSheets) continue;
+		LotusSpreadsheetInternal::Spreadsheet &sheet=m_state->m_spreadsheetList[size_t(pos[1])];
 		sheet.m_LBPosition=Vec2i(sheet.m_LBPosition[0]>col ? sheet.m_LBPosition[0] : col,
-		                         sheet.m_LBPosition[1]>pos[1] ? sheet.m_LBPosition[1] : pos[1]);
+		                         sheet.m_LBPosition[1]>pos[0] ? sheet.m_LBPosition[1] : pos[0]);
 	}
 }
 
@@ -698,7 +727,7 @@ bool LotusSpreadsheet::readRowFormats()
 			actCell+=numCell;
 		}
 		f << "],";
-		m_state->m_rowIdToStyleIdMap[Vec2i(sheetId,row)]=m_state->m_rowStylesList.size();
+		m_state->m_rowSheetIdToStyleIdMap[Vec2i(row,sheetId)]=m_state->m_rowStylesList.size();
 		m_state->m_rowStylesList.push_back(stylesList);
 		if (actCell>256)
 		{
@@ -743,8 +772,8 @@ bool LotusSpreadsheet::readRowFormats()
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the original row seems bad\n"));
 			f << "#";
 		}
-		m_state->m_rowIdToChildRowIdMap.insert
-		(std::multimap<Vec2i,Vec2i>::value_type(Vec2i(sheetId2,val),Vec2i(sheetId,row)));
+		m_state->m_rowSheetIdToChildRowIdMap.insert
+		(std::multimap<Vec2i,Vec2i>::value_type(Vec2i(val,sheetId2),Vec2i(row,sheetId)));
 		f << "orig[row]=" << val << ",";
 		break;
 	}
@@ -1448,46 +1477,89 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,72,8), librevenge::RVNG_POINT,
 	                      std::vector<int>(), m_state->getSheetName(sheetId));
 	m_mainParser.sendGraphics(sheetId);
-	std::vector<LotusSpreadsheetInternal::Style> const *listStyles=0;
+	typedef std::map<int, LotusSpreadsheetInternal::CellPLC> SparseRow_t;
+	typedef std::map<int, SparseRow_t> SparseTable_t;
+	SparseTable_t table;
+	LotusSpreadsheetInternal::Spreadsheet::PositionToCellMap_t::const_iterator cIt;
+	for (cIt=sheet.m_positionToCellMap.begin(); cIt!=sheet.m_positionToCellMap.end(); ++cIt)
+	{
+		Vec2i pos=cIt->first;
+		if (table.find(pos[1])==table.end())
+			table[pos[1]]=SparseRow_t();
+		SparseRow_t &rowMap=table.find(pos[1])->second;
+		LotusSpreadsheetInternal::CellPLC plc;
+		plc.m_pos=pos;
+		plc.m_cell=&cIt->second;
+		rowMap[pos[0]]=plc;
+	}
+	size_t numRowStyle=m_state->m_rowStylesList.size();
+	std::map<Vec2i,size_t>::const_iterator rIt=m_state->m_rowSheetIdToStyleIdMap.lower_bound(Vec2i(-1,sheetId));
+	while (rIt!=m_state->m_rowSheetIdToStyleIdMap.end() && rIt->first[1]==sheetId)
+	{
+		int row=rIt->first[0];
+		size_t listId=rIt->second;
+		++rIt;
+		if (listId>=numRowStyle)
+		{
+			WPS_DEBUG_MSG(("LotusSpreadsheet::sendSpreadsheet: can not find list %d\n", int(listId)));
+			continue;
+		}
+		std::vector<LotusSpreadsheetInternal::Style> const &listStyle=m_state->m_rowStylesList[listId];
+		if (listStyle.empty()) continue;
+		bool useless=false;
+		if (table.find(row)==table.end())
+		{
+			useless=true;
+			table[row]=SparseRow_t();
+		}
+		SparseRow_t &rowMap=table.find(row)->second;
+		LotusSpreadsheetInternal::CellPLC plc;
+		for (size_t col=0; col<listStyle.size(); ++col)
+		{
+			if (rowMap.find(int(col))==rowMap.end())
+			{
+				if (!listStyle[col].isVisible())
+					continue;
+				plc.m_pos=Vec2i(int(col), row);
+				rowMap[int(col)]=plc;
+			}
+			rowMap.find(int(col))->second.m_style=&listStyle[col];
+			useless=false;
+		}
+		if (useless)
+			table.erase(row);
+	}
 	LotusSpreadsheetInternal::Style defaultStyle(m_mainParser.getDefaultFontType());
 	LotusSpreadsheetInternal::Cell emptyCell;
-	for (int r=0; r<=sheet.m_LBPosition[1]; ++r)
+	int prevRow = -1;
+	for (SparseTable_t::const_iterator tIt = table.begin(); tIt != table.end(); ++tIt)
 	{
-		m_listener->openSheetRow(sheet.getRowHeight(r), librevenge::RVNG_POINT);
-		listStyles=0;
-		if (m_state->m_rowIdToStyleIdMap.find(Vec2i(sheetId,r))!=m_state->m_rowIdToStyleIdMap.end())
+		int row=tIt->first;
+		if (row>prevRow+1)
 		{
-			size_t listId=m_state->m_rowIdToStyleIdMap.find(Vec2i(sheetId,r))->second;
-			if (listId<m_state->m_rowStylesList.size())
-				listStyles=&m_state->m_rowStylesList[listId];
-			else
+			while (row > prevRow+1)
 			{
-				WPS_DEBUG_MSG(("LotusSpreadsheet::sendSpreadsheet: can not find the list id\n"));
+				if (prevRow != -1) m_listener->closeSheetRow();
+				int numRepeat;
+				float h=sheet.getRowHeight(prevRow+1, numRepeat);
+				if (row<prevRow+1+numRepeat)
+					numRepeat=row-1-prevRow;
+				m_listener->openSheetRow(h, librevenge::RVNG_POINT, false, numRepeat);
+				prevRow+=numRepeat;
 			}
 		}
-		for (int c=0; c<=sheet.m_LBPosition[0]; ++c)
+		if (prevRow != -1) m_listener->closeSheetRow();
+		m_listener->openSheetRow(sheet.getRowHeight(++prevRow), librevenge::RVNG_POINT);
+		for (SparseRow_t::const_iterator colIt = tIt->second.begin(); colIt != tIt->second.end(); ++colIt)
 		{
-			bool hasData=false;
-			LotusSpreadsheetInternal::Cell const *cell=&emptyCell;
-			if (sheet.m_positionToCellMap.find(Vec2i(c,r))!=sheet.m_positionToCellMap.end())
-			{
-				cell=&sheet.m_positionToCellMap.find(Vec2i(c,r))->second;
-				hasData=true;
-			}
-			else
-				emptyCell.setPosition(Vec2i(c,r));
-			LotusSpreadsheetInternal::Style const *style=&defaultStyle;
-			if (listStyles && c>=0 && c<(int) listStyles->size())
-			{
-				style=&(*listStyles)[size_t(c)];
-				if (style->isVisible())
-					hasData=true;
-			}
-			if (hasData)
-				sendCellContent(*cell, *style);
+			LotusSpreadsheetInternal::CellPLC const &plc=colIt->second;
+			if (plc.m_cell==0)
+				emptyCell.setPosition(plc.m_pos);
+			sendCellContent(plc.m_cell ? *plc.m_cell : emptyCell, plc.m_style ? *plc.m_style : defaultStyle);
 		}
-		m_listener->closeSheetRow();
 	}
+	if (prevRow!=-1) m_listener->closeSheetRow();
+
 	m_listener->closeSheet();
 }
 

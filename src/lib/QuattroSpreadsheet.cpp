@@ -2202,11 +2202,8 @@ void QuattroSpreadsheet::sendSpreadsheet(int sId)
 				prevRow+=numRepeat;
 			}
 		}
-		if (row > prevRow)
-		{
-			if (prevRow != -1) m_listener->closeSheetRow();
-			m_listener->openSheetRow(sheet->getRowHeight(++prevRow), librevenge::RVNG_POINT);
-		}
+		if (prevRow != -1) m_listener->closeSheetRow();
+		m_listener->openSheetRow(sheet->getRowHeight(++prevRow), librevenge::RVNG_POINT);
 
 		for (SparseRow_t::const_iterator cIt = rIt->second.begin(); cIt != rIt->second.end(); ++cIt)
 			sendCellContent(*cIt->second);
