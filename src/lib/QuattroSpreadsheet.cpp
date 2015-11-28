@@ -277,29 +277,12 @@ std::ostream &operator<<(std::ostream &o, Cell const &cell)
 //! the spreadsheet of a WPS4Spreadsheet
 class Spreadsheet
 {
-protected:
-	//! a comparaison structure used to sort cell by rows and and columns
-	struct ComparePosition
-	{
-		//! constructor
-		ComparePosition() {}
-		//! comparaison function
-		bool operator()(Vec2i const &c1, Vec2i const &c2) const
-		{
-			if (c1[1]!=c2[1])
-				return c1[1]<c2[1];
-			return c1[0]<c2[0];
-		}
-	};
-
 public:
 	//! the spreadsheet type
 	enum Type { T_Spreadsheet, T_Filter, T_Report };
 
-	typedef std::map<Vec2i, Cell, ComparePosition> PositionToCellMap_t;
-
 	//! a constructor
-	Spreadsheet(Type type=T_Spreadsheet, int id=0) : m_type(type), m_id(id), m_numCols(0), m_numRows(0), m_LBPosition(-1,-1),
+	Spreadsheet(Type type=T_Spreadsheet, int id=0) : m_type(type), m_id(id), m_numCols(0), m_numRows(0), 
 		m_widthCols(), m_heightRows(), m_heightDefault(16), m_positionToCellMap(), m_lastCellPos(),
 		m_rowPageBreaksList() {}
 	//! return a cell corresponding to a spreadsheet, create one if needed
@@ -309,8 +292,7 @@ public:
 		{
 			Cell cell(type);
 			cell.setPosition(pos);
-			m_positionToCellMap.insert
-			(std::map<Vec2i, Cell, ComparePosition>::value_type(pos,cell));
+			m_positionToCellMap.insert(std::map<Vec2i, Cell>::value_type(pos,cell));
 		}
 		m_lastCellPos=pos;
 		return m_positionToCellMap.find(pos)->second;
@@ -379,18 +361,6 @@ public:
 		}
 		return res;
 	}
-	/** compute the last Right Bottom cell position */
-	void computeRightBottomPosition()
-	{
-		int maxX = -1, maxY = -1;
-		for (PositionToCellMap_t::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
-		{
-			Vec2i const &p = it->second.position();
-			if (p[0] > maxX) maxX = p[0];
-			if (p[1] > maxY) maxY = p[1];
-		}
-		m_LBPosition=Vec2i(maxX, maxY);
-	}
 	//! returns true if the spreedsheet is empty
 	bool empty() const
 	{
@@ -404,8 +374,6 @@ public:
 	int m_numCols;
 	/** the number of rows */
 	int m_numRows;
-	/** the final Right Bottom position, computed by updateState */
-	Vec2i m_LBPosition;
 
 	/** the column size in TWIP (?) */
 	std::vector<int> m_widthCols;
@@ -414,7 +382,7 @@ public:
 	/** the default row size in point */
 	int m_heightDefault;
 	/** a map cell to not empty cells */
-	PositionToCellMap_t m_positionToCellMap;
+	std::map<Vec2i, Cell> m_positionToCellMap;
 	/** the last cell position */
 	Vec2i m_lastCellPos;
 	/** the list of row page break */
@@ -2174,21 +2142,15 @@ void QuattroSpreadsheet::sendSpreadsheet(int sId)
 		}
 		sheet.reset(new QuattroSpreadsheetInternal::Spreadsheet);
 	}
-	sheet->computeRightBottomPosition();
 
 	m_listener->openSheet(sheet->convertInPoint(sheet->m_widthCols,76), librevenge::RVNG_POINT,
 	                      std::vector<int>(), m_state->getSheetName(sId));
-
-	typedef std::map<int, const QuattroSpreadsheetInternal::Cell *> SparseRow_t;
-	typedef std::map<int, SparseRow_t> SparseTable_t;
-	SparseTable_t table;
-	for (QuattroSpreadsheetInternal::Spreadsheet::PositionToCellMap_t::const_iterator it = sheet->m_positionToCellMap.begin(); it != sheet->m_positionToCellMap.end(); ++it)
-		table[it->first[1]][it->first[0]] = &it->second;
-
+	std::map<Vec2i, QuattroSpreadsheetInternal::Cell>::const_iterator it = sheet->m_positionToCellMap.begin();
 	int prevRow = -1;
-	for (SparseTable_t::const_iterator rIt = table.begin(); rIt != table.end(); ++rIt)
+	while(it != sheet->m_positionToCellMap.end())
 	{
-		int row=rIt->first;
+		int row=it->first[1];
+		QuattroSpreadsheetInternal::Cell const &cell=(it++)->second;
 		if (row>prevRow+1)
 		{
 			while (row > prevRow+1)
@@ -2202,11 +2164,11 @@ void QuattroSpreadsheet::sendSpreadsheet(int sId)
 				prevRow+=numRepeat;
 			}
 		}
-		if (prevRow != -1) m_listener->closeSheetRow();
-		m_listener->openSheetRow(sheet->getRowHeight(++prevRow), librevenge::RVNG_POINT);
-
-		for (SparseRow_t::const_iterator cIt = rIt->second.begin(); cIt != rIt->second.end(); ++cIt)
-			sendCellContent(*cIt->second);
+		if (row!=prevRow) {
+			if (prevRow != -1) m_listener->closeSheetRow();
+			m_listener->openSheetRow(sheet->getRowHeight(++prevRow), librevenge::RVNG_POINT);
+		}
+		sendCellContent(cell);
 	}
 	if (prevRow!=-1) m_listener->closeSheetRow();
 	m_listener->closeSheet();

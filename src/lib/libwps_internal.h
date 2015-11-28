@@ -690,10 +690,6 @@ public:
 			return s1.cmp(s2) < 0;
 		}
 	};
-	/*! \typedef MapX
-	 *  \brief map of Vec2
-	 */
-	typedef std::map<Vec2<T>, T,struct PosSizeLtX> MapX;
 
 	/*! \struct PosSizeLtY
 	 * \brief internal struct used to create sorted map, sorted by Y
@@ -706,10 +702,6 @@ public:
 			return s1.cmpY(s2) < 0;
 		}
 	};
-	/*! \typedef MapY
-	 *  \brief map of Vec2
-	 */
-	typedef std::map<Vec2<T>, T,struct PosSizeLtY> MapY;
 protected:
 	T m_x/*! \brief first element */, m_y/*! \brief second element */;
 };
