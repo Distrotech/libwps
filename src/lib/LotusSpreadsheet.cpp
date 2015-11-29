@@ -63,9 +63,18 @@ struct Style : public WPSCellFormat
 		return !backgroundColor().isWhite() || hasBorders() || m_format!=F_UNKNOWN;
 	}
 	//! operator<<
-	friend std::ostream &operator<<(std::ostream &o, Style const &style);
+	friend std::ostream &operator<<(std::ostream &o, Style const &style)
+	{
+		o << static_cast<WPSCellFormat const &>(style) << ",";
+		if (!style.m_extra.empty()) o << style.m_extra;
+		return o;
+	}
 	//! operator==
-	bool operator==(Style const &st) const;
+	bool operator==(Style const &st) const
+	{
+		if (m_fontType!=st.m_fontType || WPSCellFormat::compare(st)!=0) return false;
+		return true;
+	}
 	//! operator!=
 	bool operator!=(Style const &st) const
 	{
@@ -77,22 +86,30 @@ struct Style : public WPSCellFormat
 	std::string m_extra;
 };
 
-//! operator<<
-std::ostream &operator<<(std::ostream &o, Style const &style)
+//! a class used to store the styles of a row in LotusSpreadsheet
+struct RowStyles
 {
-	o << static_cast<WPSCellFormat const &>(style) << ",";
-
-	if (!style.m_extra.empty())
-		o << style.m_extra;
-
-	return o;
-}
-
-bool Style::operator==(Style const &st) const
-{
-	if (m_fontType!=st.m_fontType || WPSCellFormat::compare(st)!=0) return false;
-	return true;
-}
+	//! constructor
+	RowStyles() : m_colsToStyleMap()
+	{
+	}
+	//! returns true if we have no style
+	bool isEmpty(bool checkOnlyVisible=false) const
+	{
+		if (m_colsToStyleMap.empty())
+			return true;
+		if (!checkOnlyVisible)
+			return false;
+		for (std::map<Vec2i, Style>::const_iterator it=m_colsToStyleMap.begin(); it!=m_colsToStyleMap.end(); ++it)
+		{
+			if (it->second.isVisible())
+				return false;
+		}
+		return true;
+	}
+	//! a map Vec2i(minCol,maxCol) to style
+	std::map<Vec2i, Style> m_colsToStyleMap;
+};
 
 //! a list of position of a Lotus spreadsheet
 struct CellsList
@@ -210,7 +227,7 @@ class Spreadsheet
 {
 public:
 	//! a constructor
-	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_LBPosition(-1,-1), m_boundsColsMap(),
+	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_boundsColsMap(),
 		m_widthColsInChar(), m_rowHeightMap(), m_heightDefault(16),
 		m_rowPageBreaksList(), m_positionToCellMap() {}
 	//! return a cell corresponding to a spreadsheet, create one if needed
@@ -331,19 +348,7 @@ public:
 	//! returns true if the spreedsheet is empty
 	bool empty() const
 	{
-		return m_positionToCellMap.empty() && (m_LBPosition[0]<0 || m_LBPosition[1]<0) && m_name.empty();
-	}
-	/** compute the last Right Bottom cell position, using the cell list */
-	void computeRightBottomPosition()
-	{
-		int maxX = -1, maxY = -1;
-		for (std::map<Vec2i, Cell>::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
-		{
-			Vec2i const &p = it->second.position();
-			if (p[0] > maxX) maxX = p[0];
-			if (p[1] > maxY) maxY = p[1];
-		}
-		m_LBPosition=Vec2i(maxX, maxY);
+		return m_positionToCellMap.empty() && m_name.empty();
 	}
 	/** the sheet name */
 	librevenge::RVNGString m_name;
@@ -351,8 +356,6 @@ public:
 	int m_numCols;
 	/** the number of rows */
 	int m_numRows;
-	/** the final Right Bottom position, computed by updateState */
-	Vec2i m_LBPosition;
 	/** a map used to stored the min/max row of each columns */
 	std::map<int, Vec2i> m_boundsColsMap;
 	/** the column size in char */
@@ -401,6 +404,14 @@ struct State
 		name.sprintf("Sheet%d", id+1);
 		return name;
 	}
+	//! returns true if a sheet has some style
+	bool hasStyles(int sheetId) const
+	{
+		std::map<Vec2i,size_t>::const_iterator it=m_rowSheetIdToStyleIdMap.find(Vec2i(-1, sheetId));
+		if (it!=m_rowSheetIdToStyleIdMap.end() && it->first[1]==sheetId)
+			return true;
+		return false;
+	}
 	//! the last file position
 	long m_eof;
 	//! the file version
@@ -410,7 +421,7 @@ struct State
 	//! map name to position
 	std::map<std::string, CellsList> m_nameToCellsMap;
 	//! the list of row styles
-	std::vector<std::vector<Style> > m_rowStylesList;
+	std::vector<RowStyles> m_rowStylesList;
 	//! map Vec2i(row, sheetId) to row style id
 	std::map<Vec2i,size_t> m_rowSheetIdToStyleIdMap;
 	//! map Vec2i(row, sheetId) to child style
@@ -438,10 +449,6 @@ void LotusSpreadsheet::cleanState()
 
 void LotusSpreadsheet::updateState()
 {
-	// update the right/bottom position of each spreadsheet
-	size_t numSheets=m_state->m_spreadsheetList.size();
-	for (size_t i=0; i< numSheets; ++i)
-		m_state->m_spreadsheetList[i].computeRightBottomPosition();
 	// update the state correspondance between row and row's styles
 	if (!m_state->m_rowSheetIdToChildRowIdMap.empty())
 	{
@@ -476,34 +483,6 @@ void LotusSpreadsheet::updateState()
 				toDo.push(cPos);
 			}
 		}
-	}
-	// compute the last style with background/border on each style row
-	std::map<size_t, int> stylesToLastColMap;
-	for (size_t i=0; i<m_state->m_rowStylesList.size(); ++i)
-	{
-		std::vector<LotusSpreadsheetInternal::Style> const &styles=m_state->m_rowStylesList[i];
-		int lastCol=-1;
-		for (size_t c=0; c<styles.size(); ++c)
-		{
-			if (styles[c].isVisible())
-				lastCol=int(c);
-		}
-		if (lastCol>255) lastCol=255; // dubious
-		stylesToLastColMap[i]=lastCol;
-	}
-	for (std::map<Vec2i,size_t>::const_iterator it=m_state->m_rowSheetIdToStyleIdMap.begin();
-	        it!=m_state->m_rowSheetIdToStyleIdMap.end(); ++it)
-	{
-		Vec2i const &pos=it->first;
-		size_t styleId=it->second;
-		if (stylesToLastColMap.find(styleId)==stylesToLastColMap.end() ||
-		        stylesToLastColMap.find(styleId)->second<0) continue;
-		if (pos[1]>8192) continue; // dubious
-		int col=stylesToLastColMap.find(styleId)->second;
-		if (pos[1]<0 || pos[1]>=(int)numSheets) continue;
-		LotusSpreadsheetInternal::Spreadsheet &sheet=m_state->m_spreadsheetList[size_t(pos[1])];
-		sheet.m_LBPosition=Vec2i(sheet.m_LBPosition[0]>col ? sheet.m_LBPosition[0] : col,
-		                         sheet.m_LBPosition[1]>pos[0] ? sheet.m_LBPosition[1] : pos[0]);
 	}
 }
 
@@ -540,7 +519,7 @@ bool LotusSpreadsheet::hasSomeSpreadsheetData() const
 {
 	for (size_t i=0; i<m_state->m_spreadsheetList.size(); ++i)
 	{
-		if (!m_state->m_spreadsheetList[i].empty())
+		if (!m_state->m_spreadsheetList[i].empty() || !m_state->hasStyles(int(i)))
 			return true;
 	}
 	return false;
@@ -715,8 +694,11 @@ bool LotusSpreadsheet::readRowFormats()
 	case 0:
 	{
 		f << "def,";
+		size_t rowStyleId=m_state->m_rowStylesList.size();
+		m_state->m_rowStylesList.resize(rowStyleId+1);
+
 		int actCell=0;
-		std::vector<LotusSpreadsheetInternal::Style> stylesList;
+		LotusSpreadsheetInternal::RowStyles &stylesList=m_state->m_rowStylesList.back();
 		f << "[";
 		while (m_input->tell()<endPos)
 		{
@@ -728,8 +710,10 @@ bool LotusSpreadsheet::readRowFormats()
 				WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: find extra data\n"));
 				break;
 			}
-			for (int i=0; i<numCell; ++i)
-				stylesList.push_back(style);
+			if (numCell>=1)
+				stylesList.m_colsToStyleMap.insert
+				(std::map<Vec2i,LotusSpreadsheetInternal::Style>::value_type
+				 (Vec2i(actCell,actCell+numCell-1),style));
 			f << "[" << style << "]";
 			if (numCell>1)
 				f << "x" << numCell;
@@ -737,8 +721,7 @@ bool LotusSpreadsheet::readRowFormats()
 			actCell+=numCell;
 		}
 		f << "],";
-		m_state->m_rowSheetIdToStyleIdMap[Vec2i(row,sheetId)]=m_state->m_rowStylesList.size();
-		m_state->m_rowStylesList.push_back(stylesList);
+		m_state->m_rowSheetIdToStyleIdMap[Vec2i(row,sheetId)]=rowStyleId;
 		if (actCell>256)
 		{
 			f << "###";
@@ -1515,30 +1498,31 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 			WPS_DEBUG_MSG(("LotusSpreadsheet::sendSpreadsheet: can not find list %d\n", int(listId)));
 			continue;
 		}
-		std::vector<LotusSpreadsheetInternal::Style> const &listStyle=m_state->m_rowStylesList[listId];
-		if (listStyle.empty()) continue;
-		bool useless=false;
+		LotusSpreadsheetInternal::RowStyles const &listStyle=m_state->m_rowStylesList[listId];
+		if (listStyle.isEmpty()) continue;
 		if (table.find(row)==table.end())
 		{
-			useless=true;
+			if (listStyle.isEmpty(true)) continue;
 			table[row]=SparseRow_t();
 		}
 		SparseRow_t &rowMap=table.find(row)->second;
 		LotusSpreadsheetInternal::CellPLC plc;
-		for (size_t col=0; col<listStyle.size(); ++col)
+		std::map<Vec2i, LotusSpreadsheetInternal::Style>::const_iterator sIt;
+		for (sIt=listStyle.m_colsToStyleMap.begin(); sIt!=listStyle.m_colsToStyleMap.end(); ++sIt)
 		{
-			if (rowMap.find(int(col))==rowMap.end())
+			bool isVisible=sIt->second.isVisible();
+			for (int col=sIt->first[0]; col<=sIt->first[1]; ++col)
 			{
-				if (!listStyle[col].isVisible())
-					continue;
-				plc.m_pos=Vec2i(int(col), row);
-				rowMap[int(col)]=plc;
+				if (rowMap.find(col)==rowMap.end())
+				{
+					if (!isVisible)
+						continue;
+					plc.m_pos=Vec2i(col, row);
+					rowMap[col]=plc;
+				}
+				rowMap.find(col)->second.m_style=&sIt->second;
 			}
-			rowMap.find(int(col))->second.m_style=&listStyle[col];
-			useless=false;
 		}
-		if (useless)
-			table.erase(row);
 	}
 	LotusSpreadsheetInternal::Style defaultStyle(m_mainParser.getDefaultFontType());
 	LotusSpreadsheetInternal::Cell emptyCell;
