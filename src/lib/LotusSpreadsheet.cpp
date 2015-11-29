@@ -205,30 +205,13 @@ struct CellPLC
 };
 
 ///////////////////////////////////////////////////////////////////
-//! the spreadsheet of a WPS4Spreadsheet
+//! the spreadsheet of a LotusSpreadsheet
 class Spreadsheet
 {
-protected:
-	//! a comparaison structure used to sort cell by rows and and columns
-	struct ComparePosition
-	{
-		//! constructor
-		ComparePosition() {}
-		//! comparaison function
-		bool operator()(Vec2i const &c1, Vec2i const &c2) const
-		{
-			if (c1[1]!=c2[1])
-				return c1[1]<c2[1];
-			return c1[0]<c2[0];
-		}
-	};
-
 public:
-	typedef std::map<Vec2i, Cell, ComparePosition> PositionToCellMap_t;
-
 	//! a constructor
 	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_LBPosition(-1,-1), m_boundsColsMap(),
-		m_widthColsInChar(), m_heightRows(), m_heightDefault(16),
+		m_widthColsInChar(), m_rowHeightMap(), m_heightDefault(16),
 		m_rowPageBreaksList(), m_positionToCellMap() {}
 	//! return a cell corresponding to a spreadsheet, create one if needed
 	Cell &getCell(Vec2i const &pos)
@@ -269,42 +252,69 @@ public:
 		m_widthColsInChar[size_t(col)] = w;
 		if (col >= m_numCols) m_numCols=col+1;
 	}
-	//! set the rows size
-	void setRowHeight(int row, int h=-1)
-	{
-		if (row < 0) return;
-		if (row >= int(m_heightRows.size())) m_heightRows.resize(size_t(row)+1, -1);
-		m_heightRows[size_t(row)] = h;
-		if (row >= m_numRows) m_numRows=row+1;
-	}
 	//! returns the row size in point
 	float getRowHeight(int row) const
 	{
-		if (row>=0&&row<(int) m_heightRows.size() && m_heightRows[size_t(row)]>=0)
-			return (float) m_heightRows[size_t(row)];
+		std::map<Vec2i,int>::const_iterator rIt=m_rowHeightMap.lower_bound(Vec2i(-1,row));
+		if (rIt!=m_rowHeightMap.end() && rIt->first[0]<=row && rIt->first[1]>=row)
+			return (float) rIt->second;
 		return (float) m_heightDefault;
 	}
 	//! returns the height of a row in point and updated repeated row
 	float getRowHeight(int row, int &numRepeated) const
 	{
-		float res=getRowHeight(row);
-		numRepeated=1;
-		if (row<0 || row>=(int) m_heightRows.size())
-			numRepeated=1000;
-		else
+		std::map<Vec2i,int>::const_iterator rIt=m_rowHeightMap.lower_bound(Vec2i(-1,row));
+		if (rIt!=m_rowHeightMap.end() && rIt->first[0]<=row && rIt->first[1]>=row)
 		{
-			for (size_t r=size_t(row+1); r<m_heightRows.size(); ++r)
-			{
-				float nextH=getRowHeight(row+1);
-				if (nextH<res || nextH>res)
-					break;
-				++numRepeated;
-			}
+			numRepeated=rIt->first[1]-row+1;
+			return (float) rIt->second;
 		}
-		return res;
+		numRepeated=10000;
+		return (float) m_heightDefault;
 	}
-
-	//! convert the m_widthColsInChar, m_heightRows in a vector of of point size
+	//! set the rows size
+	void setRowHeight(int row, int h)
+	{
+		if (h>=0)
+			m_rowHeightMap[Vec2i(row,row)]=h;
+	}
+	//! try to compress the list of row height
+	void compressRowHeights()
+	{
+		std::map<Vec2i,int> oldMap=m_rowHeightMap;
+		m_rowHeightMap.clear();
+		std::map<Vec2i,int>::const_iterator rIt=oldMap.begin();
+		int actHeight=-1;
+		Vec2i actPos(0,-1);
+		while (rIt!=oldMap.end())
+		{
+			// first check for not filled row
+			if (rIt->first[0]!=actPos[1]+1)
+			{
+				if (actHeight==m_heightDefault)
+					actPos[1]=rIt->first[0]-1;
+				else
+				{
+					if (actPos[1]>=actPos[0])
+						m_rowHeightMap[actPos]=actHeight;
+					actHeight=m_heightDefault;
+					actPos=Vec2i(actPos[1]+1, rIt->first[0]-1);
+				}
+			}
+			if (rIt->second!=actHeight)
+			{
+				if (actPos[1]>=actPos[0])
+					m_rowHeightMap[actPos]=actHeight;
+				actPos[0]=rIt->first[0];
+				actHeight=rIt->second;
+			}
+			actPos[1]=rIt->first[1];
+			++rIt;
+		}
+		if (actPos[1]>=actPos[0])
+			m_rowHeightMap[actPos]=actHeight;
+	}
+	//! convert the m_widthColsInChar, m_rowHeightMap in a vector of of point size
 	static std::vector<float> convertInPoint(std::vector<int> const &list,
 	                                         float defSize, float factor=1)
 	{
@@ -327,7 +337,7 @@ public:
 	void computeRightBottomPosition()
 	{
 		int maxX = -1, maxY = -1;
-		for (PositionToCellMap_t::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
+		for (std::map<Vec2i, Cell>::const_iterator it=m_positionToCellMap.begin(); it!=m_positionToCellMap.end(); ++it)
 		{
 			Vec2i const &p = it->second.position();
 			if (p[0] > maxX) maxX = p[0];
@@ -347,14 +357,14 @@ public:
 	std::map<int, Vec2i> m_boundsColsMap;
 	/** the column size in char */
 	std::vector<int> m_widthColsInChar;
-	/** the row size in points */
-	std::vector<int> m_heightRows;
+	/** the map Vec2i(min row, max row) to size in points */
+	std::map<Vec2i,int> m_rowHeightMap;
 	/** the default row size in point */
 	int m_heightDefault;
 	/** the list of row page break */
 	std::vector<int> m_rowPageBreaksList;
 	/** a map cell to not empty cells */
-	PositionToCellMap_t m_positionToCellMap;
+	std::map<Vec2i, Cell> m_positionToCellMap;
 };
 
 //! the state of LotusSpreadsheet
@@ -1014,7 +1024,7 @@ bool LotusSpreadsheet::readRowSizes(long endPos)
 		int row=(int) libwps::readU16(m_input);
 		f << "row=" << row << ",";
 		val=(int) libwps::readU16(m_input);
-		f << "dim=" << float(val)/32.f << ",";
+		f << "dim=" << float(val+31)/32.f << ",";
 		sheet->setRowHeight(row, int((val+31)/32));
 		for (int j=0; j<2; ++j)
 		{
@@ -1477,10 +1487,11 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,72,8), librevenge::RVNG_POINT,
 	                      std::vector<int>(), m_state->getSheetName(sheetId));
 	m_mainParser.sendGraphics(sheetId);
+	sheet.compressRowHeights();
 	typedef std::map<int, LotusSpreadsheetInternal::CellPLC> SparseRow_t;
 	typedef std::map<int, SparseRow_t> SparseTable_t;
 	SparseTable_t table;
-	LotusSpreadsheetInternal::Spreadsheet::PositionToCellMap_t::const_iterator cIt;
+	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator cIt;
 	for (cIt=sheet.m_positionToCellMap.begin(); cIt!=sheet.m_positionToCellMap.end(); ++cIt)
 	{
 		Vec2i pos=cIt->first;

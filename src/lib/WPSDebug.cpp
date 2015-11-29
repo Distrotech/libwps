@@ -93,12 +93,12 @@ void DebugFile::sort()
 		m_notes[i] = it->first;
 	if (i != numNotes) m_notes.resize(i);
 
-	Vec2i::MapX sMap;
+	std::map<Vec2i,int,Vec2i::PosSizeLtX> sMap;
 	size_t numSkip = m_skipZones.size();
 	for (size_t s = 0; s < numSkip; s++) sMap[m_skipZones[s]] = 0;
 
 	i = 0;
-	for (Vec2i::MapX::iterator it = sMap.begin(); it != sMap.end(); i++, ++it)
+	for (std::map<Vec2i,int,Vec2i::PosSizeLtX>::const_iterator it = sMap.begin(); it != sMap.end(); i++, ++it)
 		m_skipZones[i] = it->first;
 	if (i < numSkip) m_skipZones.resize(i);
 }

@@ -282,8 +282,8 @@ public:
 	enum Type { T_Spreadsheet, T_Filter, T_Report };
 
 	//! a constructor
-	Spreadsheet(Type type=T_Spreadsheet, int id=0) : m_type(type), m_id(id), m_numCols(0), m_numRows(0), 
-		m_widthCols(), m_heightRows(), m_heightDefault(16), m_positionToCellMap(), m_lastCellPos(),
+	Spreadsheet(Type type=T_Spreadsheet, int id=0) : m_type(type), m_id(id), m_numCols(0), m_numRows(0),
+		m_widthCols(), m_rowHeightMap(), m_heightDefault(16), m_positionToCellMap(), m_lastCellPos(),
 		m_rowPageBreaksList() {}
 	//! return a cell corresponding to a spreadsheet, create one if needed
 	Cell &getCell(Vec2i const &pos, libwps_tools_win::Font::Type type)
@@ -312,16 +312,8 @@ public:
 		m_widthCols[size_t(col)] = w;
 		if (col >= m_numCols) m_numCols=col+1;
 	}
-	//! set the rows size
-	void setRowHeight(int row, int h=-1)
-	{
-		if (row < 0) return;
-		if (row >= int(m_heightRows.size())) m_heightRows.resize(size_t(row)+1, -1);
-		m_heightRows[size_t(row)] = h;
-		if (row >= m_numRows) m_numRows=row+1;
-	}
 
-	//! convert the m_widthCols, m_heightRows in a vector of of point size
+	//! convert the m_widthCols in a vector of of point size
 	static std::vector<float> convertInPoint(std::vector<int> const &list,
 	                                         float defSize)
 	{
@@ -338,28 +330,64 @@ public:
 	//! returns the row size in point
 	float getRowHeight(int row) const
 	{
-		if (row>=0&&row<(int) m_heightRows.size() && m_heightRows[size_t(row)]>=0)
-			return (float) m_heightRows[size_t(row)]/20.f;
+		std::map<Vec2i,int>::const_iterator rIt=m_rowHeightMap.lower_bound(Vec2i(-1,row));
+		if (rIt!=m_rowHeightMap.end() && rIt->first[0]<=row && rIt->first[1]>=row)
+			return (float) rIt->second;
 		return (float) m_heightDefault;
 	}
 	//! returns the height of a row in point and updated repeated row
 	float getRowHeight(int row, int &numRepeated) const
 	{
-		float res=getRowHeight(row);
-		numRepeated=1;
-		if (row<0 || row>=(int) m_heightRows.size())
-			numRepeated=1000;
-		else
+		std::map<Vec2i,int>::const_iterator rIt=m_rowHeightMap.lower_bound(Vec2i(-1,row));
+		if (rIt!=m_rowHeightMap.end() && rIt->first[0]<=row && rIt->first[1]>=row)
 		{
-			for (size_t r=size_t(row+1); r<m_heightRows.size(); ++r)
-			{
-				float nextH=getRowHeight(row+1);
-				if (nextH<res || nextH>res)
-					break;
-				++numRepeated;
-			}
+			numRepeated=rIt->first[1]-row+1;
+			return (float) rIt->second;
 		}
-		return res;
+		numRepeated=10000;
+		return (float) m_heightDefault;
+	}
+	//! set the rows size
+	void setRowHeight(int row, int h)
+	{
+		if (h>=0)
+			m_rowHeightMap[Vec2i(row,row)]=h;
+	}
+	//! try to compress the list of row height
+	void compressRowHeights()
+	{
+		std::map<Vec2i,int> oldMap=m_rowHeightMap;
+		m_rowHeightMap.clear();
+		std::map<Vec2i,int>::const_iterator rIt=oldMap.begin();
+		int actHeight=-1;
+		Vec2i actPos(0,-1);
+		while (rIt!=oldMap.end())
+		{
+			// first check for not filled row
+			if (rIt->first[0]!=actPos[1]+1)
+			{
+				if (actHeight==m_heightDefault)
+					actPos[1]=rIt->first[0]-1;
+				else
+				{
+					if (actPos[1]>=actPos[0])
+						m_rowHeightMap[actPos]=actHeight;
+					actHeight=m_heightDefault;
+					actPos=Vec2i(actPos[1]+1, rIt->first[0]-1);
+				}
+			}
+			if (rIt->second!=actHeight)
+			{
+				if (actPos[1]>=actPos[0])
+					m_rowHeightMap[actPos]=actHeight;
+				actPos[0]=rIt->first[0];
+				actHeight=rIt->second;
+			}
+			actPos[1]=rIt->first[1];
+			++rIt;
+		}
+		if (actPos[1]>=actPos[0])
+			m_rowHeightMap[actPos]=actHeight;
 	}
 	//! returns true if the spreedsheet is empty
 	bool empty() const
@@ -377,8 +405,8 @@ public:
 
 	/** the column size in TWIP (?) */
 	std::vector<int> m_widthCols;
-	/** the row size in TWIP */
-	std::vector<int> m_heightRows;
+	/** the map Vec2i(min row, max row) to size in points */
+	std::map<Vec2i,int> m_rowHeightMap;
 	/** the default row size in point */
 	int m_heightDefault;
 	/** a map cell to not empty cells */
@@ -555,7 +583,6 @@ bool QuattroSpreadsheet::readSheetSize()
 	if (nRow==-1 && nCol==0) return true;
 	if (nRow < 0 || nCol <= 0) return false;
 
-	m_state->getActualSheet().setRowHeight(nRow-1);
 	m_state->getActualSheet().setColumnWidth(nCol-1);
 	return true;
 
@@ -581,25 +608,13 @@ bool QuattroSpreadsheet::readRowSize()
 	int row = libwps::read16(m_input);
 	int height = libwps::readU8(m_input);
 
-	bool ok = row >= 0 && row < m_state->getActualSheet().m_numRows+20;
+	bool ok = row >= 0;
 	f << "Entries(Row):Row" << row << "";
 	if (!ok) f << "###";
 	f << ":height=" << height << ",";
 
 	if (ok)
-	{
-		if (row >= m_state->getActualSheet().m_numRows)
-		{
-			static bool first = true;
-			if (first)
-			{
-				first = false;
-				WPS_DEBUG_MSG(("QuattroSpreadsheet::readRowSize: I must increase the number of rows\n"));
-			}
-			f << "#row[inc],";
-		}
-		m_state->getActualSheet().setRowHeight(row, 20*height); // point to TWIP
-	}
+		m_state->getActualSheet().setRowHeight(row, height); // point to TWIP
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
 
@@ -2145,9 +2160,10 @@ void QuattroSpreadsheet::sendSpreadsheet(int sId)
 
 	m_listener->openSheet(sheet->convertInPoint(sheet->m_widthCols,76), librevenge::RVNG_POINT,
 	                      std::vector<int>(), m_state->getSheetName(sId));
+	sheet->compressRowHeights();
 	std::map<Vec2i, QuattroSpreadsheetInternal::Cell>::const_iterator it = sheet->m_positionToCellMap.begin();
 	int prevRow = -1;
-	while(it != sheet->m_positionToCellMap.end())
+	while (it != sheet->m_positionToCellMap.end())
 	{
 		int row=it->first[1];
 		QuattroSpreadsheetInternal::Cell const &cell=(it++)->second;
@@ -2164,7 +2180,8 @@ void QuattroSpreadsheet::sendSpreadsheet(int sId)
 				prevRow+=numRepeat;
 			}
 		}
-		if (row!=prevRow) {
+		if (row!=prevRow)
+		{
 			if (prevRow != -1) m_listener->closeSheetRow();
 			m_listener->openSheetRow(sheet->getRowHeight(++prevRow), librevenge::RVNG_POINT);
 		}
