@@ -35,7 +35,7 @@
 namespace LotusSpreadsheetInternal
 {
 class Cell;
-class SpreadSheet;
+class Spreadsheet;
 struct Style;
 struct State;
 }
@@ -72,15 +72,19 @@ protected:
 	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
-	//! returns true if some spreadshet are defined
+	//! returns true if some spreadsheet are defined
 	bool hasSomeSpreadsheetData() const;
 
 	//! send the data
 	void sendSpreadsheet(int sheetId);
 
+	/** send the cell data in a row
+
+	 \note this function does not call openSheetRow, closeSheetRow*/
+	void sendRowContent(LotusSpreadsheetInternal::Spreadsheet const &sheet, int sheetId, int row);
 	//! send the cell data
 	void sendCellContent(LotusSpreadsheetInternal::Cell const &cell,
-	                     LotusSpreadsheetInternal::Style const &style);
+	                     LotusSpreadsheetInternal::Style const &style, int numRepeated=1);
 
 	//////////////////////// report //////////////////////////////
 

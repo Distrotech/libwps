@@ -192,35 +192,6 @@ std::ostream &operator<<(std::ostream &o, Cell const &cell)
 	return o;
 }
 
-//! small struct use to keep trace of cell with style or content used by LotusSpreadsheet::sendSpreadsheet
-struct CellPLC
-{
-	//! constructor
-	CellPLC() : m_pos(0,0), m_cell(0), m_style(0)
-	{
-	}
-	//! copy constructor
-	CellPLC(CellPLC const &orig) : m_pos(orig.m_pos), m_cell(orig.m_cell), m_style(orig.m_style)
-	{
-	}
-	//! operator=
-	CellPLC &operator=(CellPLC const &orig)
-	{
-		if (this==&orig)
-			return *this;
-		m_pos=orig.m_pos;
-		m_cell=orig.m_cell;
-		m_style=orig.m_style;
-		return *this;
-	}
-	//! the cell position
-	Vec2i m_pos;
-	//! a pointer to the cell content
-	Cell const *m_cell;
-	//! a pointer to the cell style
-	Style const *m_style;
-};
-
 ///////////////////////////////////////////////////////////////////
 //! the spreadsheet of a LotusSpreadsheet
 class Spreadsheet
@@ -407,10 +378,18 @@ struct State
 	//! returns true if a sheet has some style
 	bool hasStyles(int sheetId) const
 	{
-		std::map<Vec2i,size_t>::const_iterator it=m_rowSheetIdToStyleIdMap.find(Vec2i(-1, sheetId));
+		std::map<Vec2i,size_t>::const_iterator it=m_rowSheetIdToStyleIdMap.lower_bound(Vec2i(-1, sheetId));
 		if (it!=m_rowSheetIdToStyleIdMap.end() && it->first[1]==sheetId)
 			return true;
 		return false;
+	}
+	//! returns the row style id corresponding to a sheetId (or -1)
+	int getRowStyleId(int sheetId, int row) const
+	{
+		std::map<Vec2i,size_t>::const_iterator it=m_rowSheetIdToStyleIdMap.find(Vec2i(row, sheetId));
+		if (it!=m_rowSheetIdToStyleIdMap.end())
+			return int(it->second);
+		return -1;
 	}
 	//! the last file position
 	long m_eof;
@@ -1471,21 +1450,10 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 	                      std::vector<int>(), m_state->getSheetName(sheetId));
 	m_mainParser.sendGraphics(sheetId);
 	sheet.compressRowHeights();
-	typedef std::map<int, LotusSpreadsheetInternal::CellPLC> SparseRow_t;
-	typedef std::map<int, SparseRow_t> SparseTable_t;
-	SparseTable_t table;
+	std::set<int> notEmptyRowSet;
 	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator cIt;
 	for (cIt=sheet.m_positionToCellMap.begin(); cIt!=sheet.m_positionToCellMap.end(); ++cIt)
-	{
-		Vec2i pos=cIt->first;
-		if (table.find(pos[1])==table.end())
-			table[pos[1]]=SparseRow_t();
-		SparseRow_t &rowMap=table.find(pos[1])->second;
-		LotusSpreadsheetInternal::CellPLC plc;
-		plc.m_pos=pos;
-		plc.m_cell=&cIt->second;
-		rowMap[pos[0]]=plc;
-	}
+		notEmptyRowSet.insert(cIt->first[1]);
 	size_t numRowStyle=m_state->m_rowStylesList.size();
 	std::map<Vec2i,size_t>::const_iterator rIt=m_state->m_rowSheetIdToStyleIdMap.lower_bound(Vec2i(-1,sheetId));
 	while (rIt!=m_state->m_rowSheetIdToStyleIdMap.end() && rIt->first[1]==sheetId)
@@ -1499,67 +1467,110 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 			continue;
 		}
 		LotusSpreadsheetInternal::RowStyles const &listStyle=m_state->m_rowStylesList[listId];
-		if (listStyle.isEmpty()) continue;
-		if (table.find(row)==table.end())
-		{
-			if (listStyle.isEmpty(true)) continue;
-			table[row]=SparseRow_t();
-		}
-		SparseRow_t &rowMap=table.find(row)->second;
-		LotusSpreadsheetInternal::CellPLC plc;
-		std::map<Vec2i, LotusSpreadsheetInternal::Style>::const_iterator sIt;
-		for (sIt=listStyle.m_colsToStyleMap.begin(); sIt!=listStyle.m_colsToStyleMap.end(); ++sIt)
-		{
-			bool isVisible=sIt->second.isVisible();
-			for (int col=sIt->first[0]; col<=sIt->first[1]; ++col)
-			{
-				if (rowMap.find(col)==rowMap.end())
-				{
-					if (!isVisible)
-						continue;
-					plc.m_pos=Vec2i(col, row);
-					rowMap[col]=plc;
-				}
-				rowMap.find(col)->second.m_style=&sIt->second;
-			}
-		}
+		if (listStyle.isEmpty(true)) continue;
+		notEmptyRowSet.insert(row);
 	}
-	LotusSpreadsheetInternal::Style defaultStyle(m_mainParser.getDefaultFontType());
-	LotusSpreadsheetInternal::Cell emptyCell;
 	int prevRow = -1;
-	for (SparseTable_t::const_iterator tIt = table.begin(); tIt != table.end(); ++tIt)
+	for (std::set<int>::const_iterator sIt=notEmptyRowSet.begin(); sIt!=notEmptyRowSet.end(); ++sIt)
 	{
-		int row=tIt->first;
+		int row=*sIt;
+		if (row<0)
+		{
+			WPS_DEBUG_MSG(("LotusSpreadsheet::sendSpreadsheet: find a negative row %d\n", row));
+			continue;
+		}
 		if (row>prevRow+1)
 		{
 			while (row > prevRow+1)
 			{
-				if (prevRow != -1) m_listener->closeSheetRow();
 				int numRepeat;
 				float h=sheet.getRowHeight(prevRow+1, numRepeat);
 				if (row<prevRow+1+numRepeat)
 					numRepeat=row-1-prevRow;
 				m_listener->openSheetRow(h, librevenge::RVNG_POINT, false, numRepeat);
+				m_listener->closeSheetRow();
 				prevRow+=numRepeat;
 			}
 		}
-		if (prevRow != -1) m_listener->closeSheetRow();
 		m_listener->openSheetRow(sheet.getRowHeight(++prevRow), librevenge::RVNG_POINT);
-		for (SparseRow_t::const_iterator colIt = tIt->second.begin(); colIt != tIt->second.end(); ++colIt)
-		{
-			LotusSpreadsheetInternal::CellPLC const &plc=colIt->second;
-			if (plc.m_cell==0)
-				emptyCell.setPosition(plc.m_pos);
-			sendCellContent(plc.m_cell ? *plc.m_cell : emptyCell, plc.m_style ? *plc.m_style : defaultStyle);
-		}
+		sendRowContent(sheet, sheetId, row);
+		m_listener->closeSheetRow();
 	}
-	if (prevRow!=-1) m_listener->closeSheetRow();
-
 	m_listener->closeSheet();
 }
 
+void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet const &sheet, int sheetId, int row)
+{
+	if (m_listener.get() == 0L)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::sendRowContent: I can not find the listener\n"));
+		return;
+	}
+	LotusSpreadsheetInternal::RowStyles const *styles=0;
+	int styleId=m_state->getRowStyleId(sheetId, row);
+	if (styleId>=int(m_state->m_rowStylesList.size()))
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::sendCellContent: I can not row style %d\n", styleId));
+	}
+	else if (styleId>=0)
+		styles=&m_state->m_rowStylesList[size_t(styleId)];
+	// we need to go through the row style list and the cell list in parallel
+	bool checkStyle=false;
+	int actStyleCol=0;
+	std::map<Vec2i, LotusSpreadsheetInternal::Style>::const_iterator sIt;
+	if (styles && !styles->m_colsToStyleMap.empty())
+	{
+		checkStyle=true;
+		sIt=styles->m_colsToStyleMap.begin();
+		actStyleCol=sIt->first[0];
+	}
+
+	bool checkCell=false;
+	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator cIt;
+	if (!sheet.m_positionToCellMap.empty())
+	{
+		cIt=sheet.m_positionToCellMap.lower_bound(Vec2i(-1, row));
+		checkCell=cIt!=sheet.m_positionToCellMap.end() && cIt->first[1]==row;
+	}
+
+	LotusSpreadsheetInternal::Style defaultStyle(m_mainParser.getDefaultFontType());
+	LotusSpreadsheetInternal::Cell emptyCell;
+	while (checkStyle || checkCell)
+	{
+		int newCol=checkCell ? cIt->first[0] : -1;
+		if (checkStyle && sIt->first[1] < actStyleCol)
+		{
+			++sIt;
+			checkStyle=sIt!=styles->m_colsToStyleMap.end();
+			actStyleCol=checkStyle ? sIt->first[0] : -1;
+		}
+
+		if (checkStyle && (!checkCell || actStyleCol<newCol))
+		{
+			emptyCell.setPosition(Vec2i(actStyleCol, row));
+			int numRepeated=(checkCell && newCol<=sIt->first[1]) ? newCol-actStyleCol : sIt->first[1]-actStyleCol+1;
+			sendCellContent(emptyCell, sIt->second, numRepeated);
+			actStyleCol += numRepeated;
+			continue;
+		}
+
+		if (!checkCell)
+			break;
+		if (checkStyle && newCol==actStyleCol)
+		{
+			sendCellContent(cIt->second, sIt->second);
+			++actStyleCol;
+		}
+		else
+			sendCellContent(cIt->second, defaultStyle);
+		++cIt;
+		checkCell=cIt!=sheet.m_positionToCellMap.end() && cIt->first[1]==row;
+	}
+}
+
 void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cell,
-                                       LotusSpreadsheetInternal::Style const &style)
+                                       LotusSpreadsheetInternal::Style const &style,
+                                       int numRepeated)
 {
 	if (m_listener.get() == 0L)
 	{
@@ -1591,7 +1602,7 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 		}
 		text=finalString.cstr();
 	}
-	m_listener->openSheetCell(finalCell, content);
+	m_listener->openSheetCell(finalCell, content, numRepeated);
 
 	if (cell.m_content.m_textEntry.valid())
 	{
