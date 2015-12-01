@@ -200,7 +200,7 @@ public:
 	//! a constructor
 	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_boundsColsMap(),
 		m_widthColsInChar(), m_rowHeightMap(), m_heightDefault(16),
-		m_rowPageBreaksList(), m_positionToCellMap() {}
+		m_rowPageBreaksList(), m_positionToCellMap(), m_rowToStyleIdMap() {}
 	//! return a cell corresponding to a spreadsheet, create one if needed
 	Cell &getCell(Vec2i const &pos)
 	{
@@ -316,10 +316,19 @@ public:
 		}
 		return res;
 	}
+	//! returns the row style id corresponding to a sheetId (or -1)
+	int getRowStyleId(int row) const
+	{
+		std::map<Vec2i,size_t>::const_iterator it=m_rowToStyleIdMap.lower_bound(Vec2i(-1, row));
+		if (it!=m_rowToStyleIdMap.end() && it->first[0]<=row && row<=it->first[1])
+			return int(it->second);
+		return -1;
+	}
+
 	//! returns true if the spreedsheet is empty
 	bool empty() const
 	{
-		return m_positionToCellMap.empty() && m_name.empty();
+		return m_positionToCellMap.empty() && m_rowToStyleIdMap.empty() && m_name.empty();
 	}
 	/** the sheet name */
 	librevenge::RVNGString m_name;
@@ -339,6 +348,8 @@ public:
 	std::vector<int> m_rowPageBreaksList;
 	/** a map cell to not empty cells */
 	std::map<Vec2i, Cell> m_positionToCellMap;
+	//! map Vec2i(min row, max row) to state row style id
+	std::map<Vec2i,size_t> m_rowToStyleIdMap;
 };
 
 //! the state of LotusSpreadsheet
@@ -374,22 +385,6 @@ struct State
 		librevenge::RVNGString name;
 		name.sprintf("Sheet%d", id+1);
 		return name;
-	}
-	//! returns true if a sheet has some style
-	bool hasStyles(int sheetId) const
-	{
-		std::map<Vec2i,size_t>::const_iterator it=m_rowSheetIdToStyleIdMap.lower_bound(Vec2i(-1, sheetId));
-		if (it!=m_rowSheetIdToStyleIdMap.end() && it->first[1]==sheetId)
-			return true;
-		return false;
-	}
-	//! returns the row style id corresponding to a sheetId (or -1)
-	int getRowStyleId(int sheetId, int row) const
-	{
-		std::map<Vec2i,size_t>::const_iterator it=m_rowSheetIdToStyleIdMap.find(Vec2i(row, sheetId));
-		if (it!=m_rowSheetIdToStyleIdMap.end())
-			return int(it->second);
-		return -1;
 	}
 	//! the last file position
 	long m_eof;
@@ -463,6 +458,37 @@ void LotusSpreadsheet::updateState()
 			}
 		}
 	}
+
+	// time to update each sheet rows style map
+	for (std::map<Vec2i,size_t>::const_iterator it=m_state->m_rowSheetIdToStyleIdMap.begin();
+	        it!=m_state->m_rowSheetIdToStyleIdMap.end();)
+	{
+		int sheetId=it->first[1];
+		LotusSpreadsheetInternal::Spreadsheet *sheet=0;
+		if (sheetId>=0 && sheetId<(int) m_state->m_spreadsheetList.size())
+			sheet=&m_state->m_spreadsheetList[size_t(sheetId)];
+		else
+		{
+			WPS_DEBUG_MSG(("LotusSpreadsheet::updateState: can not find sheet %d\n", sheetId));
+		}
+		int lastStyleId=-1;
+		Vec2i rows(0,-1);
+		while (it!=m_state->m_rowSheetIdToStyleIdMap.end() && it->first[1]==sheetId)
+		{
+			if (lastStyleId!=(int) it->second || it->first[0]!=rows[1]+1)
+			{
+				if (lastStyleId>=0 && sheet)
+					sheet->m_rowToStyleIdMap[rows]=(size_t) lastStyleId;
+				lastStyleId=(int)it->second;
+				rows=Vec2i(it->first[0], it->first[0]);
+			}
+			else
+				++rows[1];
+			++it;
+		}
+		if (lastStyleId>=0 && sheet)
+			sheet->m_rowToStyleIdMap[rows]=(size_t) lastStyleId;
+	}
 }
 
 void LotusSpreadsheet::setLastSpreadsheetId(int id)
@@ -498,7 +524,7 @@ bool LotusSpreadsheet::hasSomeSpreadsheetData() const
 {
 	for (size_t i=0; i<m_state->m_spreadsheetList.size(); ++i)
 	{
-		if (!m_state->m_spreadsheetList[i].empty() || !m_state->hasStyles(int(i)))
+		if (!m_state->m_spreadsheetList[i].empty())
 			return true;
 	}
 	return false;
@@ -1450,64 +1476,69 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 	                      std::vector<int>(), m_state->getSheetName(sheetId));
 	m_mainParser.sendGraphics(sheetId);
 	sheet.compressRowHeights();
-	std::set<int> notEmptyRowSet;
+	/* create a set to know which row needed to be send, each value of
+	   the set corresponding to a position where the rows change
+	   excepted the last position */
+	std::set<int> newRowSet;
+	newRowSet.insert(0);
 	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator cIt;
+	int prevRow=-1;
 	for (cIt=sheet.m_positionToCellMap.begin(); cIt!=sheet.m_positionToCellMap.end(); ++cIt)
-		notEmptyRowSet.insert(cIt->first[1]);
-	size_t numRowStyle=m_state->m_rowStylesList.size();
-	std::map<Vec2i,size_t>::const_iterator rIt=m_state->m_rowSheetIdToStyleIdMap.lower_bound(Vec2i(-1,sheetId));
-	while (rIt!=m_state->m_rowSheetIdToStyleIdMap.end() && rIt->first[1]==sheetId)
 	{
-		int row=rIt->first[0];
+		if (prevRow==cIt->first[1])
+			continue;
+		prevRow=cIt->first[1];
+		newRowSet.insert(prevRow);
+		newRowSet.insert(prevRow+1);
+	}
+	size_t numRowStyle=m_state->m_rowStylesList.size();
+	for (std::map<Vec2i,size_t>::const_iterator rIt=sheet.m_rowToStyleIdMap.begin();
+	        rIt!=sheet.m_rowToStyleIdMap.end(); ++rIt)
+	{
+		Vec2i rows=rIt->first;
 		size_t listId=rIt->second;
-		++rIt;
 		if (listId>=numRowStyle)
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::sendSpreadsheet: can not find list %d\n", int(listId)));
 			continue;
 		}
-		LotusSpreadsheetInternal::RowStyles const &listStyle=m_state->m_rowStylesList[listId];
-		if (listStyle.isEmpty(true)) continue;
-		notEmptyRowSet.insert(row);
+		newRowSet.insert(rows[0]);
+		newRowSet.insert(rows[1]+1);
 	}
-	int prevRow = -1;
-	for (std::set<int>::const_iterator sIt=notEmptyRowSet.begin(); sIt!=notEmptyRowSet.end(); ++sIt)
+	for (std::map<Vec2i,int>::const_iterator rIt=sheet.m_rowHeightMap.begin();
+	        rIt!=sheet.m_rowHeightMap.end(); ++rIt)
 	{
-		int row=*sIt;
+		Vec2i rows=rIt->first;
+		newRowSet.insert(rows[0]);
+		newRowSet.insert(rows[1]+1);
+	}
+	for (std::set<int>::const_iterator sIt=newRowSet.begin(); sIt!=newRowSet.end();)
+	{
+		int row=*(sIt++);
 		if (row<0)
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::sendSpreadsheet: find a negative row %d\n", row));
 			continue;
 		}
-		if (row>prevRow+1)
-		{
-			while (row > prevRow+1)
-			{
-				int numRepeat;
-				float h=sheet.getRowHeight(prevRow+1, numRepeat);
-				if (row<prevRow+1+numRepeat)
-					numRepeat=row-1-prevRow;
-				m_listener->openSheetRow(h, librevenge::RVNG_POINT, false, numRepeat);
-				m_listener->closeSheetRow();
-				prevRow+=numRepeat;
-			}
-		}
-		m_listener->openSheetRow(sheet.getRowHeight(++prevRow), librevenge::RVNG_POINT);
-		sendRowContent(sheet, sheetId, row);
+		if (sIt==newRowSet.end())
+			break;
+		m_listener->openSheetRow(sheet.getRowHeight(row), librevenge::RVNG_POINT, false, *sIt-row);
+		sendRowContent(sheet, row);
 		m_listener->closeSheetRow();
 	}
 	m_listener->closeSheet();
 }
 
-void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet const &sheet, int sheetId, int row)
+void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet const &sheet, int row)
 {
 	if (m_listener.get() == 0L)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::sendRowContent: I can not find the listener\n"));
 		return;
 	}
+
 	LotusSpreadsheetInternal::RowStyles const *styles=0;
-	int styleId=m_state->getRowStyleId(sheetId, row);
+	int styleId=sheet.getRowStyleId(row);
 	if (styleId>=int(m_state->m_rowStylesList.size()))
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::sendCellContent: I can not row style %d\n", styleId));

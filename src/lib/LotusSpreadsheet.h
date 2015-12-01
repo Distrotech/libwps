@@ -81,7 +81,7 @@ protected:
 	/** send the cell data in a row
 
 	 \note this function does not call openSheetRow, closeSheetRow*/
-	void sendRowContent(LotusSpreadsheetInternal::Spreadsheet const &sheet, int sheetId, int row);
+	void sendRowContent(LotusSpreadsheetInternal::Spreadsheet const &sheet, int row);
 	//! send the cell data
 	void sendCellContent(LotusSpreadsheetInternal::Cell const &cell,
 	                     LotusSpreadsheetInternal::Style const &style, int numRepeated=1);
