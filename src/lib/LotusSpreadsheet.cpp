@@ -57,11 +57,6 @@ struct Style : public WPSCellFormat
 		m_font.m_size=10;
 	}
 
-	//! returns true if the style has a background color and a border or a format type
-	bool isVisible() const
-	{
-		return !backgroundColor().isWhite() || hasBorders() || m_format!=F_UNKNOWN;
-	}
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Style const &style)
 	{
@@ -92,20 +87,6 @@ struct RowStyles
 	//! constructor
 	RowStyles() : m_colsToStyleMap()
 	{
-	}
-	//! returns true if we have no style
-	bool isEmpty(bool checkOnlyVisible=false) const
-	{
-		if (m_colsToStyleMap.empty())
-			return true;
-		if (!checkOnlyVisible)
-			return false;
-		for (std::map<Vec2i, Style>::const_iterator it=m_colsToStyleMap.begin(); it!=m_colsToStyleMap.end(); ++it)
-		{
-			if (it->second.isVisible())
-				return false;
-		}
-		return true;
 	}
 	//! a map Vec2i(minCol,maxCol) to style
 	std::map<Vec2i, Style> m_colsToStyleMap;
@@ -246,18 +227,6 @@ public:
 		std::map<Vec2i,int>::const_iterator rIt=m_rowHeightMap.lower_bound(Vec2i(-1,row));
 		if (rIt!=m_rowHeightMap.end() && rIt->first[0]<=row && rIt->first[1]>=row)
 			return (float) rIt->second;
-		return (float) m_heightDefault;
-	}
-	//! returns the height of a row in point and updated repeated row
-	float getRowHeight(int row, int &numRepeated) const
-	{
-		std::map<Vec2i,int>::const_iterator rIt=m_rowHeightMap.lower_bound(Vec2i(-1,row));
-		if (rIt!=m_rowHeightMap.end() && rIt->first[0]<=row && rIt->first[1]>=row)
-		{
-			numRepeated=rIt->first[1]-row+1;
-			return (float) rIt->second;
-		}
-		numRepeated=10000;
 		return (float) m_heightDefault;
 	}
 	//! set the rows size
