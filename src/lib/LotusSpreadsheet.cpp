@@ -193,16 +193,6 @@ public:
 		}
 		return m_positionToCellMap.find(pos)->second;
 	}
-	//! return the row bounds corresponding to a column
-	bool getRowBounds(int col, Vec2i &bound) const
-	{
-		if (m_boundsColsMap.empty()) return false;
-		if (m_boundsColsMap.find(col)==m_boundsColsMap.end())
-			bound=Vec2i(-1,-1);
-		else
-			bound=m_boundsColsMap.find(col)->second;
-		return true;
-	}
 	//! set the columns size
 	void setColumnWidthInChar(int col, int w=-1)
 	{
