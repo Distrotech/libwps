@@ -617,7 +617,7 @@ void DosWordParser::readSUMD()
 		return;
 	}
 
-	input->seek(fc, librevenge::RVNG_SEEK_SET);
+	input->seek(long(fc), librevenge::RVNG_SEEK_SET);
 	if (libwps::readU16(input))
 	{
 		WPS_DEBUG_MSG(("DosWordParser::readSUMD: garbage\n"));
@@ -638,7 +638,7 @@ void DosWordParser::readSUMD()
 		NULL
 	};
 
-	input->seek(fc, librevenge::RVNG_SEEK_SET);
+	input->seek(long(fc), librevenge::RVNG_SEEK_SET);
 
 	for (i=0; sum_types[i]; i++)
 	{
@@ -743,7 +743,7 @@ void DosWordParser::readFNTB()
 		return;
 	}
 
-	input->seek(fc, librevenge::RVNG_SEEK_SET);
+	input->seek(long(fc), librevenge::RVNG_SEEK_SET);
 
 	uint16_t noteCount = libwps::readU16(input);
 	uint16_t noteCountAndDeleted = libwps::readU16(input);

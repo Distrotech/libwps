@@ -354,7 +354,7 @@ void MSWriteParser::readFFNTB()
 		}
 		else
 		{
-			input->seek(pnFfntb * 0x80, librevenge::RVNG_SEEK_SET);
+			input->seek(long(pnFfntb) * 0x80, librevenge::RVNG_SEEK_SET);
 			font_count = libwps::readU16(input);
 		}
 	}
@@ -388,7 +388,7 @@ void MSWriteParser::readFFNTB()
 				}
 
 				offset = 0;
-				input->seek(pnFfntb * 0x80, librevenge::RVNG_SEEK_SET);
+				input->seek(long(pnFfntb) * 0x80, librevenge::RVNG_SEEK_SET);
 				continue;
 			}
 
@@ -454,7 +454,7 @@ void MSWriteParser::readSECT()
 			throw (libwps::ParseException());
 		}
 
-		input->seek(pnSetb * 0x80, librevenge::RVNG_SEEK_SET);
+		input->seek(long(pnSetb) * 0x80, librevenge::RVNG_SEEK_SET);
 		uint16_t cset = libwps::readU16(input);
 
 		// ignore csetMax, cp, fn
@@ -463,7 +463,7 @@ void MSWriteParser::readSECT()
 		uint32_t fcSep = libwps::readU32(input);
 		if (cset > 1 && checkFilePosition(fcSep + 22))
 		{
-			input->seek(fcSep, librevenge::RVNG_SEEK_SET);
+			input->seek(long(fcSep), librevenge::RVNG_SEEK_SET);
 			uint8_t headerSize = libwps::readU8(input);
 			if (headerSize<22 || !checkFilePosition(fcSep+2+headerSize))
 			{
@@ -529,7 +529,7 @@ int MSWriteParser::numPages()
 			continue;
 
 		uint32_t fc = paps->m_fcFirst;
-		input->seek(fc, librevenge::RVNG_SEEK_SET);
+		input->seek(long(fc), librevenge::RVNG_SEEK_SET);
 
 		while (fc < paps->m_fcLim && fc < m_fcMac)
 		{
@@ -774,16 +774,16 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 			{
 				headerPage1 = m_paragraphList[first].m_firstpage;
 				headerOccurrence = m_paragraphList[first].m_HeaderFooterOccurrence;
-				header.setBegin(m_paragraphList[first].m_fcFirst);
-				header.setEnd(m_paragraphList[i - 1].m_fcLim);
+				header.setBegin(long(m_paragraphList[first].m_fcFirst));
+				header.setEnd(long(m_paragraphList[i - 1].m_fcLim));
 				header.setType("TEXT");
 			}
 			else if (location == MSWriteParserInternal::Paragraph::FOOTER)
 			{
 				footerPage1 = m_paragraphList[first].m_firstpage;
 				footerOccurrence = m_paragraphList[first].m_HeaderFooterOccurrence;
-				footer.setBegin(m_paragraphList[first].m_fcFirst);
-				footer.setEnd(m_paragraphList[i - 1].m_fcLim);
+				footer.setBegin(long(m_paragraphList[first].m_fcFirst));
+				footer.setEnd(long(m_paragraphList[i - 1].m_fcLim));
 				footer.setType("TEXT");
 			}
 
@@ -810,8 +810,8 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 		throw (libwps::ParseException());
 	}
 
-	m_Main.setBegin(m_paragraphList[first].m_fcFirst);
-	m_Main.setEnd(std::min(m_paragraphList[i - 1].m_fcLim, m_fcMac));
+	m_Main.setBegin(long(m_paragraphList[first].m_fcFirst));
+	m_Main.setEnd(long(std::min(m_paragraphList[i - 1].m_fcLim, m_fcMac)));
 	m_Main.setType("TEXT");
 
 	empty.setType("TEXT");
@@ -929,7 +929,7 @@ void MSWriteParser::readText(WPSEntry e, MSWriteParserInternal::Paragraph::Locat
 
 			pos.setRelativePosition(WPSPosition::ParagraphContent, align);
 
-			input->seek(fc + 8, librevenge::RVNG_SEEK_SET);
+			input->seek(long(fc) + 8, librevenge::RVNG_SEEK_SET);
 			uint16_t dxaOffset = libwps::readU16(input);
 			uint16_t dxaSize = libwps::readU16(input);
 			uint16_t dyaSize = libwps::readU16(input);
@@ -955,7 +955,7 @@ void MSWriteParser::readText(WPSEntry e, MSWriteParserInternal::Paragraph::Locat
 				origin[0] = dxaOffset/1440.0f;
 			origin[1] = lastObjectHeight;
 			pos.setOrigin(origin);
-			input->seek(fc, librevenge::RVNG_SEEK_SET);
+			input->seek(long(fc), librevenge::RVNG_SEEK_SET);
 
 			processObject(pos, fcLim);
 			lastObjectHeight += pos.size()[1];
@@ -997,7 +997,7 @@ void MSWriteParser::readText(WPSEntry e, MSWriteParserInternal::Paragraph::Locat
 			unsigned size = lim - fc;
 			unsigned long read_bytes;
 
-			input->seek(fc, librevenge::RVNG_SEEK_SET);
+			input->seek(long(fc), librevenge::RVNG_SEEK_SET);
 			const unsigned char *p = input->read(size, read_bytes);
 			if (!p || read_bytes != size)
 			{
@@ -1592,7 +1592,7 @@ void MSWriteParser::processEmbeddedOLE(WPSPosition &pos, unsigned long lastPos)
 		return;
 	}
 
-	input->seek(size, librevenge::RVNG_SEEK_CUR);
+	input->seek(long(size), librevenge::RVNG_SEEK_CUR);
 
 	WPSEmbeddedObject obj(embeddedOle, "object/ole");
 	unsigned ole_id = libwps::readU32(input);
@@ -1674,13 +1674,13 @@ void MSWriteParser::insertNote(bool annotation, uint32_t fcPos, librevenge::RVNG
 		if (fcPos == iter->m_fcRef)
 		{
 			WPSEntry e;
-			e.setBegin(iter->m_fcFtn);
+			e.setBegin(long(iter->m_fcFtn));
 			if (++iter == m_footnotes.end())
 			{
 				WPS_DEBUG_MSG(("MSWriteParser::insertNote missing sentinel footnote\n"));
 				return;
 			}
-			e.setEnd(iter->m_fcFtn);
+			e.setEnd(long(iter->m_fcFtn));
 			e.setType("TEXT");
 
 			if (e.valid() && e.begin() >= m_Main.end() && e.end() <= long(m_fcMac))
