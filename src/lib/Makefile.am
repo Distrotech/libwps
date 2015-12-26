@@ -5,10 +5,6 @@ version_info = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 endif
 
 lib_LTLIBRARIES = libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la $(target_libwps_stream)
-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir = $(includedir)/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@/libwps
-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS = \
-	$(top_srcdir)/inc/libwps/libwps.h \
-	$(top_srcdir)/inc/libwps/WPSDocument.h
 
 AM_CXXFLAGS =  -I$(top_srcdir)/inc $(REVENGE_CFLAGS) $(DEBUG_CXXFLAGS) -DBUILD_WPS=1
 
