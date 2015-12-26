@@ -40,13 +40,18 @@
 
 static int printUsage()
 {
-	printf("Usage: wps2raw [OPTION] <Microsoft Works or Microsoft Write text document>\n");
+	printf("`wps2raw' is used to test text document import in libwps.\n");
+	printf("Supported formats are Microsoft Works, Write and Word for DOS.\n");
+	printf("\n");
+	printf("Usage: wps2raw [OPTION] FILE\n");
 	printf("\n");
 	printf("Options:\n");
-	printf("\t-h, --help:                Shows this help message\n");
-	printf("\t-v, --version:             Output wps2raw version \n");
-	printf("\t--callgraph:               Display the call graph nesting level\n");
-	printf("\t--password password:       Password to open the file\n");
+	printf("\t-h, --help                 show this help message\n");
+	printf("\t-v, --version              show version information\n");
+	printf("\t--callgraph                display the call graph nesting level\n");
+	printf("\t--password PASSWORD        set password to open the file\n");
+	printf("\n");
+	printf("Report bugs to <https://sourceforge.net/p/libwps/bugs/> or <https://bugs.documentfoundation.org/>.\n");
 	return -1;
 }
 

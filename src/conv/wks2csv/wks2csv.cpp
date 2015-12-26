@@ -46,34 +46,39 @@ using namespace libwps;
 
 static int printUsage()
 {
-	printf("Usage: wks2csv [OPTION] <Works Spreadsheet Document>\n");
+	printf("`wks2csv' converts various spreadsheets and database formats to CSV.\n");
+	printf("Supported formats are Microsoft Works Spreadsheet and Database, Lotus Wk1-Wk4 and Quattro Pro Wq1-Wq2.\n");
+	printf("\n");
+	printf("Usage: wks2csv [OPTION] FILE\n");
 	printf("\n");
 	printf("Options:\n");
-	printf("\t-h:          Shows this help message\n");
-	printf("\t-dc:         Sets the decimal commas to character c: default .\n");
-	printf("\t-e \"encoding\":    Define the file encoding where encoding can be\n");
+	printf("\t-h           show this help message\n");
+	printf("\t-d CHAR      set the decimal commas to character CHAR: default .\n");
+	printf("\t-e ENCODING         Define the file encoding where encoding can be\n");
 	printf("\t\t CP037, CP424, CP437, CP737, CP500, CP775, CP850, CP852, CP855, CP856, CP857,\n");
 	printf("\t\t CP860, CP861, CP862, CP863, CP864, CP865, CP866, CP869, CP874, CP875, CP932,\n");
 	printf("\t\t CP950, CP1006, CP1026, CP1250, CP1251, CP1252, CP1253, CP1254, CP1255, CP1256,\n");
 	printf("\t\t CP1257, CP1258, MacArabic, MacCeltic, MacCEurope, MacCroation, MacCyrillic,\n");
 	printf("\t\t MacDevanage, MacFarsi, MacGaelic, MacGreek, MacGujarati, MacGurmukhi, MacHebrew,\n");
 	printf("\t\t MacIceland, MacInuit, MacRoman, MacRomanian, MacThai, MacTurkish.\n");
-	printf("\t-fc:         Sets the field separator to character c: default ,\n");
-	printf("\t-tc:         Sets the text separator to character c: default \"\n");
-	printf("\t-o file.csv: Defines the ouput file\n");
-	printf("\t-p password: Password to open the file\n");
-	printf("\t-v:          Output wks2csv version\n");
-	printf("\t-N:          Output the number of sheets \n");
-	printf("\t-n num:      Sets the choose the sheet to convert (1: means first sheet) \n");
-	printf("\t-F:          Sets to output the formula which exists in the file\n");
-	printf("\t-Dformat:    Sets the date format: default \"%%m/%%d/%%y\"\n");
-	printf("\t-Tformat:    Sets the time format: default \"%%H:%%M:%%S\"\n");
+	printf("\t-f CHAR      Sets the field separator to character CHAR: default ,\n");
+	printf("\t-t CHAR      set the text separator to character CHAR: default \"\n");
+	printf("\t-o FILE      set the ouput file\n");
+	printf("\t-p PASSWORD  set password to open the file\n");
+	printf("\t-v           show version information\n");
+	printf("\t-N           show the number of sheets\n");
+	printf("\t-n NUM       choose the sheet to convert (1 means first sheet) \n");
+	printf("\t-F           set to output the formula which exists in the file\n");
+	printf("\t-D FORMAT    set date format: default \"%%m/%%d/%%y\"\n");
+	printf("\t-T FORMAT    set time format: default \"%%H:%%M:%%S\"\n");
 	printf("\n");
-	printf("Example:\n");
-	printf("\twks2cvs -d, -D\"%%d/%%m/%%y\" file : Converts a file using french locale\n");
+	printf("Examples:\n");
+	printf("\twks2cvs -d, -D\"%%d/%%m/%%y\" file	convert a file using french locale\n");
 	printf("\n");
 	printf("Note:\n");
-	printf("\t If -F is present, the formula are generated which english names\n");
+	printf("\tIf -F is present, the formula are generated which english names\n");
+	printf("\n");
+	printf("Report bugs to <https://sourceforge.net/p/libwps/bugs/> or <https://bugs.documentfoundation.org/>.\n");
 	return -1;
 }
 

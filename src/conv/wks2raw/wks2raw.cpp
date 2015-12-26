@@ -40,13 +40,18 @@
 
 static int printUsage()
 {
-	printf("Usage: wks2raw [OPTION] <Works Spreadsheet Document>\n");
+	printf("`wks2raw' is used to test spreadsheet import in libwps.\n");
+	printf("Supported formats are Microsoft Works Spreadsheet and Database, Lotus Wk1-Wk4 and Quattro Pro Wq1-Wq2.\n");
+	printf("\n");
+	printf("Usage: wks2raw [OPTION] FILE\n");
 	printf("\n");
 	printf("Options:\n");
-	printf("\t-h, --help:                Shows this help message\n");
-	printf("\t-v, --version:             Output wks2raw version \n");
-	printf("\t--callgraph:               Display the call graph nesting level\n");
-	printf("\t--password password:       Password to open the file\n");
+	printf("\t-h, --help                 show this help message\n");
+	printf("\t-v, --version              show version information\n");
+	printf("\t--callgraph                display the call graph nesting level\n");
+	printf("\t--password PASSWORD        set password to open the file\n");
+	printf("\n");
+	printf("Report bugs to <https://sourceforge.net/p/libwps/bugs/> or <https://bugs.documentfoundation.org/>.\n");
 	return -1;
 }
 

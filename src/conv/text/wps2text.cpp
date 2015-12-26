@@ -41,19 +41,24 @@ using namespace libwps;
 
 static int printUsage()
 {
-	printf("Usage: wps2text [OPTION] <Microsoft Works or Microsoft Write text document>\n");
+	printf("`wps2text' converts various Microsoft text document formats to plain text.\n");
+	printf("Supported formats are Microsoft Works, Write and Word for DOS.\n");
+	printf("\n");
+	printf("Usage: wps2text [OPTION] FILE\n");
 	printf("\n");
 	printf("Options:\n");
-	printf("\t-e \"encoding\":   Define the file encoding where encoding can be\n");
+	printf("\t-e ENCODING        define the file encoding, where encoding can be\n");
 	printf("\t\t CP037, CP424, CP437, CP737, CP500, CP775, CP850, CP852, CP855, CP856, CP857,\n");
 	printf("\t\t CP860, CP861, CP862, CP863, CP864, CP865, CP866, CP869, CP874, CP875, CP932,\n");
 	printf("\t\t CP950, CP1006, CP1026, CP1250, CP1251, CP1252, CP1253, CP1254, CP1255, CP1256,\n");
 	printf("\t\t CP1257, CP1258, MacArabic, MacCeltic, MacCEurope, MacCroation, MacCyrillic,\n");
 	printf("\t\t MacDevanage, MacFarsi, MacGaelic, MacGreek, MacGujarati, MacGurmukhi, MacHebrew,\n");
 	printf("\t\t MacIceland, MacInuit, MacRoman, MacRomanian, MacThai, MacTurkish.\n");
-	printf("\t-h:                Shows this help message\n");
-	printf("\t-p password:       Password to open the file\n");
-	printf("\t-v:                Output wps2text version \n");
+	printf("\t-h:                show this help message\n");
+	printf("\t-p PASSWORD        set password to open the file\n");
+	printf("\t-v                 show version information\n");
+	printf("\n");
+	printf("Report bugs to <https://sourceforge.net/p/libwps/bugs/> or <https://bugs.documentfoundation.org/>.\n");
 	return -1;
 }
 

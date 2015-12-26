@@ -45,20 +45,25 @@ using namespace libwps;
 
 static int printUsage()
 {
-	printf("Usage: wks2text [OPTION] <Works Spreadsheet Document>\n");
+	printf("`wks2text' converts various spreadsheets and database formats to plain text.\n");
+	printf("Supported formats are Microsoft Works Spreadsheet and Database, Lotus Wk1-Wk4 and Quattro Pro Wq1-Wq2.\n");
+	printf("\n");
+	printf("Usage: wks2text [OPTION] FILE\n");
 	printf("\n");
 	printf("Options:\n");
-	printf("\t-e \"encoding\":    Define the file encoding where encoding can be\n");
+	printf("\t-e ENCODING         define the file encoding, where encoding can be\n");
 	printf("\t\t CP037, CP424, CP437, CP737, CP500, CP775, CP850, CP852, CP855, CP856, CP857,\n");
 	printf("\t\t CP860, CP861, CP862, CP863, CP864, CP865, CP866, CP869, CP874, CP875, CP1006, CP1026,\n");
 	printf("\t\t CP1250, CP1251, CP1252, CP1253, CP1254, CP1255, CP1256, CP1257, CP1258,\n");
 	printf("\t\t MacArabic, MacCeltic, MacCEurope, MacCroation, MacCyrillic, MacDevanage,\n");
 	printf("\t\t MacFarsi, MacGaelic, MacGreek, MacGujarati, MacGurmukhi, MacHebrew, MacIceland,\n");
 	printf("\t\t MacInuit, MacRoman, MacRomanian, MacThai, MacTurkish.\n");
-	printf("\t-h:                 Shows this help message\n");
-	printf("\t-o file.text:       Defines the ouput file\n");
-	printf("\t-p password:        Password to open the file\n");
-	printf("\t-v:                 Output wks2text version \n");
+	printf("\t-h                  show this help message\n");
+	printf("\t-o FILE             set the output file\n");
+	printf("\t-p PASSWORD         set password to open the file\n");
+	printf("\t-v                  show version information\n");
+	printf("\n");
+	printf("Report bugs to <https://sourceforge.net/p/libwps/bugs/> or <https://bugs.documentfoundation.org/>.\n");
 	return -1;
 }
 
