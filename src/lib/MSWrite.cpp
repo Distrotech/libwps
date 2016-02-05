@@ -117,23 +117,6 @@ void SubDocument::parse(shared_ptr<WPSContentListener> &listener, libwps::SubDoc
 	m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 
-struct SEP
-{
-	//! constructor
-	SEP() : m_yaMac(11), m_xaMac(8.5), m_yaTop(1), m_dyaText(9), m_xaLeft(1.25), m_dxaText(6),
-		m_startPageNumber(0xffff), m_yaHeader(0.75), m_yaFooter(10.25) /* 11-0.75inch*/
-	{
-	}
-	double m_yaMac, m_xaMac;
-	double m_yaTop;
-	double m_dyaText;
-	double m_xaLeft;
-	double m_dxaText;
-	uint16_t m_startPageNumber;
-	double m_yaHeader;
-	double m_yaFooter;
-};
-
 struct PAP
 {
 	//! constructor
@@ -282,8 +265,8 @@ static void appendU32(librevenge::RVNGBinaryData &b, uint32_t val)
 MSWriteParser::MSWriteParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
                              libwps_tools_win::Font::Type encoding):
 	WPSParser(input, header), m_fileLength(0), m_fcMac(0),
-	m_paragraphList(0), m_fontList(0), m_footnotes(0), m_fonts(0),
-	m_pageSpan(), m_fontType(encoding), m_listener(), m_Main(), m_metaData()
+	m_paragraphList(0), m_fontList(0), m_footnotes(0), m_sections(0),
+	m_fonts(0), m_fontType(encoding), m_listener(), m_metaData()
 {
 	if (!input)
 	{
@@ -433,7 +416,7 @@ void MSWriteParser::readFFNTB()
 		m_fonts.push_back("Arial");
 }
 
-void MSWriteParser::readSECT()
+void MSWriteParser::readSED()
 {
 	unsigned pnSetb, pnBftb;
 	RVNGInputStreamPtr input = getInput();
@@ -444,11 +427,9 @@ void MSWriteParser::readSECT()
 	input->seek(MSWriteParserInternal::HEADER_W_PNBFTB, librevenge::RVNG_SEEK_SET);
 	pnBftb = libwps::readU16(input);
 
-	MSWriteParserInternal::SEP sep;
-
 	if (pnSetb && pnSetb != pnBftb)
 	{
-		if (!checkFilePosition(pnSetb * 0x80 + 14))
+		if (!checkFilePosition(pnSetb * 0x80 + 4))
 		{
 			WPS_DEBUG_MSG(("Section is truncated\n"));
 			throw (libwps::ParseException());
@@ -457,44 +438,90 @@ void MSWriteParser::readSECT()
 		input->seek(long(pnSetb) * 0x80, librevenge::RVNG_SEEK_SET);
 		uint16_t cset = libwps::readU16(input);
 
-		// ignore csetMax, cp, fn
-		input->seek(8, librevenge::RVNG_SEEK_CUR);
+		// ignore csetMax
+		input->seek(2, librevenge::RVNG_SEEK_CUR);
 
-		uint32_t fcSep = libwps::readU32(input);
-		if (cset > 1 && checkFilePosition(fcSep + 22))
+		for (unsigned sed = 0; sed<cset; sed++)
 		{
-			input->seek(long(fcSep), librevenge::RVNG_SEEK_SET);
-			uint8_t headerSize = libwps::readU8(input);
-			if (headerSize<22 || !checkFilePosition(fcSep+2+headerSize))
+			if (!checkFilePosition(pnSetb * 0x80 + (sed + 1) * 10 + 4))
 			{
-				WPS_DEBUG_MSG(("MSWriteParser::readSECT: can not read the structure, using default\n"));
+				WPS_DEBUG_MSG(("is truncated\n"));
+				throw (libwps::ParseException());
 			}
-			else
-			{
-				input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved 1
-				// read section
-				sep.m_yaMac=double(libwps::readU16(input))/1440.;
-				sep.m_xaMac=double(libwps::readU16(input))/1440.;
-				sep.m_startPageNumber=libwps::readU16(input);
-				sep.m_yaTop=double(libwps::readU16(input))/1440.;
-				sep.m_dyaText=double(libwps::readU16(input))/1440.;
-				sep.m_xaLeft=double(libwps::readU16(input))/1440.;
-				sep.m_dxaText=double(libwps::readU16(input))/1440.;
-				input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved 2
-				sep.m_yaHeader=double(libwps::readU16(input))/1440.;
-				sep.m_yaFooter=double(libwps::readU16(input))/1440.;
-			}
+
+			uint32_t fcLim = libwps::readU32(input) + 0x80;
+
+			// unknown
+			input->seek(2, librevenge::RVNG_SEEK_CUR);
+
+			uint32_t fcSep = libwps::readU32(input);
+
+			if (fcSep == 0xffffffff)
+				break;
+
+			readSECT(fcSep, fcLim);
+
+			if (fcLim >= m_fcMac)
+				break;
 		}
 	}
 
-	m_pageSpan.setFormLength(sep.m_yaMac);
-	m_pageSpan.setFormWidth(sep.m_xaMac);
+	if (m_sections.empty())
+	{
+		// create default section by reading invalid fc
+		readSECT(m_fileLength, m_fcMac);
+	}
+	else
+	{
+		// Ensure the last m_fcLim makes sense
+		m_sections[m_sections.size() - 1].m_fcLim = m_fcMac;
+	}
+}
+
+void MSWriteParser::readSECT(uint32_t fcSep, uint32_t fcLim)
+{
+	RVNGInputStreamPtr input = getInput();
+	MSWriteParserInternal::Section sep;
+
+	if (checkFilePosition(fcSep + 22))
+	{
+		input->seek(fcSep, librevenge::RVNG_SEEK_SET);
+		uint8_t headerSize = libwps::readU8(input);
+		if (headerSize<22 || !checkFilePosition(fcSep+2+headerSize))
+		{
+			WPS_DEBUG_MSG(("MSWriteParser::readSECT: can not read the structure, using default\n"));
+		}
+		else
+		{
+			input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved 1
+			// read section
+			sep.m_yaMac=double(libwps::readU16(input))/1440.;
+			sep.m_xaMac=double(libwps::readU16(input))/1440.;
+			sep.m_startPageNumber=libwps::readU16(input);
+			sep.m_yaTop=double(libwps::readU16(input))/1440.;
+			sep.m_dyaText=double(libwps::readU16(input))/1440.;
+			sep.m_xaLeft=double(libwps::readU16(input))/1440.;
+			sep.m_dxaText=double(libwps::readU16(input))/1440.;
+			input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved 2
+			sep.m_yaHeader=double(libwps::readU16(input))/1440.;
+			sep.m_yaFooter=double(libwps::readU16(input))/1440.;
+		}
+	}
+
+	sep.m_fcLim = fcLim;
+	m_sections.push_back(sep);
+}
+
+void MSWriteParser::getPageStyle(MSWriteParserInternal::Section &sep, WPSPageSpan &pageSpan)
+{
+	pageSpan.setFormLength(sep.m_yaMac);
+	pageSpan.setFormWidth(sep.m_xaMac);
 
 	if (sep.m_yaTop < sep.m_yaMac && sep.m_yaMac - sep.m_yaTop - sep.m_dyaText >= 0 &&
 	        sep.m_yaMac - sep.m_dyaText < sep.m_yaMac)
 	{
-		m_pageSpan.setMarginTop(sep.m_yaTop);
-		m_pageSpan.setMarginBottom(sep.m_yaMac - sep.m_yaTop - sep.m_dyaText);
+		pageSpan.setMarginTop(sep.m_yaTop);
+		pageSpan.setMarginBottom(sep.m_yaMac - sep.m_yaTop - sep.m_dyaText);
 	}
 	else
 	{
@@ -503,8 +530,8 @@ void MSWriteParser::readSECT()
 	if (sep.m_xaLeft < sep.m_xaMac && sep.m_xaMac - sep.m_xaLeft - sep.m_dxaText >= 0 &&
 	        sep.m_xaMac - sep.m_dxaText < sep.m_xaMac)
 	{
-		m_pageSpan.setMarginLeft(sep.m_xaLeft);
-		m_pageSpan.setMarginRight(sep.m_xaMac - sep.m_xaLeft - sep.m_dxaText);
+		pageSpan.setMarginLeft(sep.m_xaLeft);
+		pageSpan.setMarginRight(sep.m_xaMac - sep.m_xaLeft - sep.m_dxaText);
 	}
 	else
 	{
@@ -512,33 +539,13 @@ void MSWriteParser::readSECT()
 	}
 
 	if (sep.m_startPageNumber != 0xffff)
-		m_pageSpan.setPageNumber(sep.m_startPageNumber);
-}
+		pageSpan.setPageNumber(sep.m_startPageNumber);
 
-int MSWriteParser::numPages()
-{
-	int numPage = 1;
-
-	RVNGInputStreamPtr input = getInput();
-
-	std::vector<MSWriteParserInternal::Paragraph>::iterator paps;
-
-	for (paps = m_paragraphList.begin(); paps != m_paragraphList.end(); ++paps)
-	{
-		if (paps->m_graphics)
-			continue;
-
-		uint32_t fc = paps->m_fcFirst;
-		input->seek(long(fc), librevenge::RVNG_SEEK_SET);
-
-		while (fc < paps->m_fcLim && fc < m_fcMac)
-		{
-			if (libwps::readU8(input) == 0x0C) numPage++;
-			fc++;
-		}
-	}
-
-	return numPage;
+	// FIXME:
+	// - page numbers
+	// - line numbers
+	// - page break style
+	// - columns
 }
 
 void MSWriteParser::readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size))
@@ -751,68 +758,94 @@ void MSWriteParser::readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch)
 	m_fontList.push_back(font);
 }
 
-shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTextInterface *interface)
+void MSWriteParser::getHeaderFooters(uint32_t first, MSWriteParserInternal::Section &section, WPSPageSpan &ps)
 {
 	bool headerPage1 = true, footerPage1 = true;
-	std::vector<WPSPageSpan> pageList;
-	WPSPageSpan ps(m_pageSpan);
+	bool reachedMain = false;
 	WPSEntry empty, footer, header;
 	WPSPageSpan::HeaderFooterOccurrence headerOccurrence = WPSPageSpan::ALL;
 	WPSPageSpan::HeaderFooterOccurrence footerOccurrence = WPSPageSpan::ALL;
 
 	MSWriteParserInternal::Paragraph::Location location = MSWriteParserInternal::Paragraph::MAIN;
+	RVNGInputStreamPtr input = getInput();
+	int numPage = 1;
 
-	unsigned first = 0, i;
+	unsigned firstP = 0, i;
 
 	for (i = 0; i < m_paragraphList.size(); i++)
 	{
 		MSWriteParserInternal::Paragraph &p = m_paragraphList[i];
 
-		if (p.m_Location != location)
+		if (p.m_fcLim < first)
+		{
+			firstP = i + 1;
+			continue;
+		}
+
+		if (p.m_fcFirst >= section.m_fcLim)
+			break;
+
+		if (!p.m_graphics)
+		{
+			uint32_t fc = p.m_fcFirst;
+
+			input->seek(long(fc), librevenge::RVNG_SEEK_SET);
+
+			while (fc < p.m_fcLim && fc < m_fcMac)
+			{
+				if (libwps::readU8(input) == 0x0C) numPage++;
+				fc++;
+			}
+		}
+
+		if (!p.m_headerUseMargin && (p.m_Location == MSWriteParserInternal::Paragraph::HEADER ||
+		                             p.m_Location == MSWriteParserInternal::Paragraph::FOOTER))
+		{
+			// Indents in header/footer are off paper, not margins
+			p.m_margins[1] -= ps.getMarginLeft();
+			p.m_margins[2] -= ps.getMarginRight();
+		}
+
+
+		if (p.m_Location != location && !reachedMain)
 		{
 			if (location == MSWriteParserInternal::Paragraph::HEADER)
 			{
-				headerPage1 = m_paragraphList[first].m_firstpage;
-				headerOccurrence = m_paragraphList[first].m_HeaderFooterOccurrence;
-				header.setBegin(long(m_paragraphList[first].m_fcFirst));
+				headerPage1 = m_paragraphList[firstP].m_firstpage;
+				headerOccurrence = m_paragraphList[firstP].m_HeaderFooterOccurrence;
+				header.setBegin(long(m_paragraphList[firstP].m_fcFirst));
 				header.setEnd(long(m_paragraphList[i - 1].m_fcLim));
 				header.setType("TEXT");
 			}
 			else if (location == MSWriteParserInternal::Paragraph::FOOTER)
 			{
-				footerPage1 = m_paragraphList[first].m_firstpage;
-				footerOccurrence = m_paragraphList[first].m_HeaderFooterOccurrence;
-				footer.setBegin(long(m_paragraphList[first].m_fcFirst));
+				footerPage1 = m_paragraphList[firstP].m_firstpage;
+				footerOccurrence = m_paragraphList[firstP].m_HeaderFooterOccurrence;
+				footer.setBegin(long(m_paragraphList[firstP].m_fcFirst));
 				footer.setEnd(long(m_paragraphList[i - 1].m_fcLim));
 				footer.setType("TEXT");
 			}
 
 			location = p.m_Location;
-			first = i;
+			firstP = i;
 		}
-
-		if (p.m_Location == MSWriteParserInternal::Paragraph::FOOTNOTE ||
-		        p.m_Location == MSWriteParserInternal::Paragraph::MAIN)
-			break;
-	}
-
-	for (; i < m_paragraphList.size(); i++)
-	{
-		MSWriteParserInternal::Paragraph &p = m_paragraphList[i];
 
 		if (p.m_Location == MSWriteParserInternal::Paragraph::FOOTNOTE)
 			break;
+
+		if (p.m_Location == MSWriteParserInternal::Paragraph::MAIN)
+			reachedMain = true;
 	}
 
-	if (i <= first)
+	if (i <= firstP)
 	{
-		WPS_DEBUG_MSG(("MSWriteParser::createListener: missing body text\n"));
+		WPS_DEBUG_MSG(("MSWriteParser::getPageSpan: missing body text\n"));
 		throw (libwps::ParseException());
 	}
 
-	m_Main.setBegin(long(m_paragraphList[first].m_fcFirst));
-	m_Main.setEnd(long(std::min(m_paragraphList[i - 1].m_fcLim, m_fcMac)));
-	m_Main.setType("TEXT");
+	section.m_Main.setBegin(long(m_paragraphList[firstP].m_fcFirst));
+	section.m_Main.setEnd(long(std::min(m_paragraphList[i - 1].m_fcLim, m_fcMac)));
+	section.m_Main.setType("TEXT");
 
 	empty.setType("TEXT");
 
@@ -857,8 +890,26 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 		}
 	}
 
-	ps.setPageSpan(numPages());
-	pageList.push_back(ps);
+	ps.setPageSpan(numPage);
+}
+
+shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTextInterface *interface)
+{
+	std::vector<WPSPageSpan> pageList;
+	uint32_t fc = 0x80;
+	std::vector<MSWriteParserInternal::Section>::iterator sections;
+
+	for (sections = m_sections.begin(); sections != m_sections.end(); ++sections)
+	{
+		WPSPageSpan ps;
+		// Get margins etc from SEP
+		getPageStyle(*sections, ps);
+		// Get headers, footers and page count from actual text
+		getHeaderFooters(fc, *sections, ps);
+		pageList.push_back(ps);
+		fc = sections->m_fcLim;
+	}
+
 	return shared_ptr<WPSContentListener>
 	       (new WPSContentListener(pageList, interface));
 }
@@ -977,14 +1028,6 @@ void MSWriteParser::readText(WPSEntry e, MSWriteParserInternal::Paragraph::Locat
 		MSWriteParserInternal::Paragraph para = *paps;
 		if (paps->m_interLine>0)
 			para.setInterline((paps->m_interLine * chps->m_size)/72., librevenge::RVNG_INCH, WPSParagraph::AtLeast);
-
-		if (!para.m_headerUseMargin && (para.m_Location == MSWriteParserInternal::Paragraph::HEADER ||
-		                                para.m_Location == MSWriteParserInternal::Paragraph::FOOTER))
-		{
-			// Indents in header/footer are off paper, not margins
-			para.m_margins[1] -= m_pageSpan.getMarginLeft();
-			para.m_margins[2] -= m_pageSpan.getMarginRight();
-		}
 
 		m_listener->setParagraph(para);
 		m_listener->setFont(*chps);
@@ -1643,7 +1686,7 @@ void MSWriteParser::readStructures()
 
 	readFIB();
 	readFFNTB();
-	readSECT();
+	readSED();
 	readSUMD();
 	readFNTB();
 
@@ -1683,7 +1726,7 @@ void MSWriteParser::insertNote(bool annotation, uint32_t fcPos, librevenge::RVNG
 			e.setEnd(long(iter->m_fcFtn));
 			e.setType("TEXT");
 
-			if (e.valid() && e.begin() >= m_Main.end() && e.end() <= long(m_fcMac))
+			if (e.valid() && e.end() <= long(m_fcMac))
 			{
 				WPSSubDocumentPtr subdoc(new MSWriteParserInternal::SubDocument
 				                         (getInput(), *this, e, MSWriteParserInternal::Paragraph::FOOTNOTE));
@@ -1716,10 +1759,14 @@ void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
 
 	m_listener->setMetaData(m_metaData);
 	m_listener->startDocument();
-	if (m_Main.valid())
+
+	std::vector<MSWriteParserInternal::Section>::iterator sections;
+
+	for (sections = m_sections.begin(); sections != m_sections.end(); ++sections)
 	{
-		readText(m_Main, MSWriteParserInternal::Paragraph::MAIN);
+		readText(sections->m_Main, MSWriteParserInternal::Paragraph::MAIN);
 	}
+
 	m_listener->endDocument();
 	m_listener.reset();
 }

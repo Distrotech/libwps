@@ -68,6 +68,25 @@ struct Footnote
 	uint32_t m_fcFtn, m_fcRef;
 };
 
+struct Section
+{
+	//! constructor
+	Section() : m_fcLim(0), m_yaMac(11), m_xaMac(8.5), m_yaTop(1),
+		m_dyaText(9), m_xaLeft(1.25), m_dxaText(6),
+		m_startPageNumber(0xffff), m_yaHeader(0.75),
+		m_yaFooter(10.25) /* 11-0.75inch*/, m_Main() { }
+	uint32_t m_fcLim;
+	double m_yaMac, m_xaMac;
+	double m_yaTop;
+	double m_dyaText;
+	double m_xaLeft;
+	double m_dxaText;
+	uint16_t m_startPageNumber;
+	double m_yaHeader;
+	double m_yaFooter;
+	WPSEntry m_Main;
+};
+
 }
 
 /**
@@ -98,12 +117,13 @@ protected:
 	virtual libwps_tools_win::Font::Type getFileEncoding(libwps_tools_win::Font::Type hint);
 	void readFIB();
 	virtual void readFFNTB();
-	void readSECT();
 	void readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size));
 	virtual void readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	virtual void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	virtual void readSUMD();
 	virtual void readFNTB();
+	void readSED();
+	void readSECT(uint32_t fcSep, uint32_t fcLim);
 	void readText(WPSEntry e, MSWriteParserInternal::Paragraph::Location location);
 	int numPages();
 	void processObject(WPSPosition &pos, unsigned long lastPos);
@@ -117,6 +137,8 @@ protected:
 	virtual void insertControl(uint8_t val);
 	void insertNote(bool annotation, uint32_t fcPos, librevenge::RVNGString &label);
 	unsigned insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type);
+	void getPageStyle(MSWriteParserInternal::Section &sep, WPSPageSpan &pageSpan);
+	void getHeaderFooters(uint32_t first, MSWriteParserInternal::Section &sep, WPSPageSpan &pageSpan);
 
 	//! check if the file position is correct or not
 	bool checkFilePosition(uint32_t pos) const
@@ -131,13 +153,12 @@ protected:
 	std::vector<MSWriteParserInternal::Paragraph> m_paragraphList;
 	std::vector<MSWriteParserInternal::Font> m_fontList;
 	std::vector<MSWriteParserInternal::Footnote> m_footnotes;
+	std::vector<MSWriteParserInternal::Section> m_sections;
 	std::vector<librevenge::RVNGString> m_fonts;
-	WPSPageSpan m_pageSpan;
 	libwps_tools_win::Font::Type m_fontType;
 
 	shared_ptr<WPSContentListener> m_listener; /* the listener (if set)*/
 
-	WPSEntry m_Main;
 	librevenge::RVNGPropertyList m_metaData;
 };
 
