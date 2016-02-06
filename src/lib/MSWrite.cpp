@@ -483,11 +483,11 @@ void MSWriteParser::readSECT(uint32_t fcSep, uint32_t fcLim)
 	RVNGInputStreamPtr input = getInput();
 	MSWriteParserInternal::Section sep;
 
-	if (checkFilePosition(fcSep + 22))
+	if (checkFilePosition(fcSep + 1))
 	{
 		input->seek(fcSep, librevenge::RVNG_SEEK_SET);
 		uint8_t headerSize = libwps::readU8(input);
-		if (headerSize<22 || !checkFilePosition(fcSep+2+headerSize))
+		if (headerSize<26 || !checkFilePosition(fcSep+2+headerSize))
 		{
 			WPS_DEBUG_MSG(("MSWriteParser::readSECT: can not read the structure, using default\n"));
 		}
@@ -502,9 +502,15 @@ void MSWriteParser::readSECT(uint32_t fcSep, uint32_t fcLim)
 			sep.m_dyaText=double(libwps::readU16(input))/1440.;
 			sep.m_xaLeft=double(libwps::readU16(input))/1440.;
 			sep.m_dxaText=double(libwps::readU16(input))/1440.;
-			input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved 2
+
+			sep.m_endFtns = (libwps::readU8(input) & 0x80) != 0;
+			sep.m_columns = libwps::readU8(input);
+
 			sep.m_yaHeader=double(libwps::readU16(input))/1440.;
 			sep.m_yaFooter=double(libwps::readU16(input))/1440.;
+
+			sep.m_dxaColumns=double(libwps::readU16(input))/1440.;
+			sep.m_dxaGutter=double(libwps::readU16(input))/1440.;
 		}
 	}
 
@@ -527,8 +533,20 @@ void MSWriteParser::getPageStyle(MSWriteParserInternal::Section &sep, WPSPageSpa
 	{
 		WPS_DEBUG_MSG(("MSWriteParser::readSECT: the top bottom margin seems bad\n"));
 	}
-	if (sep.m_xaLeft < sep.m_xaMac && sep.m_xaMac - sep.m_xaLeft - sep.m_dxaText >= 0 &&
-	        sep.m_xaMac - sep.m_dxaText < sep.m_xaMac)
+
+	if (sep.m_columns > 1 && sep.m_xaLeft < sep.m_xaMac)
+	{
+		// m_dxaText is width of column
+		double dxaText = sep.m_dxaText * sep.m_columns + sep.m_dxaColumns * (sep.m_columns - 1);
+
+		if (sep.m_xaMac - dxaText >= sep.m_xaLeft)
+		{
+			pageSpan.setMarginLeft(sep.m_xaLeft);
+			pageSpan.setMarginRight(sep.m_xaMac - sep.m_xaLeft - dxaText);
+		}
+	}
+	else if (sep.m_xaLeft < sep.m_xaMac && sep.m_xaMac - sep.m_xaLeft - sep.m_dxaText >= 0 &&
+	         sep.m_xaMac - sep.m_dxaText < sep.m_xaMac)
 	{
 		pageSpan.setMarginLeft(sep.m_xaLeft);
 		pageSpan.setMarginRight(sep.m_xaMac - sep.m_xaLeft - sep.m_dxaText);
@@ -545,7 +563,6 @@ void MSWriteParser::getPageStyle(MSWriteParserInternal::Section &sep, WPSPageSpa
 	// - page numbers
 	// - line numbers
 	// - page break style
-	// - columns
 }
 
 void MSWriteParser::readFOD(unsigned page, void (MSWriteParser::*parseFOD)(uint32_t fcFirst, uint32_t fcLim, unsigned size))
@@ -1745,6 +1762,17 @@ void MSWriteParser::insertNote(bool annotation, uint32_t fcPos, librevenge::RVNG
 	WPS_DEBUG_MSG(("MSWriteParser::insertNote note not found!\n"));
 }
 
+void MSWriteParser::startSection(MSWriteParserInternal::Section &section)
+{
+	std::vector<int> widths;
+	unsigned i;
+
+	for (i=0; i<section.m_columns; i++)
+		widths.push_back(unsigned(section.m_dxaText * 1440.0));
+
+	m_listener->openSection(widths, librevenge::RVNG_TWIP);
+}
+
 void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
 {
 	readStructures();
@@ -1764,6 +1792,12 @@ void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
 
 	for (sections = m_sections.begin(); sections != m_sections.end(); ++sections)
 	{
+		if (sections != m_sections.begin())
+			m_listener->closeSection();
+
+		if (sections->m_columns > 1)
+			startSection(*sections);
+
 		readText(sections->m_Main, MSWriteParserInternal::Paragraph::MAIN);
 	}
 

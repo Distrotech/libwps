@@ -74,7 +74,8 @@ struct Section
 	Section() : m_fcLim(0), m_yaMac(11), m_xaMac(8.5), m_yaTop(1),
 		m_dyaText(9), m_xaLeft(1.25), m_dxaText(6),
 		m_startPageNumber(0xffff), m_yaHeader(0.75),
-		m_yaFooter(10.25) /* 11-0.75inch*/, m_Main() { }
+		m_yaFooter(10.25) /* 11-0.75inch*/, m_endFtns(false),
+		m_columns(1), m_dxaColumns(0.5), m_dxaGutter(0.0), m_Main() { }
 	uint32_t m_fcLim;
 	double m_yaMac, m_xaMac;
 	double m_yaTop;
@@ -84,6 +85,9 @@ struct Section
 	uint16_t m_startPageNumber;
 	double m_yaHeader;
 	double m_yaFooter;
+	bool m_endFtns;
+	unsigned m_columns;
+	double m_dxaColumns, m_dxaGutter;
 	WPSEntry m_Main;
 };
 
@@ -139,6 +143,7 @@ protected:
 	unsigned insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type);
 	void getPageStyle(MSWriteParserInternal::Section &sep, WPSPageSpan &pageSpan);
 	void getHeaderFooters(uint32_t first, MSWriteParserInternal::Section &sep, WPSPageSpan &pageSpan);
+	void startSection(MSWriteParserInternal::Section &section);
 
 	//! check if the file position is correct or not
 	bool checkFilePosition(uint32_t pos) const
