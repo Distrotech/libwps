@@ -439,7 +439,6 @@ void MSWriteParser::readSED()
 		uint16_t cset = libwps::readU16(input);
 
 		// ignore csetMax
-		input->seek(2, librevenge::RVNG_SEEK_CUR);
 
 		for (unsigned sed = 0; sed<cset; sed++)
 		{
@@ -448,6 +447,8 @@ void MSWriteParser::readSED()
 				WPS_DEBUG_MSG(("is truncated\n"));
 				throw (libwps::ParseException());
 			}
+
+			input->seek(long(pnSetb) * 0x80 + sed * 10 + 4, librevenge::RVNG_SEEK_SET);
 
 			uint32_t fcLim = libwps::readU32(input) + 0x80;
 
@@ -487,30 +488,48 @@ void MSWriteParser::readSECT(uint32_t fcSep, uint32_t fcLim)
 	{
 		input->seek(fcSep, librevenge::RVNG_SEEK_SET);
 		uint8_t headerSize = libwps::readU8(input);
-		if (headerSize<26 || !checkFilePosition(fcSep+2+headerSize))
+		if (headerSize<1 || !checkFilePosition(fcSep+1+headerSize))
 		{
 			WPS_DEBUG_MSG(("MSWriteParser::readSECT: can not read the structure, using default\n"));
 		}
 		else
 		{
-			input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved 1
-			// read section
-			sep.m_yaMac=double(libwps::readU16(input))/1440.;
-			sep.m_xaMac=double(libwps::readU16(input))/1440.;
-			sep.m_startPageNumber=libwps::readU16(input);
-			sep.m_yaTop=double(libwps::readU16(input))/1440.;
-			sep.m_dyaText=double(libwps::readU16(input))/1440.;
-			sep.m_xaLeft=double(libwps::readU16(input))/1440.;
-			sep.m_dxaText=double(libwps::readU16(input))/1440.;
+			do
+			{
+				if (headerSize < 2) break;
+				input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved
+				// read section
+				if (headerSize < 4) break;
+				sep.m_yaMac=double(libwps::readU16(input))/1440.;
+				if (headerSize < 6) break;
+				sep.m_xaMac=double(libwps::readU16(input))/1440.;
+				if (headerSize < 8) break;
+				sep.m_startPageNumber=libwps::readU16(input);
+				if (headerSize < 10) break;
+				sep.m_yaTop=double(libwps::readU16(input))/1440.;
+				if (headerSize < 12) break;
+				sep.m_dyaText=double(libwps::readU16(input))/1440.;
+				if (headerSize < 14) break;
+				sep.m_xaLeft=double(libwps::readU16(input))/1440.;
+				if (headerSize < 16) break;
+				sep.m_dxaText=double(libwps::readU16(input))/1440.;
 
-			sep.m_endFtns = (libwps::readU8(input) & 0x80) != 0;
-			sep.m_columns = libwps::readU8(input);
+				if (headerSize < 17) break;
+				sep.m_endFtns = (libwps::readU8(input) & 0x80) != 0;
+				if (headerSize < 18) break;
+				sep.m_columns = libwps::readU8(input);
 
-			sep.m_yaHeader=double(libwps::readU16(input))/1440.;
-			sep.m_yaFooter=double(libwps::readU16(input))/1440.;
+				if (headerSize < 20) break;
+				sep.m_yaHeader=double(libwps::readU16(input))/1440.;
+				if (headerSize < 22) break;
+				sep.m_yaFooter=double(libwps::readU16(input))/1440.;
 
-			sep.m_dxaColumns=double(libwps::readU16(input))/1440.;
-			sep.m_dxaGutter=double(libwps::readU16(input))/1440.;
+				if (headerSize < 24) break;
+				sep.m_dxaColumns=double(libwps::readU16(input))/1440.;
+				if (headerSize < 26) break;
+				sep.m_dxaGutter=double(libwps::readU16(input))/1440.;
+			}
+			while (0);
 		}
 	}
 
