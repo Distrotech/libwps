@@ -1784,10 +1784,8 @@ void MSWriteParser::insertNote(bool annotation, uint32_t fcPos, librevenge::RVNG
 void MSWriteParser::startSection(MSWriteParserInternal::Section &section)
 {
 	std::vector<int> widths;
-	unsigned i;
 
-	for (i=0; i<section.m_columns; i++)
-		widths.push_back(unsigned(section.m_dxaText * 1440.0));
+	widths.resize(section.m_columns, unsigned(section.m_dxaText * 1440.0));
 
 	m_listener->openSection(widths, librevenge::RVNG_TWIP);
 }
