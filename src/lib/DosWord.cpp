@@ -770,4 +770,125 @@ void DosWordParser::readFNTB()
 		m_footnotes.push_back(footnote);
 	}
 }
+
+void DosWordParser::readSED()
+{
+	unsigned pnSetb, pnBftb;
+	RVNGInputStreamPtr input = getInput();
+
+	input->seek(DosWordParserInternal::HEADER_W_PNSETB, librevenge::RVNG_SEEK_SET);
+	pnSetb = libwps::readU16(input);
+
+	input->seek(DosWordParserInternal::HEADER_W_PNBFTB, librevenge::RVNG_SEEK_SET);
+	pnBftb = libwps::readU16(input);
+
+	if (pnSetb && pnSetb != pnBftb)
+	{
+		if (!checkFilePosition(pnSetb * 0x80 + 4))
+		{
+			WPS_DEBUG_MSG(("Section is truncated\n"));
+			throw (libwps::ParseException());
+		}
+
+		input->seek(long(pnSetb) * 0x80, librevenge::RVNG_SEEK_SET);
+		uint16_t cset = libwps::readU16(input);
+
+		// ignore csetMax
+
+		for (unsigned sed = 0; sed<cset; sed++)
+		{
+			if (!checkFilePosition(pnSetb * 0x80 + (sed + 1) * 10 + 4))
+			{
+				WPS_DEBUG_MSG(("is truncated\n"));
+				throw (libwps::ParseException());
+			}
+
+			input->seek(long(pnSetb) * 0x80 + sed * 10 + 4, librevenge::RVNG_SEEK_SET);
+
+			uint32_t fcLim = libwps::readU32(input) + 0x80;
+
+			// unknown
+			input->seek(2, librevenge::RVNG_SEEK_CUR);
+
+			uint32_t fcSep = libwps::readU32(input);
+
+			if (fcSep == 0xffffffff)
+				break;
+
+			readSECT(fcSep, fcLim);
+
+			if (fcLim >= m_fcMac)
+				break;
+		}
+	}
+
+	if (m_sections.empty())
+	{
+		// create default section by reading invalid fc
+		readSECT(m_fileLength, m_fcMac);
+	}
+	else
+	{
+		// Ensure the last m_fcLim makes sense
+		m_sections[m_sections.size() - 1].m_fcLim = m_fcMac;
+	}
+}
+
+void DosWordParser::readSECT(uint32_t fcSep, uint32_t fcLim)
+{
+	RVNGInputStreamPtr input = getInput();
+	MSWriteParserInternal::Section sep;
+
+	if (checkFilePosition(fcSep + 1))
+	{
+		input->seek(fcSep, librevenge::RVNG_SEEK_SET);
+		uint8_t headerSize = libwps::readU8(input);
+		if (headerSize<1 || !checkFilePosition(fcSep+1+headerSize))
+		{
+			WPS_DEBUG_MSG(("DosWordParser::readSECT: can not read the structure, using default\n"));
+		}
+		else
+		{
+			do
+			{
+				if (headerSize < 2) break;
+				input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved
+				// read section
+				if (headerSize < 4) break;
+				sep.m_yaMac=double(libwps::readU16(input))/1440.;
+				if (headerSize < 6) break;
+				sep.m_xaMac=double(libwps::readU16(input))/1440.;
+				if (headerSize < 8) break;
+				sep.m_startPageNumber=libwps::readU16(input);
+				if (headerSize < 10) break;
+				sep.m_yaTop=double(libwps::readU16(input))/1440.;
+				if (headerSize < 12) break;
+				sep.m_dyaText=double(libwps::readU16(input))/1440.;
+				if (headerSize < 14) break;
+				sep.m_xaLeft=double(libwps::readU16(input))/1440.;
+				if (headerSize < 16) break;
+				sep.m_dxaText=double(libwps::readU16(input))/1440.;
+
+				if (headerSize < 17) break;
+				sep.m_endFtns = (libwps::readU8(input) & 0x80) != 0;
+				if (headerSize < 18) break;
+				sep.m_columns = libwps::readU8(input);
+
+				if (headerSize < 20) break;
+				sep.m_yaHeader=double(libwps::readU16(input))/1440.;
+				if (headerSize < 22) break;
+				sep.m_yaFooter=double(libwps::readU16(input))/1440.;
+
+				if (headerSize < 24) break;
+				sep.m_dxaColumns=double(libwps::readU16(input))/1440.;
+				if (headerSize < 26) break;
+				sep.m_dxaGutter=double(libwps::readU16(input))/1440.;
+			}
+			while (0);
+		}
+	}
+
+	sep.m_fcLim = fcLim;
+	m_sections.push_back(sep);
+}
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

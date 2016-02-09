@@ -53,6 +53,8 @@ private:
 
 	WPSColor color(int clr);
 
+	void readSECT(uint32_t fcSep, uint32_t fcLim);
+	virtual void readSED();
 	virtual void readFFNTB();
 	virtual void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	virtual void readPAP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);

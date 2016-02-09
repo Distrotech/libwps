@@ -126,8 +126,7 @@ protected:
 	virtual void readCHP(uint32_t fcFirst, uint32_t fcLim, unsigned cch);
 	virtual void readSUMD();
 	virtual void readFNTB();
-	void readSED();
-	void readSECT(uint32_t fcSep, uint32_t fcLim);
+	virtual void readSED();
 	void readText(WPSEntry e, MSWriteParserInternal::Paragraph::Location location);
 	int numPages();
 	void processObject(WPSPosition &pos, unsigned long lastPos);
