@@ -804,7 +804,7 @@ void MSWriteParser::getHeaderFooters(uint32_t first, MSWriteParserInternal::Sect
 
 	MSWriteParserInternal::Paragraph::Location location = MSWriteParserInternal::Paragraph::MAIN;
 	RVNGInputStreamPtr input = getInput();
-	int numPage = 1;
+	int numPage = 0; // each section ends with a page break (0x0c)
 
 	unsigned firstP = 0, i;
 
@@ -812,7 +812,7 @@ void MSWriteParser::getHeaderFooters(uint32_t first, MSWriteParserInternal::Sect
 	{
 		MSWriteParserInternal::Paragraph &p = m_paragraphList[i];
 
-		if (p.m_fcLim < first)
+		if (p.m_fcLim <= first)
 		{
 			firstP = i + 1;
 			continue;
@@ -875,7 +875,7 @@ void MSWriteParser::getHeaderFooters(uint32_t first, MSWriteParserInternal::Sect
 
 	if (i <= firstP)
 	{
-		WPS_DEBUG_MSG(("MSWriteParser::getPageSpan: missing body text\n"));
+		WPS_DEBUG_MSG(("MSWriteParser::getHeaderFooters: missing body text\n"));
 		throw (libwps::ParseException());
 	}
 
@@ -935,15 +935,19 @@ shared_ptr<WPSContentListener> MSWriteParser::createListener(librevenge::RVNGTex
 	uint32_t fc = 0x80;
 	std::vector<MSWriteParserInternal::Section>::iterator sections;
 
-	for (sections = m_sections.begin(); sections != m_sections.end(); ++sections)
+	for (sections = m_sections.begin(); sections != m_sections.end();)
 	{
 		WPSPageSpan ps;
 		// Get margins etc from SEP
 		getPageStyle(*sections, ps);
 		// Get headers, footers and page count from actual text
 		getHeaderFooters(fc, *sections, ps);
-		pageList.push_back(ps);
 		fc = sections->m_fcLim;
+		// Add extra page for last section
+		if (++sections == m_sections.end())
+			ps.setPageSpan(ps.getPageSpan()+1);
+
+		pageList.push_back(ps);
 	}
 
 	return shared_ptr<WPSContentListener>
