@@ -1726,7 +1726,7 @@ void MSWriteParser::startSection(MSWriteParserInternal::Section &section)
 {
 	std::vector<int> widths;
 
-	widths.resize(section.m_columns, unsigned(section.m_dxaText * 1440.0));
+	widths.resize(section.m_columns, int(section.m_dxaText * 1440.0));
 
 	m_listener->openSection(widths, librevenge::RVNG_TWIP);
 }
