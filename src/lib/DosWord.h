@@ -51,7 +51,7 @@ private:
 	DosWordParser &operator=(const DosWordParser &);
 	virtual libwps_tools_win::Font::Type getFileEncoding(libwps_tools_win::Font::Type hint);
 
-	WPSColor color(int clr);
+	static WPSColor color(int clr);
 
 	void readSECT(uint32_t fcSep, uint32_t fcLim);
 	virtual void readSED();

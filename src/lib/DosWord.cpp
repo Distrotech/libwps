@@ -685,7 +685,7 @@ void DosWordParser::readSUMD()
 
 	// Year is given in two decimals since 1900 so fudge any value
 	// < 50 to be after 2000
-	if (3 == sscanf(creationDate.cstr(), "%d/%d/%d", &month, &day, &year))
+	if (3 == sscanf(creationDate.cstr(), "%2d/%2d/%4d", &month, &day, &year))
 	{
 		librevenge::RVNGString str;
 		if (year > 50)
@@ -710,7 +710,7 @@ void DosWordParser::readSUMD()
 		revisionDate.append(ch);
 	}
 
-	if (3 == sscanf(revisionDate.cstr(), "%d/%d/%d", &month, &day, &year))
+	if (3 == sscanf(revisionDate.cstr(), "%2d/%2d/%4d", &month, &day, &year))
 	{
 		librevenge::RVNGString str;
 		if (year > 50)
@@ -803,7 +803,7 @@ void DosWordParser::readSED()
 				throw (libwps::ParseException());
 			}
 
-			input->seek(long(pnSetb) * 0x80 + sed * 10 + 4, librevenge::RVNG_SEEK_SET);
+			input->seek(long(pnSetb * 0x80 + sed * 10 + 4), librevenge::RVNG_SEEK_SET);
 
 			uint32_t fcLim = libwps::readU32(input) + 0x80;
 
@@ -841,7 +841,7 @@ void DosWordParser::readSECT(uint32_t fcSep, uint32_t fcLim)
 
 	if (checkFilePosition(fcSep + 1))
 	{
-		input->seek(fcSep, librevenge::RVNG_SEEK_SET);
+		input->seek(long(fcSep), librevenge::RVNG_SEEK_SET);
 		uint8_t headerSize = libwps::readU8(input);
 		if (headerSize<1 || !checkFilePosition(fcSep+1+headerSize))
 		{

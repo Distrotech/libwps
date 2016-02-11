@@ -976,7 +976,7 @@ bool WPS4Parser::readDocWindowsInfo(WPSEntry const &entry)
 	// Find in one file str[0]="C:\Databases\Elem 02-03.wdb",str[120]="Query1"
 	while (pos++ < 0x132)   // try to find some strings
 	{
-		char c = libwps::read8(input);
+		char c = char(libwps::read8(input));
 		if (c == '\0')
 		{
 			if (debSPos>=0)
