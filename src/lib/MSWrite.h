@@ -71,12 +71,13 @@ struct Footnote
 struct Section
 {
 	//! constructor
-	Section() : m_fcLim(0), m_yaMac(11), m_xaMac(8.5), m_yaTop(1),
-		m_dyaText(9), m_xaLeft(1.25), m_dxaText(6),
+	Section() : m_fcLim(0), m_bkc(1), m_yaMac(11), m_xaMac(8.5),
+		m_yaTop(1), m_dyaText(9), m_xaLeft(1.25), m_dxaText(6),
 		m_startPageNumber(0xffff), m_yaHeader(0.75),
 		m_yaFooter(10.25) /* 11-0.75inch*/, m_endFtns(false),
 		m_columns(1), m_dxaColumns(0.5), m_dxaGutter(0.0), m_Main() { }
 	uint32_t m_fcLim;
+	unsigned m_bkc;
 	double m_yaMac, m_xaMac;
 	double m_yaTop;
 	double m_dyaText;
@@ -137,7 +138,7 @@ protected:
 	bool processStaticOLE(librevenge::RVNGBinaryData &, std::string &mimetype, WPSPosition &pos, unsigned long lastPos);
 	bool readString(std::string &res, unsigned long lastPos);
 	virtual void insertSpecial(uint8_t val, uint32_t fc, MSWriteParserInternal::Paragraph::Location location);
-	virtual void insertControl(uint8_t val);
+	virtual void insertControl(uint8_t val, uint32_t fc);
 	void insertNote(bool annotation, uint32_t fcPos, librevenge::RVNGString &label);
 	unsigned insertString(const unsigned char *str, unsigned size, libwps_tools_win::Font::Type type);
 	static void getPageStyle(MSWriteParserInternal::Section &sep, WPSPageSpan &pageSpan);

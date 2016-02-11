@@ -556,7 +556,7 @@ void DosWordParser::insertSpecial(uint8_t val, uint32_t fc, MSWriteParserInterna
 	}
 }
 
-void DosWordParser::insertControl(uint8_t val)
+void DosWordParser::insertControl(uint8_t val, uint32_t fc)
 {
 	// 0xc4 = normal hyphen, 0xff = nbsp, already handled by cp437
 	switch (val)
@@ -569,8 +569,33 @@ void DosWordParser::insertControl(uint8_t val)
 		m_listener->insertEOL();
 		break;
 	case 12:
+	{
+		// each section is ended with 0x0c but no page break might
+		// be required
+	        std::vector<MSWriteParserInternal::Section>::iterator s;
+
+	        for (s = m_sections.begin(); s != m_sections.end(); ++s)
+		{
+			if (fc + 1 == s->m_fcLim)
+			{
+				switch (s->m_bkc)
+				{
+				case 0:
+					break;
+				case 1:
+					m_listener->insertBreak(WPS_COLUMN_BREAK);
+					break;
+				default:
+					m_listener->insertBreak(WPS_PAGE_BREAK);
+					break;
+				}
+				return;
+			}
+		}
+
 		m_listener->insertBreak(WPS_PAGE_BREAK);
 		break;
+	}
 	case 13: // carriage return
 		break;
 	case 14: // column break
@@ -847,7 +872,9 @@ void DosWordParser::readSECT(uint32_t fcSep, uint32_t fcLim)
 			do
 			{
 				if (headerSize < 2) break;
-				input->seek(2, librevenge::RVNG_SEEK_CUR); // skip reserved
+				input->seek(1, librevenge::RVNG_SEEK_CUR); // skip style
+				sep.m_bkc = libwps::readU8(input) & 7;
+
 				// read section
 				if (headerSize < 4) break;
 				sep.m_yaMac=double(libwps::readU16(input))/1440.;

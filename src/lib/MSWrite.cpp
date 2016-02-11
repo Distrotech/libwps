@@ -863,6 +863,9 @@ void MSWriteParser::getHeaderFooters(uint32_t first, MSWriteParserInternal::Sect
 		}
 	}
 
+	if (section.m_bkc == 0)
+		numPage--;
+
 	ps.setPageSpan(numPage);
 }
 
@@ -1046,7 +1049,12 @@ void MSWriteParser::readText(WPSEntry e, MSWriteParserInternal::Paragraph::Locat
 					p++;
 					fc++;
 				}
-				if (size)
+				if (size && *p < ' ')
+				{
+					insertControl(*p, fc);
+					size = 1;
+				}
+				else if (size)
 					size = insertString(p, size, chps->m_encoding);
 			}
 			fc += size;
@@ -1062,7 +1070,7 @@ void MSWriteParser::insertSpecial(uint8_t val, uint32_t /*fc*/, MSWriteParserInt
 		m_listener->insertField(WPSField(WPSField::PageNumber));
 }
 
-void MSWriteParser::insertControl(uint8_t val)
+void MSWriteParser::insertControl(uint8_t val, uint32_t /*fc*/)
 {
 	switch (val)
 	{
@@ -1096,19 +1104,11 @@ unsigned MSWriteParser::insertString(const unsigned char *str, unsigned size, li
 	while (len < size && str[len] >= ' ')
 		len++;
 
-	if (len == 0)
-	{
-		insertControl(str[0]);
-		len = 1;
-	}
-	else
-	{
-		librevenge::RVNGString convert;
+	librevenge::RVNGString convert;
 
-		convert = libwps_tools_win::Font::unicodeString(str, len, type);
+	convert = libwps_tools_win::Font::unicodeString(str, len, type);
 
-		m_listener->insertUnicodeString(convert);
-	}
+	m_listener->insertUnicodeString(convert);
 
 	return len;
 }
