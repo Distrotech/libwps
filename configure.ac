@@ -42,6 +42,7 @@ AC_SUBST(WPS_MAJOR_VERSION, [libwps_version_major])
 AC_SUBST(WPS_MINOR_VERSION, [libwps_version_minor])
 AC_SUBST(WPS_MICRO_VERSION, [libwps_version_micro])
 AC_SUBST(WPS_VERSION, [libwps_version])
+AC_SUBST(WPS_OBJDIR, [$objdir])
 # AC_SUBST(LT_RELEASE, [libwps_version_major.libwps_version_minor])
 LT_CURRENT=`expr 100 '*' libwps_version_major + libwps_version_minor`
 # For 1.0.0 comment the first line and uncomment the second
