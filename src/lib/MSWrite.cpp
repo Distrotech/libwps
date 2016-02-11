@@ -1726,7 +1726,8 @@ void MSWriteParser::startSection(MSWriteParserInternal::Section &section)
 {
 	std::vector<int> widths;
 
-	widths.resize(section.m_columns, int(section.m_dxaText * 1440.0));
+	if (section.m_columns > 1)
+		widths.resize(section.m_columns, int(section.m_dxaText * 1440.0));
 
 	m_listener->openSection(widths, librevenge::RVNG_TWIP);
 }
@@ -1750,13 +1751,10 @@ void MSWriteParser::parse(librevenge::RVNGTextInterface *document)
 
 	for (sections = m_sections.begin(); sections != m_sections.end(); ++sections)
 	{
-		if (sections != m_sections.begin())
-			m_listener->closeSection();
-
-		if (sections->m_columns > 1)
-			startSection(*sections);
+		startSection(*sections);
 
 		readText(sections->m_Main, MSWriteParserInternal::Paragraph::MAIN);
+		m_listener->closeSection();
 	}
 
 	m_listener->endDocument();

@@ -822,15 +822,10 @@ void DosWordParser::readSED()
 		}
 	}
 
-	if (m_sections.empty())
+	if (m_sections.empty() || m_sections.back().m_fcLim < m_fcMac)
 	{
 		// create default section by reading invalid fc
 		readSECT(m_fileLength, m_fcMac);
-	}
-	else
-	{
-		// Ensure the last m_fcLim makes sense
-		m_sections[m_sections.size() - 1].m_fcLim = m_fcMac;
 	}
 }
 
