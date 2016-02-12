@@ -572,9 +572,9 @@ void DosWordParser::insertControl(uint8_t val, uint32_t fc)
 	{
 		// each section is ended with 0x0c but no page break might
 		// be required
-	        std::vector<MSWriteParserInternal::Section>::iterator s;
+		std::vector<MSWriteParserInternal::Section>::iterator s;
 
-	        for (s = m_sections.begin(); s != m_sections.end(); ++s)
+		for (s = m_sections.begin(); s != m_sections.end(); ++s)
 		{
 			if (fc + 1 == s->m_fcLim)
 			{
@@ -643,14 +643,14 @@ void DosWordParser::readSUMD()
 	}
 
 	input->seek(long(fc), librevenge::RVNG_SEEK_SET);
-	if (libwps::readU16(input))
+	if (libwps::readU16(input) >= 0x80)
 	{
 		WPS_DEBUG_MSG(("DosWordParser::readSUMD: garbage\n"));
 		return;
 	}
 
 	// Step over the offsets; it's packed together anyway.
-	fc += 0x12;
+	fc += 0x14;
 
 	static const char *sum_types[] =
 	{
@@ -658,7 +658,7 @@ void DosWordParser::readSUMD()
 		"dc:creator", // author
 		"dc:publisher", // operator
 		"meta:keyword", // keywords
-		"librevenge:comments", // comments
+		"dc:description", // comments
 		"librevenge:version-number", // version
 		NULL
 	};
@@ -743,7 +743,7 @@ void DosWordParser::readSUMD()
 		else
 			year += 2000;
 		str.sprintf("%d-%d-%d", year, month, day);
-		m_metaData.insert("librevenge:revision-notes", str);
+		m_metaData.insert("dc:date", str);
 	}
 }
 
