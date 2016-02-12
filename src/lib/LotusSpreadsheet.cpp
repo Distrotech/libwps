@@ -1646,7 +1646,7 @@ bool LotusSpreadsheet::readCell(int sId, bool isList, WKSContentListener::Formul
 		int col=(int) libwps::readU8(m_input);
 		instr.m_position[i]=Vec2i(col, row);
 		int wh=(i==0) ? (flags&0xF) : (flags>>4);
-		instr.m_positionRelative[i]=Vec2b(wh&1, wh&2);
+		instr.m_positionRelative[i]=Vec2b((wh&1)!=0, (wh&2)!=0);
 		if (i==0)
 		{
 			if (sheetId!=sId)
