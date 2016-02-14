@@ -54,7 +54,7 @@ static int printUsage()
 	printf("\t\t CP1257, CP1258, MacArabic, MacCeltic, MacCEurope, MacCroation, MacCyrillic,\n");
 	printf("\t\t MacDevanage, MacFarsi, MacGaelic, MacGreek, MacGujarati, MacGurmukhi, MacHebrew,\n");
 	printf("\t\t MacIceland, MacInuit, MacRoman, MacRomanian, MacThai, MacTurkish.\n");
-	printf("\t-h:                show this help message\n");
+	printf("\t-h                 show this help message\n");
 	printf("\t-p PASSWORD        set password to open the file\n");
 	printf("\t-v                 show version information\n");
 	printf("\n");
