@@ -426,7 +426,10 @@ bool LotusStyleManager::readLineStyle(long endPos)
 	libwps::DebugStream f;
 
 	long pos = m_input->tell();
-	if (endPos-pos!=8)   // only find in a WK3 mac file
+	int vers=0;
+	if (endPos-pos==14)
+		vers=1;
+	else if (endPos-pos!=8)   // only find in a WK3 mac file
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readLineStyle: the zone size seems bad\n"));
 		ascii().addPos(pos-6);
@@ -438,15 +441,12 @@ bool LotusStyleManager::readLineStyle(long endPos)
 	int val=(int) libwps::readU8(m_input); // always 10?
 	if (val!=0x10)
 		f << "fl=" << std::hex << val << std::dec << ",";
-	for (int i=0; i<2; ++i) // always 0?
-	{
-		val=(int) libwps::readU8(m_input);
-		if (val) f << "f" << i << "=" << val << ",";
-	}
+	val=(int) libwps::readU16(m_input); // 0 or small number
+	if (val) f << "f0=" << val << ",";
 	WPSColor color[2]= {WPSColor::black(), WPSColor::white()};
 	for (int i=0; i<2; ++i)
 	{
-		int col=(int) libwps::readU8(m_input);
+		int col=vers==1 ? (int) libwps::readU16(m_input) : (int) libwps::readU8(m_input);
 		if (col!=0xEF && !m_state->getColor(col, color[i]))
 		{
 			f << "###col" << i << "=" << col << ",";
@@ -457,10 +457,20 @@ bool LotusStyleManager::readLineStyle(long endPos)
 		f << "col" << i << "=" << color[i] << ",";
 	}
 	WPSColor finalColor=color[0];
+	int patId;
 	val=(int) libwps::readU16(m_input);
-	int patId=(val&0x3f);
-	line.m_width=float((val>>6)&0xF);
-	line.m_dashId=(val>>11);
+	if (vers==0)
+	{
+		patId=(val&0x3f);
+		line.m_width=float((val>>6)&0xF);
+		line.m_dashId=(val>>11);
+	}
+	else
+	{
+		patId=val;
+		line.m_width=float(libwps::readU16(m_input))/256.f;
+		line.m_dashId=(int) libwps::readU16(m_input);
+	}
 	if (patId!=1)
 	{
 		f << "pattern=" << patId << ",";
@@ -910,6 +920,7 @@ bool LotusStyleManager::readCellStyle(long endPos)
 		f << "Entries(CellStyle):Ce" << id << ",";
 		if (val!=0x50)
 			f << "fl=" << std::hex << val << std::dec << ",";
+		// OP_CreatePattern123 in op.cxx contains some data
 		ascii().addPos(pos-6);
 		ascii().addNote(f.str().c_str());
 		return true;

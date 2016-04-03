@@ -117,7 +117,8 @@ struct State
 {
 	//! constructor
 	explicit State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1),
-		m_inMainContentBlock(false), m_fontsMap(), m_pageSpan(), m_maxSheet(0), m_actPage(0), m_numPages(0),
+		m_inMainContentBlock(false), m_fontsMap(), m_pageSpan(), m_maxSheet(0),
+		m_actualLevels(), m_actPage(0), m_numPages(0),
 		m_headerString(""), m_footerString("")
 	{
 	}
@@ -141,6 +142,29 @@ struct State
 		return res;
 	}
 
+	//! returns a name corresponding to the actual level(for debugging)
+	std::string getLevelsDebugName() const
+	{
+		std::stringstream s;
+		for (size_t i=0; i<m_actualLevels.size(); ++i)
+		{
+			if (i==0 && m_actualLevels[0]==Vec2i(0,0)) continue;
+			if (i<4)
+			{
+				char const *(wh[])= {"Z", "T", "C", "R"};
+				s << wh[i];
+			}
+			else
+				s << "[F" << i << "]";
+			if (m_actualLevels[i][0]==m_actualLevels[i][1])
+				s << "_";
+			else if (m_actualLevels[i][0]+1==m_actualLevels[i][1])
+				s << m_actualLevels[i][0];
+			else
+				s << m_actualLevels[i][0] << "x" << m_actualLevels[i][1]-1;
+		}
+		return s.str();
+	}
 	//! the last file position
 	long m_eof;
 	//! the user font type
@@ -155,6 +179,8 @@ struct State
 	WPSPageSpan m_pageSpan;
 	//! the last sheet number
 	int m_maxSheet;
+	//! the actual zone
+	std::vector<Vec2i> m_actualLevels;
 	int m_actPage /** the actual page*/, m_numPages /* the number of pages */;
 	//! the header string
 	std::string m_headerString;
@@ -802,6 +828,7 @@ bool LotusParser::readZone()
 			ok=false;
 			break;
 		}
+		ok = isParsed=readZoneV3();
 		break;
 	}
 	if (!ok)
@@ -1034,25 +1061,35 @@ bool LotusParser::readDataZone()
 	case 0xfa0:
 		isParsed=m_styleManager->readFontStyle(endPos);
 		break;
-	case 0xfaa:
+	case 0xfa1: // with size 26
+		f.str("");
+		f << "Entries(FontStyle):";
+		break;
+	case 0xfaa: // 10Style
+	case 0xfab: // with size 16
 		isParsed=m_styleManager->readLineStyle(endPos);
 		break;
-	case 0xfb4:
+	case 0xfb4: // 20 Style
 		isParsed=m_styleManager->readColorStyle(endPos);
 		break;
-	case 0xfbe:
+	case 0xfbe: // 30Style
 		isParsed=m_styleManager->readFormatStyle(endPos);
 		break;
-	case 0xfc8:
+	case 0xfc8: // 40Style
 		isParsed=m_styleManager->readGraphicStyle(endPos);
 		break;
-	case 0xfd2:
+	case 0xfc9: // with size 33
+		f.str("");
+		f << "Entries(GraphicStyle):";
+		break;
+	case 0xfd2: // 50Style
 		isParsed=m_styleManager->readCellStyle(endPos);
 		break;
 	case 0xfdc:
 		isParsed=readMacFontName(endPos);
 		break;
-	// 0xfd2: id, ..., colorid
+
+	// 0xfe6: X X CeId : 60Style
 
 	//
 	// graphic
@@ -1158,6 +1195,95 @@ bool LotusParser::readDataZone()
 	return true;
 }
 
+bool LotusParser::readZoneV3()
+{
+	libwps::DebugStream f;
+	RVNGInputStreamPtr input = getInput();
+	long pos = input->tell();
+	int type = (int) libwps::readU16(input);
+	long sz = (long) libwps::readU16(input);
+	long endPos=pos+4+sz;
+	if (sz<0 || !checkFilePosition(endPos))
+	{
+		input->seek(pos, librevenge::RVNG_SEEK_SET);
+		return false;
+	}
+	f << "Entries(Data" << std::hex << type << std::dec << "N):";
+	bool isParsed=false, needWriteInAscii=false;
+
+	int val;
+	switch (type)
+	{
+	// level 1=table, 2=col, 3=row
+	case 0x106:
+		f.str("");
+		f << "Entries(LevelOpen):";
+		m_state->m_actualLevels.push_back(Vec2i(0,0));
+		f << "[" << m_state->getLevelsDebugName() << "],";
+		break;
+	case 0x107:
+		f.str("");
+		f << "Entries(LevelClose):";
+		if (m_state->m_actualLevels.empty())
+		{
+			WPS_DEBUG_MSG(("LotusParser::readZoneV3: the level seems bad\n"));
+			f << "###";
+			break;
+		}
+		else
+			m_state->m_actualLevels.pop_back();
+		f << "[" << m_state->getLevelsDebugName() << "],";
+		break;
+	case 0x800:
+	{
+		f.str("");
+		f << "Entries(LevelSelect):";
+		if (sz<2)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readDataZone: the level size seems bad\n"));
+			f << "###";
+			break;
+		}
+		if (m_state->m_actualLevels.empty())
+		{
+			WPS_DEBUG_MSG(("LotusParser::readZoneV3: the level seems bad\n"));
+			f << "###";
+			break;
+		}
+		long count=(int)(sz>=4 ? libwps::readU32(input) : libwps::readU16(input));
+		Vec2i &zone=m_state->m_actualLevels.back();
+		if ((int)(zone[1]+count)<0)
+		{
+			WPS_DEBUG_MSG(("LotusParser::readZoneV3: arg the delta bad\n"));
+			f << "###delta=" << count << ",";
+			val=0;
+		}
+		zone[0] = zone[1];
+		zone[1] += int(count);
+		f << "[" << m_state->getLevelsDebugName() << "],";
+		break;
+	}
+	case 0x801:
+		f.str("");
+		f << "Entries(SetStyle)[" << m_state->getLevelsDebugName() << "]:";
+		break;
+	case 0x804:
+		f.str("");
+		f << "Entries(FormatUnkn0):";
+		break;
+	default:
+		break;
+	}
+	if (!isParsed || needWriteInAscii)
+	{
+		ascii().addPos(pos);
+		ascii().addNote(f.str().c_str());
+	}
+	if (input->tell()!=endPos)
+		ascii().addDelimiter(input->tell(),'|');
+	input->seek(endPos, librevenge::RVNG_SEEK_SET);
+	return true;
+}
 ////////////////////////////////////////////////////////////
 //   generic
 ////////////////////////////////////////////////////////////

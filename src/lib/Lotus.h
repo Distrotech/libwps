@@ -100,6 +100,8 @@ protected:
 	bool readDataZone();
 	//! reads a zone
 	bool readZone();
+	//! parse a wk123 zone
+	bool readZoneV3();
 
 	//////////////////////// generic ////////////////////////////////////
 
