@@ -421,15 +421,13 @@ bool LotusStyleManager::getColor(int cId, WPSColor &color) const
 ////////////////////////////////////////////////////////////
 // styles
 ////////////////////////////////////////////////////////////
-bool LotusStyleManager::readLineStyle(long endPos)
+bool LotusStyleManager::readLineStyle(long endPos, int vers)
 {
 	libwps::DebugStream f;
 
 	long pos = m_input->tell();
-	int vers=0;
-	if (endPos-pos==14)
-		vers=1;
-	else if (endPos-pos!=8)   // only find in a WK3 mac file
+	const int expectedSize=vers==0 ? 8 : vers==1 ? 14 : 0;
+	if (endPos-pos!=expectedSize)   // only find in a WK3 mac file
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readLineStyle: the zone size seems bad\n"));
 		ascii().addPos(pos-6);
@@ -458,16 +456,16 @@ bool LotusStyleManager::readLineStyle(long endPos)
 	}
 	WPSColor finalColor=color[0];
 	int patId;
-	val=(int) libwps::readU16(m_input);
 	if (vers==0)
 	{
+		val=(int) libwps::readU16(m_input);
 		patId=(val&0x3f);
 		line.m_width=float((val>>6)&0xF);
 		line.m_dashId=(val>>11);
 	}
-	else
+	else // checkme
 	{
-		patId=val;
+		patId=(int) libwps::readU16(m_input);
 		line.m_width=float(libwps::readU16(m_input))/256.f;
 		line.m_dashId=(int) libwps::readU16(m_input);
 	}

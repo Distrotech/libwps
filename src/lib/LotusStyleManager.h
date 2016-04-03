@@ -89,7 +89,7 @@ protected:
 	//! reads a format style
 	bool readFormatStyle(long endPos);
 	//! reads a line style
-	bool readLineStyle(long endPos);
+	bool readLineStyle(long endPos, int vers);
 	//! reads a graphic style
 	bool readGraphicStyle(long endPos);
 

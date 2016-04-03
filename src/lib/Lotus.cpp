@@ -1066,8 +1066,8 @@ bool LotusParser::readDataZone()
 		f << "Entries(FontStyle):";
 		break;
 	case 0xfaa: // 10Style
-	case 0xfab: // with size 16
-		isParsed=m_styleManager->readLineStyle(endPos);
+	case 0xfab:
+		isParsed=m_styleManager->readLineStyle(endPos, type==0xfaa ? 0 : 1);
 		break;
 	case 0xfb4: // 20 Style
 		isParsed=m_styleManager->readColorStyle(endPos);
@@ -1211,19 +1211,18 @@ bool LotusParser::readZoneV3()
 	f << "Entries(Data" << std::hex << type << std::dec << "N):";
 	bool isParsed=false, needWriteInAscii=false;
 
-	int val;
 	switch (type)
 	{
 	// level 1=table, 2=col, 3=row
 	case 0x106:
 		f.str("");
-		f << "Entries(LevelOpen):";
+		f << "Entries(Level)[open]:";
 		m_state->m_actualLevels.push_back(Vec2i(0,0));
 		f << "[" << m_state->getLevelsDebugName() << "],";
 		break;
 	case 0x107:
 		f.str("");
-		f << "Entries(LevelClose):";
+		f << "Entries(Level)[close]:";
 		if (m_state->m_actualLevels.empty())
 		{
 			WPS_DEBUG_MSG(("LotusParser::readZoneV3: the level seems bad\n"));
@@ -1237,7 +1236,7 @@ bool LotusParser::readZoneV3()
 	case 0x800:
 	{
 		f.str("");
-		f << "Entries(LevelSelect):";
+		f << "Entries(Level)[select]:";
 		if (sz<2)
 		{
 			WPS_DEBUG_MSG(("LotusParser::readDataZone: the level size seems bad\n"));
@@ -1256,7 +1255,7 @@ bool LotusParser::readZoneV3()
 		{
 			WPS_DEBUG_MSG(("LotusParser::readZoneV3: arg the delta bad\n"));
 			f << "###delta=" << count << ",";
-			val=0;
+			count=0;
 		}
 		zone[0] = zone[1];
 		zone[1] += int(count);
