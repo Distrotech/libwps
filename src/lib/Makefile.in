@@ -14,7 +14,6 @@
 
 @SET_MAKE@
 
-
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
@@ -81,8 +80,7 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = src/lib
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(srcdir)/libwps.rc.in $(top_srcdir)/depcomp \
-	$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS)
+	$(srcdir)/libwps.rc.in $(top_srcdir)/depcomp
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
@@ -121,20 +119,21 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(libdir)" \
-	"$(DESTDIR)$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir)"
+am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 am_libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_OBJECTS =  \
-	libwps_internal.lo libwps_tools_win.lo WKS4.lo \
+	libwps_internal.lo libwps_tools_win.lo DosWord.lo Lotus.lo \
+	LotusGraph.lo LotusSpreadsheet.lo LotusStyleManager.lo \
+	MSWrite.lo Quattro.lo QuattroSpreadsheet.lo WKS4.lo \
 	WKS4Spreadsheet.lo WKSContentListener.lo WKSParser.lo \
 	WKSSubDocument.lo WPS4.lo WPS4Graph.lo WPS4Text.lo WPS8.lo \
 	WPS8Graph.lo WPS8Struct.lo WPS8Table.lo WPS8Text.lo \
 	WPS8TextStyle.lo WPSCell.lo WPSContentListener.lo WPSDebug.lo \
-	WPSDocument.lo WPSFont.lo WPSHeader.lo WPSList.lo \
-	WPSOLEParser.lo WPSPageSpan.lo WPSParagraph.lo WPSParser.lo \
-	WPSSubDocument.lo WPSTable.lo WPSTextParser.lo \
-	WPSTextSubDocument.lo
+	WPSDocument.lo WPSFont.lo WPSGraphicShape.lo \
+	WPSGraphicStyle.lo WPSHeader.lo WPSList.lo WPSOLEParser.lo \
+	WPSPageSpan.lo WPSParagraph.lo WPSParser.lo WPSSubDocument.lo \
+	WPSTable.lo WPSTextParser.lo WPSTextSubDocument.lo
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_OBJECTS = $(am_libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -206,7 +205,6 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-HEADERS = $(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
@@ -302,6 +300,7 @@ WPS2TEXT_WIN32_RESOURCE = @WPS2TEXT_WIN32_RESOURCE@
 WPS_MAJOR_VERSION = @WPS_MAJOR_VERSION@
 WPS_MICRO_VERSION = @WPS_MICRO_VERSION@
 WPS_MINOR_VERSION = @WPS_MINOR_VERSION@
+WPS_OBJDIR = @WPS_OBJDIR@
 WPS_VERSION = @WPS_VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -359,11 +358,6 @@ top_srcdir = @top_srcdir@
 @OS_WIN32_FALSE@version_info = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 @OS_WIN32_TRUE@version_info = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) -avoid-version
 lib_LTLIBRARIES = libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@.la $(target_libwps_stream)
-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir = $(includedir)/libwps-@WPS_MAJOR_VERSION@.@WPS_MINOR_VERSION@/libwps
-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS = \
-	$(top_srcdir)/inc/libwps/libwps.h \
-	$(top_srcdir)/inc/libwps/WPSDocument.h
-
 AM_CXXFLAGS = -I$(top_srcdir)/inc $(REVENGE_CFLAGS) $(DEBUG_CXXFLAGS) -DBUILD_WPS=1
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_LIBADD = $(REVENGE_LIBS) @LIBWPS_WIN32_RESOURCE@
 libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_DEPENDENCIES = @LIBWPS_WIN32_RESOURCE@
@@ -373,6 +367,22 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	libwps_tools_win.h	\
 	libwps_tools_win.cpp	\
 	libwps_internal.h	\
+	DosWord.cpp		\
+	DosWord.h		\
+	Lotus.cpp		\
+	Lotus.h			\
+	LotusGraph.cpp		\
+	LotusGraph.h		\
+	LotusSpreadsheet.cpp	\
+	LotusSpreadsheet.h	\
+	LotusStyleManager.cpp	\
+	LotusStyleManager.h	\
+	MSWrite.cpp		\
+	MSWrite.h		\
+	Quattro.cpp		\
+	Quattro.h		\
+	QuattroSpreadsheet.cpp	\
+	QuattroSpreadsheet.h	\
 	WKS4.cpp		\
 	WKS4.h			\
 	WKS4Spreadsheet.cpp	\
@@ -411,6 +421,10 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSEntry.h		\
 	WPSFont.cpp		\
 	WPSFont.h		\
+	WPSGraphicShape.cpp	\
+	WPSGraphicShape.h	\
+	WPSGraphicStyle.cpp	\
+	WPSGraphicStyle.h	\
 	WPSHeader.cpp		\
 	WPSHeader.h		\
 	WPSList.cpp		\
@@ -523,6 +537,14 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DosWord.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Lotus.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/LotusGraph.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/LotusSpreadsheet.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/LotusStyleManager.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MSWrite.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Quattro.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/QuattroSpreadsheet.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WKS4.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WKS4Spreadsheet.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WKSContentListener.Plo@am__quote@
@@ -542,6 +564,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPSDebug.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPSDocument.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPSFont.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPSGraphicShape.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPSGraphicStyle.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPSHeader.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPSList.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WPSOLEParser.Plo@am__quote@
@@ -581,27 +605,6 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
-install-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includeHEADERS: $(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS)
-	@$(NORMAL_INSTALL)
-	@list='$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS)'; test -n "$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir)" || list=; \
-	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir)" || exit 1; \
-	fi; \
-	for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  echo "$$d$$p"; \
-	done | $(am__base_list) | \
-	while read files; do \
-	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir)'"; \
-	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir)" || exit $$?; \
-	done
-
-uninstall-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includeHEADERS:
-	@$(NORMAL_UNINSTALL)
-	@list='$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_include_HEADERS)'; test -n "$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir)" || list=; \
-	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
-	dir='$(DESTDIR)$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir)'; $(am__uninstall_files_from_dir)
 tags TAGS:
 
 ctags CTAGS:
@@ -641,9 +644,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(HEADERS)
+all-am: Makefile $(LTLIBRARIES)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -698,7 +701,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includeHEADERS
+install-data-am:
 
 install-dvi: install-dvi-am
 
@@ -744,8 +747,7 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-libLTLIBRARIES \
-	uninstall-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includeHEADERS
+uninstall-am: uninstall-libLTLIBRARIES
 
 .MAKE: install-am install-strip
 
@@ -756,15 +758,12 @@ uninstall-am: uninstall-libLTLIBRARIES \
 	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
 	install-html-am install-info install-info-am \
-	install-libLTLIBRARIES \
-	install-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includeHEADERS \
-	install-man install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic \
-	mostlyclean-libtool pdf pdf-am ps ps-am tags-am uninstall \
-	uninstall-am uninstall-libLTLIBRARIES \
-	uninstall-libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_includeHEADERS
+	install-libLTLIBRARIES install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags-am uninstall uninstall-am uninstall-libLTLIBRARIES
 
 
 @OS_WIN32_TRUE@@LIBWPS_WIN32_RESOURCE@ : libwps.rc $(libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_OBJECTS)

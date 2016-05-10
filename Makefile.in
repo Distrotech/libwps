@@ -83,7 +83,7 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) \
 	$(srcdir)/config.h.in $(srcdir)/libwps.pc.in \
 	$(srcdir)/libwps-zip.in INSTALL NEWS README ar-lib compile \
-	config.guess config.sub install-sh missing ltmain.sh
+	config.guess config.sub depcomp install-sh missing ltmain.sh
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
@@ -318,6 +318,7 @@ WPS2TEXT_WIN32_RESOURCE = @WPS2TEXT_WIN32_RESOURCE@
 WPS_MAJOR_VERSION = @WPS_MAJOR_VERSION@
 WPS_MICRO_VERSION = @WPS_MICRO_VERSION@
 WPS_MINOR_VERSION = @WPS_MINOR_VERSION@
+WPS_OBJDIR = @WPS_OBJDIR@
 WPS_VERSION = @WPS_VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -906,6 +907,9 @@ zip: install
 
 dist-hook:
 	git log --date=short --pretty="format:@%cd  %an  <%ae>  [%H]%n%n%s%n%n%e%b" | sed -e "s|^\([^@]\)|\t\1|" -e "s|^@||" >$(distdir)/ChangeLog
+
+astyle:
+	astyle --options=astyle.options \*.cpp \*.h
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
