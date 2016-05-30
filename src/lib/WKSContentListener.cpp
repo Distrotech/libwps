@@ -1284,14 +1284,57 @@ std::ostream &operator<<(std::ostream &o, WKSContentListener::FormulaInstruction
 // ---------- WKSContentListener::CellContent ------------------
 bool WKSContentListener::CellContent::double2Date(double val, int &Y, int &M, int &D)
 {
-	// number of day since 1/1/1970
-	time_t date= time_t((val-24107-1462+0.4)*24.*3600);
-	struct tm dateTm;
-	if (!gmtime_r(&date,&dateTm)) return false;
+	/* first convert the date in long. Checkme: unsure why -2 is needed...*/
+	long numDaysSinceOrigin=long(val-2+0.4);
+	// checkme: do we need to check before for isNan(val) ?
+	if (numDaysSinceOrigin<-10000*365 || numDaysSinceOrigin>10000*365)
+	{
+		/* normally, we can expect documents to contain date between 1904
+		   and 2004. So even if such a date can make sense, storing it as
+		   a number of days is clearly abnormal */
+		WPS_DEBUG_MSG(("WKSContentListener::CellContent::double2Date: using a double to represent the date %ld seems odd\n", numDaysSinceOrigin));
+		Y=1904;
+		M=D=1;
+		return false;
+	}
+	// find the century
+	int century=19;
+	while (numDaysSinceOrigin>=36500+24)
+	{
+		long numDaysInCentury=36500+24+((century%4)?0:1);
+		if (numDaysSinceOrigin<numDaysInCentury) break;
+		numDaysSinceOrigin-=numDaysInCentury;
+		++century;
+	}
+	while (numDaysSinceOrigin<0)
+	{
+		--century;
+		numDaysSinceOrigin+=36500+24+((century%4)?0:1);
+	}
+	// now compute the year
+	Y=int(numDaysSinceOrigin/365);
+	long numDaysToEndY1=Y*365+(Y>0 ? (Y-1)/4+((century%4)?0:1) : 0);
+	if (numDaysToEndY1>numDaysSinceOrigin)
+	{
+		--Y;
+		numDaysToEndY1=Y*365+(Y>0 ? (Y-1)/4+((century%4)?0:1) : 0);
+	}
+	// finish to compute the date
+	int numDaysFrom1Jan=int(numDaysSinceOrigin-numDaysToEndY1);
+	Y+=century*100;
+	bool isLeap=(Y%4)==0 && ((Y%400)==0 || (Y%100)!=0);
 
-	Y = dateTm.tm_year+1900;
-	M=dateTm.tm_mon+1;
-	D=dateTm.tm_mday;
+	for (M=0; M<12; ++M)
+	{
+		static const int days[2][12] =
+		{
+			{ 0,31,59,90,120,151,181,212,243,273,304,334},
+			{ 0,31,60,91,121,152,182,213,244,274,305,335}
+		};
+		if (M<11 && days[isLeap ? 1 : 0][M+1]<=numDaysFrom1Jan) continue;
+		D=(numDaysFrom1Jan-days[isLeap ? 1 : 0][M++])+1;
+		break;
+	}
 	return true;
 }
 
