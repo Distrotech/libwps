@@ -637,6 +637,7 @@ bool WKS4Parser::readZone()
 		case 0xe: // floating cell
 		case 0xf: // label cell
 		case 0x10: // formula cell
+		case 0x36: // continue label
 			ok = m_spreadsheetParser->readCell();
 			isParsed = true;
 			break;
@@ -757,19 +758,6 @@ bool WKS4Parser::readZone()
 				m_state->m_version=1;
 			isParsed = needWriteInAscii = true;
 			break;
-		case 0x36: // find one time in a spreadsheet (not standard)
-		{
-			if (sz!=0x1e) break;
-			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-			for (int i=0; i<3; ++i)   // always 0?
-			{
-				val=(int) libwps::read16(input);
-				if (val) f << "f" << i << "=" << val << ",";
-			}
-			// after find some junk, so..
-			isParsed = needWriteInAscii = true;
-			break;
-		}
 		case 0x41: // graph record name
 			readChartName();
 			isParsed = true;

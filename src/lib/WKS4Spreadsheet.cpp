@@ -174,7 +174,7 @@ class Cell : public WPSCell
 {
 public:
 	/// constructor
-	Cell() : m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content() { }
+	Cell() : m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content(), m_extraTextEntryList() { }
 
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
@@ -199,6 +199,10 @@ public:
 	WPSCellFormat::HorizontalAlignment m_hAlign;
 	//! the content
 	WKSContentListener::CellContent m_content;
+	/** As very long text is splitted in zone 0xf and then in zone 0x36,
+		the list of zone36 text entries...
+	 */
+	std::vector<WPSEntry> m_extraTextEntryList;
 };
 
 //! operator<<
@@ -1353,7 +1357,7 @@ bool WKS4Spreadsheet::readCell()
 
 	long pos = m_input->tell();
 	long type = libwps::read16(m_input);
-	if ((type != 0x545b) && (type < 0xc || type > 0x10))
+	if ((type != 0x545b) && (type!=0x36) && (type < 0xc || type > 0x10))
 	{
 		WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: not a cell property\n"));
 		return false;
@@ -1446,7 +1450,14 @@ bool WKS4Spreadsheet::readCell()
 		break;
 	}
 	case 15:
+	case 0x36: // continue text zone
 	{
+		if (type==0x36 && cell.m_content.m_contentType!=WKSContentListener::CellContent::C_TEXT)
+		{
+			WPS_DEBUG_MSG(("WKS4Spreadsheet::readCell: oops, find zone 0x36 but not zone 15\n"));
+			f << "###";
+			break;
+		}
 		cell.m_content.m_contentType=WKSContentListener::CellContent::C_TEXT;
 		long begText=m_input->tell(), endText=begText+dataSz;
 		std::string s("");
@@ -1474,8 +1485,18 @@ bool WKS4Spreadsheet::readCell()
 				--begText;
 			++begText;
 		}
-		cell.m_content.m_textEntry.setBegin(begText);
-		cell.m_content.m_textEntry.setEnd(endText);
+		if (type==15)
+		{
+			cell.m_content.m_textEntry.setBegin(begText);
+			cell.m_content.m_textEntry.setEnd(endText);
+		}
+		else
+		{
+			WPSEntry newEntry;
+			newEntry.setBegin(begText);
+			newEntry.setEnd(endText);
+			cell.m_extraTextEntryList.push_back(newEntry);
+		}
 		break;
 	}
 	case 16:
@@ -2375,11 +2396,16 @@ void WKS4Spreadsheet::sendCellContent(WKS4SpreadsheetInternal::Cell const &cell)
 	}
 	m_listener->openSheetCell(finalCell, content);
 
-	if (cell.m_content.m_textEntry.valid())
+	size_t numTextEntry=cell.m_content.m_textEntry.valid() ? 1 : 0;
+	if (!cell.m_extraTextEntryList.empty())
+		numTextEntry=1+cell.m_extraTextEntryList.size();
+	for (size_t t=0; t<numTextEntry; ++t)
 	{
-		m_input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
+		WPSEntry entry=t==0 ? cell.m_content.m_textEntry : cell.m_extraTextEntryList[t-1];
+		if (!entry.valid()) continue;
+		m_input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 		bool prevEOL=false;
-		while (!m_input->isEnd() && m_input->tell()<cell.m_content.m_textEntry.end())
+		while (!m_input->isEnd() && m_input->tell()<entry.end())
 		{
 			unsigned char c=(unsigned char) libwps::readU8(m_input);
 			if (c==0xd)
