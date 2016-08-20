@@ -1209,7 +1209,6 @@ bool LotusParser::readZoneV3()
 		return false;
 	}
 	f << "Entries(Data" << std::hex << type << std::dec << "N):";
-	bool isParsed=false, needWriteInAscii=false;
 
 	switch (type)
 	{
@@ -1273,11 +1272,8 @@ bool LotusParser::readZoneV3()
 	default:
 		break;
 	}
-	if (!isParsed || needWriteInAscii)
-	{
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
-	}
+	ascii().addPos(pos);
+	ascii().addNote(f.str().c_str());
 	if (input->tell()!=endPos)
 		ascii().addDelimiter(input->tell(),'|');
 	input->seek(endPos, librevenge::RVNG_SEEK_SET);
