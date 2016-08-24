@@ -47,8 +47,10 @@ public:
 	                          BottomLeft, BottomCenter, BottomRight, BottomLeftAndRight, BottomInsideLeftAndRight
 	                        };
 public:
+	//! constructor
 	WPSPageSpan();
-	virtual ~WPSPageSpan();
+	//! destructor
+	~WPSPageSpan();
 
 	double getFormLength() const
 	{

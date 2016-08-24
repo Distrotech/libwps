@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* libwps
  * Version: MPL 2.0 / LGPLv2.1+
  *
@@ -39,9 +40,8 @@ class WPSEntry
 public:
 	//!constructor
 	WPSEntry() : m_begin(-1), m_length(-1), m_type(""), m_name(""), m_id(-1), m_parsed(false), m_extra("") {}
-
+	//! destructor
 	virtual ~WPSEntry() {}
-
 	//! sets the begin offset
 	void setBegin(long off)
 	{

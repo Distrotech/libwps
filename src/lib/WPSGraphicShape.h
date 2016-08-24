@@ -81,8 +81,8 @@ public:
 		m_vertices(), m_path(), m_extra("")
 	{
 	}
-	//! virtual destructor
-	virtual ~WPSGraphicShape() { }
+	//! destructor
+	~WPSGraphicShape() { }
 	//! static constructor to create a line
 	static WPSGraphicShape line(Vec2f const &orign, Vec2f const &dest);
 	//! static constructor to create a rectangle

@@ -53,8 +53,8 @@ public:
 	WPSPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), librevenge::RVNGUnit unt=librevenge::RVNG_INCH):
 		m_anchorTo(Char), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
 		m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_unit(unt), m_order(0) {}
-
-	virtual ~WPSPosition() {}
+	//! destructor
+	~WPSPosition() {}
 	//! operator<<
 	friend  std::ostream &operator<<(std::ostream &o, WPSPosition const &pos)
 	{
