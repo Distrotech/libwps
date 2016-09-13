@@ -45,6 +45,21 @@
 
 namespace LotusStyleManagerInternal
 {
+//! small struct used to defined a font name
+struct FontName
+{
+	//! constructor
+	FontName() : m_name(), m_id(-2)
+	{
+		for (int i=0; i<2; ++i) m_size[i]=0;
+	}
+	//! the font name
+	std::string m_name;
+	//! the font id
+	int m_id;
+	//! the font height, font size
+	int m_size[2];
+};
 //! small struct used to defined color style
 struct ColorStyle
 {
@@ -246,8 +261,9 @@ struct GraphicStyle
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_version(-1), m_isUpdated(false), m_idCellStyleMap(), m_idColorStyleMap(),
-		m_idFontStyleMap(), m_idFormatStyleMap(), m_idGraphicStyleMap(), m_idLineStyleMap()
+	State() :  m_version(-1), m_isUpdated(false), m_idCellStyleMap(), m_idColorStyleMap(),
+		m_idFontStyleMap(), m_idFormatStyleMap(), m_idGraphicStyleMap(), m_idLineStyleMap(),
+		m_idFontNameMap()
 
 	{
 	}
@@ -256,8 +272,6 @@ struct State
 	//! returns the pattern corresponding to a pattern id
 	bool getPattern(int id, WPSGraphicStyle::Pattern &pattern) const;
 
-	//! the last file position
-	long m_eof;
 	//! the file version
 	int m_version;
 	//! a flag to know if updateState was launched
@@ -274,6 +288,9 @@ struct State
 	std::map<int, GraphicStyle> m_idGraphicStyleMap;
 	//! a map id to line style
 	std::map<int, LineStyle> m_idLineStyleMap;
+
+	//! a map id to font name style
+	std::map<int, FontName> m_idFontNameMap;
 };
 
 bool State::getColor(int id, WPSColor &color) const
@@ -361,10 +378,8 @@ bool State::getPattern(int id, WPSGraphicStyle::Pattern &pat) const
 
 // constructor, destructor
 LotusStyleManager::LotusStyleManager(LotusParser &parser) :
-	m_input(parser.getInput()), m_mainParser(parser), m_state(new LotusStyleManagerInternal::State),
-	m_asciiFile(parser.ascii())
+	m_mainParser(parser), m_state(new LotusStyleManagerInternal::State)
 {
-	m_state.reset(new LotusStyleManagerInternal::State);
 }
 
 LotusStyleManager::~LotusStyleManager()
@@ -401,18 +416,6 @@ int LotusStyleManager::version() const
 	return m_state->m_version;
 }
 
-bool LotusStyleManager::checkFilePosition(long pos)
-{
-	if (m_state->m_eof < 0)
-	{
-		long actPos = m_input->tell();
-		m_input->seek(0, librevenge::RVNG_SEEK_END);
-		m_state->m_eof=m_input->tell();
-		m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
-	}
-	return pos <= m_state->m_eof;
-}
-
 bool LotusStyleManager::getColor(int cId, WPSColor &color) const
 {
 	return m_state->getColor(cId, color);
@@ -421,30 +424,32 @@ bool LotusStyleManager::getColor(int cId, WPSColor &color) const
 ////////////////////////////////////////////////////////////
 // styles
 ////////////////////////////////////////////////////////////
-bool LotusStyleManager::readLineStyle(long endPos, int vers)
+bool LotusStyleManager::readLineStyle(LotusParserInternal::LotusStream &stream, long endPos, int vers)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
+	long pos = input->tell();
 	const int expectedSize=vers==0 ? 8 : vers==1 ? 14 : 0;
 	if (endPos-pos!=expectedSize)   // only find in a WK3 mac file
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readLineStyle: the zone size seems bad\n"));
-		ascii().addPos(pos-6);
-		ascii().addNote("Entries(LineStyle):###");
+		ascFile.addPos(pos-6);
+		ascFile.addNote("Entries(LineStyle):###");
 		return true;
 	}
 	LotusStyleManagerInternal::LineStyle line;
-	int id=(int) libwps::readU8(m_input);
-	int val=(int) libwps::readU8(m_input); // always 10?
+	int id=(int) libwps::readU8(input);
+	int val=(int) libwps::readU8(input); // always 10?
 	if (val!=0x10)
 		f << "fl=" << std::hex << val << std::dec << ",";
-	val=(int) libwps::readU16(m_input); // 0 or small number
+	val=(int) libwps::readU16(input); // 0 or small number
 	if (val) f << "f0=" << val << ",";
 	WPSColor color[2]= {WPSColor::black(), WPSColor::white()};
 	for (int i=0; i<2; ++i)
 	{
-		int col=vers==1 ? (int) libwps::readU16(m_input) : (int) libwps::readU8(m_input);
+		int col=vers==1 ? (int) libwps::readU16(input) : (int) libwps::readU8(input);
 		if (col!=0xEF && !m_state->getColor(col, color[i]))
 		{
 			f << "###col" << i << "=" << col << ",";
@@ -458,16 +463,16 @@ bool LotusStyleManager::readLineStyle(long endPos, int vers)
 	int patId;
 	if (vers==0)
 	{
-		val=(int) libwps::readU16(m_input);
+		val=(int) libwps::readU16(input);
 		patId=(val&0x3f);
 		line.m_width=float((val>>6)&0xF);
 		line.m_dashId=(val>>11);
 	}
 	else // checkme
 	{
-		patId=(int) libwps::readU16(m_input);
-		line.m_width=float(libwps::readU16(m_input))/256.f;
-		line.m_dashId=(int) libwps::readU16(m_input);
+		patId=(int) libwps::readU16(input);
+		line.m_width=float(libwps::readU16(input))/256.f;
+		line.m_dashId=(int) libwps::readU16(input);
 	}
 	if (patId!=1)
 	{
@@ -498,8 +503,8 @@ bool LotusStyleManager::readLineStyle(long endPos, int vers)
 	}
 	else
 		m_state->m_idLineStyleMap[id]=line;
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
@@ -518,11 +523,13 @@ bool LotusStyleManager::updateLineStyle(int lineId, WPSGraphicStyle &style) cons
 	return true;
 }
 
-bool LotusStyleManager::readColorStyle(long endPos)
+bool LotusStyleManager::readColorStyle(LotusParserInternal::LotusStream &stream, long endPos)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
+	long pos = input->tell();
 	int colorSz=1;
 	if (endPos-pos==7)
 		colorSz=1;
@@ -531,25 +538,25 @@ bool LotusStyleManager::readColorStyle(long endPos)
 	else
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readColorStyle: the zone size seems bad\n"));
-		ascii().addPos(pos-6);
-		ascii().addNote("Entries(ColorStyle):###");
+		ascFile.addPos(pos-6);
+		ascFile.addNote("Entries(ColorStyle):###");
 		return true;
 	}
-	int id=(int) libwps::readU8(m_input);
-	int val=(int) libwps::readU8(m_input); // always 20?
+	int id=(int) libwps::readU8(input);
+	int val=(int) libwps::readU8(input); // always 20?
 	if (val!=0x20)
 		f << "fl=" << std::hex << val << std::dec << ",";
 	LotusStyleManagerInternal::ColorStyle color;
 	for (int i=0; i<4; ++i)
 	{
-		val=(colorSz==1) ? (int) libwps::readU8(m_input) : (int) libwps::readU16(m_input);
+		val=(colorSz==1) ? (int) libwps::readU8(input) : (int) libwps::readU16(input);
 		if (val!=0xEF && !m_state->getColor(val,color.m_colors[i]))
 		{
 			WPS_DEBUG_MSG(("LotusStyleManager::readColorStyle: can not read a color\n"));
 			f << "##colId=" << val << ",";
 		}
 	}
-	color.m_patternId=(int) libwps::readU8(m_input);
+	color.m_patternId=(int) libwps::readU8(input);
 	if (color.m_patternId && !m_state->getPattern(color.m_patternId, color.m_pattern))
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readColorStyle: can not read a pattern\n"));
@@ -568,8 +575,8 @@ bool LotusStyleManager::readColorStyle(long endPos)
 	else
 		m_state->m_idColorStyleMap[id]=color;
 
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
@@ -636,27 +643,29 @@ bool LotusStyleManager::updateShadowStyle(int colorId, WPSGraphicStyle &style) c
 	return true;
 }
 
-bool LotusStyleManager::readGraphicStyle(long endPos)
+bool LotusStyleManager::readGraphicStyle(LotusParserInternal::LotusStream &stream, long endPos)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
+	long pos = input->tell();
 	if (endPos-pos!=13)   // only find in a WK3 mac file
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the zone size seems bad\n"));
-		ascii().addPos(pos-6);
-		ascii().addNote("Entries(GraphicStyle):###");
+		ascFile.addPos(pos-6);
+		ascFile.addNote("Entries(GraphicStyle):###");
 		return true;
 	}
-	int id=(int) libwps::readU8(m_input);
+	int id=(int) libwps::readU8(input);
 	LotusStyleManagerInternal::GraphicStyle style;
-	int val=(int) libwps::readU8(m_input); // always 40?
+	int val=(int) libwps::readU8(input); // always 40?
 	if (val!=0x40)
 		f << "fl=" << std::hex << val << std::dec << ",";
 	for (int i=0; i<4; ++i)
 	{
-		val=(int) libwps::readU8(m_input);
-		int fl=(int) libwps::readU8(m_input);
+		val=(int) libwps::readU8(input);
+		int fl=(int) libwps::readU8(input);
 		if (!val) continue;
 		if (i==0) f << "unknId=" << val << "[" << std::hex << fl << std::dec << ",";
 		else if (i==1)
@@ -684,7 +693,7 @@ bool LotusStyleManager::readGraphicStyle(long endPos)
 	}
 	for (int i=0; i<3; ++i)   //f0=f1=0|1|3|4 : a size?, f2=2|3|22
 	{
-		val=(int) libwps::readU8(m_input);
+		val=(int) libwps::readU8(input);
 		if (val)
 			f << "f" << i << "=" << std::hex << val << std::dec << ",";
 	}
@@ -700,8 +709,8 @@ bool LotusStyleManager::readGraphicStyle(long endPos)
 	else
 		m_state->m_idGraphicStyleMap[id]=style;
 
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
@@ -724,40 +733,42 @@ bool LotusStyleManager::updateGraphicStyle(int graphicId, WPSGraphicStyle &style
 	return true;
 }
 
-bool LotusStyleManager::readFontStyle(long endPos)
+bool LotusStyleManager::readFontStyle(LotusParserInternal::LotusStream &stream, long endPos)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
+	long pos = input->tell();
 	if (endPos-pos!=12)
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readFontStyle: the zone size seems bad\n"));
-		ascii().addPos(pos-6);
-		ascii().addNote("Entries(FontStyle):###");
+		ascFile.addPos(pos-6);
+		ascFile.addNote("Entries(FontStyle):###");
 		return true;
 	}
-	int id=(int) libwps::readU8(m_input);
+	int id=(int) libwps::readU8(input);
 	LotusStyleManagerInternal::FontStyle font(m_mainParser.getDefaultFontType());
-	int val=(int) libwps::readU8(m_input); // always 0?
+	int val=(int) libwps::readU8(input); // always 0?
 	if (val)
 		f << "fl=" << std::hex << val << std::dec << ",";
 	for (int i=0; i<2; ++i)   // always 0?
 	{
-		val=(int) libwps::readU8(m_input);
+		val=(int) libwps::readU8(input);
 		if (val)
 			f << "f" << i << "=" << val << ",";
 	}
-	val=(int) libwps::readU8(m_input);
+	val=(int) libwps::readU8(input);
 	if (val!=0xFF)
 		f << "g0=" << std::hex << val << std::dec << ",";
 	// we can not read the font name here, because the font is defined after...
-	font.m_fontId=(int) libwps::readU8(m_input);
-	val=(int) libwps::readU16(m_input);
+	font.m_fontId=(int) libwps::readU8(input);
+	val=(int) libwps::readU16(input);
 	if (val)
 		font.m_font.m_size=val/32.;
 	for (int i=0; i<2; ++i)
 	{
-		val=(int) libwps::readU8(m_input);
+		val=(int) libwps::readU8(input);
 		if (val==0xEF) continue;
 		WPSColor color;
 		if (!getColor(val, color))
@@ -767,7 +778,7 @@ bool LotusStyleManager::readFontStyle(long endPos)
 		else if (color!=font.m_font.m_color) //unsured
 			f << "col[def]=" << color << ",";
 	}
-	val=(int) libwps::readU8(m_input);
+	val=(int) libwps::readU8(input);
 	if (val)
 	{
 		if (val&1) font.m_font.m_attributes |= WPS_BOLD_BIT;
@@ -779,7 +790,7 @@ bool LotusStyleManager::readFontStyle(long endPos)
 		if (val&0x40) font.m_font.m_spacing=2;
 		if (val&0x80) f << "flags[#80],";
 	}
-	val=(int) libwps::readU8(m_input);
+	val=(int) libwps::readU8(input);
 	if (val) // 0|18|20|24
 		f << "h0=" << std::hex << val << std::dec << ",";
 	font.m_extra=f.str();
@@ -794,8 +805,8 @@ bool LotusStyleManager::readFontStyle(long endPos)
 
 	f.str("");
 	f << "Entries(FontStyle):FS" << id << "," << font;
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
@@ -819,33 +830,35 @@ bool LotusStyleManager::updateFontStyle(int fontId, WPSFont &font, libwps_tools_
 	return true;
 }
 
-bool LotusStyleManager::readFormatStyle(long endPos)
+bool LotusStyleManager::readFormatStyle(LotusParserInternal::LotusStream &stream, long endPos)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
+	long pos = input->tell();
 	if (endPos-pos<23)
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readFormatStyle: the zone size seems bad\n"));
-		ascii().addPos(pos-6);
-		ascii().addNote("Entries(FormatStyle):###");
+		ascFile.addPos(pos-6);
+		ascFile.addNote("Entries(FormatStyle):###");
 		return true;
 	}
-	int id=(int) libwps::readU8(m_input);
+	int id=(int) libwps::readU8(input);
 	LotusStyleManagerInternal::FormatStyle format;
-	int val=(int) libwps::readU8(m_input); // always 30?
+	int val=(int) libwps::readU8(input); // always 30?
 	if (val!=0x30)
 		f << "fl=" << std::hex << val << std::dec << ",";
 
 	for (int i=0; i<10; ++i) // always f1=100, other 0?
 	{
-		val=(int) libwps::readU16(m_input);
+		val=(int) libwps::readU16(input);
 		if (val) f << "f" << i << "=" << val << ",";
 	}
 	bool ok=true;
 	for (int i=0; i<2; ++i)
 	{
-		val=(int) libwps::readU8(m_input);
+		val=(int) libwps::readU8(input);
 		if (val==0xf) continue;
 		if (val!=0x3c)
 		{
@@ -854,8 +867,8 @@ bool LotusStyleManager::readFormatStyle(long endPos)
 			ok=false;
 			break;
 		}
-		int dSz=(int) libwps::readU8(m_input);
-		if (m_input->tell()+dSz+1>endPos)
+		int dSz=(int) libwps::readU8(input);
+		if (input->tell()+dSz+1>endPos)
 		{
 			WPS_DEBUG_MSG(("LotusStyleManager::readFormatStyle: bad string size\n"));
 			f << "###size=" << std::hex << dSz << std::dec << ",";
@@ -864,15 +877,15 @@ bool LotusStyleManager::readFormatStyle(long endPos)
 		}
 		std::string name("");
 		for (int j=0; j<dSz; ++j)
-			name += (char) libwps::readU8(m_input);
+			name += (char) libwps::readU8(input);
 		if (i==0)
 			format.m_prefix=name;
 		else
 			format.m_suffix=name;
 	}
-	if (ok && m_input->tell()+1<=endPos)
+	if (ok && input->tell()+1<=endPos)
 	{
-		val=(int) libwps::readU8(m_input);
+		val=(int) libwps::readU8(input);
 		if (val!=0xc)
 			f << "g0=" << val << ",";
 	}
@@ -888,25 +901,27 @@ bool LotusStyleManager::readFormatStyle(long endPos)
 
 	f.str("");
 	f << "Entries(FormatStyle):Fo" << id << "," << format;
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
-bool LotusStyleManager::readCellStyle(long endPos)
+bool LotusStyleManager::readCellStyle(LotusParserInternal::LotusStream &stream, long endPos)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
+	long pos = input->tell();
 	if (endPos-pos!=21 && endPos-pos!=33)
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readCellStyle: the zone size seems bad\n"));
-		ascii().addPos(pos-6);
-		ascii().addNote("Entries(CellStyle):###");
+		ascFile.addPos(pos-6);
+		ascFile.addNote("Entries(CellStyle):###");
 		return true;
 	}
-	int id=(int) libwps::readU8(m_input);
-	int val=(int) libwps::readU8(m_input); // always 50?
+	int id=(int) libwps::readU8(input);
+	int val=(int) libwps::readU8(input); // always 50?
 	if (endPos-pos==33)   // wk6...wk9
 	{
 		static bool first=true;
@@ -919,8 +934,8 @@ bool LotusStyleManager::readCellStyle(long endPos)
 		if (val!=0x50)
 			f << "fl=" << std::hex << val << std::dec << ",";
 		// OP_CreatePattern123 in op.cxx contains some data
-		ascii().addPos(pos-6);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos-6);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 
@@ -929,14 +944,14 @@ bool LotusStyleManager::readCellStyle(long endPos)
 		f << "fl=" << std::hex << val << std::dec << ",";
 	for (int i=0; i<2; ++i)   // always 0?
 	{
-		val=(int) libwps::readU8(m_input);
+		val=(int) libwps::readU8(input);
 		if (val)
 			f << "f" << i << "=" << val << ",";
 	}
 	for (int i=0; i<8; ++i)
 	{
-		val=(int) libwps::readU8(m_input);
-		int fl=(int) libwps::readU8(m_input);
+		val=(int) libwps::readU8(input);
+		int fl=(int) libwps::readU8(input);
 		if (!val) continue;
 		if (i<4)
 		{
@@ -984,7 +999,7 @@ bool LotusStyleManager::readCellStyle(long endPos)
 				cell.m_formatId=val;
 		}
 	}
-	val=(int) libwps::readU8(m_input);
+	val=(int) libwps::readU8(input);
 	cell.m_borders=(val&0xF);
 	val >>=4;
 	// small number 0|2
@@ -1000,8 +1015,8 @@ bool LotusStyleManager::readCellStyle(long endPos)
 	}
 	else
 		m_state->m_idCellStyleMap[id]=cell;
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
@@ -1062,4 +1077,168 @@ bool LotusStyleManager::updateCellStyle(int cellId, WPSCellFormat &format,
 	}
 	return true;
 }
+
+bool LotusStyleManager::readFMTFontName(LotusParserInternal::LotusStream &stream)
+{
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	int type = (int) libwps::read16(input);
+	if (type!=0xae)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontName: not a font name definition\n"));
+		return false;
+	}
+	long sz = (long) libwps::readU16(input);
+	long endPos=pos+4+sz;
+	f << "Entries(FMTFont)[name]:";
+	if (sz < 2)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontName: the zone is too short\n"));
+		f << "###";
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+		return true;
+	}
+	int id=(int) libwps::readU8(input);
+	f << "id=" << id << ",";
+	bool nameOk=true;
+	std::string name("");
+	for (long i=1; i<sz; ++i)
+	{
+		char c=(char) libwps::readU8(input);
+		if (!c) break;
+		if (nameOk && !(c==' ' || (c>='0'&&c<='9') || (c>='a'&&c<='z') || (c>='A'&&c<='Z')))
+		{
+			nameOk=false;
+			WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontName: find odd character in name\n"));
+			f << "#";
+		}
+		name += c;
+	}
+	f << name << ",";
+	if (m_state->m_idFontNameMap.find(id)!=m_state->m_idFontNameMap.end())
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontName: can not update font map for id=%d\n", id));
+	}
+	else
+	{
+		LotusStyleManagerInternal::FontName font;
+		font.m_name=name;
+		m_state->m_idFontNameMap[id]=font;
+	}
+	if (input->tell()!=endPos)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontName: find extra data\n"));
+		f << "###extra";
+		input->seek(endPos, librevenge::RVNG_SEEK_SET);
+	}
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusStyleManager::readFMTFontId(LotusParserInternal::LotusStream &stream)
+{
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	int type = (int) libwps::read16(input);
+	if (type!=0xb0)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontId: not a font id definition\n"));
+		return false;
+	}
+	long sz = (long) libwps::readU16(input);
+	long endPos=pos+4+sz;
+	f << "Entries(FMTFont)[ids]:";
+	if ((sz%2)!=0)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontId: the zone size is odd\n"));
+		f << "###";
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+		return true;
+	}
+	f << "ids=[";
+	bool isFirstError=true;
+	for (int i=0; i<int(sz)/2; ++i)
+	{
+		int id =int(libwps::readU16(input));
+		f << id << ",";
+		if (m_state->m_idFontNameMap.find(i)!=m_state->m_idFontNameMap.end())
+			m_state->m_idFontNameMap.find(i)->second.m_id=id;
+		else if (isFirstError)
+		{
+			isFirstError=false;
+			WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontId: can not update some font map for id=%d\n", id));
+		}
+	}
+	f << "],";
+	if (input->tell()!=endPos)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontId: find extra data\n"));
+		f << "###extra";
+		input->seek(endPos, librevenge::RVNG_SEEK_SET);
+	}
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusStyleManager::readFMTFontSize(LotusParserInternal::LotusStream &stream)
+{
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	int type = (int) libwps::read16(input);
+	if (type!=0xaf && type!=0xb1)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontSize: not a font size definition\n"));
+		return false;
+	}
+	long sz = (long) libwps::readU16(input);
+	long endPos=pos+4+sz;
+	int const wh=type==0xaf ? 0 : 1;
+	f << "Entries(FMTFont)[size" << wh << "]:";
+	if ((sz%2)!=0)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontSize: the zone size is odd\n"));
+		f << "###";
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+		return true;
+	}
+	f << "size=[";
+	bool isFirstError=true;
+	for (int i=0; i<int(sz)/2; ++i)
+	{
+		int size =int(libwps::readU16(input));
+		f << size << ",";
+		if (m_state->m_idFontNameMap.find(i)!=m_state->m_idFontNameMap.end())
+			m_state->m_idFontNameMap.find(i)->second.m_size[wh]=size;
+		else if (isFirstError)
+		{
+			isFirstError=false;
+			WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontSize: can not update some font map for size=%d\n", size));
+		}
+	}
+	f << "],";
+	if (input->tell()!=endPos)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFMTFontSize: find extra data\n"));
+		f << "###extra";
+		input->seek(endPos, librevenge::RVNG_SEEK_SET);
+	}
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
+	return true;
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

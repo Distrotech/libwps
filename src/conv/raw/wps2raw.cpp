@@ -30,6 +30,8 @@
 
 #include <libwps/libwps.h>
 
+#include "helper.h"
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -109,18 +111,7 @@ int main(int argc, char *argv[])
 	librevenge::RVNGRawTextGenerator listenerImpl(printIndentLevel);
 	WPSResult error= WPSDocument::parse(&input, &listenerImpl, password);
 
-	if (error == WPS_ENCRYPTION_ERROR)
-		fprintf(stderr, "ERROR: Encrypted file, bad Password!\n");
-	else if (error == WPS_FILE_ACCESS_ERROR)
-		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == WPS_PARSE_ERROR)
-		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == WPS_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Microsoft Works stream!\n");
-	else if (error != WPS_OK)
-		fprintf(stderr, "ERROR: Unknown Error!\n");
-
-	if (error != WPS_OK)
+	if (libwpsHelper::checkErrorAndPrintMessage(error))
 		return 1;
 
 	return 0;

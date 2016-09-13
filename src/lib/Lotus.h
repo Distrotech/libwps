@@ -27,11 +27,30 @@
 #include <librevenge-stream/librevenge-stream.h>
 #include "libwps_internal.h"
 #include "libwps_tools_win.h"
+#include "WPSDebug.h"
 
 #include "WKSParser.h"
 
 namespace LotusParserInternal
 {
+//! small structure use to store a stream and it debug file
+struct LotusStream
+{
+	//! constructor
+	LotusStream(RVNGInputStreamPtr input, libwps::DebugFile &ascii);
+	//! return true if the position is in the file
+	bool checkFilePosition(long pos) const
+	{
+		return pos<=m_eof;
+	}
+	//! the stream
+	RVNGInputStreamPtr m_input;
+	//! the ascii file
+	libwps::DebugFile &m_ascii;
+	//! the last position
+	long m_eof;
+};
+
 class SubDocument;
 struct State;
 }
@@ -62,8 +81,6 @@ public:
 	bool checkHeader(WPSHeader *header, bool strict=false);
 
 protected:
-	//! return true if the pos is in the file, update the file size if need
-	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
 
@@ -94,32 +111,37 @@ protected:
 	// low level
 	//
 
+	/// check for the existence of a format stream, if it exists, parse it
+	bool parseFormatStream();
+
+	//! checks if the document header is correct (or not)
+	bool checkHeader(LotusParserInternal::LotusStream &stream, bool mainStream, bool strict);
 	/** finds the different zones (spreadsheet, chart, print, ...) */
-	bool readZones();
+	bool readZones(LotusParserInternal::LotusStream &stream);
 	/** parse the different zones 1B */
-	bool readDataZone();
+	bool readDataZone(LotusParserInternal::LotusStream &stream);
 	//! reads a zone
-	bool readZone();
+	bool readZone(LotusParserInternal::LotusStream &stream);
 	//! parse a wk123 zone
-	bool readZoneV3();
+	bool readZoneV3(LotusParserInternal::LotusStream &stream);
 
 	//////////////////////// generic ////////////////////////////////////
 
 	//! reads a mac font name
-	bool readMacFontName(long endPos);
-	//! reads a format font name
-	bool readFMTFontName();
+	bool readMacFontName(LotusParserInternal::LotusStream &stream, long endPos);
+	//! reads a format style name: b6
+	bool readFMTStyleName(LotusParserInternal::LotusStream &stream);
 	//! reads a link
-	bool readLinkZone();
+	bool readLinkZone(LotusParserInternal::LotusStream &stream);
 	//! reads a mac document info zone: zone 1b, then 2af8
-	bool readDocumentInfoMac(long endPos);
+	bool readDocumentInfoMac(LotusParserInternal::LotusStream &stream, long endPos);
 
 	//////////////////////// chart zone //////////////////////////////
 
 	//! reads a chart definitions
-	bool readChartDefinition();
+	bool readChartDefinition(LotusParserInternal::LotusStream &stream);
 	//! reads the chart name or title
-	bool readChartName();
+	bool readChartName(LotusParserInternal::LotusStream &stream);
 
 	//////////////////////// unknown zone //////////////////////////////
 

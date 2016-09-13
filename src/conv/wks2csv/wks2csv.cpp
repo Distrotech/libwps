@@ -34,6 +34,8 @@
 
 #include <libwps/libwps.h>
 
+#include "helper.h"
+
 using namespace libwps;
 
 #ifdef HAVE_CONFIG_H
@@ -153,13 +155,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	char const *file=argv[optind];
-	librevenge::RVNGFileStream input(file);
-
-	WPSCreator creator;
+	WPSConfidence confidence;
 	WPSKind kind;
 	bool needCharEncoding;
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind,creator,needCharEncoding);
-	if (confidence == WPS_CONFIDENCE_NONE || (kind != WPS_SPREADSHEET && kind != WPS_DATABASE))
+	shared_ptr<librevenge::RVNGInputStream> input=libwpsHelper::isSupported(file,confidence, kind,needCharEncoding);
+	if (!input || confidence == WPS_CONFIDENCE_NONE || (kind != WPS_SPREADSHEET && kind != WPS_DATABASE))
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
@@ -173,35 +173,26 @@ int main(int argc, char *argv[])
 		librevenge::RVNGCSVSpreadsheetGenerator listenerImpl(vec, generateFormula);
 		listenerImpl.setSeparators(fieldSeparator, textSeparator, decSeparator);
 		listenerImpl.setDTFormats(dateFormat.c_str(),timeFormat.c_str());
-		error= WPSDocument::parse(&input, &listenerImpl, password, encoding);
+		error= WPSDocument::parse(input.get(), &listenerImpl, password, encoding);
 	}
 	catch (...)
 	{
 		error=WPS_PARSE_ERROR;
 	}
 
-	if (error == WPS_ENCRYPTION_ERROR)
-		fprintf(stderr, "ERROR: Encrypted file, bad Password!\n");
-	else if (error == WPS_FILE_ACCESS_ERROR)
-		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == WPS_PARSE_ERROR)
-		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == WPS_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
-	else if (error != WPS_OK)
-		fprintf(stderr, "ERROR: Unknown Error!\n");
+	if (libwpsHelper::checkErrorAndPrintMessage(error))
+		return 1;
 	else if (vec.empty())
 	{
 		fprintf(stderr, "ERROR: bad output!\n");
-		error = WPS_PARSE_ERROR;
+		return 1;
 	}
 	else if (sheetToConvert>0 && sheetToConvert>(int) vec.size())
 	{
 		fprintf(stderr, "ERROR: Can not find sheet %d\n", sheetToConvert);
-		error = WPS_PARSE_ERROR;
-	}
-	if (error != WPS_OK)
 		return 1;
+	}
+
 	if (printNumberOfSheet)
 	{
 		std::cout << vec.size() << "\n";

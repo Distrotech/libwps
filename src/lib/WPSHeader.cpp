@@ -152,6 +152,46 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		}
 	}
 
+	// check for a lotus 123 zip file containing a .wk3 and a .fm3
+	unsigned numSubStreams = input->subStreamCount();
+	std::string wk3Name, fm3Name;
+	RVNGInputStreamPtr wk3Stream;
+	for (unsigned i = 0; i < numSubStreams; ++i)
+	{
+		char const *nm=input->subStreamName(i);
+		std::string name(nm);
+		size_t len=name.length();
+		if (len<=4 || name.find_last_of('/')!=std::string::npos || name[0]=='.' || name[len-4]!='.')
+			continue;
+		std::string extension=name.substr(len-3);
+		if (extension=="wk3" || extension=="WK3")
+		{
+			if (!wk3Name.empty())
+			{
+				wk3Name.clear();
+				break;
+			}
+			wk3Stream.reset(input->getSubStreamByName(nm));
+			wk3Stream->seek(0, librevenge::RVNG_SEEK_SET);
+			if (libwps::readU16(wk3Stream)==0 && libwps::readU8(wk3Stream)==0x1a)
+				wk3Name=name;
+		}
+		else if (extension=="fm3" || extension=="FM3")
+		{
+			if (!fm3Name.empty())
+			{
+				fm3Name.clear();
+				break;
+			}
+			fm3Name=name;
+		}
+	}
+	if (!wk3Name.empty() && !fm3Name.empty() &&
+	        wk3Name.substr(0,wk3Name.length()-3) == fm3Name.substr(0,fm3Name.length()-3))
+	{
+		WPS_DEBUG_MSG(("WPSHeader::constructHeader: find a zip Lotus spreadsheet\n"));
+		return new WPSHeader(wk3Stream, input, 101, WPS_SPREADSHEET, WPS_LOTUS);
+	}
 	return NULL;
 }
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

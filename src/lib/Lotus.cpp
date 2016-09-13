@@ -50,6 +50,15 @@ using namespace libwps;
 //! Internal: namespace to define internal class of LotusParser
 namespace LotusParserInternal
 {
+// LotusStream
+LotusStream::LotusStream(RVNGInputStreamPtr input, libwps::DebugFile &ascii) : m_input(input), m_ascii(ascii), m_eof(-1)
+{
+	if (!input || input->seek(0, librevenge::RVNG_SEEK_END)!=0)
+		return;
+	m_eof=input->tell();
+	input->seek(0, librevenge::RVNG_SEEK_SET);
+}
+
 //! the font of a LotusParser
 struct Font : public WPSFont
 {
@@ -116,10 +125,11 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 struct State
 {
 	//! constructor
-	explicit State(libwps_tools_win::Font::Type fontType) :  m_eof(-1), m_fontType(fontType), m_version(-1),
+	explicit State(libwps_tools_win::Font::Type fontType) : m_fontType(fontType), m_version(-1),
 		m_inMainContentBlock(false), m_fontsMap(), m_pageSpan(), m_maxSheet(0),
 		m_actualLevels(), m_actPage(0), m_numPages(0),
-		m_headerString(""), m_footerString("")
+		m_headerString(""), m_footerString(""),
+		m_formatAscii()
 	{
 	}
 	//! return the default font style
@@ -165,8 +175,6 @@ struct State
 		}
 		return s.str();
 	}
-	//! the last file position
-	long m_eof;
 	//! the user font type
 	libwps_tools_win::Font::Type m_fontType;
 	//! the file version
@@ -186,6 +194,12 @@ struct State
 	std::string m_headerString;
 	//! the footer string
 	std::string m_footerString;
+	//! a debug file, used to print data in the format stream
+	libwps::DebugFile m_formatAscii;
+
+private:
+	State(State const &);
+	State operator=(State const &);
 };
 
 }
@@ -209,19 +223,6 @@ LotusParser::~LotusParser()
 int LotusParser::version() const
 {
 	return m_state->m_version;
-}
-
-bool LotusParser::checkFilePosition(long pos)
-{
-	if (m_state->m_eof < 0)
-	{
-		RVNGInputStreamPtr input = getInput();
-		long actPos = input->tell();
-		input->seek(0, librevenge::RVNG_SEEK_END);
-		m_state->m_eof=input->tell();
-		input->seek(actPos, librevenge::RVNG_SEEK_SET);
-	}
-	return pos <= m_state->m_eof;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -276,9 +277,20 @@ void LotusParser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 	{
 		ascii().setStream(input);
 		ascii().open("MN0");
+		LotusParserInternal::LotusStream mainStream(input, ascii());
+		if (checkHeader(0L))
+		{
+			// reset data
+			m_styleManager->cleanState();
+			m_graphParser->cleanState();
+			m_spreadsheetParser->cleanState();
 
-		if (checkHeader(0L) && readZones())
-			m_listener=createListener(documentInterface);
+			if (readZones(mainStream))
+			{
+				parseFormatStream();
+				m_listener=createListener(documentInterface);
+			}
+		}
 		if (m_listener)
 		{
 			m_styleManager->updateState();
@@ -331,15 +343,33 @@ shared_ptr<WKSContentListener> LotusParser::createListener(librevenge::RVNGSprea
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
 bool LotusParser::checkHeader(WPSHeader *header, bool strict)
 {
-	*m_state = LotusParserInternal::State(m_state->m_fontType);
+	m_state.reset(new LotusParserInternal::State(m_state->m_fontType));
+	LotusParserInternal::LotusStream mainStream(getInput(), ascii());
+	if (!checkHeader(mainStream, true, strict))
+		return false;
+	if (header)
+	{
+		header->setMajorVersion(uint8_t(100+m_state->m_version));
+		header->setCreator(libwps::WPS_LOTUS);
+		header->setKind(libwps::WPS_SPREADSHEET);
+		header->setNeedEncoding(true);
+	}
+	return true;
+}
+
+bool LotusParser::checkHeader(LotusParserInternal::LotusStream &stream, bool mainStream, bool strict)
+{
+	RVNGInputStreamPtr input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	RVNGInputStreamPtr input = getInput();
-	if (!checkFilePosition(12))
+	if (!stream.checkFilePosition(12))
 	{
 		WPS_DEBUG_MSG(("LotusParser::checkHeader: file is too short\n"));
 		return false;
@@ -361,7 +391,16 @@ bool LotusParser::checkHeader(WPSHeader *header, bool strict)
 		return false;
 	}
 	val=(int) libwps::readU16(input);
-	if (val>=0x1000 && val<=0x1002)
+	if (!mainStream)
+	{
+		if (val!=0x8007)
+		{
+			WPS_DEBUG_MSG(("LotusParser::checkHeader: find unknown lotus file format\n"));
+			return false;
+		}
+		f << "lotus123[FMT],";
+	}
+	else if (val>=0x1000 && val<=0x1002)
 	{
 		WPS_DEBUG_MSG(("LotusParser::checkHeader: find lotus123 file\n"));
 		m_state->m_version=(val-0x1000)+1;
@@ -391,29 +430,75 @@ bool LotusParser::checkHeader(WPSHeader *header, bool strict)
 	{
 		for (int i=0; i < 4; ++i)
 		{
-			if (!readZone()) return false;
+			if (!readZone(stream)) return false;
 		}
 	}
-	ascii().addPos(0);
-	ascii().addNote(f.str().c_str());
-
-	if (header)
-	{
-		header->setMajorVersion(uint8_t(100+m_state->m_version));
-		header->setCreator(libwps::WPS_LOTUS);
-		header->setKind(libwps::WPS_SPREADSHEET);
-		header->setNeedEncoding(true);
-	}
+	ascFile.addPos(0);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
-bool LotusParser::readZones()
+bool LotusParser::parseFormatStream()
 {
-	RVNGInputStreamPtr input = getInput();
-	// reset data
-	m_styleManager->cleanState();
-	m_graphParser->cleanState();
-	m_spreadsheetParser->cleanState();
+	RVNGInputStreamPtr file=getFileInput();
+	if (!file || !file->isStructured()) return false;
+
+	unsigned numSubStreams = file->subStreamCount();
+	std::string wk3Name, fm3Name;
+	RVNGInputStreamPtr formatInput;
+	for (unsigned i = 0; i < numSubStreams; ++i)
+	{
+		char const *nm=file->subStreamName(i);
+		std::string name(nm);
+		size_t len=name.length();
+		if (len<=4 || name.find_last_of('/')!=std::string::npos || name[0]=='.' || name[len-4]!='.')
+			continue;
+		std::string extension=name.substr(len-3);
+		if (extension=="wk3" || extension=="WK3")
+		{
+			if (!wk3Name.empty())
+			{
+				wk3Name.clear();
+				break;
+			}
+			wk3Name=name;
+		}
+		else if (extension=="fm3" || extension=="FM3")
+		{
+			if (!fm3Name.empty())
+			{
+				fm3Name.clear();
+				break;
+			}
+			fm3Name=name;
+			formatInput.reset(file->getSubStreamByName(nm));
+			formatInput->seek(0, librevenge::RVNG_SEEK_SET);
+		}
+	}
+	if (wk3Name.empty() || fm3Name.empty() ||  !formatInput ||
+	        wk3Name.substr(0,wk3Name.length()-3) != fm3Name.substr(0,fm3Name.length()-3))
+	{
+		WPS_DEBUG_MSG(("LotusParser::parseFormatStream: can not find the format stream\n"));
+		return false;
+	}
+
+	m_state->m_formatAscii.setStream(formatInput);
+	m_state->m_formatAscii.open("FM3");
+	LotusParserInternal::LotusStream formatStream(formatInput, m_state->m_formatAscii);
+	if (!checkHeader(formatStream, false, false))
+	{
+		WPS_DEBUG_MSG(("LotusParser::parseFormatStream: can not read format stream\n"));
+		return false;
+	}
+	bool res=readZones(formatStream);
+	m_state->m_formatAscii.reset();
+	return res;
+}
+
+bool LotusParser::readZones(LotusParserInternal::LotusStream &stream)
+{
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 
 	input->seek(0, librevenge::RVNG_SEEK_SET);
 
@@ -424,20 +509,20 @@ bool LotusParser::readZones()
 		if (input->isEnd())
 			break;
 
-		while (readZone()) ;
+		while (readZone(stream)) ;
 
 		//
 		// look for ending
 		//
 		long pos = input->tell();
-		if (!checkFilePosition(pos+4))
+		if (!stream.checkFilePosition(pos+4))
 			break;
 		int type = (int) libwps::readU16(input); // 1
 		int length = (int) libwps::readU16(input);
 		if (type==1 && length==0)
 		{
-			ascii().addPos(pos);
-			ascii().addNote("Entries(EOF)");
+			ascFile.addPos(pos);
+			ascFile.addNote("Entries(EOF)");
 			if (!mainDataRead)
 				mainDataRead=m_state->m_inMainContentBlock;
 			// end of block, look for other blocks
@@ -453,37 +538,38 @@ bool LotusParser::readZones()
 		int id = (int) libwps::readU8(input);
 		int type = (int) libwps::readU8(input);
 		long sz = (long) libwps::readU16(input);
-		if ((type>0x2a) || sz<0 || !checkFilePosition(pos+4+sz))
+		if ((type>0x2a) || sz<0 || !stream.checkFilePosition(pos+4+sz))
 		{
 			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			break;
 		}
 		libwps::DebugStream f;
 		f << "Entries(UnknZon" << std::hex << id << "):";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
 	}
 
 	if (!input->isEnd())
 	{
-		ascii().addPos(input->tell());
-		ascii().addNote("Entries(Unknown)");
+		ascFile.addPos(input->tell());
+		ascFile.addNote("Entries(Unknown)");
 	}
 
 	return mainDataRead || m_spreadsheetParser->hasSomeSpreadsheetData();
 }
 
-bool LotusParser::readZone()
+bool LotusParser::readZone(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
 	long pos = input->tell();
 	int id = (int) libwps::readU8(input);
 	int type = (int) libwps::readU8(input);
 	long sz = (long) libwps::readU16(input);
 	long endPos=pos+4+sz;
-	if ((type>0x2a) || sz<0 || !checkFilePosition(endPos))
+	if ((type>0x2a) || sz<0 || !stream.checkFilePosition(endPos))
 	{
 		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		return false;
@@ -626,13 +712,13 @@ bool LotusParser::readZone()
 			isParsed=needWriteInAscii=true;
 			break;
 		case 0x7:
-			ok=isParsed=m_spreadsheetParser->readColumnSizes();
+			ok=isParsed=m_spreadsheetParser->readColumnSizes(stream);
 			break;
 		case 0x9:
-			ok=isParsed=m_spreadsheetParser->readCellName();
+			ok=isParsed=m_spreadsheetParser->readCellName(stream);
 			break;
 		case 0xa:
-			ok=isParsed=readLinkZone();
+			ok=isParsed=readLinkZone(stream);
 			break;
 		case 0xb: // 0,1,-1
 		case 0x1e: // always with 0
@@ -746,13 +832,13 @@ bool LotusParser::readZone()
 			break;
 		}
 		case 0x11:
-			ok=isParsed=readChartDefinition();
+			ok=isParsed=readChartDefinition(stream);
 			break;
 		case 0x12:
-			ok=isParsed=readChartName();
+			ok=isParsed=readChartName(stream);
 			break;
 		case 0x13:
-			isParsed=m_spreadsheetParser->readRowFormats();
+			isParsed=m_spreadsheetParser->readRowFormats(stream);
 			break;
 		case 0x15:
 		case 0x1d:
@@ -781,10 +867,10 @@ bool LotusParser::readZone()
 		case 0x26: // comment cell
 		case 0x27: // double8 cell
 		case 0x28: // double8+formula
-			ok=isParsed=m_spreadsheetParser->readCell();
+			ok=isParsed=m_spreadsheetParser->readCell(stream);
 			break;
 		case 0x1b:
-			isParsed=readDataZone();
+			isParsed=readDataZone(stream);
 			break;
 		case 0x1c: // always 00002d000000
 			if (sz!=6)
@@ -802,10 +888,10 @@ bool LotusParser::readZone()
 			isParsed=needWriteInAscii=true;
 			break;
 		case 0x1f:
-			isParsed=ok=m_spreadsheetParser->readColumnDefinition();
+			isParsed=ok=m_spreadsheetParser->readColumnDefinition(stream);
 			break;
 		case 0x23:
-			isParsed=ok=m_spreadsheetParser->readSheetName();
+			isParsed=ok=m_spreadsheetParser->readSheetName(stream);
 			break;
 		// case 13: big structure
 
@@ -814,7 +900,23 @@ bool LotusParser::readZone()
 		//
 
 		case 0xae:
-			isParsed=readFMTFontName();
+			isParsed=m_styleManager->readFMTFontName(stream);
+			break;
+		case 0xaf:
+		case 0xb1:
+			isParsed=m_styleManager->readFMTFontSize(stream);
+			break;
+		case 0xb0:
+			isParsed=m_styleManager->readFMTFontId(stream);
+			break;
+		case 0xb6:
+			isParsed=readFMTStyleName(stream);
+			break;
+		case 0xc3:
+			isParsed=ok=m_spreadsheetParser->readSheetHeader(stream);
+			break;
+		case 0xc5:
+			isParsed=ok=m_spreadsheetParser->readExtraRowFormats(stream);
 			break;
 		default:
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
@@ -828,7 +930,7 @@ bool LotusParser::readZone()
 			ok=false;
 			break;
 		}
-		ok = isParsed=readZoneV3();
+		ok = isParsed=readZoneV3(stream);
 		break;
 	}
 	if (!ok)
@@ -837,20 +939,21 @@ bool LotusParser::readZone()
 		return false;
 	}
 	if (sz && input->tell()!=pos && input->tell()!=endPos)
-		ascii().addDelimiter(input->tell(),'|');
+		ascFile.addDelimiter(input->tell(),'|');
 	input->seek(endPos, librevenge::RVNG_SEEK_SET);
 	if (!isParsed || needWriteInAscii)
 	{
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 	}
 	return true;
 }
 
-bool LotusParser::readDataZone()
+bool LotusParser::readDataZone(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
 	long pos = input->tell();
 	int type = (int) libwps::readU16(input);
 	long sz = (long) libwps::readU16(input);
@@ -989,7 +1092,7 @@ bool LotusParser::readDataZone()
 		isParsed=needWriteInAscii=true;
 		break;
 	case 0x7d7:
-		isParsed=m_spreadsheetParser->readRowSizes(endPos);
+		isParsed=m_spreadsheetParser->readRowSizes(stream, endPos);
 		break;
 	case 0x7d8:
 	case 0x7d9:
@@ -1059,7 +1162,7 @@ bool LotusParser::readDataZone()
 	// style
 	//
 	case 0xfa0:
-		isParsed=m_styleManager->readFontStyle(endPos);
+		isParsed=m_styleManager->readFontStyle(stream, endPos);
 		break;
 	case 0xfa1: // with size 26
 		f.str("");
@@ -1067,26 +1170,26 @@ bool LotusParser::readDataZone()
 		break;
 	case 0xfaa: // 10Style
 	case 0xfab:
-		isParsed=m_styleManager->readLineStyle(endPos, type==0xfaa ? 0 : 1);
+		isParsed=m_styleManager->readLineStyle(stream, endPos, type==0xfaa ? 0 : 1);
 		break;
 	case 0xfb4: // 20 Style
-		isParsed=m_styleManager->readColorStyle(endPos);
+		isParsed=m_styleManager->readColorStyle(stream, endPos);
 		break;
 	case 0xfbe: // 30Style
-		isParsed=m_styleManager->readFormatStyle(endPos);
+		isParsed=m_styleManager->readFormatStyle(stream, endPos);
 		break;
 	case 0xfc8: // 40Style
-		isParsed=m_styleManager->readGraphicStyle(endPos);
+		isParsed=m_styleManager->readGraphicStyle(stream, endPos);
 		break;
 	case 0xfc9: // with size 33
 		f.str("");
 		f << "Entries(GraphicStyle):";
 		break;
 	case 0xfd2: // 50Style
-		isParsed=m_styleManager->readCellStyle(endPos);
+		isParsed=m_styleManager->readCellStyle(stream, endPos);
 		break;
 	case 0xfdc:
-		isParsed=readMacFontName(endPos);
+		isParsed=readMacFontName(stream, endPos);
 		break;
 
 	// 0xfe6: X X CeId : 60Style
@@ -1096,34 +1199,34 @@ bool LotusParser::readDataZone()
 	//
 
 	case 0x2328:
-		isParsed=m_graphParser->readZoneBegin(endPos);
+		isParsed=m_graphParser->readZoneBegin(stream, endPos);
 		break;
 	case 0x2332: // line
 	case 0x2346: // rect, rectoval, rect
 	case 0x2350: // arac
 	case 0x2352: // rect shadow
 	case 0x23f0: // frame
-		isParsed=m_graphParser->readZoneData(endPos, type);
+		isParsed=m_graphParser->readZoneData(stream, endPos, type);
 		break;
 	case 0x23fa: // textbox data
-		isParsed=m_graphParser->readTextBoxData(endPos);
+		isParsed=m_graphParser->readTextBoxData(stream, endPos);
 		break;
 
 	//
 	// mac pict
 	//
 	case 0x240e:
-		isParsed=m_graphParser->readPictureDefinition(endPos);
+		isParsed=m_graphParser->readPictureDefinition(stream, endPos);
 		break;
 	case 0x2410:
-		isParsed=m_graphParser->readPictureData(endPos);
+		isParsed=m_graphParser->readPictureData(stream, endPos);
 		break;
 
 	//
 	// mac printer
 	//
 	case 0x2af8:
-		isParsed=readDocumentInfoMac(endPos);
+		isParsed=readDocumentInfoMac(stream, endPos);
 		break;
 	case 0x2afa:
 		f.str("");
@@ -1186,24 +1289,25 @@ bool LotusParser::readDataZone()
 	}
 	if (!isParsed || needWriteInAscii)
 	{
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 	}
 	if (input->tell()!=endPos)
-		ascii().addDelimiter(input->tell(),'|');
+		ascFile.addDelimiter(input->tell(),'|');
 	input->seek(endPos, librevenge::RVNG_SEEK_SET);
 	return true;
 }
 
-bool LotusParser::readZoneV3()
+bool LotusParser::readZoneV3(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
 	long pos = input->tell();
 	int type = (int) libwps::readU16(input);
 	long sz = (long) libwps::readU16(input);
 	long endPos=pos+4+sz;
-	if (sz<0 || !checkFilePosition(endPos))
+	if (sz<0 || !stream.checkFilePosition(endPos))
 	{
 		input->seek(pos, librevenge::RVNG_SEEK_SET);
 		return false;
@@ -1272,20 +1376,22 @@ bool LotusParser::readZoneV3()
 	default:
 		break;
 	}
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	if (input->tell()!=endPos)
-		ascii().addDelimiter(input->tell(),'|');
+		ascFile.addDelimiter(input->tell(),'|');
 	input->seek(endPos, librevenge::RVNG_SEEK_SET);
 	return true;
 }
+
 ////////////////////////////////////////////////////////////
 //   generic
 ////////////////////////////////////////////////////////////
-bool LotusParser::readMacFontName(long endPos)
+bool LotusParser::readMacFontName(LotusParserInternal::LotusStream &stream, long endPos)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
 
 	const int vers=version();
 	long pos = input->tell();
@@ -1295,8 +1401,8 @@ bool LotusParser::readMacFontName(long endPos)
 	{
 		WPS_DEBUG_MSG(("LotusParser::readMacFontName: the zone size seems bad\n"));
 		f << "###";
-		ascii().addPos(pos-6);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos-6);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 	if (vers<=1)
@@ -1341,8 +1447,8 @@ bool LotusParser::readMacFontName(long endPos)
 			font.m_name=name;
 			m_state->m_fontsMap.insert(std::map<int, LotusParserInternal::Font>::value_type(id,font));
 		}
-		ascii().addPos(pos-6);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos-6);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 
@@ -1369,69 +1475,66 @@ bool LotusParser::readMacFontName(long endPos)
 	input->seek(pos+16, librevenge::RVNG_SEEK_SET);
 	if (input->tell()!=endPos)
 	{
-		ascii().addDelimiter(input->tell(),'|');
+		ascFile.addDelimiter(input->tell(),'|');
 		input->seek(endPos, librevenge::RVNG_SEEK_SET);
 	}
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
-bool LotusParser::readFMTFontName()
+bool LotusParser::readFMTStyleName(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
 
 	long pos = input->tell();
 	int type = (int) libwps::read16(input);
-	if (type!=0xae)
+	if (type!=0xb6)
 	{
-		WPS_DEBUG_MSG(("LotusParser::readFMTFontName: not a font name definition\n"));
+		WPS_DEBUG_MSG(("LotusParser::readFMTStyleName: not a font name definition\n"));
 		return false;
 	}
 	long sz = (long) libwps::readU16(input);
 	long endPos=pos+4+sz;
-	f << "Entries(FontFMTName):";
-	if (sz < 2)
+	if (sz<8)
 	{
-		WPS_DEBUG_MSG(("LotusParser::readFMTFontName: the zone is too short\n"));
-		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		WPS_DEBUG_MSG(("LotusParser::readFMTStyleName: the zone size seems bad\n"));
+		ascFile.addPos(pos);
+		ascFile.addNote("Entries(FMTStyleName):###");
 		return true;
 	}
-	int id=(int) libwps::readU8(input);
-	f << "id=" << id << ",";
-	bool nameOk=true;
-	std::string name("");
-	for (long i=1; i<sz; ++i)
+	f << "Entries(FMTStyleName):";
+	f << "id=" << libwps::readU16(input) << ",";
+	std::string name;
+	for (int i=0; i<6; ++i)
 	{
-		char c=(char) libwps::readU8(input);
-		if (!c) break;
-		if (nameOk && !(c==' ' || (c>='0'&&c<='9') || (c>='a'&&c<='z') || (c>='A'&&c<='Z')))
-		{
-			nameOk=false;
-			WPS_DEBUG_MSG(("LotusParser::readFMTFontName: find odd character in name\n"));
-			f << "#";
-		}
-		name += c;
+		char c=char(libwps::readU8(input));
+		if (c==0) break;
+		name+= c;
 	}
+	f << "title=" << name << ",";
+	input->seek(pos+12, librevenge::RVNG_SEEK_SET);
+	name.clear();
+	for (int i=0; i<sz-8; ++i) name+= char(libwps::readU8(input));
 	f << name << ",";
 	if (input->tell()!=endPos)
 	{
-		WPS_DEBUG_MSG(("LotusParser::readFMTFontName: find extra data\n"));
+		WPS_DEBUG_MSG(("LotusParser::readFMTStyleName: find extra data\n"));
 		f << "###extra";
 		input->seek(endPos, librevenge::RVNG_SEEK_SET);
 	}
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
-bool LotusParser::readLinkZone()
+bool LotusParser::readLinkZone(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
 
 	long pos = input->tell();
 	int type = (int) libwps::read16(input);
@@ -1446,8 +1549,8 @@ bool LotusParser::readLinkZone()
 	{
 		WPS_DEBUG_MSG(("LotusParser::readLinkZone: the zone is too short\n"));
 		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 	type=(int) libwps::read8(input);
@@ -1459,8 +1562,8 @@ bool LotusParser::readLinkZone()
 	{
 		WPS_DEBUG_MSG(("LotusParser::readLinkZone: find unknown type\n"));
 		f << "##type=" << type << ",";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 	// maybe too int
@@ -1516,20 +1619,21 @@ bool LotusParser::readLinkZone()
 	{
 		WPS_DEBUG_MSG(("LotusParser::readLinkZone: the zone seems too short\n"));
 		f << "##";
-		ascii().addDelimiter(input->tell(), '|');
+		ascFile.addDelimiter(input->tell(), '|');
 	}
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
 // ----------------------------------------------------------------------
 // Header/Footer/PageDim
 // ----------------------------------------------------------------------
-bool LotusParser::readDocumentInfoMac(long endPos)
+bool LotusParser::readDocumentInfoMac(LotusParserInternal::LotusStream &stream, long endPos)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
 
 	long pos = input->tell();
 	f << "Entries(DocMacInfo):";
@@ -1537,8 +1641,8 @@ bool LotusParser::readDocumentInfoMac(long endPos)
 	{
 		WPS_DEBUG_MSG(("LotusParser::readDocumentInfoMac: the zone size seems bad\n"));
 		f << "###";
-		ascii().addPos(pos-6);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos-6);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 	int dim[7];
@@ -1589,8 +1693,8 @@ bool LotusParser::readDocumentInfoMac(long endPos)
 		if (val)
 			f << "g" << i << "=" << val << ",";
 	}
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
@@ -1598,11 +1702,11 @@ bool LotusParser::readDocumentInfoMac(long endPos)
 //   chart
 ////////////////////////////////////////////////////////////
 
-bool LotusParser::readChartDefinition()
+bool LotusParser::readChartDefinition(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
-
 	long pos = input->tell();
 	long type = (long) libwps::read16(input);
 	if (type != 0x11)
@@ -1613,12 +1717,12 @@ bool LotusParser::readChartDefinition()
 	long sz = (long) libwps::readU16(input);
 	long endPos=pos+4+sz;
 	f << "Entries(ChartDef):";
-	if (sz != 0xB2)
+	if (sz < 0xB2) // find b2 or b3
 	{
 		WPS_DEBUG_MSG(("LotusParser::readChartDefinition: chart name is too short\n"));
 		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 	f << "id=" << (int) libwps::readU8(input) << ",";
@@ -1636,8 +1740,8 @@ bool LotusParser::readChartDefinition()
 		int val=(int) libwps::read8(input);
 		if (val) f << "f" << i << "=" << val << ",";
 	}
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 
 	pos=input->tell();
 	f.str("");
@@ -1652,24 +1756,24 @@ bool LotusParser::readChartDefinition()
 		int val=(int) libwps::read16(input);
 		if (val) f << "g" << i << "=" << val << ",";
 	}
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 
 	pos=input->tell();
 	f.str("");
 	f << "ChartDef-B:";
 	if (input->tell()!=endPos)
 		input->seek(endPos, librevenge::RVNG_SEEK_SET);
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
-bool LotusParser::readChartName()
+bool LotusParser::readChartName(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
-	RVNGInputStreamPtr input = getInput();
-
 	long pos = input->tell();
 	long type = (long) libwps::read16(input);
 	if (type != 0x12)
@@ -1683,8 +1787,8 @@ bool LotusParser::readChartName()
 	{
 		WPS_DEBUG_MSG(("LotusParser::readChartName: chart name is too short\n"));
 		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 
@@ -1704,10 +1808,10 @@ bool LotusParser::readChartName()
 	{
 		WPS_DEBUG_MSG(("LotusParser::readChartName: the zone seems too short\n"));
 		f << "##";
-		ascii().addDelimiter(input->tell(), '|');
+		ascFile.addDelimiter(input->tell(), '|');
 	}
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 

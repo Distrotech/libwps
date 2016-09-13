@@ -33,6 +33,8 @@
 
 #include <libwps/libwps.h>
 
+#include "helper.h"
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -109,13 +111,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	char const *file=argv[optind];
-	librevenge::RVNGFileStream input(file);
-
-	WPSCreator creator;
+	WPSConfidence confidence;
 	WPSKind kind;
 	bool needCharEncoding;
-	WPSConfidence confidence = WPSDocument::isFileFormatSupported(&input,kind,creator,needCharEncoding);
-	if (confidence == WPS_CONFIDENCE_NONE || (kind != WPS_SPREADSHEET && kind != WPS_DATABASE))
+	shared_ptr<librevenge::RVNGInputStream> input=libwpsHelper::isSupported(file,confidence, kind,needCharEncoding);
+	if (!input || confidence == WPS_CONFIDENCE_NONE || (kind != WPS_SPREADSHEET && kind != WPS_DATABASE))
 	{
 		printf("ERROR: Unsupported file format!\n");
 		return 1;
@@ -126,30 +126,21 @@ int main(int argc, char *argv[])
 	try
 	{
 		librevenge::RVNGTextSpreadsheetGenerator listenerImpl(vec);
-		error= WPSDocument::parse(&input, &listenerImpl, password, encoding);
+		error= WPSDocument::parse(input.get(), &listenerImpl, password, encoding);
 	}
 	catch (...)
 	{
 		error=WPS_PARSE_ERROR;
 	}
 
-	if (error == WPS_ENCRYPTION_ERROR)
-		fprintf(stderr, "ERROR: Encrypted file, bad Password!\n");
-	else if (error == WPS_FILE_ACCESS_ERROR)
-		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == WPS_PARSE_ERROR)
-		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == WPS_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document, but does not contain a Works stream!\n");
-	else if (error != WPS_OK)
-		fprintf(stderr, "ERROR: Unknown Error!\n");
+	if (libwpsHelper::checkErrorAndPrintMessage(error))
+		return 1;
 	else if (vec.empty())
 	{
 		fprintf(stderr, "ERROR: bad output!\n");
-		error = WPS_PARSE_ERROR;
-	}
-	if (error != WPS_OK)
 		return 1;
+	}
+
 	if (!output)
 	{
 		for (unsigned i=0; i<vec.size(); ++i)

@@ -32,6 +32,11 @@
 #include "WPSDebug.h"
 #include "WKSContentListener.h"
 
+namespace LotusParserInternal
+{
+struct LotusStream;
+}
+
 namespace LotusSpreadsheetInternal
 {
 class Cell;
@@ -68,8 +73,6 @@ public:
 	//! set the last spreadsheet number ( default 0)
 	void setLastSpreadsheetId(int id);
 protected:
-	//! return true if the pos is in the file, update the file size if need
-	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
 	//! returns true if some spreadsheet are defined
@@ -94,41 +97,39 @@ protected:
 	//////////////////////// spread sheet //////////////////////////////
 
 	//! reads a sheet name
-	bool readSheetName();
+	bool readSheetName(LotusParserInternal::LotusStream &stream);
 
 	//! reads the columns definitions
-	bool readColumnDefinition();
+	bool readColumnDefinition(LotusParserInternal::LotusStream &stream);
 	//! reads the column sizes ( in char )
-	bool readColumnSizes();
+	bool readColumnSizes(LotusParserInternal::LotusStream &stream);
 	//! reads the row formats
-	bool readRowFormats();
+	bool readRowFormats(LotusParserInternal::LotusStream &stream);
 	//! reads a cell's row format
-	bool readRowFormat(LotusSpreadsheetInternal::Style &style, int &numCell, long endPos);
+	bool readRowFormat(LotusParserInternal::LotusStream &stream, LotusSpreadsheetInternal::Style &style, int &numCell, long endPos);
 	//! reads the row size ( in pt*32 )
-	bool readRowSizes(long endPos);
+	bool readRowSizes(LotusParserInternal::LotusStream &stream, long endPos);
 
 	//! reads a cell
-	bool readCell();
+	bool readCell(LotusParserInternal::LotusStream &stream);
 	//! reads a cell or list of cell name
-	bool readCellName();
+	bool readCellName(LotusParserInternal::LotusStream &stream);
+
+	//! try to read a sheet header: 0xc3
+	bool readSheetHeader(LotusParserInternal::LotusStream &stream);
+	//! try to read an extra row format: 0xc5
+	bool readExtraRowFormats(LotusParserInternal::LotusStream &stream);
 
 	// data in formula
 
 	/* reads a cell */
-	bool readCell(int sId, bool isList, WKSContentListener::FormulaInstruction &instr);
+	bool readCell(LotusParserInternal::LotusStream &stream, int sId, bool isList, WKSContentListener::FormulaInstruction &instr);
 	/* reads a formula */
-	bool readFormula(long endPos, int sId, bool newFormula,
+	bool readFormula(LotusParserInternal::LotusStream &stream, long endPos, int sId, bool newFormula,
 	                 std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error);
 private:
 	LotusSpreadsheet(LotusSpreadsheet const &orig);
 	LotusSpreadsheet &operator=(LotusSpreadsheet const &orig);
-	//! returns the debug file
-	libwps::DebugFile &ascii()
-	{
-		return m_asciiFile;
-	}
-	/** the input */
-	RVNGInputStreamPtr m_input;
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the main parser
 	LotusParser &m_mainParser;
@@ -136,8 +137,6 @@ private:
 	shared_ptr<LotusStyleManager> m_styleManager;
 	//! the internal state
 	shared_ptr<LotusSpreadsheetInternal::State> m_state;
-	//! the ascii file
-	libwps::DebugFile &m_asciiFile;
 };
 
 #endif /* LOTUS_SPREAD_SHEET_H */

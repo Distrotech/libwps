@@ -32,6 +32,11 @@
 #include "WPSDebug.h"
 #include "WKSContentListener.h"
 
+namespace LotusParserInternal
+{
+struct LotusStream;
+}
+
 namespace LotusGraphInternal
 {
 struct Zone;
@@ -65,8 +70,6 @@ public:
 		m_listener = listen;
 	}
 protected:
-	//! return true if the pos is in the file, update the file size if need
-	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
 
@@ -77,7 +80,7 @@ protected:
 	//! try to send a picture
 	void sendPicture(LotusGraphInternal::Zone const &zone);
 	//! try to send a textbox content's
-	void sendTextBox(WPSEntry const &entry);
+	void sendTextBox(RVNGInputStreamPtr &input, libwps::DebugFile &ascFile, WPSEntry const &entry);
 
 	//
 	// low level
@@ -86,26 +89,19 @@ protected:
 	// ////////////////////// zone //////////////////////////////
 
 	//! reads a begin graphic zone
-	bool readZoneBegin(long endPos);
+	bool readZoneBegin(LotusParserInternal::LotusStream &stream, long endPos);
 	//! reads a graphic zone
-	bool readZoneData(long endPos, int type);
+	bool readZoneData(LotusParserInternal::LotusStream &stream, long endPos, int type);
 	//! reads a graphic textbox data
-	bool readTextBoxData(long endPos);
+	bool readTextBoxData(LotusParserInternal::LotusStream &stream, long endPos);
 	//! reads a picture definition
-	bool readPictureDefinition(long endPos);
+	bool readPictureDefinition(LotusParserInternal::LotusStream &stream, long endPos);
 	//! reads a picture data
-	bool readPictureData(long endPos);
+	bool readPictureData(LotusParserInternal::LotusStream &stream, long endPos);
 
 private:
 	LotusGraph(LotusGraph const &orig);
 	LotusGraph &operator=(LotusGraph const &orig);
-	//! returns the debug file
-	libwps::DebugFile &ascii()
-	{
-		return m_asciiFile;
-	}
-	/** the input */
-	RVNGInputStreamPtr m_input;
 	shared_ptr<WKSContentListener> m_listener; /** the listener (if set)*/
 	//! the main parser
 	LotusParser &m_mainParser;
@@ -113,8 +109,6 @@ private:
 	shared_ptr<LotusStyleManager> m_styleManager;
 	//! the internal state
 	shared_ptr<LotusGraphInternal::State> m_state;
-	//! the ascii file
-	libwps::DebugFile &m_asciiFile;
 };
 
 #endif /* LOTUS_GRAPH_H */

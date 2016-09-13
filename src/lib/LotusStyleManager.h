@@ -31,6 +31,11 @@
 
 #include "WPSDebug.h"
 
+namespace LotusParserInternal
+{
+struct LotusStream;
+}
+
 namespace LotusStyleManagerInternal
 {
 struct State;
@@ -71,8 +76,6 @@ public:
 	//! update style using graphic id
 	bool updateGraphicStyle(int graphicId, WPSGraphicStyle &style) const;
 protected:
-	//! return true if the pos is in the file, update the file size if need
-	bool checkFilePosition(long pos);
 	//! return the file version
 	int version() const;
 
@@ -81,17 +84,26 @@ protected:
 	//
 
 	//! reads a cell style
-	bool readCellStyle(long endPos);
+	bool readCellStyle(LotusParserInternal::LotusStream &stream, long endPos);
 	//! reads a color style
-	bool readColorStyle(long endPos);
+	bool readColorStyle(LotusParserInternal::LotusStream &stream, long endPos);
 	//! reads a font style
-	bool readFontStyle(long endPos);
+	bool readFontStyle(LotusParserInternal::LotusStream &stream, long endPos);
 	//! reads a format style
-	bool readFormatStyle(long endPos);
+	bool readFormatStyle(LotusParserInternal::LotusStream &stream, long endPos);
 	//! reads a line style
-	bool readLineStyle(long endPos, int vers);
+	bool readLineStyle(LotusParserInternal::LotusStream &stream, long endPos, int vers);
 	//! reads a graphic style
-	bool readGraphicStyle(long endPos);
+	bool readGraphicStyle(LotusParserInternal::LotusStream &stream, long endPos);
+
+	// old fmt style
+
+	//! reads a format font name: zones 0xae
+	bool readFMTFontName(LotusParserInternal::LotusStream &stream);
+	//! reads a format font sizes zones 0xaf and 0xb1
+	bool readFMTFontSize(LotusParserInternal::LotusStream &stream);
+	//! reads a format font id zone: 0xb0
+	bool readFMTFontId(LotusParserInternal::LotusStream &stream);
 
 	//! update style using color id for defining shadow
 	bool updateShadowStyle(int colorId, WPSGraphicStyle &style) const;
@@ -99,19 +111,10 @@ protected:
 private:
 	LotusStyleManager(LotusStyleManager const &orig);
 	LotusStyleManager &operator=(LotusStyleManager const &orig);
-	//! returns the debug file
-	libwps::DebugFile &ascii()
-	{
-		return m_asciiFile;
-	}
-	/** the input */
-	RVNGInputStreamPtr m_input;
 	//! the main parser
 	LotusParser &m_mainParser;
 	//! the internal state
 	shared_ptr<LotusStyleManagerInternal::State> m_state;
-	//! the ascii file
-	libwps::DebugFile &m_asciiFile;
 };
 
 #endif /* LOTUS_STYLE_MANAGER_H */

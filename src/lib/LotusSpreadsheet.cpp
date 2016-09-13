@@ -81,6 +81,21 @@ struct Style : public WPSCellFormat
 	std::string m_extra;
 };
 
+//! the extra style
+struct ExtraStyle
+{
+	//! constructor
+	ExtraStyle() : m_format(0), m_flag(0), m_borders(0)
+	{
+	}
+	//! the format
+	int m_format;
+	//! the second flag: merge
+	int m_flag;
+	//! the border
+	int m_borders;
+};
+
 //! a class used to store the styles of a row in LotusSpreadsheet
 struct RowStyles
 {
@@ -90,6 +105,17 @@ struct RowStyles
 	}
 	//! a map Vec2i(minCol,maxCol) to style
 	std::map<Vec2i, Style> m_colsToStyleMap;
+};
+
+//! a class used to store the extra style of a row in LotusSpreadsheet
+struct ExtraRowStyles
+{
+	//! constructor
+	ExtraRowStyles() : m_colsToStyleMap()
+	{
+	}
+	//! a map Vec2i(minCol,maxCol) to style
+	std::map<Vec2i, ExtraStyle> m_colsToStyleMap;
 };
 
 //! a list of position of a Lotus spreadsheet
@@ -118,8 +144,9 @@ class Cell : public WPSCell
 {
 public:
 	/// constructor
-	Cell() : m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content(), m_comment() { }
-
+	Cell() : m_input(), m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content(), m_comment() { }
+	/// constructor
+	Cell(RVNGInputStreamPtr input) : m_input(input), m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content(), m_comment() { }
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
 
@@ -137,6 +164,8 @@ public:
 		return false;
 	}
 
+	//! the input
+	RVNGInputStreamPtr m_input;
 	//! the style
 	int m_styleId;
 	//! the horizontal align (in dos file)
@@ -181,13 +210,14 @@ public:
 	//! a constructor
 	Spreadsheet() : m_name(""), m_numCols(0), m_numRows(0), m_boundsColsMap(),
 		m_widthColsInChar(), m_rowHeightMap(), m_heightDefault(16),
-		m_rowPageBreaksList(), m_positionToCellMap(), m_rowToStyleIdMap() {}
+		m_rowPageBreaksList(), m_positionToCellMap(), m_rowToStyleIdMap(),
+		m_rowToExtraStyleMap() {}
 	//! return a cell corresponding to a spreadsheet, create one if needed
-	Cell &getCell(Vec2i const &pos)
+	Cell &getCell(RVNGInputStreamPtr input, Vec2i const &pos)
 	{
 		if (m_positionToCellMap.find(pos)==m_positionToCellMap.end())
 		{
-			Cell cell;
+			Cell cell(input);
 			cell.setPosition(pos);
 			m_positionToCellMap[pos]=cell;
 		}
@@ -309,14 +339,17 @@ public:
 	std::map<Vec2i, Cell> m_positionToCellMap;
 	//! map Vec2i(min row, max row) to state row style id
 	std::map<Vec2i,size_t> m_rowToStyleIdMap;
+	//! map row to extra style
+	std::map<int,ExtraRowStyles> m_rowToExtraStyleMap;
 };
 
 //! the state of LotusSpreadsheet
 struct State
 {
 	//! constructor
-	State() :  m_eof(-1), m_version(-1), m_spreadsheetList(), m_nameToCellsMap(),
-		m_rowStylesList(), m_rowSheetIdToStyleIdMap(), m_rowSheetIdToChildRowIdMap()
+	State() :  m_version(-1), m_spreadsheetList(), m_nameToCellsMap(),
+		m_rowStylesList(), m_rowSheetIdToStyleIdMap(), m_rowSheetIdToChildRowIdMap(),
+		m_sheetCurrentId(-1)
 	{
 		m_spreadsheetList.resize(1);
 	}
@@ -345,8 +378,6 @@ struct State
 		name.sprintf("Sheet%d", id+1);
 		return name;
 	}
-	//! the last file position
-	long m_eof;
 	//! the file version
 	int m_version;
 	//! the list of spreadsheet ( first: main spreadsheet, other report spreadsheet )
@@ -359,16 +390,17 @@ struct State
 	std::map<Vec2i,size_t> m_rowSheetIdToStyleIdMap;
 	//! map Vec2i(row, sheetId) to child style
 	std::multimap<Vec2i,Vec2i> m_rowSheetIdToChildRowIdMap;
+	//! the sheet id
+	int m_sheetCurrentId;
 };
 
 }
 
 // constructor, destructor
 LotusSpreadsheet::LotusSpreadsheet(LotusParser &parser) :
-	m_input(parser.getInput()), m_listener(), m_mainParser(parser), m_styleManager(parser.m_styleManager),
-	m_state(new LotusSpreadsheetInternal::State), m_asciiFile(parser.ascii())
+	m_listener(), m_mainParser(parser), m_styleManager(parser.m_styleManager),
+	m_state(new LotusSpreadsheetInternal::State)
 {
-	m_state.reset(new LotusSpreadsheetInternal::State);
 }
 
 LotusSpreadsheet::~LotusSpreadsheet()
@@ -467,18 +499,6 @@ int LotusSpreadsheet::version() const
 	return m_state->m_version;
 }
 
-bool LotusSpreadsheet::checkFilePosition(long pos)
-{
-	if (m_state->m_eof < 0)
-	{
-		long actPos = m_input->tell();
-		m_input->seek(0, librevenge::RVNG_SEEK_END);
-		m_state->m_eof=m_input->tell();
-		m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
-	}
-	return pos <= m_state->m_eof;
-}
-
 bool LotusSpreadsheet::hasSomeSpreadsheetData() const
 {
 	for (size_t i=0; i<m_state->m_spreadsheetList.size(); ++i)
@@ -495,34 +515,36 @@ bool LotusSpreadsheet::hasSomeSpreadsheetData() const
 ////////////////////////////////////////////////////////////
 //   parse sheet data
 ////////////////////////////////////////////////////////////
-bool LotusSpreadsheet::readColumnDefinition()
+bool LotusSpreadsheet::readColumnDefinition(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
-	long type = (long) libwps::read16(m_input);
+	long pos = input->tell();
+	long type = (long) libwps::read16(input);
 	if (type != 0x1f)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readColumnDefinition: not a column definition\n"));
 		return false;
 	}
-	long sz = (long) libwps::readU16(m_input);
+	long sz = (long) libwps::readU16(input);
 	f << "Entries(ColDef):";
 	if (sz<8 || (sz%4))
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readColumnDefinition: the zone is too short\n"));
 		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
-	int sheetId=(int) libwps::readU8(m_input);
+	int sheetId=(int) libwps::readU8(input);
 	f << "sheet[id]=" << sheetId << ",";
-	int col=(int) libwps::readU8(m_input);
+	int col=(int) libwps::readU8(input);
 	f << "col=" << col << ",";
-	int N=(int) libwps::readU8(m_input);
+	int N=(int) libwps::readU8(input);
 	if (N!=1) f << "N=" << N << ",";
-	int val=(int) libwps::readU8(m_input); // between 0 and 94
+	int val=(int) libwps::readU8(input); // between 0 and 94
 	if (val) f << "f0=" << val << ",";
 	if (sz!=4+4*N)
 	{
@@ -532,8 +554,8 @@ bool LotusSpreadsheet::readColumnDefinition()
 			N=1;
 		else
 		{
-			ascii().addPos(pos);
-			ascii().addNote(f.str().c_str());
+			ascFile.addPos(pos);
+			ascFile.addNote(f.str().c_str());
 			return true;
 		}
 	}
@@ -541,7 +563,7 @@ bool LotusSpreadsheet::readColumnDefinition()
 	for (int n=0; n<N; ++n)
 	{
 		int rowPos[2];
-		for (int i=0; i<2; ++i) rowPos[i]=(int) libwps::readU16(m_input);
+		for (int i=0; i<2; ++i) rowPos[i]=(int) libwps::readU16(input);
 		if (n==0)
 			bound=Vec2i(rowPos[0], rowPos[1]);
 		else
@@ -569,33 +591,35 @@ bool LotusSpreadsheet::readColumnDefinition()
 		else
 			sheet.m_boundsColsMap[col]=bound;
 	}
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
-bool LotusSpreadsheet::readColumnSizes()
+bool LotusSpreadsheet::readColumnSizes(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
-	long type = (long) libwps::read16(m_input);
+	long pos = input->tell();
+	long type = (long) libwps::read16(input);
 	if (type != 0x7)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readColumnSizes: not a column size name\n"));
 		return false;
 	}
-	long sz = (long) libwps::readU16(m_input);
+	long sz = (long) libwps::readU16(input);
 	f << "Entries(ColSize):";
 	if (sz < 4 || (sz%2))
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readColumnSizes: the zone is too odd\n"));
 		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
-	int sheetId=(int) libwps::readU8(m_input);
+	int sheetId=(int) libwps::readU8(input);
 	f << "id[sheet]=" << sheetId << ",";
 	LotusSpreadsheetInternal::Spreadsheet empty, *sheet=0;
 	if (sheetId<0||sheetId>=int(m_state->m_spreadsheetList.size()))
@@ -606,50 +630,52 @@ bool LotusSpreadsheet::readColumnSizes()
 	}
 	else
 		sheet=&m_state->m_spreadsheetList[size_t(sheetId)];
-	int val=(int) libwps::readU8(m_input); // always 0?
+	int val=(int) libwps::readU8(input); // always 0?
 	if (val) f << "f0=" << val << ",";
-	f << "f1=" << std::hex << libwps::readU16(m_input) << std::dec << ","; // big number
+	f << "f1=" << std::hex << libwps::readU16(input) << std::dec << ","; // big number
 	int N=int((sz-4)/2);
 	f << "widths=[";
 	for (int i=0; i<N; ++i)
 	{
-		int col=(int)libwps::readU8(m_input);
-		int width=(int)libwps::readU8(m_input); // width in char, default 12...
+		int col=(int)libwps::readU8(input);
+		int width=(int)libwps::readU8(input); // width in char, default 12...
 		sheet->setColumnWidthInChar(col, width);
 		f << width << "C:col" << col << ",";
 	}
 	f << "],";
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 
 	return true;
 }
 
-bool LotusSpreadsheet::readRowFormats()
+bool LotusSpreadsheet::readRowFormats(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
-	long type = (long) libwps::read16(m_input);
+	long pos = input->tell();
+	long type = (long) libwps::read16(input);
 	if (type != 0x13)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: not a row definition\n"));
 		return false;
 	}
-	long sz = (long) libwps::readU16(m_input);
+	long sz = (long) libwps::readU16(input);
 	long endPos = pos+4+sz;
 	f << "Entries(RowFormat):";
 	if (sz<8)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the zone is too short\n"));
 		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
-	int sheetId=(int) libwps::readU8(m_input);
-	int rowType=(int) libwps::readU8(m_input);
-	int row=int(libwps::readU16(m_input));
+	int sheetId=(int) libwps::readU8(input);
+	int rowType=(int) libwps::readU8(input);
+	int row=int(libwps::readU16(input));
 	int val;
 	f << "sheet[id]=" << sheetId << ",";
 	if (row) f << "row=" << row << ",";
@@ -664,11 +690,11 @@ bool LotusSpreadsheet::readRowFormats()
 		int actCell=0;
 		LotusSpreadsheetInternal::RowStyles &stylesList=m_state->m_rowStylesList.back();
 		f << "[";
-		while (m_input->tell()<endPos)
+		while (input->tell()<endPos)
 		{
 			int numCell;
 			LotusSpreadsheetInternal::Style style(m_mainParser.getDefaultFontType());
-			if (!readRowFormat(style, numCell, endPos))
+			if (!readRowFormat(stream, style, numCell, endPos))
 			{
 				f << "###";
 				WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: find extra data\n"));
@@ -703,7 +729,7 @@ bool LotusSpreadsheet::readRowFormats()
 		}
 		for (int i=0; i<8; ++i)  // f0=0|32|41|71|7e|fe,f1=0|1|40|50|c0, f2=0|4|5|b|41, f3=0|40|54|5c, f4=27, other 0
 		{
-			val=(int) libwps::readU8(m_input);
+			val=(int) libwps::readU8(input);
 			if (val)
 				f << "f" << i << "=" << std::hex << val << std::dec << ",";
 		}
@@ -717,13 +743,13 @@ bool LotusSpreadsheet::readRowFormats()
 			f << "###sz,";
 			break;
 		}
-		int sheetId2=(int) libwps::readU8(m_input);
+		int sheetId2=(int) libwps::readU8(input);
 		if (sheetId2!=sheetId)
 			f << "#sheetId2=" << sheetId2 << ",";
-		val=(int) libwps::readU8(m_input); // always 0?
+		val=(int) libwps::readU8(input); // always 0?
 		if (val)
 			f << "f0=" << val << ",";
-		val=int (libwps::readU16(m_input));
+		val=int (libwps::readU16(input));
 		if (val>=row)
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the original row seems bad\n"));
@@ -739,22 +765,23 @@ bool LotusSpreadsheet::readRowFormats()
 		f << "###type=" << rowType << ",";
 		break;
 	}
-	if (m_input->tell()!=endPos)
+	if (input->tell()!=endPos)
 	{
-		ascii().addDelimiter(m_input->tell(),'|');
-		m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
+		ascFile.addDelimiter(input->tell(),'|');
+		input->seek(endPos, librevenge::RVNG_SEEK_SET);
 	}
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
-bool LotusSpreadsheet::readRowFormat(LotusSpreadsheetInternal::Style &style, int &numCell, long endPos)
+bool LotusSpreadsheet::readRowFormat(LotusParserInternal::LotusStream &stream, LotusSpreadsheetInternal::Style &style, int &numCell, long endPos)
 {
 	numCell=1;
 
+	RVNGInputStreamPtr &input=stream.m_input;
 	libwps::DebugStream f;
-	long actPos=m_input->tell();
+	long actPos=input->tell();
 	if (endPos-actPos<4)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the zone seems too short\n"));
@@ -763,18 +790,18 @@ bool LotusSpreadsheet::readRowFormat(LotusSpreadsheetInternal::Style &style, int
 
 	int value[3];
 	for (int i=0; i<3; ++i)
-		value[i]=(i==1) ? (int) libwps::readU16(m_input) : (int) libwps::readU8(m_input);
+		value[i]=(i==1) ? (int) libwps::readU16(input) : (int) libwps::readU8(input);
 	WPSFont font;
 	if (value[2]&0x80)
 	{
 		if (actPos+5>endPos)
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readRowFormats: the zone seems too short\n"));
-			m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
+			input->seek(actPos, librevenge::RVNG_SEEK_SET);
 			return false;
 		}
 		value[2]&=0x7F;
-		numCell=1+(int) libwps::readU8(m_input);
+		numCell=1+(int) libwps::readU8(input);
 	}
 	if ((value[0]&0x80)==0)
 		f << "protected?,";
@@ -931,23 +958,25 @@ bool LotusSpreadsheet::readRowFormat(LotusSpreadsheetInternal::Style &style, int
 	return true;
 }
 
-bool LotusSpreadsheet::readRowSizes(long endPos)
+bool LotusSpreadsheet::readRowSizes(LotusParserInternal::LotusStream &stream, long endPos)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
+	long pos = input->tell();
 	long sz=endPos-pos;
 	f << "Entries(RowSize):";
 	if (sz<10 || (sz%8)!=2)
 	{
 		WPS_DEBUG_MSG(("LotusParser::readRowSizes: the zone size seems bad\n"));
 		f << "###";
-		ascii().addPos(pos-6);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos-6);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 
-	int sheetId=(int) libwps::readU8(m_input);
+	int sheetId=(int) libwps::readU8(input);
 	f << "id[sheet]=" << sheetId << ",";
 	LotusSpreadsheetInternal::Spreadsheet empty, *sheet=0;
 	if (sheetId<0||sheetId>=int(m_state->m_spreadsheetList.size()))
@@ -958,78 +987,80 @@ bool LotusSpreadsheet::readRowSizes(long endPos)
 	}
 	else
 		sheet=&m_state->m_spreadsheetList[size_t(sheetId)];
-	int val=(int) libwps::readU8(m_input);  // always 0
+	int val=(int) libwps::readU8(input);  // always 0
 	if (val) f << "f0=" << val << ",";
-	ascii().addPos(pos-6);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
 	int N=int(sz/8);
 	for (int i=0; i<N; ++i)
 	{
-		pos=m_input->tell();
+		pos=input->tell();
 		f.str("");
 		f << "RowSize-" << i << ":";
-		int row=(int) libwps::readU16(m_input);
+		int row=(int) libwps::readU16(input);
 		f << "row=" << row << ",";
-		val=(int) libwps::readU16(m_input);
+		val=(int) libwps::readU16(input);
 		f << "dim=" << float(val+31)/32.f << ",";
 		sheet->setRowHeight(row, int((val+31)/32));
 		for (int j=0; j<2; ++j)
 		{
-			val=(int) libwps::read16(m_input);
+			val=(int) libwps::read16(input);
 			if (val!=j-1)
 				f << "f" << j << "=" << val <<",";
 		}
-		m_input->seek(pos+8, librevenge::RVNG_SEEK_SET);
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		input->seek(pos+8, librevenge::RVNG_SEEK_SET);
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 	}
 
 	return true;
 }
 
-bool LotusSpreadsheet::readSheetName()
+bool LotusSpreadsheet::readSheetName(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
-	long type = (long) libwps::read16(m_input);
+	long pos = input->tell();
+	long type = (long) libwps::read16(input);
 	if (type != 0x23)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readSheetName: not a sheet name\n"));
 		return false;
 	}
-	long sz = (long) libwps::readU16(m_input);
+	long sz = (long) libwps::readU16(input);
 	f << "Entries(SheetName):";
 	if (sz < 5)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readSheetName: sheet name is too short\n"));
 		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
-	int val=(int) libwps::read16(m_input); // always 14000
+	int val=(int) libwps::read16(input); // always 14000
 	if (val!=14000)
 		f << "f0=" << std::hex << val << std::dec << ",";
-	int sheetId=(int) libwps::readU8(m_input);
+	int sheetId=(int) libwps::readU8(input);
 	f << "id[sheet]=" << sheetId << ",";
-	val=(int) libwps::readU8(m_input); // always 0
+	val=(int) libwps::readU8(input); // always 0
 	if (val)
 		f << "f1=" << val << ",";
 	librevenge::RVNGString name("");
 	libwps_tools_win::Font::Type fontType=m_mainParser.getDefaultFontType();
 	for (int i = 0; i < sz-4; i++)
 	{
-		unsigned char c = libwps::readU8(m_input);
+		unsigned char c = libwps::readU8(input);
 		if (c == '\0') break;
 		libwps::appendUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType), name);
 	}
 	f << name.cstr() << ",";
-	if (m_input->tell()!=pos+4+sz && m_input->tell()+1!=pos+4+sz)
+	if (input->tell()!=pos+4+sz && input->tell()+1!=pos+4+sz)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readSheetName: the zone seems too short\n"));
 		f << "##";
-		ascii().addDelimiter(m_input->tell(), '|');
+		ascFile.addDelimiter(input->tell(), '|');
 	}
 	if (sheetId<0||sheetId>=m_state->getNumSheet())
 	{
@@ -1038,54 +1069,176 @@ bool LotusSpreadsheet::readSheetName()
 	}
 	else
 		m_state->getSheet(sheetId).m_name=name;
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
+bool LotusSpreadsheet::readSheetHeader(LotusParserInternal::LotusStream &stream)
+{
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	long type = long(libwps::read16(input));
+	if (type!=0xc3)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readSheetHeader: not a sheet header\n"));
+		return false;
+	}
+	long sz = long(libwps::readU16(input));
+	f << "Entries(SheetId):";
+	if (sz != 0x22)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readSheetHeader: the zone size seems bad\n"));
+		f << "###";
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+		return true;
+	}
+	int id=int(libwps::read16(input));
+	if (id<0)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readSheetHeader: the id seems bad\n"));
+		f << "###";
+		m_state->m_sheetCurrentId=-1;
+	}
+	else
+		m_state->m_sheetCurrentId=id;
+	f << "id=" << id << ",";
+	for (int i=0; i<16; ++i)   // always 0
+	{
+		int val=int(libwps::read16(input));
+		if (val) f << "f" << i << "=" << val << ",";
+	}
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusSpreadsheet::readExtraRowFormats(LotusParserInternal::LotusStream &stream)
+{
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	long type = long(libwps::read16(input));
+	if (type!=0xc5)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readExtraRowFormats: not a sheet header\n"));
+		return false;
+	}
+	long sz = long(libwps::readU16(input));
+	f << "Entries(FMTRowForm):";
+	if (sz < 9 || (sz%5)!=4)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readExtraRowFormats: the zone size seems bad\n"));
+		f << "###";
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+		return true;
+	}
+	int row=int(libwps::readU16(input));
+	f << "row=" << row << ",";
+	f << "height=" << std::hex << libwps::readU16(input) << ",";
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
+
+	LotusSpreadsheetInternal::Spreadsheet &sheet=m_state->getSheet(m_state->m_sheetCurrentId);
+	LotusSpreadsheetInternal::ExtraRowStyles badRow;
+	LotusSpreadsheetInternal::ExtraRowStyles *rowStyles=&badRow;
+	if (sheet.m_rowToExtraStyleMap.find(row)==sheet.m_rowToExtraStyleMap.end())
+	{
+		sheet.m_rowToExtraStyleMap[row]=LotusSpreadsheetInternal::ExtraRowStyles();
+		rowStyles=&sheet.m_rowToExtraStyleMap.find(row)->second;
+	}
+	else
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readExtraRowFormats: row %d is already defined\n", row));
+	}
+	int N=int(sz/5);
+	int begPos=0;
+	for (int i=0; i<N; ++i)
+	{
+		pos=input->tell();
+		f.str("");
+		f << "FMTRowForm-" << i << ":";
+		LotusSpreadsheetInternal::ExtraStyle style;
+		int val=style.m_format=int(libwps::readU8(input));
+		if (val&0x8) f << "bold,";
+		if (val&0x10) f << "italic,";
+		if (val&0x20) f << "underline,";
+		val &= 0xC7;
+		if (val) f << "fl=" << std::hex << val << std::dec << ",";
+		style.m_flag=val=int(libwps::readU8(input));
+		if (val&0x20) f << "merged,";
+		val &= 0xDF;
+		if (val) f << "fl1=" << std::hex << val << std::dec << ",";
+		val=int(libwps::readU8(input));
+		if (val) f << "f0=" << val << ",";
+		style.m_borders=val=int(libwps::readU8(input));
+		if (val) f << "border=" << std::hex << val << std::dec << ",";
+		val=int(libwps::readU8(input));
+		if (val) f << "dup=" << val << ",";
+		rowStyles->m_colsToStyleMap[Vec2i(begPos, begPos+val)]=style;
+		begPos+=1+val;
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+		input->seek(pos+5, librevenge::RVNG_SEEK_SET);
+	}
+	if (begPos!=256)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readExtraRowFormats: the number of columns for row %d seems bad\n", row));
+	}
+	return true;
+}
 ////////////////////////////////////////////////////////////
 // Cell
 ////////////////////////////////////////////////////////////
-bool LotusSpreadsheet::readCellName()
+bool LotusSpreadsheet::readCellName(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
-	long type = (long) libwps::read16(m_input);
+	long pos = input->tell();
+	long type = (long) libwps::read16(input);
 	if (type!=9)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readCellName: not a cell name cell\n"));
 		return false;
 	}
-	long sz = (long) libwps::readU16(m_input);
+	long sz = (long) libwps::readU16(input);
 	long endPos=pos+4+sz;
 	f << "Entries(CellName):";
 	if (sz < 0x1a)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readCellName: the zone is too short\n"));
 		f << "###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
-	int val=(int) libwps::read16(m_input); // 0 or 1
+	int val=(int) libwps::read16(input); // 0 or 1
 	if (val)
 		f << "f0=" << val << ",";
 	std::string name("");
 	for (int i=0; i<16; ++i)
 	{
-		char c=(char) libwps::readU8(m_input);
+		char c=(char) libwps::readU8(input);
 		if (!c) break;
 		name += c;
 	}
 	f << name << ",";
-	m_input->seek(pos+4+18, librevenge::RVNG_SEEK_SET);
+	input->seek(pos+4+18, librevenge::RVNG_SEEK_SET);
 	LotusSpreadsheetInternal::CellsList cells;
 	for (int i=0; i<2; ++i)
 	{
-		int row=(int) libwps::readU16(m_input);
-		int sheetId=(int) libwps::readU8(m_input);
-		int col=(int) libwps::readU8(m_input);
+		int row=(int) libwps::readU16(input);
+		int sheetId=(int) libwps::readU8(input);
+		int col=(int) libwps::readU8(input);
 		if (i==0)
 			cells.m_positions.setMin(Vec2i(col,row));
 		else
@@ -1107,29 +1260,31 @@ bool LotusSpreadsheet::readCellName()
 	else
 		m_state->m_nameToCellsMap[name]=cells;
 	std::string note("");
-	int remain=int(endPos-m_input->tell());
+	int remain=int(endPos-input->tell());
 	for (int i=0; i<remain; ++i)
 	{
-		char c=(char) libwps::readU8(m_input);
+		char c=(char) libwps::readU8(input);
 		if (!c) break;
 		note+=c;
 	}
 	if (!note.empty())
 		f << "note=" << note << ",";
-	if (m_input->tell()!=endPos)
-		ascii().addDelimiter(m_input->tell(),'|');
+	if (input->tell()!=endPos)
+		ascFile.addDelimiter(input->tell(),'|');
 
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 
-bool LotusSpreadsheet::readCell()
+bool LotusSpreadsheet::readCell(LotusParserInternal::LotusStream &stream)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	libwps::DebugStream f;
 
-	long pos = m_input->tell();
-	long type = (long) libwps::read16(m_input);
+	long pos = input->tell();
+	long type = (long) libwps::read16(input);
 	std::string what("");
 	if (type == 0x16)
 		what="TextCell";
@@ -1155,19 +1310,19 @@ bool LotusSpreadsheet::readCell()
 		return false;
 	}
 
-	long sz = (long) libwps::readU16(m_input);
+	long sz = (long) libwps::readU16(input);
 	if (sz < 5)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: the zone is too short\n"));
 		f << "Entries(" << what << "):###";
-		ascii().addPos(pos);
-		ascii().addNote(f.str().c_str());
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
 		return true;
 	}
 	long endPos=pos+4+sz;
-	int row=(int) libwps::readU16(m_input);
-	int sheetId=(int) libwps::readU8(m_input);
-	int col=(int) libwps::readU8(m_input);
+	int row=(int) libwps::readU16(input);
+	int sheetId=(int) libwps::readU8(input);
+	int col=(int) libwps::readU8(input);
 	if (sheetId) f << "sheet[id]=" << sheetId << ",";
 
 	LotusSpreadsheetInternal::Spreadsheet empty, *sheet=0;
@@ -1180,7 +1335,7 @@ bool LotusSpreadsheet::readCell()
 	else
 		sheet=&m_state->m_spreadsheetList[size_t(sheetId)];
 
-	LotusSpreadsheetInternal::Cell &cell=sheet->getCell(Vec2i(col, row));
+	LotusSpreadsheetInternal::Cell &cell=sheet->getCell(stream.m_input, Vec2i(col, row));
 	switch (type)
 	{
 	case 0x16:
@@ -1188,10 +1343,10 @@ bool LotusSpreadsheet::readCell()
 	case 0x26:   // comment
 	{
 		std::string text("");
-		long begText=m_input->tell();
+		long begText=input->tell();
 		for (int i=4; i<sz; ++i)
 		{
-			char c=(char) libwps::readU8(m_input);
+			char c=(char) libwps::readU8(input);
 			if (!c) break;
 			text += c;
 		}
@@ -1229,7 +1384,7 @@ bool LotusSpreadsheet::readCell()
 			f << "###type";
 		}
 
-		if (m_input->tell()!=endPos && m_input->tell()+1!=endPos)
+		if (input->tell()!=endPos && input->tell()+1!=endPos)
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: the string zone seems too short\n"));
 			f << "###";
@@ -1245,7 +1400,7 @@ bool LotusSpreadsheet::readCell()
 		}
 		double res;
 		bool isNaN;
-		if (!libwps::readDouble10(m_input, res, isNaN))
+		if (!libwps::readDouble10(input, res, isNaN))
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: can read a double10 zone\n"));
 			f << "###";
@@ -1265,7 +1420,7 @@ bool LotusSpreadsheet::readCell()
 		}
 		double res;
 		bool isNaN;
-		if (!libwps::readDouble2Inv(m_input, res, isNaN))
+		if (!libwps::readDouble2Inv(input, res, isNaN))
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: can read a uint16 zone\n"));
 			f << "###";
@@ -1285,7 +1440,7 @@ bool LotusSpreadsheet::readCell()
 		}
 		double res;
 		bool isNaN;
-		if (!libwps::readDouble10(m_input, res, isNaN))
+		if (!libwps::readDouble10(input, res, isNaN))
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: can read double10+formula for zone\n"));
 			f << "###";
@@ -1293,17 +1448,17 @@ bool LotusSpreadsheet::readCell()
 		}
 		cell.m_content.m_contentType=WKSContentListener::CellContent::C_FORMULA;
 		cell.m_content.setValue(res);
-		ascii().addDelimiter(m_input->tell(),'|');
+		ascFile.addDelimiter(input->tell(),'|');
 		std::string error;
-		if (!readFormula(endPos, sheetId, false, cell.m_content.m_formula, error))
+		if (!readFormula(stream, endPos, sheetId, false, cell.m_content.m_formula, error))
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
-			ascii().addDelimiter(m_input->tell()-1, '#');
+			ascFile.addDelimiter(input->tell()-1, '#');
 			if (error.length()) f << error;
 			break;
 		}
 		if (error.length()) f << error;
-		if (m_input->tell()+1>=endPos)
+		if (input->tell()+1>=endPos)
 			break;
 		static bool first=true;
 		if (first)
@@ -1313,8 +1468,8 @@ bool LotusSpreadsheet::readCell()
 		}
 		// find in one file "Formula failed to convert"
 		error="";
-		int remain=int(endPos-m_input->tell());
-		for (int i=0; i<remain; ++i) error += (char) libwps::readU8(m_input);
+		int remain=int(endPos-input->tell());
+		for (int i=0; i<remain; ++i) error += (char) libwps::readU8(input);
 		f << "#err[msg]=" << error << ",";
 		break;
 	}
@@ -1327,7 +1482,7 @@ bool LotusSpreadsheet::readCell()
 		}
 		double res;
 		bool isNaN;
-		if (!libwps::readDouble4Inv(m_input, res, isNaN))
+		if (!libwps::readDouble4Inv(input, res, isNaN))
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: can read a uint32 zone\n"));
 			f << "###";
@@ -1347,7 +1502,7 @@ bool LotusSpreadsheet::readCell()
 		}
 		double res;
 		bool isNaN;
-		if (!libwps::readDouble8(m_input, res, isNaN))
+		if (!libwps::readDouble8(input, res, isNaN))
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: can read a double8 zone\n"));
 			f << "###";
@@ -1367,7 +1522,7 @@ bool LotusSpreadsheet::readCell()
 		}
 		double res;
 		bool isNaN;
-		if (!libwps::readDouble8(m_input, res, isNaN))
+		if (!libwps::readDouble8(input, res, isNaN))
 		{
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: can read a double8 formula zone\n"));
 			f << "###";
@@ -1375,14 +1530,14 @@ bool LotusSpreadsheet::readCell()
 		}
 		cell.m_content.m_contentType=WKSContentListener::CellContent::C_FORMULA;
 		cell.m_content.setValue(res);
-		ascii().addDelimiter(m_input->tell(),'|');
+		ascFile.addDelimiter(input->tell(),'|');
 		std::string error;
-		if (!readFormula(endPos, sheetId, true, cell.m_content.m_formula, error))
+		if (!readFormula(stream, endPos, sheetId, true, cell.m_content.m_formula, error))
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
-			ascii().addDelimiter(m_input->tell()-1, '#');
+			ascFile.addDelimiter(input->tell()-1, '#');
 		}
-		else if (m_input->tell()+1<endPos)
+		else if (input->tell()+1<endPos)
 		{
 			// often end with another bytes 03, probably for alignement
 			WPS_DEBUG_MSG(("LotusSpreadsheet::readCell: find extra data for double8 formula zone\n"));
@@ -1398,10 +1553,10 @@ bool LotusSpreadsheet::readCell()
 	std::string extra=f.str();
 	f.str("");
 	f << "Entries(" << what << "):" << cell << "," << extra;
-	if (m_input->tell()!=endPos)
-		ascii().addDelimiter(m_input->tell(),'|');
-	ascii().addPos(pos);
-	ascii().addNote(f.str().c_str());
+	if (input->tell()!=endPos)
+		ascFile.addDelimiter(input->tell(),'|');
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 
 	return true;
 }
@@ -1471,6 +1626,13 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 		newRowSet.insert(rows[0]);
 		newRowSet.insert(rows[1]+1);
 	}
+	for (std::map<int,LotusSpreadsheetInternal::ExtraRowStyles>::const_iterator rIt=sheet.m_rowToExtraStyleMap.begin();
+	        rIt!=sheet.m_rowToExtraStyleMap.end(); ++rIt)
+	{
+		newRowSet.insert(rIt->first);
+		newRowSet.insert(rIt->first+1);
+	}
+
 	for (std::set<int>::const_iterator sIt=newRowSet.begin(); sIt!=newRowSet.end();)
 	{
 		int row=*(sIt++);
@@ -1496,6 +1658,23 @@ void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet cons
 		return;
 	}
 
+	// create a set of column we need to generate
+	std::set<int> newColSet;
+	newColSet.insert(0);
+
+	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator cIt
+	    =sheet.m_positionToCellMap.lower_bound(Vec2i(-1, row));
+	bool checkCell=cIt!=sheet.m_positionToCellMap.end() && cIt->first[1]==row;
+	if (checkCell)
+	{
+		for (; cIt!=sheet.m_positionToCellMap.end() && cIt->first[1]==row ; ++cIt)
+		{
+			newColSet.insert(cIt->first[0]);
+			newColSet.insert(cIt->first[0]+1);
+		}
+		cIt=sheet.m_positionToCellMap.lower_bound(Vec2i(-1, row));
+	}
+
 	LotusSpreadsheetInternal::RowStyles const *styles=0;
 	int styleId=sheet.getRowStyleId(row);
 	if (styleId>=int(m_state->m_rowStylesList.size()))
@@ -1504,57 +1683,72 @@ void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet cons
 	}
 	else if (styleId>=0)
 		styles=&m_state->m_rowStylesList[size_t(styleId)];
-	// we need to go through the row style list and the cell list in parallel
-	bool checkStyle=false;
-	int actStyleCol=0;
 	std::map<Vec2i, LotusSpreadsheetInternal::Style>::const_iterator sIt;
-	if (styles && !styles->m_colsToStyleMap.empty())
+	if (styles)
 	{
-		checkStyle=true;
+		for (sIt=styles->m_colsToStyleMap.begin(); sIt!=styles->m_colsToStyleMap.end(); ++sIt)
+		{
+			newColSet.insert(sIt->first[0]);
+			newColSet.insert(sIt->first[1]+1);
+		}
 		sIt=styles->m_colsToStyleMap.begin();
-		actStyleCol=sIt->first[0];
 	}
 
-	bool checkCell=false;
-	std::map<Vec2i, LotusSpreadsheetInternal::Cell>::const_iterator cIt;
-	if (!sheet.m_positionToCellMap.empty())
+	LotusSpreadsheetInternal::ExtraRowStyles const *extraStyles=0;
+	if (sheet.m_rowToExtraStyleMap.find(row)!=sheet.m_rowToExtraStyleMap.end())
+		extraStyles=&sheet.m_rowToExtraStyleMap.find(row)->second;
+	std::map<Vec2i, LotusSpreadsheetInternal::ExtraStyle>::const_iterator eIt;
+	if (extraStyles)
 	{
-		cIt=sheet.m_positionToCellMap.lower_bound(Vec2i(-1, row));
-		checkCell=cIt!=sheet.m_positionToCellMap.end() && cIt->first[1]==row;
+		for (eIt=extraStyles->m_colsToStyleMap.begin(); eIt!=extraStyles->m_colsToStyleMap.end(); ++eIt)
+		{
+			newColSet.insert(eIt->first[0]);
+			newColSet.insert(eIt->first[1]+1);
+		}
+		eIt=extraStyles->m_colsToStyleMap.begin();
 	}
+
 
 	LotusSpreadsheetInternal::Style defaultStyle(m_mainParser.getDefaultFontType());
 	LotusSpreadsheetInternal::Cell emptyCell;
-	while (checkStyle || checkCell)
+	for (std::set<int>::const_iterator colIt=newColSet.begin(); colIt!=newColSet.end();)
 	{
-		int newCol=checkCell ? cIt->first[0] : -1;
-		if (checkStyle && sIt->first[1] < actStyleCol)
-		{
-			++sIt;
-			checkStyle=sIt!=styles->m_colsToStyleMap.end();
-			actStyleCol=checkStyle ? sIt->first[0] : -1;
-		}
-
-		if (checkStyle && (!checkCell || actStyleCol<newCol))
-		{
-			emptyCell.setPosition(Vec2i(actStyleCol, row));
-			int numRepeated=(checkCell && newCol<=sIt->first[1]) ? newCol-actStyleCol : sIt->first[1]-actStyleCol+1;
-			sendCellContent(emptyCell, sIt->second, numRepeated);
-			actStyleCol += numRepeated;
-			continue;
-		}
-
-		if (!checkCell)
+		int const col=*colIt;
+		++colIt;
+		if (colIt==newColSet.end())
 			break;
-		if (checkStyle && newCol==actStyleCol)
+		int const endCol=*colIt;
+		if (styles)
 		{
-			sendCellContent(cIt->second, sIt->second);
-			++actStyleCol;
+			while (sIt->first[1] < col)
+			{
+				++sIt;
+				if (sIt==styles->m_colsToStyleMap.end())
+				{
+					styles=0;
+					break;
+				}
+			}
 		}
-		else
-			sendCellContent(cIt->second, defaultStyle);
-		++cIt;
-		checkCell=cIt!=sheet.m_positionToCellMap.end() && cIt->first[1]==row;
+		LotusSpreadsheetInternal::Style style=styles ? sIt->second : defaultStyle;
+		bool hasCell=false;
+		if (checkCell)
+		{
+			while (cIt->first[1]==row && cIt->first[0]<col)
+			{
+				++cIt;
+				if (cIt==sheet.m_positionToCellMap.end())
+				{
+					checkCell=false;
+					break;
+				}
+			}
+			if (checkCell && cIt->first[1]!=row) checkCell=false;
+			hasCell=checkCell && cIt->first[0]==col;
+		}
+		if (!hasCell && !styles) continue;
+		if (!hasCell) emptyCell.setPosition(Vec2i(col, row));
+		sendCellContent(hasCell ? cIt->second : emptyCell, style, endCol-col);
 	}
 }
 
@@ -1594,13 +1788,14 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 	}
 	m_listener->openSheetCell(finalCell, content, numRepeated);
 
-	if (cell.m_content.m_textEntry.valid())
+	if (cell.m_input && cell.m_content.m_textEntry.valid())
 	{
-		m_input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
+		RVNGInputStreamPtr input=cell.m_input;
+		input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
 		bool prevEOL=false;
-		while (!m_input->isEnd() && m_input->tell()<cell.m_content.m_textEntry.end())
+		while (!input->isEnd() && input->tell()<cell.m_content.m_textEntry.end())
 		{
-			unsigned char c=(unsigned char) libwps::readU8(m_input);
+			unsigned char c=(unsigned char) libwps::readU8(input);
 			if (c==0xd)
 			{
 				m_listener->insertEOL();
@@ -1632,18 +1827,20 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 // formula
 ////////////////////////////////////////////////////////////
 
-bool LotusSpreadsheet::readCell(int sId, bool isList, WKSContentListener::FormulaInstruction &instr)
+bool LotusSpreadsheet::readCell(LotusParserInternal::LotusStream &stream, int sId, bool isList, WKSContentListener::FormulaInstruction &instr)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
 	instr=WKSContentListener::FormulaInstruction();
 	instr.m_type=isList ? WKSContentListener::FormulaInstruction::F_CellList :
 	             WKSContentListener::FormulaInstruction::F_Cell;
-	int flags=(int) libwps::readU8(m_input);
+	int flags=(int) libwps::readU8(input);
 	int lastSheetId=-1;
 	for (int i=0; i<2; ++i)
 	{
-		int row=(int) libwps::readU16(m_input);
-		int sheetId=(int) libwps::readU8(m_input);
-		int col=(int) libwps::readU8(m_input);
+		int row=(int) libwps::readU16(input);
+		int sheetId=(int) libwps::readU8(input);
+		int col=(int) libwps::readU8(input);
 		instr.m_position[i]=Vec2i(col, row);
 		int wh=(i==0) ? (flags&0xF) : (flags>>4);
 		instr.m_positionRelative[i]=Vec2b((wh&1)!=0, (wh&2)!=0);
@@ -1656,7 +1853,7 @@ bool LotusSpreadsheet::readCell(int sId, bool isList, WKSContentListener::Formul
 		}
 		else if (lastSheetId!=sheetId)
 		{
-			ascii().addDelimiter(m_input->tell()-2,'#');
+			ascFile.addDelimiter(input->tell()-2,'#');
 			static bool isFirst=true;
 			if (isFirst)
 			{
@@ -1735,31 +1932,32 @@ static Functions const s_listFunctions[] =
 };
 }
 
-bool LotusSpreadsheet::readFormula(long endPos, int sheetId, bool newFormula,
+bool LotusSpreadsheet::readFormula(LotusParserInternal::LotusStream &stream, long endPos, int sheetId, bool newFormula,
                                    std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error)
 {
+	RVNGInputStreamPtr &input=stream.m_input;
 	formula.resize(0);
 	error = "";
-	long pos = m_input->tell();
+	long pos = input->tell();
 	if (endPos - pos < 1) return false;
 
 	std::stringstream f;
 	std::vector<std::vector<WKSContentListener::FormulaInstruction> > stack;
 	bool ok = true;
-	while (long(m_input->tell()) != endPos)
+	while (long(input->tell()) != endPos)
 	{
 		double val = 0.0;
 		bool isNaN;
-		pos = m_input->tell();
+		pos = input->tell();
 		if (pos > endPos) return false;
-		int wh = (int) libwps::readU8(m_input);
+		int wh = (int) libwps::readU8(input);
 		int arity = 0;
 		WKSContentListener::FormulaInstruction instr;
 		switch (wh)
 		{
 		case 0x0:
-			if ((!newFormula && (endPos-pos<11 || !libwps::readDouble10(m_input, val, isNaN))) ||
-			        (newFormula && (endPos-pos<9 || !libwps::readDouble8(m_input, val, isNaN))))
+			if ((!newFormula && (endPos-pos<11 || !libwps::readDouble10(input, val, isNaN))) ||
+			        (newFormula && (endPos-pos<9 || !libwps::readDouble8(input, val, isNaN))))
 			{
 				f.str("");
 				f << "###number";
@@ -1772,7 +1970,7 @@ bool LotusSpreadsheet::readFormula(long endPos, int sheetId, bool newFormula,
 			break;
 		case 0x1:
 		{
-			if (endPos-pos<6 || !readCell(sheetId, false, instr))
+			if (endPos-pos<6 || !readCell(stream, sheetId, false, instr))
 			{
 				f.str("");
 				f << "###cell short";
@@ -1784,7 +1982,7 @@ bool LotusSpreadsheet::readFormula(long endPos, int sheetId, bool newFormula,
 		}
 		case 0x2:
 		{
-			if (endPos-pos<10 || !readCell(sheetId, true, instr))
+			if (endPos-pos<10 || !readCell(stream, sheetId, true, instr))
 			{
 				f.str("");
 				f << "###list cell short";
@@ -1796,8 +1994,8 @@ bool LotusSpreadsheet::readFormula(long endPos, int sheetId, bool newFormula,
 		}
 		case 0x5:
 			instr.m_type=WKSContentListener::FormulaInstruction::F_Double;
-			if ((!newFormula && (endPos-pos<3 || !libwps::readDouble2Inv(m_input, val, isNaN))) ||
-			        (newFormula && (endPos-pos<5 || !libwps::readDouble4Inv(m_input, val, isNaN))))
+			if ((!newFormula && (endPos-pos<3 || !libwps::readDouble2Inv(input, val, isNaN))) ||
+			        (newFormula && (endPos-pos<5 || !libwps::readDouble4Inv(input, val, isNaN))))
 			{
 				WPS_DEBUG_MSG(("LotusSpreadsheet::readFormula: can read a uint16/32 zone\n"));
 				f << "###uint16/32";
@@ -1808,14 +2006,14 @@ bool LotusSpreadsheet::readFormula(long endPos, int sheetId, bool newFormula,
 			break;
 		case 0x6:
 			instr.m_type=WKSContentListener::FormulaInstruction::F_Text;
-			while (!m_input->isEnd())
+			while (!input->isEnd())
 			{
-				if (m_input->tell() >= endPos)
+				if (input->tell() >= endPos)
 				{
 					ok=false;
 					break;
 				}
-				char c = (char) libwps::readU8(m_input);
+				char c = (char) libwps::readU8(input);
 				if (c==0) break;
 				instr.m_content += c;
 			}
@@ -1824,14 +2022,14 @@ bool LotusSpreadsheet::readFormula(long endPos, int sheetId, bool newFormula,
 		case 0x8:
 		{
 			std::string variable("");
-			while (!m_input->isEnd())
+			while (!input->isEnd())
 			{
-				if (m_input->tell() >= endPos)
+				if (input->tell() >= endPos)
 				{
 					ok=false;
 					break;
 				}
-				char c = (char) libwps::readU8(m_input);
+				char c = (char) libwps::readU8(input);
 				if (c==0) break;
 				variable += c;
 			}
@@ -1871,11 +2069,11 @@ bool LotusSpreadsheet::readFormula(long endPos, int sheetId, bool newFormula,
 			ok=!instr.m_content.empty();
 			arity = LotusSpreadsheetInternal::s_listFunctions[wh].m_arity;
 			if (arity == -1)
-				arity = (int) libwps::read8(m_input);
+				arity = (int) libwps::read8(input);
 			if (wh==0x7a)   // special Spell function
 			{
-				int sSz=(int) libwps::readU16(m_input);
-				if (m_input->tell()+sSz>endPos)
+				int sSz=(int) libwps::readU16(input);
+				if (input->tell()+sSz>endPos)
 				{
 					WPS_DEBUG_MSG(("LotusSpreadsheet::readFormula: can not find spell function length\n"));
 					f << "###spell[length]=" << sSz << ",";
@@ -1886,7 +2084,7 @@ bool LotusSpreadsheet::readFormula(long endPos, int sheetId, bool newFormula,
 				lastArg.m_type=WKSContentListener::FormulaInstruction::F_Text;
 				for (int i=0; i<sSz; ++i)
 				{
-					char c = (char) libwps::readU8(m_input);
+					char c = (char) libwps::readU8(input);
 					if (c==0) break;
 					lastArg.m_content += c;
 				}
