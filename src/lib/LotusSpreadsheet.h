@@ -115,10 +115,17 @@ protected:
 	//! reads a cell or list of cell name
 	bool readCellName(LotusParserInternal::LotusStream &stream);
 
+	// in fmt
+
 	//! try to read a sheet header: 0xc3
 	bool readSheetHeader(LotusParserInternal::LotusStream &stream);
 	//! try to read an extra row format: 0xc5
 	bool readExtraRowFormats(LotusParserInternal::LotusStream &stream);
+
+	// in zone 0x1b
+
+	//! try to read a note: subZone id 9065
+	bool readNote(LotusParserInternal::LotusStream &stream, long endPos);
 
 	// data in formula
 

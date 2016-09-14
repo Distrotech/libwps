@@ -1284,6 +1284,10 @@ bool LotusParser::readDataZone(LotusParserInternal::LotusStream &stream)
 	//
 	// 4268, 4269
 	//
+	case 0x6590:
+		isParsed=m_spreadsheetParser->readNote(stream, endPos);
+		break;
+
 	default:
 		break;
 	}
@@ -1553,9 +1557,9 @@ bool LotusParser::readLinkZone(LotusParserInternal::LotusStream &stream)
 		ascFile.addNote(f.str().c_str());
 		return true;
 	}
-	type=(int) libwps::read8(input);
-	if (type==0)
-		f << "chart,";
+	type=(int) libwps::read16(input);
+	if (type==0) // fixme: find if this is a note, so that we can retrieve it
+		f << "chart/note/...,";
 	else if (type==1)
 		f << "file,";
 	else
@@ -1566,8 +1570,7 @@ bool LotusParser::readLinkZone(LotusParserInternal::LotusStream &stream)
 		ascFile.addNote(f.str().c_str());
 		return true;
 	}
-	// maybe too int
-	f << "ID=" << std::hex << libwps::readU16(input) << std::dec << ",";
+	f << "ID=" << int(libwps::readU8(input)) << ","; // 0,19,42,53,ff
 	f << "id=" << (int) libwps::readU8(input) << ",";
 	std::string name("");
 	for (int i=0; i<14; ++i)

@@ -85,12 +85,48 @@ struct Style : public WPSCellFormat
 struct ExtraStyle
 {
 	//! constructor
-	ExtraStyle() : m_format(0), m_flag(0), m_borders(0)
+	ExtraStyle() : m_color(WPSColor::black()), m_backColor(WPSColor::white()), m_format(0), m_flag(0), m_borders(0)
 	{
 	}
+	//! returns true if the style is empty
+	bool empty() const
+	{
+		return m_color.isBlack() && m_backColor.isWhite() && (m_format&0x38)==0 && m_borders==0;
+	}
+	//! update the cell style
+	void update(Style &style) const
+	{
+		WPSFont font=style.getFont();
+		if (m_format&0x38)
+		{
+			if (m_format&0x8) font.m_attributes |= WPS_BOLD_BIT;
+			if (m_format&0x10) font.m_attributes |= WPS_ITALICS_BIT;
+			if (m_format&0x20) font.m_attributes |= WPS_UNDERLINE_BIT;
+		}
+		font.m_color=m_color;
+		style.setFont(font);
+		style.setBackgroundColor(m_backColor);
+		if (m_borders)
+		{
+			for (int i=0,decal=0; i<4; ++i, decal+=2)
+			{
+				int type=(m_borders>>decal)&3;
+				if (type==0) continue;
+				static int const(wh[])= {WPSBorder::LeftBit,WPSBorder::RightBit,WPSBorder::TopBit,WPSBorder::BottomBit};
+				WPSBorder border;
+				if (type==2) border.m_width=2;
+				else if (type==3) border.m_type=WPSBorder::Double;
+				style.setBorders(wh[i],border);
+			}
+		}
+	}
+	//! the font color
+	WPSColor m_color;
+	//! the backgroun color
+	WPSColor m_backColor;
 	//! the format
 	int m_format;
-	//! the second flag: merge
+	//! the second flag: graph
 	int m_flag;
 	//! the border
 	int m_borders;
@@ -113,6 +149,16 @@ struct ExtraRowStyles
 	//! constructor
 	ExtraRowStyles() : m_colsToStyleMap()
 	{
+	}
+
+	//! returns true if all style are empty
+	bool empty() const
+	{
+		for (std::map<Vec2i, ExtraStyle>::const_iterator it=m_colsToStyleMap.begin(); it!=m_colsToStyleMap.end(); ++it)
+		{
+			if (!it->second.empty()) return false;
+		}
+		return true;
 	}
 	//! a map Vec2i(minCol,maxCol) to style
 	std::map<Vec2i, ExtraStyle> m_colsToStyleMap;
@@ -230,7 +276,7 @@ public:
 		if (col >= int(m_widthColsInChar.size()))
 		{
 			// sanity check
-			if (!m_boundsColsMap.empty() && col >= int(m_widthColsInChar.size())+10 &&
+			if (col>255 && !m_boundsColsMap.empty() && col >= int(m_widthColsInChar.size())+10 &&
 			        m_boundsColsMap.find(col)==m_boundsColsMap.end())
 			{
 				WPS_DEBUG_MSG(("LotusSpreadsheetInternal::Spreadsheet::setColumnWidth: the column %d seems bad\n", col));
@@ -1142,11 +1188,16 @@ bool LotusSpreadsheet::readExtraRowFormats(LotusParserInternal::LotusStream &str
 	}
 	int row=int(libwps::readU16(input));
 	f << "row=" << row << ",";
-	f << "height=" << std::hex << libwps::readU16(input) << ",";
+
+	LotusSpreadsheetInternal::Spreadsheet &sheet=m_state->getSheet(m_state->m_sheetCurrentId);
+	int val=int(libwps::readU8(input));
+	sheet.setRowHeight(row, val);
+	if (val!=14) f << "height=" << val << ",";
+	val=int(libwps::readU8(input)); // 10|80
+	if (val) f << "f0=" << std::hex << val << std::dec << ",";
 	ascFile.addPos(pos);
 	ascFile.addNote(f.str().c_str());
 
-	LotusSpreadsheetInternal::Spreadsheet &sheet=m_state->getSheet(m_state->m_sheetCurrentId);
 	LotusSpreadsheetInternal::ExtraRowStyles badRow;
 	LotusSpreadsheetInternal::ExtraRowStyles *rowStyles=&badRow;
 	if (sheet.m_rowToExtraStyleMap.find(row)==sheet.m_rowToExtraStyleMap.end())
@@ -1166,18 +1217,36 @@ bool LotusSpreadsheet::readExtraRowFormats(LotusParserInternal::LotusStream &str
 		f.str("");
 		f << "FMTRowForm-" << i << ":";
 		LotusSpreadsheetInternal::ExtraStyle style;
-		int val=style.m_format=int(libwps::readU8(input));
+		val=style.m_format=int(libwps::readU8(input));
+		if (val&0x7) f << "font[id]=" << (val&0x7) << ","; // useMe
 		if (val&0x8) f << "bold,";
 		if (val&0x10) f << "italic,";
 		if (val&0x20) f << "underline,";
-		val &= 0xC7;
+		val &= 0xC0;
 		if (val) f << "fl=" << std::hex << val << std::dec << ",";
 		style.m_flag=val=int(libwps::readU8(input));
-		if (val&0x20) f << "merged,";
-		val &= 0xDF;
+		if (val&0x20) f << "special,";
+		// black, dark blue, green, cyan/gray, red, magenta, yellow, white?
+		static WPSColor const(colors[])=
+		{
+			WPSColor(0,0,0), WPSColor(0,0,255), WPSColor(0,255,0), WPSColor(128,128,128),
+			WPSColor(255,0,0), WPSColor(255,0,255), WPSColor(255,255,0), WPSColor(255,255,255)
+		};
+		style.m_color=colors[val&7];
+		if (!style.m_color.isBlack()) f << "col=" << style.m_color << ",";
+		val &= 0xD8;
 		if (val) f << "fl1=" << std::hex << val << std::dec << ",";
 		val=int(libwps::readU8(input));
-		if (val) f << "f0=" << val << ",";
+		if (val&7)
+		{
+			if ((val&7)==7) // checkMe
+				style.m_backColor=WPSColor::black();
+			else
+				style.m_backColor=colors[val&7];
+		}
+		if (val&0x20) f << "shadow,";
+		val &= 0xD8;
+		if (val) f << "f0=" << std::hex << val << std::dec << ",";
 		style.m_borders=val=int(libwps::readU8(input));
 		if (val) f << "border=" << std::hex << val << std::dec << ",";
 		val=int(libwps::readU8(input));
@@ -1353,7 +1422,7 @@ bool LotusSpreadsheet::readCell(LotusParserInternal::LotusStream &stream)
 		f << "\"" << text << "\",";
 		if (!text.empty())
 		{
-			if (text[0]=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT;
+			if (text[0]=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT; // sometimes followed by 0x7C
 			else if (text[0]=='\\') cell.m_hAlign=WPSCellFormat::HALIGN_LEFT;
 			else if (text[0]=='^') cell.m_hAlign=WPSCellFormat::HALIGN_CENTER;
 			else if (text[0]=='\"') cell.m_hAlign=WPSCellFormat::HALIGN_RIGHT;
@@ -1629,6 +1698,7 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 	for (std::map<int,LotusSpreadsheetInternal::ExtraRowStyles>::const_iterator rIt=sheet.m_rowToExtraStyleMap.begin();
 	        rIt!=sheet.m_rowToExtraStyleMap.end(); ++rIt)
 	{
+		if (rIt->second.empty()) continue;
 		newRowSet.insert(rIt->first);
 		newRowSet.insert(rIt->first+1);
 	}
@@ -1702,6 +1772,7 @@ void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet cons
 	{
 		for (eIt=extraStyles->m_colsToStyleMap.begin(); eIt!=extraStyles->m_colsToStyleMap.end(); ++eIt)
 		{
+			if (eIt->second.empty()) continue;
 			newColSet.insert(eIt->first[0]);
 			newColSet.insert(eIt->first[1]+1);
 		}
@@ -1730,7 +1801,25 @@ void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet cons
 				}
 			}
 		}
+		if (extraStyles)
+		{
+			while (eIt->first[1] < col)
+			{
+				++eIt;
+				if (eIt==extraStyles->m_colsToStyleMap.end())
+				{
+					extraStyles=0;
+					break;
+				}
+			}
+		}
 		LotusSpreadsheetInternal::Style style=styles ? sIt->second : defaultStyle;
+		bool hasStyle=styles!=0;
+		if (extraStyles && !eIt->second.empty())
+		{
+			eIt->second.update(style);
+			hasStyle=true;
+		}
 		bool hasCell=false;
 		if (checkCell)
 		{
@@ -1746,7 +1835,7 @@ void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet cons
 			if (checkCell && cIt->first[1]!=row) checkCell=false;
 			hasCell=checkCell && cIt->first[0]==col;
 		}
-		if (!hasCell && !styles) continue;
+		if (!hasCell && !hasStyle) continue;
 		if (!hasCell) emptyCell.setPosition(Vec2i(col, row));
 		sendCellContent(hasCell ? cIt->second : emptyCell, style, endCol-col);
 	}
@@ -2260,4 +2349,70 @@ bool LotusSpreadsheet::readFormula(LotusParserInternal::LotusStream &stream, lon
 	error = f.str();
 	return false;
 }
+
+// ------------------------------------------------------------
+// zone 1b
+// ------------------------------------------------------------
+
+bool LotusSpreadsheet::readNote(LotusParserInternal::LotusStream &stream, long endPos)
+{
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	long sz=endPos-pos;
+	f << "Entries(Note):";
+	if (sz<4)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readNote: the zone size seems bad\n"));
+		f << "###";
+		ascFile.addPos(pos-6);
+		ascFile.addNote(f.str().c_str());
+		return true;
+	}
+	static bool first=true;
+	if (first) {
+		first=false;
+		WPS_DEBUG_MSG(("LotusParser::readNote: this spreadsheet contains some notes, but there is no code to retrieve them\n"));
+	}
+	f << "id=" << int(libwps::readU8(input)) << ",";
+	std::string text;
+	for (int i=0; i<2; ++i)   // f0=1, f1=2|4
+	{
+		int val=int(libwps::readU8(input));
+		if (val!=i+1) f << "f" << i << "=" << val << ",";
+	}
+	while (input->tell() < endPos)
+	{
+		char c=char(libwps::readU8(input));
+		if (c==0) break;
+		if (c!=1)
+		{
+			f << c;
+			text+=c;
+			continue;
+		}
+		long actPos=input->tell();
+		if (actPos+3>endPos || libwps::readU8(input)!=0x1e)
+		{
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readNote: find unknown format sequence\n"));
+			f << "##[]";
+			continue;
+		}
+		// find: i: italic, b: bold, [0-7]c: color
+		f << "[";
+		c=char(libwps::readU8(input));
+		f << c;
+		if (c>='0' && c<='7') f << char(libwps::readU8(input));
+		f << "]";
+	}
+	f << ",";
+	if (input->tell()!=endPos)
+		ascFile.addDelimiter(input->tell(),'|');
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
+	return true;
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
