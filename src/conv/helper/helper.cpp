@@ -167,8 +167,9 @@ librevenge::RVNGInputStream *StringStream::getSubStreamById(unsigned id)
 // main functions
 ////////////////////////////////////////////////////////////
 
-/* check if the file is a .wk3 file and a .fm3 file exists, if yes, try to
-   convert it in a structured input which can be parsed by libwps */
+/* check if the file is a lotus123 file and a .fm3 file exists or
+   if the file is a dos lotus file and a .fmt file exists.
+   If yes, try to convert it in a structured input which can be parsed by libwps */
 static shared_ptr<librevenge::RVNGInputStream> createMergeInput(char const *fName, librevenge::RVNGInputStream &input)
 try
 {
@@ -183,21 +184,26 @@ try
 	std::string name(fName);
 	size_t len=name.length();
 	if (len<=4 || name[len-4]!='.') return res;
-	std::string extension=name.substr(len-3);
-	if (extension!="wk3" && extension!="WK3") return res;
+	std::string extension=name.substr(len-3, 2);
+	if (extension!="wk" && extension!="WK")
+		return res;
 
 	// check the file header
 	if (input.seek(0, librevenge::RVNG_SEEK_SET)!=0) return res;
 	unsigned long numBytesRead;
-	const unsigned char *data=input.read(3, numBytesRead);
-	if (!data || numBytesRead!=3 || data[0]!=0 || data[1]!=0 || data[2]!=0x1a) return res;
+	const unsigned char *data=input.read(6, numBytesRead);
+	if (!data || numBytesRead!=6 || data[0]!=0 || data[1]!=0 || data[3]!=0) return res;
+	bool oldFile=false;
+	if (data[2]==2 && data[4]==6 && data[5]==4)
+		oldFile=true;
+	else if (data[2]!=0x1a || data[4]>2 || data[5]!=0x10) return res;
 
 	// check if the .fm3 file exists
 	std::string fmName=name.substr(0, len-3);
-	if (extension=="wk3")
-		fmName+="fm3";
+	if (extension=="wk")
+		fmName+=oldFile ? "fmt" : "fm3";
 	else
-		fmName+="FM3";
+		fmName+=oldFile ? "FMT" : "FM3";
 	struct stat status;
 	if (stat(fmName.c_str(), &status) || !S_ISREG(status.st_mode))
 		return res;

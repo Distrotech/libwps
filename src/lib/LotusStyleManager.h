@@ -31,11 +31,6 @@
 
 #include "WPSDebug.h"
 
-namespace LotusParserInternal
-{
-struct LotusStream;
-}
-
 namespace LotusStyleManagerInternal
 {
 struct State;
@@ -84,26 +79,26 @@ protected:
 	//
 
 	//! reads a cell style
-	bool readCellStyle(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readCellStyle(WPSStream &stream, long endPos);
 	//! reads a color style
-	bool readColorStyle(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readColorStyle(WPSStream &stream, long endPos);
 	//! reads a font style
-	bool readFontStyle(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readFontStyle(WPSStream &stream, long endPos);
 	//! reads a format style
-	bool readFormatStyle(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readFormatStyle(WPSStream &stream, long endPos);
 	//! reads a line style
-	bool readLineStyle(LotusParserInternal::LotusStream &stream, long endPos, int vers);
+	bool readLineStyle(WPSStream &stream, long endPos, int vers);
 	//! reads a graphic style
-	bool readGraphicStyle(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readGraphicStyle(WPSStream &stream, long endPos);
 
 	// old fmt style
 
 	//! reads a format font name: zones 0xae
-	bool readFMTFontName(LotusParserInternal::LotusStream &stream);
+	bool readFMTFontName(WPSStream &stream);
 	//! reads a format font sizes zones 0xaf and 0xb1
-	bool readFMTFontSize(LotusParserInternal::LotusStream &stream);
+	bool readFMTFontSize(WPSStream &stream);
 	//! reads a format font id zone: 0xb0
-	bool readFMTFontId(LotusParserInternal::LotusStream &stream);
+	bool readFMTFontId(WPSStream &stream);
 
 	//! update style using color id for defining shadow
 	bool updateShadowStyle(int colorId, WPSGraphicStyle &style) const;

@@ -32,11 +32,6 @@
 #include "WPSDebug.h"
 #include "WKSContentListener.h"
 
-namespace LotusParserInternal
-{
-struct LotusStream;
-}
-
 namespace LotusGraphInternal
 {
 struct Zone;
@@ -89,15 +84,15 @@ protected:
 	// ////////////////////// zone //////////////////////////////
 
 	//! reads a begin graphic zone
-	bool readZoneBegin(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readZoneBegin(WPSStream &stream, long endPos);
 	//! reads a graphic zone
-	bool readZoneData(LotusParserInternal::LotusStream &stream, long endPos, int type);
+	bool readZoneData(WPSStream &stream, long endPos, int type);
 	//! reads a graphic textbox data
-	bool readTextBoxData(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readTextBoxData(WPSStream &stream, long endPos);
 	//! reads a picture definition
-	bool readPictureDefinition(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readPictureDefinition(WPSStream &stream, long endPos);
 	//! reads a picture data
-	bool readPictureData(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readPictureData(WPSStream &stream, long endPos);
 
 private:
 	LotusGraph(LotusGraph const &orig);

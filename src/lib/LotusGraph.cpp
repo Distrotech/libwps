@@ -41,6 +41,7 @@
 #include "WPSGraphicStyle.h"
 #include "WPSParagraph.h"
 #include "WPSPosition.h"
+#include "WPSStream.h"
 
 #include "Lotus.h"
 #include "LotusStyleManager.h"
@@ -294,7 +295,7 @@ bool LotusGraph::hasGraphics(int sheetId) const
 ////////////////////////////////////////////////////////////
 // zones
 ////////////////////////////////////////////////////////////
-bool LotusGraph::readZoneBegin(LotusParserInternal::LotusStream &stream, long endPos)
+bool LotusGraph::readZoneBegin(WPSStream &stream, long endPos)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -325,7 +326,7 @@ bool LotusGraph::readZoneBegin(LotusParserInternal::LotusStream &stream, long en
 
 }
 
-bool LotusGraph::readZoneData(LotusParserInternal::LotusStream &stream, long endPos, int type)
+bool LotusGraph::readZoneData(WPSStream &stream, long endPos, int type)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -506,7 +507,7 @@ bool LotusGraph::readZoneData(LotusParserInternal::LotusStream &stream, long end
 	return true;
 }
 
-bool LotusGraph::readTextBoxData(LotusParserInternal::LotusStream &stream, long endPos)
+bool LotusGraph::readTextBoxData(WPSStream &stream, long endPos)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -541,7 +542,7 @@ bool LotusGraph::readTextBoxData(LotusParserInternal::LotusStream &stream, long 
 	return true;
 }
 
-bool LotusGraph::readPictureDefinition(LotusParserInternal::LotusStream &stream, long endPos)
+bool LotusGraph::readPictureDefinition(WPSStream &stream, long endPos)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -591,7 +592,7 @@ bool LotusGraph::readPictureDefinition(LotusParserInternal::LotusStream &stream,
 	return true;
 }
 
-bool LotusGraph::readPictureData(LotusParserInternal::LotusStream &stream, long endPos)
+bool LotusGraph::readPictureData(WPSStream &stream, long endPos)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;

@@ -88,6 +88,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSParser.cpp		\
 	WPSParser.h		\
 	WPSPosition.h		\
+	WPSStream.cpp		\
+	WPSStream.h		\
 	WPSSubDocument.cpp	\
 	WPSSubDocument.h	\
 	WPSTable.cpp		\

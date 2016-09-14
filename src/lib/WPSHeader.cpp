@@ -152,10 +152,13 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		}
 	}
 
-	// check for a lotus 123 zip file containing a .wk3 and a .fm3
+	/* check for a lotus 123 zip file containing a .wk3 and a .fm3
+	   or a old lotus file containing a .wk? and a .fmt file
+	 */
 	unsigned numSubStreams = input->subStreamCount();
-	std::string wk3Name, fm3Name;
-	RVNGInputStreamPtr wk3Stream;
+	std::string wkName, formatName;
+	RVNGInputStreamPtr wkStream;
+	int headerSz=0;
 	for (unsigned i = 0; i < numSubStreams; ++i)
 	{
 		char const *nm=input->subStreamName(i);
@@ -163,34 +166,48 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		size_t len=name.length();
 		if (len<=4 || name.find_last_of('/')!=std::string::npos || name[0]=='.' || name[len-4]!='.')
 			continue;
-		std::string extension=name.substr(len-3);
-		if (extension=="wk3" || extension=="WK3")
+		std::string extension=name.substr(len-3, 2);
+		bool wkFile=false;
+		if (extension=="wk" || extension=="WK")
 		{
-			if (!wk3Name.empty())
+			wkFile=true;
+			if (!wkName.empty())
 			{
-				wk3Name.clear();
+				wkName.clear();
 				break;
 			}
-			wk3Stream.reset(input->getSubStreamByName(nm));
-			wk3Stream->seek(0, librevenge::RVNG_SEEK_SET);
-			if (libwps::readU16(wk3Stream)==0 && libwps::readU8(wk3Stream)==0x1a)
-				wk3Name=name;
 		}
-		else if (extension=="fm3" || extension=="FM3")
+		else if (extension=="fm" || extension=="FM")
 		{
-			if (!fm3Name.empty())
+			if (!formatName.empty())
 			{
-				fm3Name.clear();
+				formatName.clear();
 				break;
 			}
-			fm3Name=name;
 		}
+		else
+			continue;
+		RVNGInputStreamPtr stream(input->getSubStreamByName(nm));
+		if (!stream || stream->seek(0, librevenge::RVNG_SEEK_SET) != 0 || libwps::readU16(stream)!=0) break;
+		int newHeaderSz=int(libwps::readU8(stream));
+		if (libwps::readU8(stream) || (newHeaderSz!=2 && newHeaderSz!=0x1a) || (headerSz && newHeaderSz!=headerSz))
+			break;
+		headerSz=newHeaderSz;
+		if (wkFile)
+		{
+			wkName=name;
+			wkStream=stream;
+		}
+		else
+			formatName=name;
 	}
-	if (!wk3Name.empty() && !fm3Name.empty() &&
-	        wk3Name.substr(0,wk3Name.length()-3) == fm3Name.substr(0,fm3Name.length()-3))
+	if (!wkName.empty() && !formatName.empty() &&
+	        wkName.substr(0,wkName.length()-3) == formatName.substr(0,formatName.length()-3))
 	{
 		WPS_DEBUG_MSG(("WPSHeader::constructHeader: find a zip Lotus spreadsheet\n"));
-		return new WPSHeader(wk3Stream, input, 101, WPS_SPREADSHEET, WPS_LOTUS);
+		if (headerSz==2)
+			return new WPSHeader(wkStream, input, 2, WPS_SPREADSHEET);
+		return new WPSHeader(wkStream, input, 101, WPS_SPREADSHEET, WPS_LOTUS);
 	}
 	return NULL;
 }

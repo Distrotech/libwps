@@ -33,24 +33,6 @@
 
 namespace LotusParserInternal
 {
-//! small structure use to store a stream and it debug file
-struct LotusStream
-{
-	//! constructor
-	LotusStream(RVNGInputStreamPtr input, libwps::DebugFile &ascii);
-	//! return true if the position is in the file
-	bool checkFilePosition(long pos) const
-	{
-		return pos<=m_eof;
-	}
-	//! the stream
-	RVNGInputStreamPtr m_input;
-	//! the ascii file
-	libwps::DebugFile &m_ascii;
-	//! the last position
-	long m_eof;
-};
-
 class SubDocument;
 struct State;
 }
@@ -115,33 +97,33 @@ protected:
 	bool parseFormatStream();
 
 	//! checks if the document header is correct (or not)
-	bool checkHeader(LotusParserInternal::LotusStream &stream, bool mainStream, bool strict);
+	bool checkHeader(WPSStream &stream, bool mainStream, bool strict);
 	/** finds the different zones (spreadsheet, chart, print, ...) */
-	bool readZones(LotusParserInternal::LotusStream &stream);
+	bool readZones(WPSStream &stream);
 	/** parse the different zones 1B */
-	bool readDataZone(LotusParserInternal::LotusStream &stream);
+	bool readDataZone(WPSStream &stream);
 	//! reads a zone
-	bool readZone(LotusParserInternal::LotusStream &stream);
+	bool readZone(WPSStream &stream);
 	//! parse a wk123 zone
-	bool readZoneV3(LotusParserInternal::LotusStream &stream);
+	bool readZoneV3(WPSStream &stream);
 
 	//////////////////////// generic ////////////////////////////////////
 
 	//! reads a mac font name
-	bool readMacFontName(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readMacFontName(WPSStream &stream, long endPos);
 	//! reads a format style name: b6
-	bool readFMTStyleName(LotusParserInternal::LotusStream &stream);
+	bool readFMTStyleName(WPSStream &stream);
 	//! reads a link
-	bool readLinkZone(LotusParserInternal::LotusStream &stream);
+	bool readLinkZone(WPSStream &stream);
 	//! reads a mac document info zone: zone 1b, then 2af8
-	bool readDocumentInfoMac(LotusParserInternal::LotusStream &stream, long endPos);
+	bool readDocumentInfoMac(WPSStream &stream, long endPos);
 
 	//////////////////////// chart zone //////////////////////////////
 
 	//! reads a chart definitions
-	bool readChartDefinition(LotusParserInternal::LotusStream &stream);
+	bool readChartDefinition(WPSStream &stream);
 	//! reads the chart name or title
-	bool readChartName(LotusParserInternal::LotusStream &stream);
+	bool readChartName(WPSStream &stream);
 
 	//////////////////////// unknown zone //////////////////////////////
 

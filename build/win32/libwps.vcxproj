@@ -250,6 +250,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\WPSStream.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\WPSSubDocument.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -308,6 +312,7 @@
     <ClInclude Include="..\..\src\lib\WPSParagraph.h" />
     <ClInclude Include="..\..\src\lib\WPSParser.h" />
     <ClInclude Include="..\..\src\lib\WPSPosition.h" />
+    <ClInclude Include="..\..\src\lib\WPSStream.h" />
     <ClInclude Include="..\..\src\lib\WPSSubDocument.h" />
     <ClInclude Include="..\..\src\lib\WPSTable.h" />
     <ClInclude Include="..\..\src\lib\WPSTextParser.h" />

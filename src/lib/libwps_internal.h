@@ -86,6 +86,7 @@ struct WPS_shared_ptr_noop_deleter
 /** shared pointer to librevenge::RVNGInputStream */
 typedef shared_ptr<librevenge::RVNGInputStream> RVNGInputStreamPtr;
 
+struct WPSStream;
 class WPSCell;
 class WPSListener;
 class WPSContentListener;

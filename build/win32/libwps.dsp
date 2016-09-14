@@ -235,6 +235,10 @@ SOURCE=..\..\src\lib\WPSParser.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSStream.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSSubDocument.cpp
 # End Source File
 # Begin Source File
@@ -412,6 +416,10 @@ SOURCE=..\..\src\lib\WPSParser.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSPosition.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSStream.h
 # End Source File
 # Begin Source File
 

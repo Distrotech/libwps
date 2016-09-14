@@ -38,6 +38,7 @@
 #include "WPSFont.h"
 #include "WPSHeader.h"
 #include "WPSPageSpan.h"
+#include "WPSStream.h"
 
 #include "LotusGraph.h"
 #include "LotusSpreadsheet.h"
@@ -50,15 +51,6 @@ using namespace libwps;
 //! Internal: namespace to define internal class of LotusParser
 namespace LotusParserInternal
 {
-// LotusStream
-LotusStream::LotusStream(RVNGInputStreamPtr input, libwps::DebugFile &ascii) : m_input(input), m_ascii(ascii), m_eof(-1)
-{
-	if (!input || input->seek(0, librevenge::RVNG_SEEK_END)!=0)
-		return;
-	m_eof=input->tell();
-	input->seek(0, librevenge::RVNG_SEEK_SET);
-}
-
 //! the font of a LotusParser
 struct Font : public WPSFont
 {
@@ -277,7 +269,7 @@ void LotusParser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 	{
 		ascii().setStream(input);
 		ascii().open("MN0");
-		LotusParserInternal::LotusStream mainStream(input, ascii());
+		WPSStream mainStream(input, ascii());
 		if (checkHeader(0L))
 		{
 			// reset data
@@ -350,7 +342,7 @@ shared_ptr<WKSContentListener> LotusParser::createListener(librevenge::RVNGSprea
 bool LotusParser::checkHeader(WPSHeader *header, bool strict)
 {
 	m_state.reset(new LotusParserInternal::State(m_state->m_fontType));
-	LotusParserInternal::LotusStream mainStream(getInput(), ascii());
+	WPSStream mainStream(getInput(), ascii());
 	if (!checkHeader(mainStream, true, strict))
 		return false;
 	if (header)
@@ -363,7 +355,7 @@ bool LotusParser::checkHeader(WPSHeader *header, bool strict)
 	return true;
 }
 
-bool LotusParser::checkHeader(LotusParserInternal::LotusStream &stream, bool mainStream, bool strict)
+bool LotusParser::checkHeader(WPSStream &stream, bool mainStream, bool strict)
 {
 	RVNGInputStreamPtr input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -484,7 +476,7 @@ bool LotusParser::parseFormatStream()
 
 	m_state->m_formatAscii.setStream(formatInput);
 	m_state->m_formatAscii.open("FM3");
-	LotusParserInternal::LotusStream formatStream(formatInput, m_state->m_formatAscii);
+	WPSStream formatStream(formatInput, m_state->m_formatAscii);
 	if (!checkHeader(formatStream, false, false))
 	{
 		WPS_DEBUG_MSG(("LotusParser::parseFormatStream: can not read format stream\n"));
@@ -495,7 +487,7 @@ bool LotusParser::parseFormatStream()
 	return res;
 }
 
-bool LotusParser::readZones(LotusParserInternal::LotusStream &stream)
+bool LotusParser::readZones(WPSStream &stream)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -559,7 +551,7 @@ bool LotusParser::readZones(LotusParserInternal::LotusStream &stream)
 	return mainDataRead || m_spreadsheetParser->hasSomeSpreadsheetData();
 }
 
-bool LotusParser::readZone(LotusParserInternal::LotusStream &stream)
+bool LotusParser::readZone(WPSStream &stream)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -949,7 +941,7 @@ bool LotusParser::readZone(LotusParserInternal::LotusStream &stream)
 	return true;
 }
 
-bool LotusParser::readDataZone(LotusParserInternal::LotusStream &stream)
+bool LotusParser::readDataZone(WPSStream &stream)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -1302,7 +1294,7 @@ bool LotusParser::readDataZone(LotusParserInternal::LotusStream &stream)
 	return true;
 }
 
-bool LotusParser::readZoneV3(LotusParserInternal::LotusStream &stream)
+bool LotusParser::readZoneV3(WPSStream &stream)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -1391,7 +1383,7 @@ bool LotusParser::readZoneV3(LotusParserInternal::LotusStream &stream)
 ////////////////////////////////////////////////////////////
 //   generic
 ////////////////////////////////////////////////////////////
-bool LotusParser::readMacFontName(LotusParserInternal::LotusStream &stream, long endPos)
+bool LotusParser::readMacFontName(WPSStream &stream, long endPos)
 {
 	RVNGInputStreamPtr &input=stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -1487,7 +1479,7 @@ bool LotusParser::readMacFontName(LotusParserInternal::LotusStream &stream, long
 	return true;
 }
 
-bool LotusParser::readFMTStyleName(LotusParserInternal::LotusStream &stream)
+bool LotusParser::readFMTStyleName(WPSStream &stream)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -1534,7 +1526,7 @@ bool LotusParser::readFMTStyleName(LotusParserInternal::LotusStream &stream)
 	return true;
 }
 
-bool LotusParser::readLinkZone(LotusParserInternal::LotusStream &stream)
+bool LotusParser::readLinkZone(WPSStream &stream)
 {
 	RVNGInputStreamPtr &input=stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -1632,7 +1624,7 @@ bool LotusParser::readLinkZone(LotusParserInternal::LotusStream &stream)
 // ----------------------------------------------------------------------
 // Header/Footer/PageDim
 // ----------------------------------------------------------------------
-bool LotusParser::readDocumentInfoMac(LotusParserInternal::LotusStream &stream, long endPos)
+bool LotusParser::readDocumentInfoMac(WPSStream &stream, long endPos)
 {
 	RVNGInputStreamPtr &input=stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -1705,7 +1697,7 @@ bool LotusParser::readDocumentInfoMac(LotusParserInternal::LotusStream &stream, 
 //   chart
 ////////////////////////////////////////////////////////////
 
-bool LotusParser::readChartDefinition(LotusParserInternal::LotusStream &stream)
+bool LotusParser::readChartDefinition(WPSStream &stream)
 {
 	RVNGInputStreamPtr &input=stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -1772,7 +1764,7 @@ bool LotusParser::readChartDefinition(LotusParserInternal::LotusStream &stream)
 	return true;
 }
 
-bool LotusParser::readChartName(LotusParserInternal::LotusStream &stream)
+bool LotusParser::readChartName(WPSStream &stream)
 {
 	RVNGInputStreamPtr &input=stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
