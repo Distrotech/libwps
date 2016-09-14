@@ -92,6 +92,9 @@ protected:
 	// low level
 	//
 
+	/// check for the existence of a format stream, if it exists, parse it
+	bool parseFormatStream();
+
 	/** finds the different zones (spreadsheet, chart, print, ...) */
 	bool readZones();
 	//! reads a zone

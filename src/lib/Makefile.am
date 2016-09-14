@@ -34,6 +34,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	QuattroSpreadsheet.h	\
 	WKS4.cpp		\
 	WKS4.h			\
+	WKS4Format.cpp		\
+	WKS4Format.h		\
 	WKS4Spreadsheet.cpp	\
 	WKS4Spreadsheet.h	\
 	WKSContentListener.cpp	\

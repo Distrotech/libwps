@@ -131,6 +131,10 @@ SOURCE=..\..\src\lib\WKS4.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WKS4Format.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WKS4Spreadsheet.cpp
 # End Source File
 # Begin Source File
@@ -304,6 +308,10 @@ SOURCE=..\..\src\lib\QuattroSpreadsheet.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WKS4.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WKS4Format.h
 # End Source File
 # Begin Source File
 

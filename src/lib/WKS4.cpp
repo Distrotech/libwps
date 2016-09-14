@@ -39,6 +39,7 @@
 #include "WPSHeader.h"
 #include "WPSPageSpan.h"
 
+#include "WKS4Format.h"
 #include "WKS4Spreadsheet.h"
 
 #include "WKS4.h"
@@ -292,7 +293,10 @@ void WKS4Parser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 		ascii().open("MN0");
 
 		if (checkHeader(0L) && readZones())
+		{
+			parseFormatStream();
 			m_listener=createListener(documentInterface);
+		}
 		if (m_listener)
 		{
 			m_spreadsheetParser->setListener(m_listener);
@@ -473,6 +477,53 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 		header->setNeedEncoding(needEncoding);
 	}
 	return true;
+}
+
+bool WKS4Parser::parseFormatStream()
+{
+	RVNGInputStreamPtr file=getFileInput();
+	if (!file || !file->isStructured()) return false;
+
+	unsigned numSubStreams = file->subStreamCount();
+	std::string wkName, fmName;
+	RVNGInputStreamPtr formatInput;
+	for (unsigned i = 0; i < numSubStreams; ++i)
+	{
+		char const *nm=file->subStreamName(i);
+		std::string name(nm);
+		size_t len=name.length();
+		if (len<=4 || name.find_last_of('/')!=std::string::npos || name[0]=='.' || name[len-4]!='.')
+			continue;
+		std::string extension=name.substr(len-3, 2);
+		if (extension=="wk" || extension=="WK")
+		{
+			if (!wkName.empty())
+			{
+				wkName.clear();
+				break;
+			}
+			wkName=name;
+		}
+		else if (extension=="fm" || extension=="FM")
+		{
+			if (!fmName.empty())
+			{
+				fmName.clear();
+				break;
+			}
+			fmName=name;
+			formatInput.reset(file->getSubStreamByName(nm));
+			formatInput->seek(0, librevenge::RVNG_SEEK_SET);
+		}
+	}
+	if (wkName.empty() || fmName.empty() ||  !formatInput ||
+	        wkName.substr(0,wkName.length()-3) != fmName.substr(0,fmName.length()-3))
+	{
+		WPS_DEBUG_MSG(("WKS4Parser::parseFormatStream: can not find the format stream\n"));
+		return false;
+	}
+	WKS4Format formatManager(*this, formatInput);
+	return formatManager.parse();
 }
 
 bool WKS4Parser::readZones()
