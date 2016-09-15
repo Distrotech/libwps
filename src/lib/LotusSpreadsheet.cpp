@@ -1418,20 +1418,23 @@ bool LotusSpreadsheet::readCell(WPSStream &stream)
 		{
 			char c=(char) libwps::readU8(input);
 			if (!c) break;
+			if (i==4)
+			{
+				bool done=true;
+				if (c=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT; // sometimes followed by 0x7C
+				else if (c=='\\') cell.m_hAlign=WPSCellFormat::HALIGN_LEFT;
+				else if (c=='^') cell.m_hAlign=WPSCellFormat::HALIGN_CENTER;
+				else if (c=='\"') cell.m_hAlign=WPSCellFormat::HALIGN_RIGHT;
+				else done=false;
+				if (done)
+				{
+					++begText;
+					continue;
+				}
+			}
 			text += c;
 		}
-		f << "\"" << text << "\",";
-		if (!text.empty())
-		{
-			if (text[0]=='\'') cell.m_hAlign=WPSCellFormat::HALIGN_DEFAULT; // sometimes followed by 0x7C
-			else if (text[0]=='\\') cell.m_hAlign=WPSCellFormat::HALIGN_LEFT;
-			else if (text[0]=='^') cell.m_hAlign=WPSCellFormat::HALIGN_CENTER;
-			else if (text[0]=='\"') cell.m_hAlign=WPSCellFormat::HALIGN_RIGHT;
-			else
-				--begText;
-			++begText;
-		}
-
+		f << "\"" << getDebugStringForText(text) << "\",";
 		WPSEntry entry;
 		entry.setBegin(begText);
 		entry.setEnd(endPos);
@@ -1882,29 +1885,7 @@ void LotusSpreadsheet::sendCellContent(LotusSpreadsheetInternal::Cell const &cel
 	{
 		RVNGInputStreamPtr input=cell.m_input;
 		input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
-		bool prevEOL=false;
-		while (!input->isEnd() && input->tell()<cell.m_content.m_textEntry.end())
-		{
-			unsigned char c=(unsigned char) libwps::readU8(input);
-			if (c==0xd)
-			{
-				m_listener->insertEOL();
-				prevEOL=true;
-			}
-			else if (c==0xa)
-			{
-				if (!prevEOL)
-				{
-					WPS_DEBUG_MSG(("LotusSpreadsheet::sendCellContent: find 0xa without 0xd\n"));
-				}
-				prevEOL=false;
-			}
-			else if (c)
-			{
-				m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType));
-				prevEOL=false;
-			}
-		}
+		sendText(input, cell.m_content.m_textEntry.end(), cellStyle);
 	}
 	if (cell.m_comment.valid())
 	{
@@ -2379,42 +2360,202 @@ bool LotusSpreadsheet::readNote(WPSStream &stream, long endPos)
 		WPS_DEBUG_MSG(("LotusParser::readNote: this spreadsheet contains some notes, but there is no code to retrieve them\n"));
 	}
 	f << "id=" << int(libwps::readU8(input)) << ",";
-	std::string text;
 	for (int i=0; i<2; ++i)   // f0=1, f1=2|4
 	{
 		int val=int(libwps::readU8(input));
 		if (val!=i+1) f << "f" << i << "=" << val << ",";
 	}
-	while (input->tell() < endPos)
-	{
-		char c=char(libwps::readU8(input));
-		if (c==0) break;
-		if (c!=1)
-		{
-			f << c;
-			text+=c;
-			continue;
-		}
-		long actPos=input->tell();
-		if (actPos+3>endPos || libwps::readU8(input)!=0x1e)
-		{
-			WPS_DEBUG_MSG(("LotusSpreadsheet::readNote: find unknown format sequence\n"));
-			f << "##[]";
-			continue;
-		}
-		// find: i: italic, b: bold, [0-7]c: color
-		f << "[";
-		c=char(libwps::readU8(input));
-		f << c;
-		if (c>='0' && c<='7') f << char(libwps::readU8(input));
-		f << "]";
-	}
-	f << ",";
-	if (input->tell()!=endPos)
-		ascFile.addDelimiter(input->tell(),'|');
+	std::string text;
+	for (int i=0; i<sz-3; ++i) text+=char(libwps::readU8(input));
+	f << getDebugStringForText(text) << ",";
 	ascFile.addPos(pos-6);
 	ascFile.addNote(f.str().c_str());
 	return true;
+}
+
+//////////////////////////////////////////////////////////////////////
+// formatted text
+//////////////////////////////////////////////////////////////////////
+void LotusSpreadsheet::sendText(RVNGInputStreamPtr &input, long endPos, LotusSpreadsheetInternal::Style const &style) const
+{
+	if (!input || !m_listener)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::sendText: can not find the listener\n"));
+		return;
+	}
+	libwps_tools_win::Font::Type fontType = style.m_fontType;
+	WPSFont font=style.getFont();
+	m_listener->setFont(font);
+	bool prevEOL=false;
+	while (!input->isEnd())
+	{
+		long pos=input->tell();
+		if (pos>=endPos) break;
+		char c=char(libwps::readU8(input));
+		switch (c)
+		{
+		case 0x1:
+			if (pos+1>=endPos)
+			{
+				WPS_DEBUG_MSG(("LotusSpreadsheet::sendText: can not read the escape value\n"));
+				break;
+			}
+			c=char(libwps::readU8(input));
+			switch (c)
+			{
+			case 0x1e:
+				if (pos+2>=endPos)
+				{
+					WPS_DEBUG_MSG(("LotusSpreadsheet::sendText: can not read the escape value\n"));
+					break;
+				}
+				c=char(libwps::readU8(input));
+				switch (c)
+				{
+				case 'b': // bold
+					font.m_attributes |= WPS_BOLD_BIT;
+					m_listener->setFont(font);
+					break;
+				case 'i': // italic
+					font.m_attributes |= WPS_ITALICS_BIT;
+					m_listener->setFont(font);
+					break;
+				default:
+					if (c>='0' && c<='7')
+					{
+						if (pos+3>=endPos)
+						{
+							WPS_DEBUG_MSG(("LotusSpreadsheet::sendText: can not read the escape value\n"));
+							break;
+						}
+						char c2=char(libwps::readU8(input));
+						if (c2=='c')
+						{
+							static WPSColor const(colors[])=
+							{
+								WPSColor(0,0,0), WPSColor(0,0,255), WPSColor(0,255,0), WPSColor(128,128,128),
+								WPSColor(255,0,0), WPSColor(255,0,255), WPSColor(255,255,0), WPSColor(255,255,255)
+							};
+							font.m_color=colors[int(c-'0')];
+							m_listener->setFont(font);
+						}
+						else if (c2!='F')   // F for font?
+						{
+							WPS_DEBUG_MSG(("LotusSpreadsheet::sendText: unknown int sequence\n"));
+							break;
+						}
+						break;
+					}
+					WPS_DEBUG_MSG(("LotusSpreadsheet::sendText: unknown sequence\n"));
+					break;
+				}
+				break;
+			case 0x1f: // end
+				font=style.getFont();
+				m_listener->setFont(font);
+				break;
+			case ';': // unknown, ie. the text can begin with 27013b in some mac file
+				break;
+			default:
+				WPS_DEBUG_MSG(("LotusSpreadsheet::sendText: unknown debut sequence\n"));
+				break;
+			}
+			break;
+		case 0xd:
+			m_listener->insertEOL();
+			prevEOL=true;
+			break;
+		case 0xa:
+			if (!prevEOL)
+			{
+				WPS_DEBUG_MSG(("LotusSpreadsheet::sendText: find 0xa without 0xd\n"));
+			}
+			prevEOL=false;
+			break;
+		default:
+			if (c)
+				m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode(static_cast<unsigned char>(c),fontType));
+			break;
+		}
+	}
+}
+
+std::string LotusSpreadsheet::getDebugStringForText(std::string const &text)
+{
+	std::string res;
+	size_t len=text.length();
+	for (size_t i=0; i<len; ++i)
+	{
+		char c=text[i];
+		switch (c)
+		{
+		case 0x1:
+			if (i>=len)
+			{
+				WPS_DEBUG_MSG(("LotusSpreadsheet::getDebugStringForText: can not read the escape value\n"));
+				res+= "[##escape]";
+				break;
+			}
+			c=text[++i];
+			switch (c)
+			{
+			case 0x1e:
+				if (i>=len)
+				{
+					WPS_DEBUG_MSG(("LotusSpreadsheet::getDebugStringForText: can not read the escape value\n"));
+					res+= "[##escape1]";
+					break;
+				}
+				c=text[++i];
+				switch (c)
+				{
+				case 'b': // bold
+				case 'i': // italic
+					res+= std::string("[") + c + "]";
+					break;
+				default:
+					if (c>='0' && c<='8')
+					{
+						if (i>=len)
+						{
+							WPS_DEBUG_MSG(("LotusSpreadsheet::getDebugStringForText: can not read the escape value\n"));
+							res+= "[##escape1]";
+							break;
+						}
+						char c2=text[++i];
+						if (c2!='c' && c2!='F')   // color and F for font?
+						{
+							WPS_DEBUG_MSG(("LotusSpreadsheet::getDebugStringForText: unknown int sequence\n"));
+							res+= std::string("[##") + c + c2 + "]";
+							break;
+						}
+						res += std::string("[") + c + c2 + "]";
+						break;
+					}
+					WPS_DEBUG_MSG(("LotusSpreadsheet::getDebugStringForText: unknown sequence\n"));
+					res+= std::string("[##") + c + "]";
+					break;
+				}
+				break;
+			case 0x1f: // end
+				res+= "[^]";
+				break;
+			// case ';': ?
+			default:
+				WPS_DEBUG_MSG(("LotusSpreadsheet::getDebugStringForText: unknown debut sequence\n"));
+				res+= std::string("[##") +c+ "]";
+				break;
+			}
+			break;
+		case 0xd:
+			res+="\\n";
+			break;
+		default:
+			res+=c;
+			break;
+		}
+	}
+	return res;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

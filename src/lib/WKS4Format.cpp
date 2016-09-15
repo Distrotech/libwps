@@ -243,6 +243,7 @@ bool WKS4Format::readZone()
 		{
 		case 0:
 			if (sz!=2) break;
+			m_input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			f.str("");
 			f << "version=" << std::hex << libwps::readU16(m_input) << std::dec << ",";
 			isParsed=needWriteInAscii=true;
@@ -252,14 +253,61 @@ bool WKS4Format::readZone()
 			break;
 		// boolean
 		case 0x2: // Calculation mode 0 or FF
+		case 0x83: // always with 0, can also be a string
+		case 0x84: // always with 0, can also be a string
+		case 0x85: // always with 0, can also be a string
+		case 0x96: // 0 or FF
+		case 0x99: // 0|4 or FF
+		case 0xa3: // 0 or FF
 			f.str("");
-			f << "Entries(Byte" << std::hex << id << std::dec << "Z):";
-			if (sz!=1) break;
+			if (id==2)
+				f << "Entries(Byte2Z):";
+			else
+				f << "Entries(FMTByte" << std::hex << id << std::dec << "Z):";
+			if (sz!=1)
+			{
+				f << "###";
+				break;
+			}
+			m_input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			val=int(libwps::readU8(m_input));
 			if (val==0xFF) f << "true,";
 			else if (val) f << "#val=" << val << ",";
 			isParsed=needWriteInAscii=true;
 			break;
+		case 0x87: // always with 0000
+		case 0x88: // always with 0000
+		case 0x8e: // with 57|64
+			f.str("");
+			f << "Entries(FMTInt" << std::hex << id << std::dec << "Z):";
+			if (sz!=2)
+			{
+				f << "###";
+				break;
+			}
+			m_input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=int(libwps::readU16(m_input));
+			if (val) f << "val=" << val << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		case 0x86:
+		case 0x89:
+		{
+			f.str("");
+			f << "Entries(FMTPrinter):";
+			if (id==0x89) f << "shortName,";
+			if (sz<1)
+			{
+				f << "###";
+				break;
+			}
+			m_input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			std::string text;
+			for (int i=0; i<sz; ++i) text+=char(libwps::readU8(m_input));
+			f << text << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		}
 		case 0xae:
 			isParsed=readFontName();
 			break;

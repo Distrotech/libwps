@@ -83,6 +83,8 @@ protected:
 	//! send the cell data
 	void sendCellContent(LotusSpreadsheetInternal::Cell const &cell,
 	                     LotusSpreadsheetInternal::Style const &style, int numRepeated=1);
+	//! try to send a formated text
+	void sendText(RVNGInputStreamPtr &input, long endPos, LotusSpreadsheetInternal::Style const &style) const;
 
 	//////////////////////// report //////////////////////////////
 
@@ -129,6 +131,9 @@ protected:
 	/* reads a formula */
 	bool readFormula(WPSStream &stream, long endPos, int sId, bool newFormula,
 	                 std::vector<WKSContentListener::FormulaInstruction> &formula, std::string &error);
+
+	//! small debug function used to print text with format sequence
+	static std::string getDebugStringForText(std::string const &text);
 private:
 	LotusSpreadsheet(LotusSpreadsheet const &orig);
 	LotusSpreadsheet &operator=(LotusSpreadsheet const &orig);

@@ -890,7 +890,35 @@ bool LotusParser::readZone(WPSStream &stream)
 		//
 		// format:
 		//
-
+		case 0x96: // 0 or FF
+		case 0x99: // 0|4 or FF
+		case 0xa3: // 0 or FF
+			f.str("");
+			f << "Entries(FMTByte" << std::hex << id << std::dec << "Z):";
+			if (sz!=1)
+			{
+				f << "###";
+				break;
+			}
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=int(libwps::readU8(input));
+			if (val==0xFF) f << "true,";
+			else if (val) f << "#val=" << val << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		case 0x8e: // with 57|64
+			f.str("");
+			f << "Entries(FMTInt" << std::hex << id << std::dec << "Z):";
+			if (sz!=2)
+			{
+				f << "###";
+				break;
+			}
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			val=int(libwps::readU16(input));
+			if (val) f << "val=" << val << ",";
+			isParsed=needWriteInAscii=true;
+			break;
 		case 0xae:
 			isParsed=m_styleManager->readFMTFontName(stream);
 			break;
