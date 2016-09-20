@@ -92,6 +92,8 @@ struct ExtraStyle
 	//! returns true if the style is empty
 	bool empty() const
 	{
+		// find also f[8-c]ffffffXX, which seems to have a different meaning
+		if ((m_format&0xf0)==0xf0) return true;
 		return m_color.isBlack() && m_backColor.isWhite() && (m_format&0x38)==0 && m_borders==0;
 	}
 	//! update the cell style
@@ -962,26 +964,52 @@ bool LotusSpreadsheet::readRowFormat(WPSStream &stream, LotusSpreadsheetInternal
 	  seem robust and may fail on some files...
 	 */
 	int wh=(value[2]>>2);
-	if (value[2]&0x40)
+	int const vers=version();
+	if (vers==1 && (wh&0x10))
 	{
 		int fId=(value[1]>>6)&0x3F;
 		if (fId==0)
 			;
-		else if ((wh&7)==5)
+		else if ((wh&0xf)==5)
 		{
+			/* unsure about this code, seems to work for Lotus123 mac,
+			   but I never find a cell style in Lotus123 pc and this
+			   part can be called*/
 			if (!m_styleManager->updateCellStyle(fId, style, font, style.m_fontType))
 				f << "#";
 			f << "Ce" << fId << ",";
+			wh &= 0xE0;
 		}
-		else if ((wh&7)==0)
+		else if ((wh&0xf)==0)
 		{
 			if (!m_styleManager->updateFontStyle(fId, font, style.m_fontType))
 				f << "#";
 			f << "FS" << fId << ",";
+			wh &= 0xE0;
 		}
 		else
-			f << "#fId=" << fId << "[" << wh << "],";
+			f << "#fId=" << fId << ",";
 		value[1] &= 0xF03C;
+	}
+	else if (wh&0x10)
+	{
+		int fId=(value[1]>>6)&0xFF;
+		if (fId==0)
+			;
+		else if ((wh&0xf)==0)
+		{
+			if (!m_styleManager->updateCellStyle(fId, style, font, style.m_fontType))
+				f << "#";
+			f << "Ce" << fId << ",";
+			wh &= 0xE0;
+		}
+		else
+			f << "#fId=" << fId << ",";
+		value[1] &= 0x303C;
+	}
+	else if (wh&0x10)
+	{
+		f << "##,";
 	}
 	else
 	{
@@ -997,7 +1025,7 @@ bool LotusSpreadsheet::readRowFormat(WPSStream &stream, LotusSpreadsheetInternal
 	if (value[1])
 		f << "f1=" << std::hex << value[1] << std::dec << ",";
 	if (wh)
-		f << "wh=" << wh << ",";
+		f << "wh=" << std::hex << wh << std::dec << ",";
 	if (font.m_size<=0)
 		font.m_size=10; // if the size is not defined, set it to default
 	style.setFont(font);
@@ -1047,8 +1075,11 @@ bool LotusSpreadsheet::readRowSizes(WPSStream &stream, long endPos)
 		int row=(int) libwps::readU16(input);
 		f << "row=" << row << ",";
 		val=(int) libwps::readU16(input);
-		f << "dim=" << float(val+31)/32.f << ",";
-		sheet->setRowHeight(row, int((val+31)/32));
+		if (val!=0xFFFF)
+		{
+			f << "dim=" << float(val+31)/32.f << ",";
+			sheet->setRowHeight(row, int((val+31)/32));
+		}
 		for (int j=0; j<2; ++j)
 		{
 			val=(int) libwps::read16(input);
@@ -1135,7 +1166,7 @@ bool LotusSpreadsheet::readSheetHeader(WPSStream &stream)
 		return false;
 	}
 	long sz = long(libwps::readU16(input));
-	f << "Entries(SheetId):";
+	f << "Entries(FMTSheetId):";
 	if (sz != 0x22)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readSheetHeader: the zone size seems bad\n"));
@@ -1219,6 +1250,8 @@ bool LotusSpreadsheet::readExtraRowFormats(WPSStream &stream)
 		f << "FMTRowForm-" << i << ":";
 		LotusSpreadsheetInternal::ExtraStyle style;
 		val=style.m_format=int(libwps::readU8(input));
+		// find also f[8-c]ffffffXX, which seems to have a different meaning
+		if ((val>>4)==0xf) f << "#";
 		if (val&0x7) f << "font[id]=" << (val&0x7) << ","; // useMe
 		if (val&0x8) f << "bold,";
 		if (val&0x10) f << "italic,";
@@ -1227,14 +1260,12 @@ bool LotusSpreadsheet::readExtraRowFormats(WPSStream &stream)
 		if (val) f << "fl=" << std::hex << val << std::dec << ",";
 		style.m_flag=val=int(libwps::readU8(input));
 		if (val&0x20) f << "special,";
-		// black, dark blue, green, cyan/gray, red, magenta, yellow, white?
-		static WPSColor const(colors[])=
+		if (!m_styleManager->getColor8(val&7, style.m_color))
 		{
-			WPSColor(0,0,0), WPSColor(0,0,255), WPSColor(0,255,0), WPSColor(128,128,128),
-			WPSColor(255,0,0), WPSColor(255,0,255), WPSColor(255,255,0), WPSColor(255,255,255)
-		};
-		style.m_color=colors[val&7];
-		if (!style.m_color.isBlack()) f << "col=" << style.m_color << ",";
+			WPS_DEBUG_MSG(("LotusSpreadsheet::readExtraRowFormats: can not read a color\n"));
+			f << "##colId=" << (val&7) << ",";
+		}
+		else if (!style.m_color.isBlack()) f << "col=" << style.m_color << ",";
 		val &= 0xD8;
 		if (val) f << "fl1=" << std::hex << val << std::dec << ",";
 		val=int(libwps::readU8(input));
@@ -1242,9 +1273,15 @@ bool LotusSpreadsheet::readExtraRowFormats(WPSStream &stream)
 		{
 			if ((val&7)==7) // checkMe
 				style.m_backColor=WPSColor::black();
+			else if (!m_styleManager->getColor8(val&7, style.m_backColor))
+			{
+				WPS_DEBUG_MSG(("LotusSpreadsheet::readExtraRowFormats: can not read a color\n"));
+				f << "##colId=" << (val&7) << ",";
+			}
 			else
-				style.m_backColor=colors[val&7];
+				f << "col[back]=" << style.m_backColor << ",";
 		}
+		if (val&0x10) f << "shadow2";
 		if (val&0x20) f << "shadow,";
 		val &= 0xD8;
 		if (val) f << "f0=" << std::hex << val << std::dec << ",";
@@ -1262,6 +1299,39 @@ bool LotusSpreadsheet::readExtraRowFormats(WPSStream &stream)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readExtraRowFormats: the number of columns for row %d seems bad\n", row));
 	}
+	return true;
+}
+
+bool LotusSpreadsheet::readFrame(WPSStream &stream)
+{
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	long type = long(libwps::read16(input));
+	if (type!=0xcc)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readFrame: not a sheet header\n"));
+		return false;
+	}
+	long sz = long(libwps::readU16(input));
+	f << "Entries(FMTFrame):";
+	if (sz != 0x13)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readFrame: the zone size seems bad\n"));
+		f << "###";
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+		return true;
+	}
+	int row=int(libwps::readU16(input));
+	f << "row=" << row << ",";
+	int col=int(libwps::readU8(input));
+	f << "col=" << col << ",";
+	ascFile.addDelimiter(input->tell(), '|');
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
 	return true;
 }
 ////////////////////////////////////////////////////////////
@@ -1753,7 +1823,7 @@ void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet cons
 	int styleId=sheet.getRowStyleId(row);
 	if (styleId>=int(m_state->m_rowStylesList.size()))
 	{
-		WPS_DEBUG_MSG(("LotusSpreadsheet::sendCellContent: I can not row style %d\n", styleId));
+		WPS_DEBUG_MSG(("LotusSpreadsheet::sendRowContent: I can not row style %d\n", styleId));
 	}
 	else if (styleId>=0)
 		styles=&m_state->m_rowStylesList[size_t(styleId)];
@@ -2335,6 +2405,45 @@ bool LotusSpreadsheet::readFormula(WPSStream &stream, long endPos, int sheetId, 
 // ------------------------------------------------------------
 // zone 1b
 // ------------------------------------------------------------
+bool LotusSpreadsheet::readSheetName1B(WPSStream &stream, long endPos)
+{
+	RVNGInputStreamPtr &input=stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	long sz=endPos-pos;
+	f << "Entries(SheetName):";
+	if (sz<3)
+	{
+		WPS_DEBUG_MSG(("LotusParser::readSheetName1B: the zone size seems bad\n"));
+		f << "###";
+		ascFile.addPos(pos-6);
+		ascFile.addNote(f.str().c_str());
+		return true;
+	}
+	int sheetId=int(libwps::readU16(input));
+	f << "id=" << sheetId << ",";
+	librevenge::RVNGString name("");
+	libwps_tools_win::Font::Type fontType=m_mainParser.getDefaultFontType();
+	for (int i=2; i<sz; ++i)
+	{
+		unsigned char c = libwps::readU8(input);
+		if (c == '\0') break;
+		libwps::appendUnicode((uint32_t)libwps_tools_win::Font::unicode(c,fontType), name);
+	}
+	f << name.cstr() << ",";
+	if (sheetId<0||sheetId>=m_state->getNumSheet())
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::readSheetName: the zone id seems bad\n"));
+		f << "##id";
+	}
+	else
+		m_state->getSheet(sheetId).m_name=name;
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
+	return true;
+}
 
 bool LotusSpreadsheet::readNote(WPSStream &stream, long endPos)
 {
@@ -2429,16 +2538,8 @@ void LotusSpreadsheet::sendText(RVNGInputStreamPtr &input, long endPos, LotusSpr
 							break;
 						}
 						char c2=char(libwps::readU8(input));
-						if (c2=='c')
-						{
-							static WPSColor const(colors[])=
-							{
-								WPSColor(0,0,0), WPSColor(0,0,255), WPSColor(0,255,0), WPSColor(128,128,128),
-								WPSColor(255,0,0), WPSColor(255,0,255), WPSColor(255,255,0), WPSColor(255,255,255)
-							};
-							font.m_color=colors[int(c-'0')];
+						if (c2=='c' && m_styleManager->getColor8(c-'0', font.m_color))
 							m_listener->setFont(font);
-						}
 						else if (c2!='F')   // F for font?
 						{
 							WPS_DEBUG_MSG(("LotusSpreadsheet::sendText: unknown int sequence\n"));
@@ -2490,7 +2591,7 @@ std::string LotusSpreadsheet::getDebugStringForText(std::string const &text)
 		switch (c)
 		{
 		case 0x1:
-			if (i>=len)
+			if (i+1>=len)
 			{
 				WPS_DEBUG_MSG(("LotusSpreadsheet::getDebugStringForText: can not read the escape value\n"));
 				res+= "[##escape]";
@@ -2500,7 +2601,7 @@ std::string LotusSpreadsheet::getDebugStringForText(std::string const &text)
 			switch (c)
 			{
 			case 0x1e:
-				if (i>=len)
+				if (i+1>=len)
 				{
 					WPS_DEBUG_MSG(("LotusSpreadsheet::getDebugStringForText: can not read the escape value\n"));
 					res+= "[##escape1]";
@@ -2516,7 +2617,7 @@ std::string LotusSpreadsheet::getDebugStringForText(std::string const &text)
 				default:
 					if (c>='0' && c<='8')
 					{
-						if (i>=len)
+						if (i+1>=len)
 						{
 							WPS_DEBUG_MSG(("LotusSpreadsheet::getDebugStringForText: can not read the escape value\n"));
 							res+= "[##escape1]";

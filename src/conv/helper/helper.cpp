@@ -196,7 +196,7 @@ try
 	bool oldFile=false;
 	if (data[2]==2 && data[4]==6 && data[5]==4)
 		oldFile=true;
-	else if (data[2]!=0x1a || data[4]>2 || data[5]!=0x10) return res;
+	else if (data[2]!=0x1a || data[4]>=2 || data[5]!=0x10) return res;
 
 	// check if the .fm3 file exists
 	std::string fmName=name.substr(0, len-3);

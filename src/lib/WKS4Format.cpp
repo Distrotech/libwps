@@ -256,8 +256,12 @@ bool WKS4Format::readZone()
 		case 0x83: // always with 0, can also be a string
 		case 0x84: // always with 0, can also be a string
 		case 0x85: // always with 0, can also be a string
+		case 0x93: // 4
 		case 0x96: // 0 or FF
+		case 0x97: // 5F
+		case 0x98: // 0|2|3
 		case 0x99: // 0|4 or FF
+		case 0x9c: // 0
 		case 0xa3: // 0 or FF
 			f.str("");
 			if (id==2)
@@ -278,6 +282,8 @@ bool WKS4Format::readZone()
 		case 0x87: // always with 0000
 		case 0x88: // always with 0000
 		case 0x8e: // with 57|64
+		case 0x9a: // with 800
+		case 0x9b: // with 720
 			f.str("");
 			f << "Entries(FMTInt" << std::hex << id << std::dec << "Z):";
 			if (sz!=2)
@@ -292,10 +298,18 @@ bool WKS4Format::readZone()
 			break;
 		case 0x86:
 		case 0x89:
+		case 0xba: // header?
+		case 0xbb: // footer?
 		{
 			f.str("");
-			f << "Entries(FMTPrinter):";
-			if (id==0x89) f << "shortName,";
+			if (id==0x86)
+				f << "Entries(FMTPrinter):";
+			else if (id==0x89)
+				f << "Entries(FMTPrinter):shortName,";
+			else if (id==0xba)
+				f << "Entries(FMTHeader):";
+			else
+				f << "Entries(FMTFooter):";
 			if (sz<1)
 			{
 				f << "###";
@@ -317,6 +331,22 @@ bool WKS4Format::readZone()
 			break;
 		case 0xb0:
 			isParsed=readFontId();
+			break;
+		case 0xb8: // always 0101
+			f.str("");
+			f << "Entries(FMTInts" << std::hex << id << std::dec << "Z):";
+			if (sz!=2)
+			{
+				f << "###";
+				break;
+			}
+			m_input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			for (int i=0; i<2; ++i)
+			{
+				val=int(libwps::readU8(m_input));
+				if (val!=1) f << "f" << i << "=" << val << ",";
+			}
+			isParsed=needWriteInAscii=true;
 			break;
 
 		default:

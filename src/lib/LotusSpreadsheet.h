@@ -93,8 +93,10 @@ protected:
 	//
 	//////////////////////// spread sheet //////////////////////////////
 
-	//! reads a sheet name
+	//! reads a sheet name: zone 0x23
 	bool readSheetName(WPSStream &stream);
+	//! reads a sheet name: zone 0x1b 36b0
+	bool readSheetName1B(WPSStream &stream, long endPos);
 
 	//! reads the columns definitions
 	bool readColumnDefinition(WPSStream &stream);
@@ -118,6 +120,8 @@ protected:
 	bool readSheetHeader(WPSStream &stream);
 	//! try to read an extra row format: 0xc5
 	bool readExtraRowFormats(WPSStream &stream);
+	//! try to read a cell's frame: 0xcc
+	bool readFrame(WPSStream &stream);
 
 	// in zone 0x1b
 

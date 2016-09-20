@@ -810,7 +810,7 @@ void LotusGraph::sendTextBox(RVNGInputStreamPtr &input, libwps::DebugFile &ascFi
 		{
 			f << "[color=" << param << "]";
 			WPSColor color;
-			if (m_styleManager->getColor(param, color))
+			if (m_styleManager->getColor256(param, color))
 			{
 				font.m_color=color;
 				m_listener->setFont(font);

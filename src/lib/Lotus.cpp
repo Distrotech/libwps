@@ -890,9 +890,17 @@ bool LotusParser::readZone(WPSStream &stream)
 		//
 		// format:
 		//
+		case 0x93: // 4
 		case 0x96: // 0 or FF
+		case 0x97: // 5F
+		case 0x98: // 0|2|3
 		case 0x99: // 0|4 or FF
+		case 0x9c: // 0
 		case 0xa3: // 0 or FF
+		case 0xce: // 1
+		case 0xcf: // 1
+		case 0xd0: // 1
+			if (m_state->m_inMainContentBlock) break;
 			f.str("");
 			f << "Entries(FMTByte" << std::hex << id << std::dec << "Z):";
 			if (sz!=1)
@@ -906,7 +914,13 @@ bool LotusParser::readZone(WPSStream &stream)
 			else if (val) f << "#val=" << val << ",";
 			isParsed=needWriteInAscii=true;
 			break;
+		case 0x87: // always with 0000
+		case 0x88: // always with 0000
 		case 0x8e: // with 57|64
+		case 0x9a: // with 800
+		case 0x9b: // with 720
+		case 0xcd: // with 57|64
+			if (m_state->m_inMainContentBlock) break;
 			f.str("");
 			f << "Entries(FMTInt" << std::hex << id << std::dec << "Z):";
 			if (sz!=2)
@@ -919,27 +933,105 @@ bool LotusParser::readZone(WPSStream &stream)
 			if (val) f << "val=" << val << ",";
 			isParsed=needWriteInAscii=true;
 			break;
+		case 0x86:
+		case 0x89:
+		case 0xba: // header?
+		case 0xbb: // footer?
+		{
+			if (m_state->m_inMainContentBlock) break;
+			f.str("");
+			if (id==0x86)
+				f << "Entries(FMTPrinter):";
+			else if (id==0x89)
+				f << "Entries(FMTPrinter):shortName,";
+			else if (id==0xba)
+				f << "Entries(FMTHeader):";
+			else
+				f << "Entries(FMTFooter):";
+
+			if (sz<1)
+			{
+				f << "###";
+				break;
+			}
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			std::string text;
+			for (int i=0; i<sz; ++i) text+=char(libwps::readU8(input));
+			f << text << ",";
+			isParsed=needWriteInAscii=true;
+			break;
+		}
 		case 0xae:
+			if (m_state->m_inMainContentBlock) break;
 			isParsed=m_styleManager->readFMTFontName(stream);
 			break;
 		case 0xaf:
 		case 0xb1:
+			if (m_state->m_inMainContentBlock) break;
 			isParsed=m_styleManager->readFMTFontSize(stream);
 			break;
 		case 0xb0:
+			if (m_state->m_inMainContentBlock) break;
 			isParsed=m_styleManager->readFMTFontId(stream);
 			break;
 		case 0xb6:
+			if (m_state->m_inMainContentBlock) break;
 			isParsed=readFMTStyleName(stream);
 			break;
+		case 0xb8: // always 0101
+			if (m_state->m_inMainContentBlock) break;
+			f.str("");
+			f << "Entries(FMTInts" << std::hex << id << std::dec << "Z):";
+			if (sz!=2)
+			{
+				f << "###";
+				break;
+			}
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			for (int i=0; i<2; ++i)
+			{
+				val=int(libwps::readU8(input));
+				if (val!=1) f << "f" << i << "=" << val << ",";
+			}
+			isParsed=needWriteInAscii=true;
+			break;
 		case 0xc3:
+			if (m_state->m_inMainContentBlock) break;
 			isParsed=ok=m_spreadsheetParser->readSheetHeader(stream);
 			break;
+		case 0xc4:
+			if (m_state->m_inMainContentBlock) break;
+			f.str("");
+			f << "Entries(FMTInt2" << std::hex << id << std::dec << "Z):";
+			if (sz!=4)
+			{
+				f << "###";
+				break;
+			}
+			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			for (int i=0; i<2; ++i)   // f0=0-8, f1=5c-15c
+			{
+				val=int(libwps::readU16(input));
+				if (val) f << "f" << i << "=" << val << ",";
+			}
+			isParsed=needWriteInAscii=true;
+			break;
 		case 0xc5:
+			if (m_state->m_inMainContentBlock) break;
 			isParsed=ok=m_spreadsheetParser->readExtraRowFormats(stream);
+			break;
+		// ca: maybe also related to some frame
+		case 0xcc: // frame around a cell
+			if (m_state->m_inMainContentBlock) break;
+			isParsed=ok=m_spreadsheetParser->readFrame(stream);
 			break;
 		default:
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+			if (!m_state->m_inMainContentBlock && id>=0x80)
+			{
+				f.str("");
+				f << "Entries(FMT" << std::hex << id << std::dec << "E):";
+			}
 			break;
 		}
 		break;
@@ -1181,10 +1273,10 @@ bool LotusParser::readDataZone(WPSStream &stream)
 	//
 	// style
 	//
-	case 0xfa0:
-		isParsed=m_styleManager->readFontStyle(stream, endPos);
+	case 0xfa0: // wk3
+		isParsed=m_styleManager->readFontStyleA0(stream, endPos);
 		break;
-	case 0xfa1: // with size 26
+	case 0xfa1: // wk6-wk9, with size 26
 		f.str("");
 		f << "Entries(FontStyle):";
 		break;
@@ -1206,10 +1298,17 @@ bool LotusParser::readDataZone(WPSStream &stream)
 		f << "Entries(GraphicStyle):";
 		break;
 	case 0xfd2: // 50Style
-		isParsed=m_styleManager->readCellStyle(stream, endPos);
+		isParsed=m_styleManager->readCellStyleD2(stream, endPos);
 		break;
 	case 0xfdc:
 		isParsed=readMacFontName(stream, endPos);
+		break;
+	case 0xfe6: // wk5
+		if (version()!=3) break;
+		isParsed=m_styleManager->readCellStyleE6(stream, endPos);
+		break;
+	case 0xff0: // wk5
+		isParsed=m_styleManager->readFontStyleF0(stream, endPos);
 		break;
 
 	// 0xfe6: X X CeId : 60Style
@@ -1301,6 +1400,9 @@ bool LotusParser::readDataZone(WPSStream &stream)
 		isParsed=needWriteInAscii=true;
 		break;
 
+	case 0x36b0:
+		isParsed=m_spreadsheetParser->readSheetName1B(stream, endPos);
+		break;
 	//
 	// 4268, 4269
 	//

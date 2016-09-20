@@ -56,8 +56,12 @@ public:
 	//! update the state (need to be called before asking for style)
 	void updateState();
 
-	//! returns if possible the color
-	bool getColor(int cId, WPSColor &color) const;
+	//! returns if possible the color(id between 0 and 7)
+	bool getColor8(int cId, WPSColor &color) const;
+	//! returns if possible the color(id between 0 and 15)
+	bool getColor16(int cId, WPSColor &color) const;
+	//! returns if possible the color(id between 0 and 255)
+	bool getColor256(int cId, WPSColor &color) const;
 
 	//! update a cell format using the cell id
 	bool updateCellStyle(int cellId, WPSCellFormat &format,
@@ -78,18 +82,25 @@ protected:
 	// low level
 	//
 
-	//! reads a cell style
-	bool readCellStyle(WPSStream &stream, long endPos);
 	//! reads a color style
 	bool readColorStyle(WPSStream &stream, long endPos);
-	//! reads a font style
-	bool readFontStyle(WPSStream &stream, long endPos);
 	//! reads a format style
 	bool readFormatStyle(WPSStream &stream, long endPos);
 	//! reads a line style
 	bool readLineStyle(WPSStream &stream, long endPos, int vers);
 	//! reads a graphic style
 	bool readGraphicStyle(WPSStream &stream, long endPos);
+
+	// 1b style
+
+	//! reads a font style: fa0
+	bool readFontStyleA0(WPSStream &stream, long endPos);
+	//! reads a font style: ff0 (wk5)
+	bool readFontStyleF0(WPSStream &stream, long endPos);
+	//! reads a cell style: fd2
+	bool readCellStyleD2(WPSStream &stream, long endPos);
+	//! reads a cell style: fe6 (wk5)
+	bool readCellStyleE6(WPSStream &stream, long endPos);
 
 	// old fmt style
 

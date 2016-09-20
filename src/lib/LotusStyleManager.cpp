@@ -180,9 +180,15 @@ struct LineStyle
 struct CellStyle
 {
 	//! constructor
-	CellStyle() : m_borders(0), m_fontId(0), m_formatId(0), m_extra("")
+	CellStyle(libwps_tools_win::Font::Type fontType) :
+		m_borders(0), m_fontId(0), m_formatId(0),
+		m_colorStyle(), m_fontStyle(fontType), m_extra("")
 	{
-		for (int i=0; i<4; ++i) m_bordersId[i]=0;
+		for (int i=0; i<4; ++i)
+		{
+			m_bordersId[i]=0;
+			m_bordersStyle[i].m_style=WPSBorder::None;
+		}
 		for (int i=0; i<2; ++i) m_colorsId[i]=0;
 	}
 	//! operator<<
@@ -226,6 +232,13 @@ struct CellStyle
 	int m_fontId;
 	//! the format id
 	int m_formatId;
+	// wk5
+	//! the color style
+	ColorStyle m_colorStyle;
+	//! the font style
+	FontStyle m_fontStyle;
+	//! the cell border
+	WPSBorder m_bordersStyle[4];
 	//! extra data
 	std::string m_extra;
 };
@@ -268,8 +281,12 @@ struct State
 
 	{
 	}
+	//! returns a color corresponding to an id between 0 and 7
+	bool getColor8(int id, WPSColor &color) const;
+	//! returns a color corresponding to an id between 0 and 15
+	bool getColor16(int id, WPSColor &color) const;
 	//! returns a color corresponding to an id
-	bool getColor(int id, WPSColor &color) const;
+	bool getColor256(int id, WPSColor &color) const;
 	//! returns the pattern corresponding to a pattern id
 	bool getPattern(int id, WPSGraphicStyle::Pattern &pattern) const;
 
@@ -294,11 +311,43 @@ struct State
 	std::map<int, FontName> m_idFontNameMap;
 };
 
-bool State::getColor(int id, WPSColor &color) const
+bool State::getColor8(int id, WPSColor &color) const
+{
+	if (id<0||id>=8)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManagerInteranl::State::getColor8(): unknown color id: %d\n",id));
+		return false;
+	}
+	static uint32_t colorMap[]=
+	{
+		// black, dark blue, green, cyan/gray, red, magenta, yellow, white?
+		0, 0xFF, 0xFF00, 0x7F7F7F, 0xFF0000, 0xFF00FF, 0xFFFF00, 0xFFFFFF
+	};
+	color=WPSColor(colorMap[id]);
+	return true;
+}
+
+bool State::getColor16(int id, WPSColor &color) const
+{
+	if (id<0||id>=16)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManagerInteranl::State::getColor16(): unknown color id: %d\n",id));
+		return false;
+	}
+	static uint32_t colorMap[]=
+	{
+		0, 0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF, 0x00FFFF,
+		0x7F0000, 0x007F00, 0x00007F, 0x7F7F00, 0x7F007F, 0x007F7F, 0x7F7F7F, 0x3F3F3F
+	};
+	color=WPSColor(colorMap[id]);
+	return true;
+}
+
+bool State::getColor256(int id, WPSColor &color) const
 {
 	if (id<0||id>=256)
 	{
-		WPS_DEBUG_MSG(("LotusStyleManagerInteranl::State::getColor(): unknown color id: %d\n",id));
+		WPS_DEBUG_MSG(("LotusStyleManagerInteranl::State::getColor256(): unknown color id: %d\n",id));
 		return false;
 	}
 	// in one file, find 0xEF as current...
@@ -417,9 +466,19 @@ int LotusStyleManager::version() const
 	return m_state->m_version;
 }
 
-bool LotusStyleManager::getColor(int cId, WPSColor &color) const
+bool LotusStyleManager::getColor8(int cId, WPSColor &color) const
 {
-	return m_state->getColor(cId, color);
+	return m_state->getColor8(cId, color);
+}
+
+bool LotusStyleManager::getColor16(int cId, WPSColor &color) const
+{
+	return m_state->getColor16(cId, color);
+}
+
+bool LotusStyleManager::getColor256(int cId, WPSColor &color) const
+{
+	return m_state->getColor256(cId, color);
 }
 
 ////////////////////////////////////////////////////////////
@@ -451,7 +510,7 @@ bool LotusStyleManager::readLineStyle(WPSStream &stream, long endPos, int vers)
 	for (int i=0; i<2; ++i)
 	{
 		int col=vers==1 ? (int) libwps::readU16(input) : (int) libwps::readU8(input);
-		if (col!=0xEF && !m_state->getColor(col, color[i]))
+		if (col!=0xEF && !m_state->getColor256(col, color[i]))
 		{
 			f << "###col" << i << "=" << col << ",";
 			continue;
@@ -551,7 +610,7 @@ bool LotusStyleManager::readColorStyle(WPSStream &stream, long endPos)
 	for (int i=0; i<4; ++i)
 	{
 		val=(colorSz==1) ? (int) libwps::readU8(input) : (int) libwps::readU16(input);
-		if (val!=0xEF && !m_state->getColor(val,color.m_colors[i]))
+		if (val!=0xEF && !m_state->getColor256(val,color.m_colors[i]))
 		{
 			WPS_DEBUG_MSG(("LotusStyleManager::readColorStyle: can not read a color\n"));
 			f << "##colId=" << val << ",";
@@ -734,7 +793,7 @@ bool LotusStyleManager::updateGraphicStyle(int graphicId, WPSGraphicStyle &style
 	return true;
 }
 
-bool LotusStyleManager::readFontStyle(WPSStream &stream, long endPos)
+bool LotusStyleManager::readFontStyleA0(WPSStream &stream, long endPos)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -743,7 +802,7 @@ bool LotusStyleManager::readFontStyle(WPSStream &stream, long endPos)
 	long pos = input->tell();
 	if (endPos-pos!=12)
 	{
-		WPS_DEBUG_MSG(("LotusStyleManager::readFontStyle: the zone size seems bad\n"));
+		WPS_DEBUG_MSG(("LotusStyleManager::readFontStyleA0: the zone size seems bad\n"));
 		ascFile.addPos(pos-6);
 		ascFile.addNote("Entries(FontStyle):###");
 		return true;
@@ -772,7 +831,7 @@ bool LotusStyleManager::readFontStyle(WPSStream &stream, long endPos)
 		val=(int) libwps::readU8(input);
 		if (val==0xEF) continue;
 		WPSColor color;
-		if (!getColor(val, color))
+		if (!getColor256(val, color))
 			f << "#col" << i << "=" << std::hex << val << std::dec << ",";
 		else if (i==0)
 			font.m_font.m_color=color;
@@ -797,13 +856,100 @@ bool LotusStyleManager::readFontStyle(WPSStream &stream, long endPos)
 	font.m_extra=f.str();
 	if (m_state->m_idFontStyleMap.find(id)!=m_state->m_idFontStyleMap.end())
 	{
-		WPS_DEBUG_MSG(("LotusStyleManager::readFontStyle: the font style %d already exists\n", id));
+		WPS_DEBUG_MSG(("LotusStyleManager::readFontStyleA0: the font style %d already exists\n", id));
 		f << "###";
 	}
 	else
 		m_state->m_idFontStyleMap.insert
 		(std::map<int,LotusStyleManagerInternal::FontStyle>::value_type(id,font));
 
+	f.str("");
+	f << "Entries(FontStyle):FS" << id << "," << font;
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusStyleManager::readFontStyleF0(WPSStream &stream, long endPos)
+{
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	long sz=endPos-pos;
+	if (sz<20)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFontStyleF0: the zone size seems bad\n"));
+		ascFile.addPos(pos-6);
+		ascFile.addNote("Entries(FontStyle):###");
+		return true;
+	}
+	int id=(int) libwps::readU8(input);
+	LotusStyleManagerInternal::FontStyle font(m_mainParser.getDefaultFontType());
+	if (id&8)
+	{
+		font.m_font.m_attributes |= WPS_BOLD_BIT;
+		f << "bold,";
+	}
+	if (id&0x10)
+	{
+		font.m_font.m_attributes |= WPS_ITALICS_BIT;
+		f << "italic,";
+	}
+	int fSz=int(libwps::readU16(input));
+	font.m_font.m_size=double(fSz)/256;
+	int val=(int) libwps::readU16(input);
+	if (val!=fSz)
+		f << "sz2=" << double(val)/256 << ",";
+	for (int i=0; i<5; ++i)   // always 0?
+	{
+		val=(int) libwps::readU8(input);
+		if (val)
+			f << "f" << i << "=" << val << ",";
+	}
+	for (int i=0; i<8; ++i)   // fl2=background?, fl3=pattern?
+	{
+		// fl0=0|c0, fl1=0|1, fl2=0|80, fl3=[0-5]0, fl4=0-4, fl5=0|50, fl6=0
+		val=(int) libwps::readU8(input);
+		if (!val)
+			continue;
+		if (i==7)
+			f << "font[id]=" << val << ",";
+		else
+			f << "fl" << i << "=" << std::hex << val << std::dec << ",";
+	}
+	val=(int) libwps::readU8(input);
+	WPSColor color;
+	if (!getColor256(val, color)) f << "#colorId=" << val << ",";
+	else
+	{
+		font.m_font.m_color=color;
+		if (!color.isBlack()) f << "color=" << color << ",";
+	}
+
+	librevenge::RVNGString name("");
+	for (long i=19; i<sz; ++i)
+	{
+		unsigned char c=static_cast<unsigned char>(libwps::readU8(input));
+		if (!c) break;
+		libwps::appendUnicode((uint32_t)libwps_tools_win::Font::unicode(c,font.m_fontType), name);
+	}
+	font.m_font.m_name=name;
+	libwps_tools_win::Font::Type fType=libwps_tools_win::Font::getFontType(name);
+	if (fType!=libwps_tools_win::Font::UNKNOWN) font.m_fontType=fType;
+	f << name.cstr() << ",";
+	if (input->tell()!=endPos) ascFile.addDelimiter(input->tell(),'|');
+	font.m_extra=f.str();
+
+	if (m_state->m_idFontStyleMap.find(id)!=m_state->m_idFontStyleMap.end())
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readFontStyleA0: the font style %d already exists\n", id));
+		f << "###";
+	}
+	else
+		m_state->m_idFontStyleMap.insert
+		(std::map<int,LotusStyleManagerInternal::FontStyle>::value_type(id,font));
 	f.str("");
 	f << "Entries(FontStyle):FS" << id << "," << font;
 	ascFile.addPos(pos-6);
@@ -907,7 +1053,7 @@ bool LotusStyleManager::readFormatStyle(WPSStream &stream, long endPos)
 	return true;
 }
 
-bool LotusStyleManager::readCellStyle(WPSStream &stream, long endPos)
+bool LotusStyleManager::readCellStyleD2(WPSStream &stream, long endPos)
 {
 	RVNGInputStreamPtr &input = stream.m_input;
 	libwps::DebugFile &ascFile=stream.m_ascii;
@@ -916,7 +1062,7 @@ bool LotusStyleManager::readCellStyle(WPSStream &stream, long endPos)
 	long pos = input->tell();
 	if (endPos-pos!=21 && endPos-pos!=33)
 	{
-		WPS_DEBUG_MSG(("LotusStyleManager::readCellStyle: the zone size seems bad\n"));
+		WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleD2 the zone size seems bad\n"));
 		ascFile.addPos(pos-6);
 		ascFile.addNote("Entries(CellStyle):###");
 		return true;
@@ -929,7 +1075,7 @@ bool LotusStyleManager::readCellStyle(WPSStream &stream, long endPos)
 		if (first)
 		{
 			first=false;
-			WPS_DEBUG_MSG(("LotusStyleManager::readCellStyle: sorry, reading cell style is not implemented\n"));
+			WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleD2 sorry, reading cell style is not implemented\n"));
 		}
 		f << "Entries(CellStyle):Ce" << id << ",";
 		if (val!=0x50)
@@ -940,7 +1086,7 @@ bool LotusStyleManager::readCellStyle(WPSStream &stream, long endPos)
 		return true;
 	}
 
-	LotusStyleManagerInternal::CellStyle cell;
+	LotusStyleManagerInternal::CellStyle cell(m_mainParser.getDefaultFontType());
 	if (val!=0x50)
 		f << "fl=" << std::hex << val << std::dec << ",";
 	for (int i=0; i<2; ++i)   // always 0?
@@ -959,7 +1105,7 @@ bool LotusStyleManager::readCellStyle(WPSStream &stream, long endPos)
 			if (fl!=0x10) f << "#fl[border" << i << "]=" << std::hex << fl << std::dec << ",";
 			if (m_state->m_idLineStyleMap.find(val)==m_state->m_idLineStyleMap.end())
 			{
-				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the line style %d does not exists\n", val));
+				WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleD2: the line style %d does not exists\n", val));
 				f << "###borderId" << i << "=" << val << ",";
 			}
 			else
@@ -971,7 +1117,7 @@ bool LotusStyleManager::readCellStyle(WPSStream &stream, long endPos)
 			if (fl!=0x20) f << "#fl[color" << wh << "]=" << std::hex << fl << std::dec << ",";
 			if (m_state->m_idColorStyleMap.find(val)==m_state->m_idColorStyleMap.end())
 			{
-				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the color style %d does not exists\n", val));
+				WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleD2: the color style %d does not exists\n", val));
 				f << "###colorId[" << wh << "]=" << val << ",";
 			}
 			else
@@ -982,7 +1128,7 @@ bool LotusStyleManager::readCellStyle(WPSStream &stream, long endPos)
 			if (fl) f << "#fl[font]=" << std::hex << fl << std::dec << ",";
 			if (m_state->m_idFontStyleMap.find(val)==m_state->m_idFontStyleMap.end())
 			{
-				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the font style %d does not exists\n", val));
+				WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleD2: the font style %d does not exists\n", val));
 				f << "###fontId=" << val << ",";
 			}
 			else
@@ -993,7 +1139,7 @@ bool LotusStyleManager::readCellStyle(WPSStream &stream, long endPos)
 			if (fl!=0x30) f << "#fl[format]=" << std::hex << fl << std::dec << ",";
 			if (m_state->m_idFormatStyleMap.find(val)==m_state->m_idFormatStyleMap.end())
 			{
-				WPS_DEBUG_MSG(("LotusStyleManager::readGraphicStyle: the format style %d does not exists\n", val));
+				WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleD2: the format style %d does not exists\n", val));
 				f << "###formatId=" << val << ",";
 			}
 			else
@@ -1011,13 +1157,187 @@ bool LotusStyleManager::readCellStyle(WPSStream &stream, long endPos)
 
 	if (m_state->m_idCellStyleMap.find(id)!=m_state->m_idCellStyleMap.end())
 	{
-		WPS_DEBUG_MSG(("LotusStyleManager::readCellStyle: the cell style %d already exists\n", id));
+		WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleD2: the cell style %d already exists\n", id));
 		f << "###";
 	}
 	else
-		m_state->m_idCellStyleMap[id]=cell;
+		m_state->m_idCellStyleMap.insert(std::map<int, LotusStyleManagerInternal::CellStyle>::value_type(id,cell));
 	ascFile.addPos(pos-6);
 	ascFile.addNote(f.str().c_str());
+	return true;
+}
+
+bool LotusStyleManager::readCellStyleE6(WPSStream &stream, long endPos)
+{
+	RVNGInputStreamPtr &input = stream.m_input;
+	libwps::DebugFile &ascFile=stream.m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	long sz=endPos-pos;
+	if ((sz%15)!=10)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleE6: the zone size seems bad\n"));
+		ascFile.addPos(pos-6);
+		ascFile.addNote("Entries(CellStyle):###");
+		return true;
+	}
+	f << "Entries(CellStyle):";
+	for (int i=0; i<5; ++i)
+	{
+		int val=int(libwps::readU16(input));
+		int const(expected[])= {0x10, 0x100, 0x10, 0xe, 0};
+		if (val!=expected[i]) f << "f0=" << val << ",";
+	}
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
+	int N=int(sz/15);
+	libwps_tools_win::Font::Type fontType=m_mainParser.getDefaultFontType();
+	for (int i=0; i<N; ++i)
+	{
+		pos=input->tell();
+		f.str("");
+		f << "CellStyle-" << i << ":";
+		int id=int(libwps::readU8(input));
+		f << "Ce" << id << ",";
+		LotusStyleManagerInternal::CellStyle cell(fontType);
+		int fId=int(libwps::readU8(input));
+		LotusStyleManagerInternal::FontStyle &font=cell.m_fontStyle;
+		if (fId)
+		{
+			if (!updateFontStyle(fId, font.m_font, font.m_fontType))
+				f << "#";
+			f << "FS" << fId << ",";
+		}
+		for (int j=0; j<5; ++j)   // fl0=0|20|40, fl1=0|f|32|36|76|a8, fl2=XX, fl3=0-b|7c, fl4=0|2
+		{
+			int val=int(libwps::readU8(input));
+			if (j==0)
+			{
+				if (val&0x60)
+				{
+					int wh=((val>>5)&3);
+					if (wh==1)
+					{
+						font.m_font.m_attributes |= WPS_UNDERLINE_BIT;
+						f << "underline,";
+					}
+					else if (wh==2)
+					{
+						f << "underline[double],";
+						font.m_font.m_attributes |= WPS_DOUBLE_UNDERLINE_BIT;
+					}
+					else
+					{
+						font.m_font.m_attributes |= WPS_UNDERLINE_BIT;
+						f << "underline[w=2],"; // FIXME
+					}
+				}
+				val&=0x9F;
+			}
+			if (!val) continue;
+			if (j==1 || j==2)
+			{
+				WPSColor color;
+				if (!getColor256(val, color)) f << "#colorId=" << val << ",";
+				else
+				{
+					cell.m_colorStyle.m_colors[j==2 ? 2 : 3]=color;
+					if (!color.isWhite()) f << "color" << j << "=" << color << ",";
+				}
+			}
+			else if (j==3)
+			{
+				if (val&0x3F)
+				{
+					cell.m_colorStyle.m_patternId=(val&0x3F);
+					f << "pat=" << val << ",";
+				}
+				if (val&0xC0) f << "pat[high]=" << (val>>6) << ",";
+			}
+			else
+				f << "fl" << j << "=" << std::hex << val << std::dec << ",";
+		}
+		int colors[4]; // TBLR
+		int borders[4];
+		unsigned long lVal=libwps::readU16(input);
+		colors[0]=(lVal>>10)&0x1f;
+		colors[1]=(lVal>>5)&0x1f;
+		lVal&=0xC21F;
+		if (lVal) f << "col[h0]=" << std::hex << lVal << ",";
+		lVal=libwps::readU16(input);
+		colors[2]=(lVal>>5)&0x1f;
+		colors[3]=(lVal>>0)&0x1f;
+		borders[1]=(lVal>>10)&0xf;
+		lVal&=0xC210;
+		if (lVal) f << "col[h1]=" << std::hex << lVal << ",";
+		lVal=libwps::readU16(input);
+		borders[0]=(lVal&0xf);
+		borders[3]=((lVal>>4)&0xf);
+		borders[2]=((lVal>>8)&0xf);
+		lVal&=0xF000;
+		if (lVal) f << "col[h2]=" << std::hex << lVal << ",";
+		for (int j=0; j<4; ++j)
+		{
+			if (!borders[j]) continue;
+			WPSBorder border;
+			switch (borders[j])
+			{
+			case 1:
+				border.m_style=WPSBorder::Simple;
+				break;
+			case 2:
+				border.m_style=WPSBorder::Simple;
+				border.m_type=WPSBorder::Double;
+				break;
+			case 3:
+				border.m_style=WPSBorder::Simple;
+				border.m_width=2;
+				break;
+			case 4:
+				border.m_style=WPSBorder::Dot; // 1x1
+				break;
+			case 5:
+				border.m_style=WPSBorder::LargeDot; // 2x2
+				break;
+			case 6:
+				border.m_style=WPSBorder::Dash; // 3x1
+				break;
+			case 7:
+				border.m_style=WPSBorder::Dash; // 1x1 2x1
+				break;
+			case 8:
+				border.m_style=WPSBorder::Dash; // 1x1 1x1 2x1
+				break;
+			default:
+				WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleE6: can not read some border format\n"));
+				f << "##border" << j << "=" << borders[j] << ",";
+				border.m_style=WPSBorder::Simple;
+				break;
+			}
+			if (!getColor16(colors[j], border.m_color))
+			{
+				WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleE6: can not read some color\n"));
+				f << "##col" << j << "=" << colors[j] << ",";
+			}
+			char const *(wh[])= {"T", "B", "L", "R"};
+			f << "bord" << wh[j] << "=" << border << ",";
+			cell.m_bordersStyle[j]=border;
+		}
+		f << "],";
+		ascFile.addDelimiter(input->tell(),'|');
+		if (m_state->m_idCellStyleMap.find(id)!=m_state->m_idCellStyleMap.end())
+		{
+			WPS_DEBUG_MSG(("LotusStyleManager::readCellStyleE6: the cell style %d already exists\n", id));
+			f << "###id";
+		}
+		else
+			m_state->m_idCellStyleMap.insert(std::map<int, LotusStyleManagerInternal::CellStyle>::value_type(id,cell));
+
+		input->seek(pos+15,librevenge::RVNG_SEEK_SET);
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+	}
 	return true;
 }
 
@@ -1036,21 +1356,30 @@ bool LotusStyleManager::updateCellStyle(int cellId, WPSCellFormat &format,
 		}
 		return false;
 	}
+	int const vers=version();
 	LotusStyleManagerInternal::CellStyle const &cellStyle=m_state->m_idCellStyleMap.find(cellId)->second;
-	if (cellStyle.m_fontId)
+	if (vers==3)
 	{
-		if (updateFontStyle(cellStyle.m_fontId, font, fontType))
-			format.setFont(font);
+		font=cellStyle.m_fontStyle.m_font;
+		fontType=cellStyle.m_fontStyle.m_fontType;
+		format.setFont(font);
+		for (int i=0; i<4; ++i)
+		{
+			static int const(wh[])= {WPSBorder::TopBit,WPSBorder::BottomBit,WPSBorder::LeftBit,WPSBorder::RightBit};
+			format.setBorders(wh[i],cellStyle.m_bordersStyle[i]);
+		}
 	}
-	if (cellStyle.m_colorsId[0])
+	// wk1 or wk3
+	if ((vers!=3 && cellStyle.m_colorsId[0]) || vers==3)
 	{
-		if (m_state->m_idColorStyleMap.find(cellStyle.m_colorsId[0])==m_state->m_idColorStyleMap.end())
+		if (vers!=3 && m_state->m_idColorStyleMap.find(cellStyle.m_colorsId[0])==m_state->m_idColorStyleMap.end())
 		{
 			WPS_DEBUG_MSG(("LotusStyleManager::updateCellStyle: the color style %d does not exist\n", cellStyle.m_colorsId[0]));
 		}
 		else
 		{
-			LotusStyleManagerInternal::ColorStyle const &color=m_state->m_idColorStyleMap.find(cellStyle.m_colorsId[0])->second;
+			LotusStyleManagerInternal::ColorStyle const &color=
+			    vers==3 ? cellStyle.m_colorStyle : m_state->m_idColorStyleMap.find(cellStyle.m_colorsId[0])->second;
 			if (color.m_patternId)   // not empty
 			{
 				WPSColor finalColor=color.m_colors[2];
@@ -1066,6 +1395,13 @@ bool LotusStyleManager::updateCellStyle(int cellId, WPSCellFormat &format,
 				format.setBackgroundColor(finalColor);
 			}
 		}
+	}
+	if (vers==3) return true;
+	// wk3
+	if (cellStyle.m_fontId)
+	{
+		if (updateFontStyle(cellStyle.m_fontId, font, fontType))
+			format.setFont(font);
 	}
 	if (!cellStyle.m_borders)
 		return true;
