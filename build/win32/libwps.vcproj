@@ -853,6 +853,26 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\WPSOLE1Parser.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\WPSOLEParser.cpp"
 				>
 				<FileConfiguration
@@ -1179,6 +1199,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\WPSList.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WPSOLE1Parser.h"
 				>
 			</File>
 			<File

@@ -223,6 +223,10 @@ SOURCE=..\..\src\lib\WPSList.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WPSOLE1Parser.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WPSOLEParser.cpp
 # End Source File
 # Begin Source File
@@ -404,6 +408,10 @@ SOURCE=..\..\src\lib\WPSHeader.h
 # Begin Source File
 
 SOURCE=..\..\src\lib\WPSList.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WPSOLE1Parser.h
 # End Source File
 # Begin Source File
 

@@ -564,10 +564,11 @@ bool LotusSpreadsheet::hasSomeSpreadsheetData() const
 ////////////////////////////////////////////////////////////
 //   parse sheet data
 ////////////////////////////////////////////////////////////
-bool LotusSpreadsheet::readColumnDefinition(WPSStream &stream)
+bool LotusSpreadsheet::readColumnDefinition(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -645,10 +646,11 @@ bool LotusSpreadsheet::readColumnDefinition(WPSStream &stream)
 	return true;
 }
 
-bool LotusSpreadsheet::readColumnSizes(WPSStream &stream)
+bool LotusSpreadsheet::readColumnSizes(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -698,10 +700,11 @@ bool LotusSpreadsheet::readColumnSizes(WPSStream &stream)
 	return true;
 }
 
-bool LotusSpreadsheet::readRowFormats(WPSStream &stream)
+bool LotusSpreadsheet::readRowFormats(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -824,11 +827,12 @@ bool LotusSpreadsheet::readRowFormats(WPSStream &stream)
 	return true;
 }
 
-bool LotusSpreadsheet::readRowFormat(WPSStream &stream, LotusSpreadsheetInternal::Style &style, int &numCell, long endPos)
+bool LotusSpreadsheet::readRowFormat(shared_ptr<WPSStream> stream, LotusSpreadsheetInternal::Style &style, int &numCell, long endPos)
 {
+	if (!stream) return false;
 	numCell=1;
 
-	RVNGInputStreamPtr &input=stream.m_input;
+	RVNGInputStreamPtr &input=stream->m_input;
 	libwps::DebugStream f;
 	long actPos=input->tell();
 	if (endPos-actPos<4)
@@ -1033,10 +1037,11 @@ bool LotusSpreadsheet::readRowFormat(WPSStream &stream, LotusSpreadsheetInternal
 	return true;
 }
 
-bool LotusSpreadsheet::readRowSizes(WPSStream &stream, long endPos)
+bool LotusSpreadsheet::readRowSizes(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1094,10 +1099,11 @@ bool LotusSpreadsheet::readRowSizes(WPSStream &stream, long endPos)
 	return true;
 }
 
-bool LotusSpreadsheet::readSheetName(WPSStream &stream)
+bool LotusSpreadsheet::readSheetName(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1152,10 +1158,11 @@ bool LotusSpreadsheet::readSheetName(WPSStream &stream)
 	return true;
 }
 
-bool LotusSpreadsheet::readSheetHeader(WPSStream &stream)
+bool LotusSpreadsheet::readSheetHeader(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1195,10 +1202,11 @@ bool LotusSpreadsheet::readSheetHeader(WPSStream &stream)
 	return true;
 }
 
-bool LotusSpreadsheet::readExtraRowFormats(WPSStream &stream)
+bool LotusSpreadsheet::readExtraRowFormats(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1302,45 +1310,14 @@ bool LotusSpreadsheet::readExtraRowFormats(WPSStream &stream)
 	return true;
 }
 
-bool LotusSpreadsheet::readFrame(WPSStream &stream)
-{
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
-	libwps::DebugStream f;
-
-	long pos = input->tell();
-	long type = long(libwps::read16(input));
-	if (type!=0xcc)
-	{
-		WPS_DEBUG_MSG(("LotusSpreadsheet::readFrame: not a sheet header\n"));
-		return false;
-	}
-	long sz = long(libwps::readU16(input));
-	f << "Entries(FMTFrame):";
-	if (sz != 0x13)
-	{
-		WPS_DEBUG_MSG(("LotusSpreadsheet::readFrame: the zone size seems bad\n"));
-		f << "###";
-		ascFile.addPos(pos);
-		ascFile.addNote(f.str().c_str());
-		return true;
-	}
-	int row=int(libwps::readU16(input));
-	f << "row=" << row << ",";
-	int col=int(libwps::readU8(input));
-	f << "col=" << col << ",";
-	ascFile.addDelimiter(input->tell(), '|');
-	ascFile.addPos(pos);
-	ascFile.addNote(f.str().c_str());
-	return true;
-}
 ////////////////////////////////////////////////////////////
 // Cell
 ////////////////////////////////////////////////////////////
-bool LotusSpreadsheet::readCellName(WPSStream &stream)
+bool LotusSpreadsheet::readCellName(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1417,10 +1394,11 @@ bool LotusSpreadsheet::readCellName(WPSStream &stream)
 	return true;
 }
 
-bool LotusSpreadsheet::readCell(WPSStream &stream)
+bool LotusSpreadsheet::readCell(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1475,7 +1453,7 @@ bool LotusSpreadsheet::readCell(WPSStream &stream)
 	else
 		sheet=&m_state->m_spreadsheetList[size_t(sheetId)];
 
-	LotusSpreadsheetInternal::Cell &cell=sheet->getCell(stream.m_input, Vec2i(col, row));
+	LotusSpreadsheetInternal::Cell &cell=sheet->getCell(stream->m_input, Vec2i(col, row));
 	switch (type)
 	{
 	case 0x16:
@@ -1593,7 +1571,7 @@ bool LotusSpreadsheet::readCell(WPSStream &stream)
 		cell.m_content.setValue(res);
 		ascFile.addDelimiter(input->tell(),'|');
 		std::string error;
-		if (!readFormula(stream, endPos, sheetId, false, cell.m_content.m_formula, error))
+		if (!readFormula(*stream, endPos, sheetId, false, cell.m_content.m_formula, error))
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
 			ascFile.addDelimiter(input->tell()-1, '#');
@@ -1675,7 +1653,7 @@ bool LotusSpreadsheet::readCell(WPSStream &stream)
 		cell.m_content.setValue(res);
 		ascFile.addDelimiter(input->tell(),'|');
 		std::string error;
-		if (!readFormula(stream, endPos, sheetId, true, cell.m_content.m_formula, error))
+		if (!readFormula(*stream, endPos, sheetId, true, cell.m_content.m_formula, error))
 		{
 			cell.m_content.m_contentType=WKSContentListener::CellContent::C_NUMBER;
 			ascFile.addDelimiter(input->tell()-1, '#');
@@ -2405,10 +2383,11 @@ bool LotusSpreadsheet::readFormula(WPSStream &stream, long endPos, int sheetId, 
 // ------------------------------------------------------------
 // zone 1b
 // ------------------------------------------------------------
-bool LotusSpreadsheet::readSheetName1B(WPSStream &stream, long endPos)
+bool LotusSpreadsheet::readSheetName1B(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -2445,10 +2424,11 @@ bool LotusSpreadsheet::readSheetName1B(WPSStream &stream, long endPos)
 	return true;
 }
 
-bool LotusSpreadsheet::readNote(WPSStream &stream, long endPos)
+bool LotusSpreadsheet::readNote(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();

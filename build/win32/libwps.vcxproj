@@ -238,6 +238,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\WPSOLE1Parser.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\WPSOLEParser.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -312,6 +316,7 @@
     <ClInclude Include="..\..\src\lib\WPSGraphicStyle.h" />
     <ClInclude Include="..\..\src\lib\WPSHeader.h" />
     <ClInclude Include="..\..\src\lib\WPSList.h" />
+    <ClInclude Include="..\..\src\lib\WPSOLE1Parser.h" />
     <ClInclude Include="..\..\src\lib\WPSOLEParser.h" />
     <ClInclude Include="..\..\src\lib\WPSPageSpan.h" />
     <ClInclude Include="..\..\src\lib\WPSParagraph.h" />

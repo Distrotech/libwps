@@ -81,6 +81,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSList.cpp		\
 	WPSList.h		\
 	WPSListener.h		\
+	WPSOLE1Parser.cpp	\
+	WPSOLE1Parser.h		\
 	WPSOLEParser.cpp	\
 	WPSOLEParser.h		\
 	WPSPageSpan.cpp		\

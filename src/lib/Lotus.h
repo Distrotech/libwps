@@ -41,6 +41,23 @@ class LotusGraph;
 class LotusSpreadsheet;
 class LotusStyleManager;
 
+/* .wk3: a spreadsheet is composed in two files
+       + a wk3 file which contains the spreadsheet data
+       + a fm3 file which contains the different formatings
+
+   .wk4: the file contains three parts:
+       + the wk3 previous file
+	   + the fm3 file
+	   + an unknown part, which may code the file structure,
+
+	   Normally the wk3 and the fm3 are a sequence of small zones,
+	   but picture seems to be appeared at random position inside the
+	   fm3 part (and even inside some structure fm3 structures...)
+
+	   search for .ole and OLE1
+
+ */
+
 /**
  * This class parses a WK2..WK4 Lotus spreadsheet
  *
@@ -86,6 +103,8 @@ protected:
 	//! send the graphics corresponding to a sheetId
 	void sendGraphics(int sheetId);
 
+	/** try to parse the different zones */
+	bool createZones(shared_ptr<WPSStream> mainStream);
 	/** creates the main listener */
 	shared_ptr<WKSContentListener> createListener(librevenge::RVNGSpreadsheetInterface *interface);
 
@@ -97,33 +116,32 @@ protected:
 	bool parseFormatStream();
 
 	//! checks if the document header is correct (or not)
-	bool checkHeader(WPSStream &stream, bool mainStream, bool strict);
+	bool checkHeader(shared_ptr<WPSStream> stream, bool mainStream, bool strict);
 	/** finds the different zones (spreadsheet, chart, print, ...) */
-	bool readZones(WPSStream &stream);
+	bool readZones(shared_ptr<WPSStream> stream);
 	/** parse the different zones 1B */
-	bool readDataZone(WPSStream &stream);
+	bool readDataZone(shared_ptr<WPSStream> stream);
 	//! reads a zone
-	bool readZone(WPSStream &stream);
+	bool readZone(shared_ptr<WPSStream> stream);
 	//! parse a wk123 zone
-	bool readZoneV3(WPSStream &stream);
-
+	bool readZoneV3(shared_ptr<WPSStream> stream);
 	//////////////////////// generic ////////////////////////////////////
 
 	//! reads a mac font name
-	bool readMacFontName(WPSStream &stream, long endPos);
+	bool readMacFontName(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a format style name: b6
-	bool readFMTStyleName(WPSStream &stream);
+	bool readFMTStyleName(shared_ptr<WPSStream> stream);
 	//! reads a link
-	bool readLinkZone(WPSStream &stream);
+	bool readLinkZone(shared_ptr<WPSStream> stream);
 	//! reads a mac document info zone: zone 1b, then 2af8
-	bool readDocumentInfoMac(WPSStream &stream, long endPos);
+	bool readDocumentInfoMac(shared_ptr<WPSStream> stream, long endPos);
 
 	//////////////////////// chart zone //////////////////////////////
 
 	//! reads a chart definitions
-	bool readChartDefinition(WPSStream &stream);
+	bool readChartDefinition(shared_ptr<WPSStream> stream);
 	//! reads the chart name or title
-	bool readChartName(WPSStream &stream);
+	bool readChartName(shared_ptr<WPSStream> stream);
 
 	//////////////////////// unknown zone //////////////////////////////
 

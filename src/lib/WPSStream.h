@@ -28,8 +28,12 @@
 //! small structure use to store a stream and it debug file
 struct WPSStream
 {
-	//! constructor
+	//! constructor with an ascii file
 	WPSStream(RVNGInputStreamPtr input, libwps::DebugFile &ascii);
+	//! constructor without an ascii file
+	explicit WPSStream(RVNGInputStreamPtr input);
+	//! destructor
+	~WPSStream();
 	//! return true if the position is in the file
 	bool checkFilePosition(long pos) const
 	{
@@ -41,6 +45,9 @@ struct WPSStream
 	libwps::DebugFile &m_ascii;
 	//! the last position
 	long m_eof;
+protected:
+	//! the local file(if not, is given)
+	libwps::DebugFile m_asciiFile;
 };
 
 #endif /* WPS_STREAM_H */

@@ -94,39 +94,37 @@ protected:
 	//////////////////////// spread sheet //////////////////////////////
 
 	//! reads a sheet name: zone 0x23
-	bool readSheetName(WPSStream &stream);
+	bool readSheetName(shared_ptr<WPSStream> stream);
 	//! reads a sheet name: zone 0x1b 36b0
-	bool readSheetName1B(WPSStream &stream, long endPos);
+	bool readSheetName1B(shared_ptr<WPSStream> stream, long endPos);
 
 	//! reads the columns definitions
-	bool readColumnDefinition(WPSStream &stream);
+	bool readColumnDefinition(shared_ptr<WPSStream> stream);
 	//! reads the column sizes ( in char )
-	bool readColumnSizes(WPSStream &stream);
+	bool readColumnSizes(shared_ptr<WPSStream> stream);
 	//! reads the row formats
-	bool readRowFormats(WPSStream &stream);
+	bool readRowFormats(shared_ptr<WPSStream> stream);
 	//! reads a cell's row format
-	bool readRowFormat(WPSStream &stream, LotusSpreadsheetInternal::Style &style, int &numCell, long endPos);
+	bool readRowFormat(shared_ptr<WPSStream> stream, LotusSpreadsheetInternal::Style &style, int &numCell, long endPos);
 	//! reads the row size ( in pt*32 )
-	bool readRowSizes(WPSStream &stream, long endPos);
+	bool readRowSizes(shared_ptr<WPSStream> stream, long endPos);
 
 	//! reads a cell
-	bool readCell(WPSStream &stream);
+	bool readCell(shared_ptr<WPSStream> stream);
 	//! reads a cell or list of cell name
-	bool readCellName(WPSStream &stream);
+	bool readCellName(shared_ptr<WPSStream> stream);
 
 	// in fmt
 
 	//! try to read a sheet header: 0xc3
-	bool readSheetHeader(WPSStream &stream);
+	bool readSheetHeader(shared_ptr<WPSStream> stream);
 	//! try to read an extra row format: 0xc5
-	bool readExtraRowFormats(WPSStream &stream);
-	//! try to read a cell's frame: 0xcc
-	bool readFrame(WPSStream &stream);
+	bool readExtraRowFormats(shared_ptr<WPSStream> stream);
 
 	// in zone 0x1b
 
 	//! try to read a note: subZone id 9065
-	bool readNote(WPSStream &stream, long endPos);
+	bool readNote(shared_ptr<WPSStream> stream, long endPos);
 
 	// data in formula
 

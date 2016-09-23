@@ -24,7 +24,7 @@
 
 #include "WKSSubDocument.h"
 
-WKSSubDocument::WKSSubDocument(RVNGInputStreamPtr &input, WKSParser *p, int i)  : WPSSubDocument(input,i), m_parser(p)
+WKSSubDocument::WKSSubDocument(RVNGInputStreamPtr input, WKSParser *p, int i)  : WPSSubDocument(input,i), m_parser(p)
 {
 }
 

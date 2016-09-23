@@ -34,7 +34,7 @@ class WPSSubDocument
 {
 public:
 	/// constructor
-	WPSSubDocument(RVNGInputStreamPtr &input, int id=0);
+	WPSSubDocument(RVNGInputStreamPtr input, int id=0);
 	/// destructor
 	virtual ~WPSSubDocument();
 

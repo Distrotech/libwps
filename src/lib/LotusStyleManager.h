@@ -83,33 +83,33 @@ protected:
 	//
 
 	//! reads a color style
-	bool readColorStyle(WPSStream &stream, long endPos);
+	bool readColorStyle(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a format style
-	bool readFormatStyle(WPSStream &stream, long endPos);
+	bool readFormatStyle(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a line style
-	bool readLineStyle(WPSStream &stream, long endPos, int vers);
+	bool readLineStyle(shared_ptr<WPSStream> stream, long endPos, int vers);
 	//! reads a graphic style
-	bool readGraphicStyle(WPSStream &stream, long endPos);
+	bool readGraphicStyle(shared_ptr<WPSStream> stream, long endPos);
 
 	// 1b style
 
 	//! reads a font style: fa0
-	bool readFontStyleA0(WPSStream &stream, long endPos);
+	bool readFontStyleA0(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a font style: ff0 (wk5)
-	bool readFontStyleF0(WPSStream &stream, long endPos);
+	bool readFontStyleF0(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a cell style: fd2
-	bool readCellStyleD2(WPSStream &stream, long endPos);
+	bool readCellStyleD2(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a cell style: fe6 (wk5)
-	bool readCellStyleE6(WPSStream &stream, long endPos);
+	bool readCellStyleE6(shared_ptr<WPSStream> stream, long endPos);
 
 	// old fmt style
 
 	//! reads a format font name: zones 0xae
-	bool readFMTFontName(WPSStream &stream);
+	bool readFMTFontName(shared_ptr<WPSStream> stream);
 	//! reads a format font sizes zones 0xaf and 0xb1
-	bool readFMTFontSize(WPSStream &stream);
+	bool readFMTFontSize(shared_ptr<WPSStream> stream);
 	//! reads a format font id zone: 0xb0
-	bool readFMTFontId(WPSStream &stream);
+	bool readFMTFontId(shared_ptr<WPSStream> stream);
 
 	//! update style using color id for defining shadow
 	bool updateShadowStyle(int colorId, WPSGraphicStyle &style) const;

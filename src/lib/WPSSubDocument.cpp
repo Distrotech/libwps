@@ -24,7 +24,7 @@
 
 #include "WPSSubDocument.h"
 
-WPSSubDocument::WPSSubDocument(RVNGInputStreamPtr &input, int i)  : m_input(input), m_id(i)
+WPSSubDocument::WPSSubDocument(RVNGInputStreamPtr input, int i)  : m_input(input), m_id(i)
 {
 }
 

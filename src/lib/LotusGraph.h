@@ -75,7 +75,7 @@ protected:
 	//! try to send a picture
 	void sendPicture(LotusGraphInternal::Zone const &zone);
 	//! try to send a textbox content's
-	void sendTextBox(RVNGInputStreamPtr &input, libwps::DebugFile &ascFile, WPSEntry const &entry);
+	void sendTextBox(shared_ptr<WPSStream> stream, WPSEntry const &entry);
 
 	//
 	// low level
@@ -84,15 +84,25 @@ protected:
 	// ////////////////////// zone //////////////////////////////
 
 	//! reads a begin graphic zone
-	bool readZoneBegin(WPSStream &stream, long endPos);
+	bool readZoneBegin(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a graphic zone
-	bool readZoneData(WPSStream &stream, long endPos, int type);
+	bool readZoneData(shared_ptr<WPSStream> stream, long endPos, int type);
 	//! reads a graphic textbox data
-	bool readTextBoxData(WPSStream &stream, long endPos);
+	bool readTextBoxData(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a picture definition
-	bool readPictureDefinition(WPSStream &stream, long endPos);
+	bool readPictureDefinition(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a picture data
-	bool readPictureData(WPSStream &stream, long endPos);
+	bool readPictureData(shared_ptr<WPSStream> stream, long endPos);
+
+	// fmt
+
+	//! try to read a graphic: 0xca (wk5)
+	bool readGraphic(shared_ptr<WPSStream> stream);
+	//! try to read a graph's frame: 0xcc (wk5)
+	bool readFrame(shared_ptr<WPSStream> stream);
+
+	//! try to read a picture's frame: 000[25] (wk5)
+	bool readPicture(shared_ptr<WPSStream> stream);
 
 private:
 	LotusGraph(LotusGraph const &orig);

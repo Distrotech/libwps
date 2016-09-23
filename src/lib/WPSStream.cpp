@@ -21,7 +21,7 @@
 
 #include "WPSStream.h"
 
-WPSStream::WPSStream(RVNGInputStreamPtr input, libwps::DebugFile &ascii) : m_input(input), m_ascii(ascii), m_eof(-1)
+WPSStream::WPSStream(RVNGInputStreamPtr input, libwps::DebugFile &ascii) : m_input(input), m_ascii(ascii), m_eof(-1), m_asciiFile()
 {
 	if (!input || input->seek(0, librevenge::RVNG_SEEK_END)!=0)
 		return;
@@ -29,4 +29,15 @@ WPSStream::WPSStream(RVNGInputStreamPtr input, libwps::DebugFile &ascii) : m_inp
 	input->seek(0, librevenge::RVNG_SEEK_SET);
 }
 
+WPSStream::WPSStream(RVNGInputStreamPtr input) : m_input(input), m_ascii(m_asciiFile), m_eof(-1), m_asciiFile()
+{
+	if (!input || input->seek(0, librevenge::RVNG_SEEK_END)!=0)
+		return;
+	m_eof=input->tell();
+	input->seek(0, librevenge::RVNG_SEEK_SET);
+}
+
+WPSStream::~WPSStream()
+{
+}
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

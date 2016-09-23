@@ -484,10 +484,11 @@ bool LotusStyleManager::getColor256(int cId, WPSColor &color) const
 ////////////////////////////////////////////////////////////
 // styles
 ////////////////////////////////////////////////////////////
-bool LotusStyleManager::readLineStyle(WPSStream &stream, long endPos, int vers)
+bool LotusStyleManager::readLineStyle(shared_ptr<WPSStream> stream, long endPos, int vers)
 {
-	RVNGInputStreamPtr &input = stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input = stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -583,10 +584,11 @@ bool LotusStyleManager::updateLineStyle(int lineId, WPSGraphicStyle &style) cons
 	return true;
 }
 
-bool LotusStyleManager::readColorStyle(WPSStream &stream, long endPos)
+bool LotusStyleManager::readColorStyle(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input = stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input = stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -703,10 +705,11 @@ bool LotusStyleManager::updateShadowStyle(int colorId, WPSGraphicStyle &style) c
 	return true;
 }
 
-bool LotusStyleManager::readGraphicStyle(WPSStream &stream, long endPos)
+bool LotusStyleManager::readGraphicStyle(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input = stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input = stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -793,10 +796,11 @@ bool LotusStyleManager::updateGraphicStyle(int graphicId, WPSGraphicStyle &style
 	return true;
 }
 
-bool LotusStyleManager::readFontStyleA0(WPSStream &stream, long endPos)
+bool LotusStyleManager::readFontStyleA0(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input = stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input = stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -870,10 +874,11 @@ bool LotusStyleManager::readFontStyleA0(WPSStream &stream, long endPos)
 	return true;
 }
 
-bool LotusStyleManager::readFontStyleF0(WPSStream &stream, long endPos)
+bool LotusStyleManager::readFontStyleF0(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input = stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input = stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -977,10 +982,11 @@ bool LotusStyleManager::updateFontStyle(int fontId, WPSFont &font, libwps_tools_
 	return true;
 }
 
-bool LotusStyleManager::readFormatStyle(WPSStream &stream, long endPos)
+bool LotusStyleManager::readFormatStyle(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input = stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input = stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1053,10 +1059,11 @@ bool LotusStyleManager::readFormatStyle(WPSStream &stream, long endPos)
 	return true;
 }
 
-bool LotusStyleManager::readCellStyleD2(WPSStream &stream, long endPos)
+bool LotusStyleManager::readCellStyleD2(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input = stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input = stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1167,10 +1174,11 @@ bool LotusStyleManager::readCellStyleD2(WPSStream &stream, long endPos)
 	return true;
 }
 
-bool LotusStyleManager::readCellStyleE6(WPSStream &stream, long endPos)
+bool LotusStyleManager::readCellStyleE6(shared_ptr<WPSStream> stream, long endPos)
 {
-	RVNGInputStreamPtr &input = stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input = stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1415,10 +1423,11 @@ bool LotusStyleManager::updateCellStyle(int cellId, WPSCellFormat &format,
 	return true;
 }
 
-bool LotusStyleManager::readFMTFontName(WPSStream &stream)
+bool LotusStyleManager::readFMTFontName(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1477,10 +1486,11 @@ bool LotusStyleManager::readFMTFontName(WPSStream &stream)
 	return true;
 }
 
-bool LotusStyleManager::readFMTFontId(WPSStream &stream)
+bool LotusStyleManager::readFMTFontId(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();
@@ -1527,10 +1537,11 @@ bool LotusStyleManager::readFMTFontId(WPSStream &stream)
 	return true;
 }
 
-bool LotusStyleManager::readFMTFontSize(WPSStream &stream)
+bool LotusStyleManager::readFMTFontSize(shared_ptr<WPSStream> stream)
 {
-	RVNGInputStreamPtr &input=stream.m_input;
-	libwps::DebugFile &ascFile=stream.m_ascii;
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
 	libwps::DebugStream f;
 
 	long pos = input->tell();

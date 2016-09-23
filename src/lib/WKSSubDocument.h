@@ -36,7 +36,7 @@ class WKSSubDocument : public WPSSubDocument
 {
 public:
 	/// constructor
-	WKSSubDocument(RVNGInputStreamPtr &input, WKSParser *parser, int id=0);
+	WKSSubDocument(RVNGInputStreamPtr input, WKSParser *parser, int id=0);
 	/// destructor
 	virtual ~WKSSubDocument();
 
