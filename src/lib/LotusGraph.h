@@ -101,7 +101,7 @@ protected:
 	//! try to read a graph's frame: 0xcc (wk5)
 	bool readFrame(shared_ptr<WPSStream> stream);
 
-	//! try to read a picture's frame: 000[25] (wk5)
+	//! try to read a picture's frame: 0105 local zone (to rewrite)
 	bool readPicture(shared_ptr<WPSStream> stream);
 
 private:

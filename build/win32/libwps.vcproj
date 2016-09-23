@@ -973,6 +973,26 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\WPSStringStream.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\WPSSubDocument.cpp"
 				>
 				<FileConfiguration
@@ -1227,6 +1247,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\WPSStream.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\WPSStringStream.h"
 				>
 			</File>
 			<File

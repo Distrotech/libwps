@@ -328,6 +328,16 @@ void WKSContentListener::setDocumentLanguage(int lcid)
 	m_ds->m_metaData.insert("librevenge:language", lang.c_str());
 }
 
+void WKSContentListener::setMetaData(const librevenge::RVNGPropertyList &list)
+{
+	librevenge::RVNGPropertyList::Iter i(list);
+
+	for (i.rewind(); i.next();)
+	{
+		m_ds->m_metaData.insert(i.key(), i()->getStr());
+	}
+}
+
 void WKSContentListener::startDocument()
 {
 	if (m_ds->m_isDocumentStarted)

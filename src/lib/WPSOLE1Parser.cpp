@@ -35,6 +35,7 @@
 
 #include "WPSDebug.h"
 #include "WPSStream.h"
+#include "WPSStringStream.h"
 
 using namespace libwps;
 
@@ -47,7 +48,7 @@ namespace WPSOLE1ParserInternal
 struct OLEZone
 {
 	//! constructor
-	OLEZone(int levl) : m_level(levl), m_defPosition(0), m_varIdToValueMap(), m_idsList(), m_beginList(), m_lengthList(), m_childList()
+	OLEZone(int levl) : m_level(levl), m_defPosition(0), m_varIdToValueMap(), m_idsList(), m_beginList(), m_lengthList(), m_childList(), m_parsed(false)
 	{
 	}
 	//! the level
@@ -66,15 +67,21 @@ struct OLEZone
 	std::vector<OLEZone> m_childList;
 	//! the list of names
 	std::string m_names[2];
+	//! a flag to know if the zone is parsed
+	mutable bool m_parsed;
 };
 
 /** Internal: internal method to keep ole1 state */
 struct State
 {
 	/// constructor
-	State(shared_ptr<WPSStream> fileStream) : m_fileStream(fileStream) { }
+	State(shared_ptr<WPSStream> fileStream) : m_fileStream(fileStream), m_idToZoneMap(), m_idToTypeNameMap() { }
 	/// the file stream
 	shared_ptr<WPSStream> m_fileStream;
+	/// the map id to zone
+	std::map<int, OLEZone> m_idToZoneMap;
+	/// the map id to zone type
+	std::map<int, std::string> m_idToTypeNameMap;
 };
 }
 
@@ -88,6 +95,13 @@ WPSOLE1Parser::WPSOLE1Parser(shared_ptr<WPSStream> fileStream)
 
 WPSOLE1Parser::~WPSOLE1Parser()
 {
+#ifdef DEBUG
+	for (std::map<int, WPSOLE1ParserInternal::OLEZone>::const_iterator oIt=m_state->m_idToZoneMap.begin();
+	        oIt!=m_state->m_idToZoneMap.end(); ++oIt)
+	{
+		if (oIt->first>=0) checkIfParsed(oIt->second);
+	}
+#endif
 }
 
 ////////////////////////////////////////////////////////////
@@ -112,8 +126,6 @@ bool WPSOLE1Parser::createZones()
 	ascFile.addNote("Entries(OLE1Struct):");
 	input->seek(pos, librevenge::RVNG_SEEK_SET);
 
-	std::map<int, WPSOLE1ParserInternal::OLEZone> idToOLEMap;
-	std::map<int, std::string> idToNames;
 	WPSOLE1ParserInternal::OLEZone badOLE(0);
 	std::vector<WPSOLE1ParserInternal::OLEZone *> parentOLE;
 	while (!input->isEnd())
@@ -136,12 +148,8 @@ bool WPSOLE1Parser::createZones()
 			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			break;
 		}
-		f << "level=" << level << ",";
-		// main varD maxId
-		// 2:4 ole1Struct, 2:5 file
-
-		// wk3: 1,1,1,2,1 or 1,_,1,1,1
-		// fm3: 1,3,1,4,1,
+		if (level!=1)
+			f << "level=" << level << ",";
 		int const nIds=8-2*level;
 		if (pos+1+2*nIds+1>=endPos) break;
 		f << "ids=[";
@@ -156,22 +164,24 @@ bool WPSOLE1Parser::createZones()
 		f << "],";
 
 		WPSOLE1ParserInternal::OLEZone *ole;
-		if (level>=int(parentOLE.size())) parentOLE.resize(size_t(level-1));
+		if (level<=int(parentOLE.size())) parentOLE.resize(size_t(level-1));
 		if (level==1)
 		{
-			// the first entry is a special 1:1, rename it with id=-1
-			int id=idToOLEMap.empty() ? -1 : listIds[0];
-			if (idToOLEMap.find(id) != idToOLEMap.end())
+			// the first entry is a special 1:1, rename it with id=-1, it contains
+			//    in varD the maxId
+			//    in child 2:4 ole1Struct, 2:5 file
+			int id=m_state->m_idToZoneMap.empty() ? -1 : listIds[0];
+			if (m_state->m_idToZoneMap.find(id) != m_state->m_idToZoneMap.end())
 			{
 				WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: find a dupplicated id\n"));
-				f << "##dupplicated],";
+				f << "##dupplicated,";
 				badOLE=WPSOLE1ParserInternal::OLEZone(level);
 				ole = &badOLE;
 			}
 			else
 			{
-				idToOLEMap.insert(std::map<int, WPSOLE1ParserInternal::OLEZone>::value_type(id,WPSOLE1ParserInternal::OLEZone(level)));
-				ole=&idToOLEMap.find(id)->second;
+				m_state->m_idToZoneMap.insert(std::map<int, WPSOLE1ParserInternal::OLEZone>::value_type(id,WPSOLE1ParserInternal::OLEZone(level)));
+				ole=&m_state->m_idToZoneMap.find(id)->second;
 				parentOLE.push_back(ole);
 			}
 		}
@@ -279,45 +289,18 @@ bool WPSOLE1Parser::createZones()
 				f2 << name;
 				ascFile.addPos(ole->m_beginList[0]);
 				ascFile.addNote(f2.str().c_str());
-				idToNames[listIds[0]]=name;
+				m_state->m_idToTypeNameMap[listIds[0]]=name;
 				f << "name=" << name;
+				ole->m_parsed=true;
 				input->seek(actPos, librevenge::RVNG_SEEK_SET);
-			}
-			else
-			{
-				ascFile.addPos(ole->m_beginList[0]);
-				ascFile.addNote("_");
 			}
 		}
 		ascFile.addPos(pos);
 		ascFile.addNote(f.str().c_str());
 	}
-	for (std::map<int, WPSOLE1ParserInternal::OLEZone>::iterator oIt=idToOLEMap.begin();
-	        oIt!=idToOLEMap.end(); ++oIt)
-	{
-		WPSOLE1ParserInternal::OLEZone &ole=oIt->second;
-		f.str("");
-		f << "[";
-		for (size_t i=1; i<3; ++i)
-		{
-			if (2*i+1 >= ole.m_idsList.size() || ole.m_idsList[2*i+1]!=1) continue;
-			int nameId=ole.m_idsList[2*i];
-			if (idToNames.find(nameId)!=idToNames.end())
-			{
-				ole.m_names[i-1]=idToNames.find(nameId)->second;
-				f << ole.m_names[i-1] << ":";
-			}
-			else
-			{
-				WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: oops can not find some names\n"));
-				f << "##nameId=" << nameId << ",";
-			}
-			if (i==1) f << ":";
-		}
-		f << "]";
-		ascFile.addPos(ole.m_defPosition);
-		ascFile.addNote(f.str().c_str());
-	}
+	for (std::map<int, WPSOLE1ParserInternal::OLEZone>::iterator oIt=m_state->m_idToZoneMap.begin();
+	        oIt!=m_state->m_idToZoneMap.end(); ++oIt)
+		updateZoneNames(oIt->second);
 
 	if (input->tell()+4<endPos)
 	{
@@ -330,4 +313,246 @@ bool WPSOLE1Parser::createZones()
 	return true;
 }
 
+shared_ptr<WPSStream> WPSOLE1Parser::getStreamForName(std::string const &name) const
+{
+	if (name.empty()) return shared_ptr<WPSStream>();
+	for (std::map<int, WPSOLE1ParserInternal::OLEZone>::const_iterator oIt=m_state->m_idToZoneMap.begin();
+	        oIt!=m_state->m_idToZoneMap.end(); ++oIt)
+	{
+		if (oIt->second.m_names[1]==name)
+			return getStream(oIt->second);
+	}
+	WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: can not find any stream with name=%s\n", name.c_str()));
+	return shared_ptr<WPSStream>();
+}
+
+shared_ptr<WPSStream> WPSOLE1Parser::getStreamForId(int id) const
+{
+	if (m_state->m_idToZoneMap.find(id)==m_state->m_idToZoneMap.end())
+	{
+		WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: can not find any stream with id=%d\n", id));
+		return shared_ptr<WPSStream>();
+	}
+	return getStream(m_state->m_idToZoneMap.find(id)->second);
+}
+
+bool WPSOLE1Parser::updateZoneNames(WPSOLE1ParserInternal::OLEZone &ole) const
+{
+	libwps::DebugStream f;
+	f << "[";
+	size_t maxId=ole.m_idsList.size()/2;
+	size_t firstId=ole.m_level==1 ? 1 : 0;
+	for (size_t i=firstId; i<maxId; ++i)
+	{
+		if (ole.m_idsList[2*i+1]!=1 || (i==0 && maxId==3)) continue;
+		int nameId=ole.m_idsList[2*i];
+		if (m_state->m_idToTypeNameMap.find(nameId)!=m_state->m_idToTypeNameMap.end())
+		{
+			ole.m_names[i-firstId]=m_state->m_idToTypeNameMap.find(nameId)->second;
+			f << ole.m_names[i-firstId];
+		}
+		else
+		{
+			WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: oops can not find some names\n"));
+			f << "##nameId=" << nameId << ",";
+		}
+		if (i+1!=maxId) f << "/";
+	}
+	f << "]";
+	for (size_t c=0; c<ole.m_childList.size(); ++c)
+		updateZoneNames(ole.m_childList[c]);
+	if (m_state->m_fileStream.get()!=0)
+	{
+		m_state->m_fileStream->m_ascii.addPos(ole.m_defPosition);
+		m_state->m_fileStream->m_ascii.addNote(f.str().c_str());
+	}
+	return true;
+}
+
+shared_ptr<WPSStream> WPSOLE1Parser::getStream(WPSOLE1ParserInternal::OLEZone const &zone) const
+{
+	shared_ptr<WPSStream> res;
+	zone.m_parsed=true;
+	if (zone.m_beginList.empty() || !m_state->m_fileStream ||
+	        zone.m_idsList.empty() || zone.m_beginList.size()!=zone.m_lengthList.size())
+		return res;
+	RVNGInputStreamPtr input=m_state->m_fileStream->m_input;
+	if (zone.m_beginList.size()==1)
+	{
+		res.reset(new WPSStream(input, m_state->m_fileStream->m_ascii));
+		res->m_eof=zone.m_beginList[0]+zone.m_lengthList[0];
+		input->seek(zone.m_beginList[0], librevenge::RVNG_SEEK_SET);
+		return res;
+	}
+	shared_ptr<WPSStringStream> newInput;
+	for (size_t i=0; i<zone.m_beginList.size(); ++i)
+	{
+		input->seek(zone.m_beginList[i], librevenge::RVNG_SEEK_SET);
+		unsigned long numRead;
+		const unsigned char *data=input->read(static_cast<unsigned long>(zone.m_lengthList[i]), numRead);
+		if (!data || long(numRead)!=zone.m_lengthList[i])
+		{
+			WPS_DEBUG_MSG(("WPSOLE1Parser::getStream: can not read some data\n"));
+			return res;
+		}
+		if (i==0)
+			newInput.reset(new WPSStringStream(data, unsigned(numRead)));
+		else
+			newInput->append(data, unsigned(numRead));
+		m_state->m_fileStream->m_ascii.skipZone(zone.m_beginList[i], zone.m_beginList[i]+zone.m_lengthList[i]-1);
+	}
+	res.reset(new WPSStream(newInput));
+	newInput->seek(0, librevenge::RVNG_SEEK_SET);
+	std::stringstream s;
+	s << "Data" << zone.m_idsList[0];
+	res->m_ascii.open(s.str());
+	res->m_ascii.setStream(newInput);
+	return res;
+}
+
+bool WPSOLE1Parser::updateMetaData(librevenge::RVNGPropertyList &metadata, libwps_tools_win::Font::Type encoding) const
+{
+	for (std::map<int, WPSOLE1ParserInternal::OLEZone>::const_iterator oIt=m_state->m_idToZoneMap.begin();
+	        oIt!=m_state->m_idToZoneMap.end(); ++oIt)
+	{
+		if (oIt->second.m_names[1]!="Doc Info Object")
+			continue;
+		WPSOLE1ParserInternal::OLEZone const &zone=oIt->second;
+		// either a node which regroup all document info or a list of node with informations
+		size_t numChilds=zone.m_childList.size();
+		for (size_t c=0; c<(numChilds ? numChilds : 1); ++c)
+		{
+			WPSOLE1ParserInternal::OLEZone const &child=numChilds ? zone.m_childList[c] : zone;
+			if (child.m_beginList.empty()) continue;
+			shared_ptr<WPSStream> childStream=getStream(child);
+			if (!childStream) continue;
+
+			RVNGInputStreamPtr input=childStream->m_input;
+			long pos=input->tell();
+			libwps::DebugFile &ascFile=childStream->m_ascii;
+			libwps::DebugStream f;
+			f << "Entries(MetaData)[" << child.m_names[0] << "]:";
+			if (!childStream->checkFilePosition(pos+4))
+			{
+				WPS_DEBUG_MSG(("WPSOLE1Parser::updateMetaData: a meta data zone seems too short\n"));
+				f << "###";
+				ascFile.addPos(pos);
+				ascFile.addNote(f.str().c_str());
+				continue;
+			}
+			int id=int(libwps::readU16(input));
+			int dSz=int(libwps::readU16(input));
+			if (!childStream->checkFilePosition(pos+4+dSz))
+			{
+				WPS_DEBUG_MSG(("WPSOLE1Parser::updateMetaData: a meta data zone seems too short\n"));
+				f << "###";
+				ascFile.addPos(pos);
+				ascFile.addNote(f.str().c_str());
+				continue;
+			}
+			int wh=-1;
+			if (child.m_names[0]=="Doc Info Author") wh=9;
+			else if (child.m_names[0]=="Doc Info Last Revisor") wh=5;
+			else if (child.m_names[0]=="Doc Info Comments") wh=0;
+			else if (child.m_names[0]=="Doc Info Property") wh=1; // find always sSz=0
+			else if (child.m_names[0]=="Doc Info Editing Time") wh=6; // sSz=4 + 2 int
+			else if (child.m_names[0]=="Doc Info Revisions Count") wh=0xc; // sSz=2 + count
+			else if (child.m_names[0]=="Doc Info Creation Date") wh=7; // sz=a or c
+			else if (child.m_names[0]=="Doc Info Last Revision Date") wh=0xa;
+			else if (child.m_names[0]=="Doc Info Last Printed Date") wh=0xd;
+			if (wh==-1 || wh!=(id&0xFE7F))
+			{
+				WPS_DEBUG_MSG(("WPSOLE1Parser::updateMetaData: find unknown data\n"));
+				f << "###unknown";
+				ascFile.addPos(pos);
+				ascFile.addNote(f.str().c_str());
+				continue;
+			}
+			bool ok=false;
+			switch (wh)
+			{
+			case 1:
+				ok=dSz==0;
+				break;
+			case 0:
+			case 5:
+			case 9:
+			{
+				librevenge::RVNGString name("");
+				for (int i=0; i<dSz; ++i)
+				{
+					unsigned char ch=static_cast<unsigned char>(libwps::readU8(input));
+					if (!ch) break;
+					libwps::appendUnicode((uint32_t)libwps_tools_win::Font::unicode(ch,encoding), name);
+				}
+				ok=true;
+				if (name.empty()) break;
+				if (wh==9)
+					metadata.insert("dc:creator", name);
+				else if (wh==0)
+					metadata.insert("dc:description", name);
+				f << name.cstr() << ",";
+				break;
+			}
+			case 0xc:
+				if (dSz!=2) break;
+				ok=true;
+				f << "rev=" << libwps::readU16(input) << ",";
+				break;
+			case 6:
+			{
+				if (dSz!=4) break;
+				ok=true;
+				f << "time=" << libwps::readU16(input) << ",";
+				int val=libwps::readU16(input); // 0
+				if (val) f << "f0=" << val << ",";
+				break;
+			}
+			case 7:
+			case 0xa:
+			case 0xd:
+			{
+				if (dSz!=10 && dSz!=12) break;
+				ok=true;
+				f << "date=" << libwps::readU16(input) << ",";
+				int const numData=(dSz-2)/2;
+				for (int i=0; i<numData; i++)   // f0=0, f1=0-16, f2=0-36, f3=0-39, f4=0
+				{
+					int val=libwps::readU16(input); // 0
+					if (val) f << "f" << i << "=" << val << ",";
+				}
+				break;
+			}
+			default:
+				ok=false;
+				break;
+			}
+			if (!ok)
+			{
+				WPS_DEBUG_MSG(("WPSOLE1Parser::updateMetaData: can not read some data\n"));
+				f << "##unknown,";
+			}
+			if (input->tell()!=pos+4+dSz)
+				ascFile.addDelimiter(input->tell(),'|');
+			ascFile.addPos(pos);
+			ascFile.addNote(f.str().c_str());
+		}
+	}
+	return false;
+}
+
+void WPSOLE1Parser::checkIfParsed(WPSOLE1ParserInternal::OLEZone const &zone) const
+{
+	if (zone.m_parsed) return;
+	for (size_t c=0; c<zone.m_childList.size(); ++c) checkIfParsed(zone.m_childList[c]);
+	if (zone.m_beginList.empty() || !m_state->m_fileStream) return;
+	libwps::DebugStream f;
+	f << "Entries(Unparsed):";
+	for (int i=0; i<2; ++i)
+	{
+		if (!zone.m_names[i].empty()) f << zone.m_names[i] << ",";
+	}
+	m_state->m_fileStream->m_ascii.addPos(zone.m_beginList[0]);
+	m_state->m_fileStream->m_ascii.addNote(f.str().c_str());
+}
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

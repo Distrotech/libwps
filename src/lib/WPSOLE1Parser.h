@@ -34,10 +34,12 @@
 #include <librevenge-stream/librevenge-stream.h>
 
 #include "libwps_internal.h"
+#include "libwps_tools_win.h"
 
 namespace WPSOLE1ParserInternal
 {
 struct State;
+struct OLEZone;
 }
 
 /** \brief a class used to parse a container which is used by Lotus123 (and also by RagTime).
@@ -47,9 +49,7 @@ struct State;
 class WPSOLE1Parser
 {
 public:
-	/** constructor knowing the file stream
-
-	 \note the file stream is supposed to exist while the parser is not destructed */
+	/** constructor knowing the file stream */
 	explicit WPSOLE1Parser(shared_ptr<WPSStream> fileStream);
 
 	/** destructor */
@@ -58,13 +58,29 @@ public:
 	//! try to find the different zones
 	bool createZones();
 
-	/** try to return a string corresponding to a name: WK3, FM3, 123 */
-	shared_ptr<WPSStream> getStringForName(std::string const &name) const;
+	/** try to return a string corresponding to a name:
+		- WK3, FM3, lotus 123 v5 main file part
+		- 123, lotus 123 v6+ main file part
+		- CR3, maybe a mailing database ?
+		- Doc Info Object (its children defines author, ...)
+		- WCHChart some Chart
+		- Lotus:TOOLS:ByteStream some object
+	 */
+	shared_ptr<WPSStream> getStreamForName(std::string const &name) const;
 	/** try to return a string corresponding to some id */
-	shared_ptr<WPSStream> getStringForId(int id) const;
+	shared_ptr<WPSStream> getStreamForId(int id) const;
+	/** try to retrieve the meta data */
+	bool updateMetaData(librevenge::RVNGPropertyList &list, libwps_tools_win::Font::Type encoding) const;
 	/** try to retrieve the content of a graphic, knowing it id */
 	bool updateEmbedded(int id, WPSEmbeddedObject &object) const;
 
+protected:
+	/** try to update the zone name */
+	bool updateZoneNames(WPSOLE1ParserInternal::OLEZone &zone) const;
+	/// try to return a stream correponding to a zone
+	shared_ptr<WPSStream> getStream(WPSOLE1ParserInternal::OLEZone const &zone) const;
+	/// check for unparsed zone
+	void checkIfParsed(WPSOLE1ParserInternal::OLEZone const &zone) const;
 private:
 	//! a smart ptr used to stored the file data
 	shared_ptr<WPSOLE1ParserInternal::State> m_state;

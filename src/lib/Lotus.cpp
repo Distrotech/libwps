@@ -54,30 +54,6 @@ using namespace libwps;
 //! Internal: namespace to define internal class of LotusParser
 namespace LotusParserInternal
 {
-//! an OLE Zone
-struct OLEZone
-{
-	//! constructor
-	OLEZone(int levl) : m_level(levl), m_defPosition(0), m_varIdToValueMap(), m_idsList(), m_beginList(), m_lengthList(), m_childList()
-	{
-	}
-	//! the level
-	int m_level;
-	//! the position where this zone is defined
-	long m_defPosition;
-	//! a list of variable
-	std::map<int,unsigned long> m_varIdToValueMap;
-	//! the list of pair id:type
-	std::vector<int> m_idsList;
-	//! the list of pointers
-	std::vector<long> m_beginList;
-	//! the list of length
-	std::vector<long> m_lengthList;
-	//! the list of child
-	std::vector<OLEZone> m_childList;
-	//! the list of names
-	std::string m_names[2];
-};
 //! the font of a LotusParser
 struct Font : public WPSFont
 {
@@ -147,7 +123,7 @@ struct State
 	explicit State(libwps_tools_win::Font::Type fontType) : m_fontType(fontType), m_version(-1),
 		m_inMainContentBlock(false), m_fontsMap(), m_pageSpan(), m_maxSheet(0),
 		m_actualLevels(), m_actPage(0), m_numPages(0),
-		m_headerString(""), m_footerString("")
+		m_headerString(""), m_footerString(""), m_metaData()
 	{
 	}
 	//! return the default font style
@@ -212,6 +188,8 @@ struct State
 	std::string m_headerString;
 	//! the footer string
 	std::string m_footerString;
+	//! the metadata
+	librevenge::RVNGPropertyList m_metaData;
 
 private:
 	State(State const &);
@@ -293,9 +271,8 @@ void LotusParser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 	{
 		ascii().setStream(input);
 		ascii().open("MN0");
-		shared_ptr<WPSStream> mainStream(new WPSStream(input, ascii()));
-		if (checkHeader(0L) && createZones(mainStream))
-			m_listener=createListener(documentInterface);
+		if (checkHeader(0L) && createZones())
+			createListener(documentInterface);
 		if (m_listener)
 		{
 			m_styleManager->updateState();
@@ -323,7 +300,7 @@ void LotusParser::parse(librevenge::RVNGSpreadsheetInterface *documentInterface)
 		throw(libwps::ParseException());
 }
 
-shared_ptr<WKSContentListener> LotusParser::createListener(librevenge::RVNGSpreadsheetInterface *interface)
+bool LotusParser::createListener(librevenge::RVNGSpreadsheetInterface *interface)
 {
 	std::vector<WPSPageSpan> pageList;
 	WPSPageSpan ps(m_state->m_pageSpan);
@@ -342,7 +319,9 @@ shared_ptr<WKSContentListener> LotusParser::createListener(librevenge::RVNGSprea
 	int numPages=m_state->m_maxSheet+1;
 	if (numPages<=0) numPages=1;
 	for (int i=0; i<numPages; ++i) pageList.push_back(ps);
-	return shared_ptr<WKSContentListener>(new WKSContentListener(pageList, interface));
+	m_listener.reset(new WKSContentListener(pageList, interface));
+	m_listener->setMetaData(m_state->m_metaData);
+	return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -443,11 +422,12 @@ bool LotusParser::checkHeader(shared_ptr<WPSStream> stream, bool mainStream, boo
 	return true;
 }
 
-bool LotusParser::createZones(shared_ptr<WPSStream> mainStream)
+bool LotusParser::createZones()
 {
-	if (!mainStream)
+	RVNGInputStreamPtr input=getInput();
+	if (!input)
 	{
-		WPS_DEBUG_MSG(("LotusParser::createZones: can not find the stream\n"));
+		WPS_DEBUG_MSG(("LotusParser::createZones: can not find the main input\n"));
 		return false;
 	}
 	m_styleManager->cleanState();
@@ -456,12 +436,25 @@ bool LotusParser::createZones(shared_ptr<WPSStream> mainStream)
 
 	int const vers=version();
 
+	shared_ptr<WPSStream> mainStream(new WPSStream(input, ascii()));
 	if (vers>=3)
 	{
 		shared_ptr<WPSOLE1Parser> ole1Parser(new WPSOLE1Parser(mainStream));
 		ole1Parser->createZones();
+		shared_ptr<WPSStream> wkStream=ole1Parser->getStreamForName(vers==3 ? "WK3" : "123");
+		if (wkStream)
+		{
+			if (!readZones(wkStream)) return false;
+			ole1Parser->updateMetaData(m_state->m_metaData, getDefaultFontType());
+			if (vers==3)
+			{
+				shared_ptr<WPSStream> fmStream=ole1Parser->getStreamForName("FM3");
+				if (fmStream) readZones(fmStream);
+			}
+			return true;
+		}
 	}
-	mainStream->m_input->seek(0, librevenge::RVNG_SEEK_SET);
+	input->seek(0, librevenge::RVNG_SEEK_SET);
 	if (!readZones(mainStream)) return false;
 	if (vers<=2) parseFormatStream();
 	return true;
@@ -512,6 +505,7 @@ bool LotusParser::parseFormatStream()
 	}
 
 	shared_ptr<WPSStream> formatStream(new WPSStream(formatInput));
+	formatInput->seek(0, librevenge::RVNG_SEEK_SET);
 	formatStream->m_ascii.open("FM3");
 	formatStream->m_ascii.setStream(formatInput);
 	if (!checkHeader(formatStream, false, false))
@@ -533,7 +527,6 @@ bool LotusParser::readZones(shared_ptr<WPSStream> stream)
 	libwps::DebugFile &ascFile=stream->m_ascii;
 
 	bool mainDataRead=false;
-	input->seek(0, librevenge::RVNG_SEEK_SET);
 	// data, format and ?
 	for (int wh=0; wh<2; ++wh)
 	{
@@ -566,6 +559,7 @@ bool LotusParser::readZones(shared_ptr<WPSStream> stream)
 	while (!input->isEnd())
 	{
 		long pos=input->tell();
+		if (pos>=stream->m_eof) break;
 		int id = (int) libwps::readU8(input);
 		int type = (int) libwps::readU8(input);
 		long sz = (long) libwps::readU16(input);
@@ -581,7 +575,7 @@ bool LotusParser::readZones(shared_ptr<WPSStream> stream)
 		input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
 	}
 
-	if (!input->isEnd())
+	if (!input->isEnd() && input->tell()<stream->m_eof)
 	{
 		ascFile.addPos(input->tell());
 		ascFile.addNote("Entries(Unknown)");
@@ -1092,14 +1086,7 @@ bool LotusParser::readZone(shared_ptr<WPSStream> stream)
 			ok=false;
 			break;
 		}
-		if (!m_state->m_inMainContentBlock && vers<=3 && sz==0 && id==0)   // find some picture with type=2|5
-		{
-			if (m_graphParser->readPicture(stream))
-				return true;
-			ok = isParsed = false;
-		}
-		else
-			ok = isParsed=readZoneV3(stream);
+		ok = isParsed=readZoneV3(stream);
 		break;
 	}
 	if (!ok)

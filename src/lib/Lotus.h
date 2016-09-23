@@ -104,9 +104,9 @@ protected:
 	void sendGraphics(int sheetId);
 
 	/** try to parse the different zones */
-	bool createZones(shared_ptr<WPSStream> mainStream);
+	bool createZones();
 	/** creates the main listener */
-	shared_ptr<WKSContentListener> createListener(librevenge::RVNGSpreadsheetInterface *interface);
+	bool createListener(librevenge::RVNGSpreadsheetInterface *interface);
 
 	//
 	// low level

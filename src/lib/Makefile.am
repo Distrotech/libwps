@@ -94,6 +94,8 @@ libwps_@WPS_MAJOR_VERSION@_@WPS_MINOR_VERSION@_la_SOURCES = \
 	WPSPosition.h		\
 	WPSStream.cpp		\
 	WPSStream.h		\
+	WPSStringStream.cpp	\
+	WPSStringStream.h	\
 	WPSSubDocument.cpp	\
 	WPSSubDocument.h	\
 	WPSTable.cpp		\
