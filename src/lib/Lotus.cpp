@@ -947,7 +947,7 @@ bool LotusParser::readZone(shared_ptr<WPSStream> stream)
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 			val=int(libwps::readU8(input));
 			if (val==0xFF) f << "true,";
-			else if (val) f << "#val=" << val << ",";
+			else if (val) f << "val=" << val << ",";
 			isParsed=needWriteInAscii=true;
 			break;
 		case 0x87: // always with 0000
@@ -1035,7 +1035,8 @@ bool LotusParser::readZone(shared_ptr<WPSStream> stream)
 			if (m_state->m_inMainContentBlock) break;
 			isParsed=ok=m_spreadsheetParser->readSheetHeader(stream);
 			break;
-		case 0xc4:
+		case 0xc4: // with 0-8, 5c-15c
+		case 0xcb: // with 1,1
 			if (m_state->m_inMainContentBlock) break;
 			f.str("");
 			f << "Entries(FMTInt2" << std::hex << id << std::dec << "Z):";
@@ -1045,7 +1046,7 @@ bool LotusParser::readZone(shared_ptr<WPSStream> stream)
 				break;
 			}
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-			for (int i=0; i<2; ++i)   // f0=0-8, f1=5c-15c
+			for (int i=0; i<2; ++i)
 			{
 				val=int(libwps::readU16(input));
 				if (val) f << "f" << i << "=" << val << ",";
@@ -1055,6 +1056,10 @@ bool LotusParser::readZone(shared_ptr<WPSStream> stream)
 		case 0xc5:
 			if (m_state->m_inMainContentBlock) break;
 			isParsed=ok=m_spreadsheetParser->readExtraRowFormats(stream);
+			break;
+		case 0xc9:
+			if (m_state->m_inMainContentBlock) break;
+			isParsed=ok=m_graphParser->readZoneBeginC9(stream);
 			break;
 		case 0xca: // a graphic
 			if (m_state->m_inMainContentBlock) break;
@@ -1068,6 +1073,14 @@ bool LotusParser::readZone(shared_ptr<WPSStream> stream)
 			if (m_state->m_inMainContentBlock) break;
 			f.str("");
 			f << "Entries(FMTTextBoxD):";
+			break;
+		case 0xb7: // main style ?
+		case 0xbf: // serie style ?
+		case 0xc0: // horizontal axis ?
+		case 0xc2: // vertical axis ?
+			if (m_state->m_inMainContentBlock) break;
+			f.str("");
+			f << "Entries(FMTChart" << std::hex << id << std::dec << "):";
 			break;
 		default:
 			input->seek(pos+4, librevenge::RVNG_SEEK_SET);
@@ -1445,12 +1458,27 @@ bool LotusParser::readDataZone(shared_ptr<WPSStream> stream)
 		isParsed=needWriteInAscii=true;
 		break;
 
+	case 0x32e7:
+		isParsed=m_styleManager->readMenuStyleE7(stream, endPos);
+		break;
+
+	// 32e7: related to style ?
 	case 0x36b0:
 		isParsed=m_spreadsheetParser->readSheetName1B(stream, endPos);
 		break;
+
 	//
 	// 4268, 4269
 	//
+
+	case 0x4a38:
+		f.str("");
+		f << "Entries(LinkUnkA):";
+		break;
+	case 0x4a39:
+		f.str("");
+		f << "Entries(LinkUnkB):";
+		break;
 	case 0x6590:
 		isParsed=m_spreadsheetParser->readNote(stream, endPos);
 		break;

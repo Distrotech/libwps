@@ -410,6 +410,39 @@ shared_ptr<WPSStream> WPSOLE1Parser::getStream(WPSOLE1ParserInternal::OLEZone co
 	return res;
 }
 
+bool WPSOLE1Parser::updateEmbeddedObject(int id, WPSEmbeddedObject &object) const
+{
+	if (m_state->m_idToZoneMap.find(id)==m_state->m_idToZoneMap.end())
+	{
+		WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: can not find any zone with id=%d\n", id));
+		return false;
+	}
+	WPSOLE1ParserInternal::OLEZone const &zone=m_state->m_idToZoneMap.find(id)->second;
+	if (zone.m_names[1]!="Lotus:TOOLS:OEMString")
+	{
+		WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: the zone name \"%s\"seems odd\n", zone.m_names[1].empty() ? "" : zone.m_names[1].c_str()));
+	}
+	zone.m_parsed=true;
+	bool done=true;
+	/* normally two children:
+	   - first with name "Lotus:TOOLS:OEMString" which contains .ole in varD
+	   - second with name "Lotus:TOOLS:ByteStream" which contains the data
+	*/
+	for (size_t c=0; c<zone.m_childList.size(); ++c)
+	{
+		if (!zone.m_childList[c].m_beginList.empty())
+		{
+			shared_ptr<WPSStream> stream=getStream(zone);
+			if (stream)	done |= readPicture(stream, object);
+		}
+	}
+	if (!done)
+	{
+		WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: can not find any picture child for zone with id=%d\n", id));
+	}
+	return done;
+}
+
 bool WPSOLE1Parser::updateMetaData(librevenge::RVNGPropertyList &metadata, libwps_tools_win::Font::Type encoding) const
 {
 	for (std::map<int, WPSOLE1ParserInternal::OLEZone>::const_iterator oIt=m_state->m_idToZoneMap.begin();
@@ -546,6 +579,12 @@ void WPSOLE1Parser::checkIfParsed(WPSOLE1ParserInternal::OLEZone const &zone) co
 	if (zone.m_parsed) return;
 	for (size_t c=0; c<zone.m_childList.size(); ++c) checkIfParsed(zone.m_childList[c]);
 	if (zone.m_beginList.empty() || !m_state->m_fileStream) return;
+	if (zone.m_names[1]=="Lotus:TOOLS:ByteStream")
+	{
+		shared_ptr<WPSStream> stream=getStream(zone);
+		WPSEmbeddedObject object;
+		if (stream && readPicture(stream, object)) return;
+	}
 	libwps::DebugStream f;
 	f << "Entries(Unparsed):";
 	for (int i=0; i<2; ++i)
@@ -555,4 +594,93 @@ void WPSOLE1Parser::checkIfParsed(WPSOLE1ParserInternal::OLEZone const &zone) co
 	m_state->m_fileStream->m_ascii.addPos(zone.m_beginList[0]);
 	m_state->m_fileStream->m_ascii.addNote(f.str().c_str());
 }
+
+bool WPSOLE1Parser::readPicture(shared_ptr<WPSStream> stream, WPSEmbeddedObject &object) const
+{
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
+	libwps::DebugStream f;
+
+	while (stream->checkFilePosition(input->tell()+24))
+	{
+		long pos = input->tell();
+		long type = long(libwps::read16(input));
+		if (type!=0x501 || !stream->checkFilePosition(pos+24))
+		{
+			WPS_DEBUG_MSG(("WPSOLE1Parser::readPicture: not a picture header\n"));
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
+			break;
+		}
+		f.str("");
+		f << "Entries(Picture):";
+		for (int i=0; i<3; ++i)   // f1=2|5
+		{
+			int val=int(libwps::readU16(input));
+			if (val) f << "f" << i << "=" << val << ",";
+		}
+		int sSz=int(libwps::readU16(input));
+		if (!sSz || !stream->checkFilePosition(pos+24+sSz))
+		{
+			WPS_DEBUG_MSG(("WPSOLE1Parser::readPicture: name size seems bad\n"));
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
+			break;
+		}
+		int val=int(libwps::readU16(input)); // 0
+		if (val) f << "f4=" << val << ",";
+		std::string name;
+		for (int i=0; i<sSz; ++i)
+		{
+			char c=char(libwps::readU8(input));
+			if (c) name+=c;
+		}
+		// find Paint.Picture, WangImage.Document, METAFILEPICT
+		f << name << ",";
+		for (int i=0; i<4; ++i)   // g0, g2, g3: some application id?
+		{
+			val=int(libwps::readU16(input));
+			if (val) f << "g" << i << "=" << std::hex << val << std::dec << ",";
+		}
+		unsigned long dSz=libwps::readU32(input);
+		if (dSz>0x40000000 || dSz<10 || !stream->checkFilePosition(pos+24+long(dSz)))
+		{
+			WPS_DEBUG_MSG(("WPSOLE1Parser::readPicture: pict size seems bad\n"));
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
+			break;
+		}
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+
+		pos=input->tell();
+		librevenge::RVNGBinaryData data;
+		if (!libwps::readData(input, dSz, data))
+		{
+			WPS_DEBUG_MSG(("WPSOLE1Parser::readPicture: I can not find the picture\n"));
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
+			break;
+		}
+		// LibreOffice does not handle metafile pict, so ignore
+		if (name!="METAFILEPICT")
+			object.add(data);
+#ifdef DEBUG_WITH_FILES
+		ascFile.skipZone(pos, pos+long(dSz)-1);
+		std::stringstream s;
+		static int fileId=0;
+		if (name=="METAFILEPICT")
+			s << "PictOLE" << ++fileId << ".metafile";
+		else
+			s << "PictOLE" << ++fileId << ".pct";
+		libwps::Debug::dumpFile(data, s.str().c_str());
+#endif
+	}
+	long pos=input->tell();
+	if (pos!=stream->m_eof)
+	{
+		WPS_DEBUG_MSG(("WPSOLE1Parser::readPicture: find some extra data\n"));
+		ascFile.addPos(pos);
+		ascFile.addNote("Picture:###");
+	}
+	return true;
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

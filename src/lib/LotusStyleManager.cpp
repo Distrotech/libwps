@@ -1589,4 +1589,51 @@ bool LotusStyleManager::readFMTFontSize(shared_ptr<WPSStream> stream)
 	return true;
 }
 
+bool LotusStyleManager::readMenuStyleE7(shared_ptr<WPSStream> stream, long endPos)
+{
+	if (!stream) return false;
+	RVNGInputStreamPtr &input = stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	if (endPos-pos<23)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::readMenuStyleE7 the zone size seems bad\n"));
+		ascFile.addPos(pos-6);
+		ascFile.addNote("Entries(MenuStyle):###");
+		return true;
+	}
+	f << "Entries(MenuStyle):";
+	f << "id=" << libwps::readU16(input) << ",";
+	for (int i=0; i<2; ++i)   // fl0=0|[048c]0FF, fl1=[04]00[0-3]
+	{
+		int val=int(libwps::readU16(input));
+		if (val) f << "fl" << i << "=" << std::hex << val << std::dec << ",";
+	}
+	std::string name;
+	for (int i=0; i<16; ++i)
+	{
+		char c=char(libwps::readU8(input));
+		if (!c) break;
+		name += c;
+	}
+	f << name << ",";
+	input->seek(pos+22, librevenge::RVNG_SEEK_SET);
+	name="";
+	int maxN=int(endPos-input->tell());
+	for (int i=0; i<maxN; ++i)
+	{
+		char c=char(libwps::readU8(input));
+		if (!c) break;
+		name += c;
+	}
+	f << name;
+	if (input->tell() != endPos)
+		ascFile.addDelimiter(input->tell(),'|');
+	ascFile.addPos(pos-6);
+	ascFile.addNote(f.str().c_str());
+	return true;
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

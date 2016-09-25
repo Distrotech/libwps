@@ -1173,7 +1173,7 @@ bool LotusSpreadsheet::readSheetHeader(shared_ptr<WPSStream> stream)
 		return false;
 	}
 	long sz = long(libwps::readU16(input));
-	f << "Entries(FMTSheetId):";
+	f << "Entries(FMTSheetBegin):";
 	if (sz != 0x22)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::readSheetHeader: the zone size seems bad\n"));

@@ -61,7 +61,7 @@ public:
 	/** try to return a string corresponding to a name:
 		- WK3, FM3, lotus 123 v5 main file part
 		- 123, lotus 123 v6+ main file part
-		- CR3, maybe a mailing database ?
+		- CR3, maybe some database ?
 		- Doc Info Object (its children defines author, ...)
 		- WCHChart some Chart
 		- Lotus:TOOLS:ByteStream some object
@@ -72,7 +72,7 @@ public:
 	/** try to retrieve the meta data */
 	bool updateMetaData(librevenge::RVNGPropertyList &list, libwps_tools_win::Font::Type encoding) const;
 	/** try to retrieve the content of a graphic, knowing it id */
-	bool updateEmbedded(int id, WPSEmbeddedObject &object) const;
+	bool updateEmbeddedObject(int id, WPSEmbeddedObject &object) const;
 
 protected:
 	/** try to update the zone name */
@@ -81,6 +81,10 @@ protected:
 	shared_ptr<WPSStream> getStream(WPSOLE1ParserInternal::OLEZone const &zone) const;
 	/// check for unparsed zone
 	void checkIfParsed(WPSOLE1ParserInternal::OLEZone const &zone) const;
+
+	//! try to read a picture's frame: 0105 local zone
+	bool readPicture(shared_ptr<WPSStream> stream, WPSEmbeddedObject &object) const;
+
 private:
 	//! a smart ptr used to stored the file data
 	shared_ptr<WPSOLE1ParserInternal::State> m_state;

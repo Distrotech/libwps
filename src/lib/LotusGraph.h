@@ -83,26 +83,27 @@ protected:
 
 	// ////////////////////// zone //////////////////////////////
 
-	//! reads a begin graphic zone
+	// zone 1b
+
+	//! reads a begin graphic zone: 2328 (wk3mac)
 	bool readZoneBegin(shared_ptr<WPSStream> stream, long endPos);
-	//! reads a graphic zone
+	//! reads a graphic zone: 2332, 2346, 2350, 2352, 23f0 (wk3mac)
 	bool readZoneData(shared_ptr<WPSStream> stream, long endPos, int type);
-	//! reads a graphic textbox data
+	//! reads a graphic textbox data: 23f0 (wk3mac)
 	bool readTextBoxData(shared_ptr<WPSStream> stream, long endPos);
-	//! reads a picture definition
+	//! reads a picture definition: 240e (wk3mac)
 	bool readPictureDefinition(shared_ptr<WPSStream> stream, long endPos);
-	//! reads a picture data
+	//! reads a picture data: 2410 (wk3mac)
 	bool readPictureData(shared_ptr<WPSStream> stream, long endPos);
 
 	// fmt
 
-	//! try to read a graphic: 0xca (wk5)
+	//! try to read the sheet id: 0xc9 (wk4)
+	bool readZoneBeginC9(shared_ptr<WPSStream> stream);
+	//! try to read a graphic: 0xca (wk4)
 	bool readGraphic(shared_ptr<WPSStream> stream);
-	//! try to read a graph's frame: 0xcc (wk5)
+	//! try to read a graph's frame: 0xcc (wk4)
 	bool readFrame(shared_ptr<WPSStream> stream);
-
-	//! try to read a picture's frame: 0105 local zone (to rewrite)
-	bool readPicture(shared_ptr<WPSStream> stream);
 
 private:
 	LotusGraph(LotusGraph const &orig);

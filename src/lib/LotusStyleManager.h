@@ -95,12 +95,15 @@ protected:
 
 	//! reads a font style: fa0
 	bool readFontStyleA0(shared_ptr<WPSStream> stream, long endPos);
-	//! reads a font style: ff0 (wk5)
+	//! reads a font style: ff0 (wk4)
 	bool readFontStyleF0(shared_ptr<WPSStream> stream, long endPos);
 	//! reads a cell style: fd2
 	bool readCellStyleD2(shared_ptr<WPSStream> stream, long endPos);
-	//! reads a cell style: fe6 (wk5)
+	//! reads a cell style: fe6 (wk4)
 	bool readCellStyleE6(shared_ptr<WPSStream> stream, long endPos);
+
+	//! reads the list of style: 32e7 (wk4)
+	bool readMenuStyleE7(shared_ptr<WPSStream> stream, long endPos);
 
 	// old fmt style
 
