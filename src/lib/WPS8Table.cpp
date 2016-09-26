@@ -646,7 +646,7 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 					f2 << dt << ",";
 			}
 
-			cell->setBox(Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2])));
+			cell->setBox(WPSBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2])));
 			totalRealDim += cell->m_size;
 			totalDataDim += cell->box().size();
 			table.add(cellPtr);
@@ -670,9 +670,9 @@ bool WPS8Table::readMCLD(RVNGInputStreamPtr input, WPSEntry const &entry)
 		{
 			WPSCellPtr cell = table.getCell(c);
 			if (!cell) continue;
-			Box2f box=cell->box();
-			cell->setBox(Box2f(Vec2f(box[0][0]*factor[0], box[0][1]*factor[1]),
-			                   Vec2f(box[1][0]*factor[0], box[1][1]*factor[1])));
+			WPSBox2f box=cell->box();
+			cell->setBox(WPSBox2f(Vec2f(box[0][0]*factor[0], box[0][1]*factor[1]),
+			                      Vec2f(box[1][0]*factor[0], box[1][1]*factor[1])));
 		}
 
 		if (tableId >=0) m_state->m_tableMap[tableId] = table;

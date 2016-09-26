@@ -52,6 +52,8 @@ public:
 		void scale(Vec2f const &factor);
 		//! rotate all the coordinate by angle (origin rotation) then translate coordinate
 		void rotate(float angle, Vec2f const &delta);
+		//! multiply all the coordinate by a matrix
+		void transform(WPSTransformation const &matrix, float rotation);
 		//! update the property list to correspond to a command
 		bool get(librevenge::RVNGPropertyList &pList, Vec2f const &orig) const;
 		//! a print operator
@@ -86,7 +88,7 @@ public:
 	//! static constructor to create a line
 	static WPSGraphicShape line(Vec2f const &orign, Vec2f const &dest);
 	//! static constructor to create a rectangle
-	static WPSGraphicShape rectangle(Box2f const &box, Vec2f const &corners=Vec2f(0,0))
+	static WPSGraphicShape rectangle(WPSBox2f const &box, Vec2f const &corners=Vec2f(0,0))
 	{
 		WPSGraphicShape res;
 		res.m_type=Rectangle;
@@ -95,7 +97,7 @@ public:
 		return res;
 	}
 	//! static constructor to create a circle
-	static WPSGraphicShape circle(Box2f const &box)
+	static WPSGraphicShape circle(WPSBox2f const &box)
 	{
 		WPSGraphicShape res;
 		res.m_type=Circle;
@@ -103,27 +105,27 @@ public:
 		return res;
 	}
 	//! static constructor to create a arc
-	static WPSGraphicShape arc(Box2f const &box, Box2f const &circleBox, Vec2f const &angles)
+	static WPSGraphicShape arc(WPSBox2f const &box, WPSBox2f const &circleWPSBox, Vec2f const &angles)
 	{
 		WPSGraphicShape res;
 		res.m_type=Arc;
 		res.m_bdBox=box;
-		res.m_formBox=circleBox;
+		res.m_formBox=circleWPSBox;
 		res.m_arcAngles=angles;
 		return res;
 	}
 	//! static constructor to create a pie
-	static WPSGraphicShape pie(Box2f const &box, Box2f const &circleBox, Vec2f const &angles)
+	static WPSGraphicShape pie(WPSBox2f const &box, WPSBox2f const &circleWPSBox, Vec2f const &angles)
 	{
 		WPSGraphicShape res;
 		res.m_type=Pie;
 		res.m_bdBox=box;
-		res.m_formBox=circleBox;
+		res.m_formBox=circleWPSBox;
 		res.m_arcAngles=angles;
 		return res;
 	}
 	//! static constructor to create a polygon
-	static WPSGraphicShape polygon(Box2f const &box)
+	static WPSGraphicShape polygon(WPSBox2f const &box)
 	{
 		WPSGraphicShape res;
 		res.m_type=Polygon;
@@ -131,7 +133,7 @@ public:
 		return res;
 	}
 	//! static constructor to create a path
-	static WPSGraphicShape path(Box2f const &box)
+	static WPSGraphicShape path(WPSBox2f const &box)
 	{
 		WPSGraphicShape res;
 		res.m_type=Path;
@@ -147,13 +149,15 @@ public:
 
 	 \note the final bdbox is not tight */
 	WPSGraphicShape rotate(float angle, Vec2f const &center) const;
+	//! returns a new shape corresponding to a matrix transformation
+	WPSGraphicShape transform(WPSTransformation const &matrix) const;
 	//! returns the type corresponding to a shape
 	Type getType() const
 	{
 		return m_type;
 	}
 	//! returns the basic bdbox
-	Box2f getBdBox() const
+	WPSBox2f getBdBox() const
 	{
 		return m_bdBox;
 	}
@@ -165,14 +169,14 @@ public:
 	int cmp(WPSGraphicShape const &a) const;
 protected:
 	//! return a path corresponding to the shape
-	std::vector<PathData> getPath() const;
+	std::vector<PathData> getPath(bool forTransformation) const;
 public:
 	//! the type
 	Type m_type;
 	//! the shape bdbox
-	Box2f m_bdBox;
+	WPSBox2f m_bdBox;
 	//! the internal shape bdbox ( used for arc, circle to store the circle bdbox )
-	Box2f m_formBox;
+	WPSBox2f m_formBox;
 	//! the rectangle round corner
 	Vec2f m_cornerWidth;
 	//! the start and end value which defines an arc

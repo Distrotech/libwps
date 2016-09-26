@@ -122,6 +122,24 @@ void WPSGraphicShape::PathData::rotate(float angle, Vec2f const &decal)
 	             std::sin(angl)*m_x2[0]+std::cos(angl)*m_x2[1])+decal;
 }
 
+void WPSGraphicShape::PathData::transform(WPSTransformation const &matrix, float rotation)
+{
+	if (m_type=='Z')
+		return;
+	m_x = matrix*m_x;
+	if (m_type=='A')
+	{
+		m_rotate += rotation;
+		return;
+	}
+	if (m_type=='H' || m_type=='V' || m_type=='M' || m_type=='L' || m_type=='T')
+		return;
+	m_x1 = matrix*m_x1;
+	if (m_type=='Q' || m_type=='S')
+		return;
+	m_x2 = matrix*m_x2;
+}
+
 bool WPSGraphicShape::PathData::get(librevenge::RVNGPropertyList &list, Vec2f const &orig) const
 {
 	list.clear();
@@ -205,7 +223,7 @@ WPSGraphicShape WPSGraphicShape::line(Vec2f const &orig, Vec2f const &dest)
 		else
 			minPt[c]=dest[c];
 	}
-	res.m_bdBox=Box2f(minPt,maxPt);
+	res.m_bdBox=WPSBox2f(minPt,maxPt);
 	return res;
 }
 
@@ -291,8 +309,8 @@ void WPSGraphicShape::translate(Vec2f const &decal)
 {
 	if (decal==Vec2f(0,0))
 		return;
-	m_bdBox=Box2f(m_bdBox.min()+decal, m_bdBox.max()+decal);
-	m_formBox=Box2f(m_formBox.min()+decal, m_formBox.max()+decal);
+	m_bdBox=WPSBox2f(m_bdBox.min()+decal, m_bdBox.max()+decal);
+	m_formBox=WPSBox2f(m_formBox.min()+decal, m_formBox.max()+decal);
 	for (size_t pt=0; pt<m_vertices.size(); ++pt)
 		m_vertices[pt]+=decal;
 	for (size_t pt=0; pt<m_path.size(); ++pt)
@@ -301,10 +319,10 @@ void WPSGraphicShape::translate(Vec2f const &decal)
 
 void WPSGraphicShape::scale(Vec2f const &scaling)
 {
-	m_bdBox=Box2f(Vec2f(scaling[0]*m_bdBox.min()[0],scaling[1]*m_bdBox.min()[1]),
-	              Vec2f(scaling[0]*m_bdBox.max()[0],scaling[1]*m_bdBox.max()[1]));
-	m_formBox=Box2f(Vec2f(scaling[0]*m_formBox.min()[0],scaling[1]*m_formBox.min()[1]),
-	                Vec2f(scaling[0]*m_formBox.max()[0],scaling[1]*m_formBox.max()[1]));
+	m_bdBox=WPSBox2f(Vec2f(scaling[0]*m_bdBox.min()[0],scaling[1]*m_bdBox.min()[1]),
+	                 Vec2f(scaling[0]*m_bdBox.max()[0],scaling[1]*m_bdBox.max()[1]));
+	m_formBox=WPSBox2f(Vec2f(scaling[0]*m_formBox.min()[0],scaling[1]*m_formBox.min()[1]),
+	                   Vec2f(scaling[0]*m_formBox.max()[0],scaling[1]*m_formBox.max()[1]));
 	for (size_t pt=0; pt<m_vertices.size(); ++pt)
 		m_vertices[pt]=Vec2f(scaling[0]*m_vertices[pt][0],
 		                     scaling[1]*m_vertices[pt][1]);
@@ -320,19 +338,51 @@ WPSGraphicShape WPSGraphicShape::rotate(float angle, Vec2f const &center) const
 	float angl=angle*float(M_PI/180.);
 	Vec2f decal=center-Vec2f(std::cos(angl)*center[0]-std::sin(angl)*center[1],
 	                         std::sin(angl)*center[0]+std::cos(angl)*center[1]);
-	Box2f fBox;
+	WPSBox2f fBox;
 	for (int i=0; i < 4; ++i)
 	{
 		Vec2f pt=Vec2f(m_bdBox[i%2][0],m_bdBox[i/2][1]);
 		pt = Vec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
 		           std::sin(angl)*pt[0]+std::cos(angl)*pt[1])+decal;
-		if (i==0) fBox=Box2f(pt,pt);
-		else fBox=fBox.getUnion(Box2f(pt,pt));
+		if (i==0) fBox=WPSBox2f(pt,pt);
+		else fBox=fBox.getUnion(WPSBox2f(pt,pt));
 	}
 	WPSGraphicShape res = path(fBox);
-	res.m_path=getPath();
+	res.m_path=getPath(false);
 	for (size_t p=0; p < res.m_path.size(); p++)
 		res.m_path[p].rotate(angle, decal);
+	return res;
+}
+
+WPSGraphicShape WPSGraphicShape::transform(WPSTransformation const &matrix) const
+{
+	if (matrix.isIdentity()) return *this;
+	if (matrix[0][1]<=0 && matrix[0][1]>=0 && matrix[1][0]<=0 && matrix[1][0]>=0)
+	{
+		WPSGraphicShape res=*this;
+		if (matrix[0][0]<1 || matrix[0][0]>1 || matrix[1][1]<1 || matrix[1][1]>1)
+			res.scale(Vec2f(matrix[0][0], matrix[1][1]));
+		res.translate(Vec2f(matrix[0][2],matrix[1][2]));
+		return res;
+	}
+
+	WPSBox2f fBox;
+	for (int i=0; i < 4; ++i)
+	{
+		Vec2f pt = matrix*Vec2f(m_bdBox[i%2][0],m_bdBox[i/2][1]);
+		if (i==0) fBox=WPSBox2f(pt,pt);
+		else fBox=fBox.getUnion(WPSBox2f(pt,pt));
+	}
+	WPSGraphicShape res = path(fBox);
+	res.m_path=getPath(true);
+
+	WPSTransformation transf;
+	float rotation=0;
+	Vec2f shearing;
+	if (!matrix.decompose(rotation,shearing,transf,fBox.center()))
+		rotation=0;
+	for (size_t p=0; p < res.m_path.size(); p++)
+		res.m_path[p].transform(matrix, rotation);
 	return res;
 }
 
@@ -481,9 +531,10 @@ WPSGraphicShape::Command WPSGraphicShape::addTo(Vec2f const &orig, bool asSurfac
 	return C_Bad;
 }
 
-std::vector<WPSGraphicShape::PathData> WPSGraphicShape::getPath() const
+std::vector<WPSGraphicShape::PathData> WPSGraphicShape::getPath(bool forTransformation) const
 {
 	std::vector<WPSGraphicShape::PathData> res;
+	float const delta=0.55228f;
 	switch (m_type)
 	{
 	case Line:
@@ -499,43 +550,85 @@ std::vector<WPSGraphicShape::PathData> WPSGraphicShape::getPath() const
 	case Rectangle:
 		if (m_cornerWidth[0] > 0 && m_cornerWidth[1] > 0)
 		{
-			Box2f box=m_formBox;
+			WPSBox2f box=m_formBox;
 			Vec2f c=m_cornerWidth;
-			res.push_back(PathData('M',Vec2f(box[1][0]-c[0],box[0][1])));
-			PathData data('A',Vec2f(box[1][0],box[0][1]+c[1]));
-			data.m_r=c;
-			data.m_sweep=true;
-			res.push_back(data);
-			res.push_back(PathData('L',Vec2f(box[1][0],box[1][1]-c[1])));
-			data.m_x=Vec2f(box[1][0]-c[0],box[1][1]);
-			res.push_back(data);
-			res.push_back(PathData('L',Vec2f(box[0][0]+c[0],box[1][1])));
-			data.m_x=Vec2f(box[0][0],box[1][1]-c[1]);
-			res.push_back(data);
-			res.push_back(PathData('L',Vec2f(box[0][0],box[0][1]+c[1])));
-			data.m_x=Vec2f(box[0][0]+c[0],box[0][1]);
-			res.push_back(data);
+			if (2*c[0]>box.size()[0]) c[0]=0.5f*box.size()[0];
+			if (2*c[1]>box.size()[1]) c[1]=0.5f*box.size()[1];
+			if (forTransformation)
+			{
+				Vec2f pt0(box[1][0]-c[0],box[0][1]);
+				res.push_back(PathData('M',pt0));
+				Vec2f pt1(box[1][0],box[0][1]+c[1]);
+				res.push_back(PathData('C',pt1,pt0+Vec2f(delta*c[0],0),pt1-Vec2f(0,delta*c[1])));
+				pt0=Vec2f(box[1][0],box[1][1]-c[1]);
+				res.push_back(PathData('L',pt0));
+				pt1=Vec2f(box[1][0]-c[0],box[1][1]);
+				res.push_back(PathData('C',pt1,pt0+Vec2f(0,delta*c[1]),pt1+Vec2f(delta*c[0],0)));
+				pt0=Vec2f(box[0][0]+c[0],box[1][1]);
+				res.push_back(PathData('L',pt0));
+				pt1=Vec2f(box[0][0],box[1][1]-c[1]);
+				res.push_back(PathData('C',pt1,pt0-Vec2f(delta*c[0],0),pt1+Vec2f(0,delta*c[1])));
+				pt0=Vec2f(box[0][0],box[0][1]+c[1]);
+				res.push_back(PathData('L',pt0));
+				pt1=Vec2f(box[0][0]+c[0],box[0][1]);
+				res.push_back(PathData('C',pt1,pt0-Vec2f(0,delta*c[1]),pt1-Vec2f(delta*c[0],0)));
+			}
+			else
+			{
+				res.push_back(PathData('M',Vec2f(box[1][0]-c[0],box[0][1])));
+				PathData data('A',Vec2f(box[1][0],box[0][1]+c[1]));
+				data.m_r=c;
+				data.m_sweep=true;
+				res.push_back(data);
+				res.push_back(PathData('L',Vec2f(box[1][0],box[1][1]-c[1])));
+				data.m_x=Vec2f(box[1][0]-c[0],box[1][1]);
+				res.push_back(data);
+				res.push_back(PathData('L',Vec2f(box[0][0]+c[0],box[1][1])));
+				data.m_x=Vec2f(box[0][0],box[1][1]-c[1]);
+				res.push_back(data);
+				res.push_back(PathData('L',Vec2f(box[0][0],box[0][1]+c[1])));
+				data.m_x=Vec2f(box[0][0]+c[0],box[0][1]);
+				res.push_back(data);
+				res.push_back(PathData('Z'));
+				break;
+			}
+			res.push_back(PathData('M',m_formBox[0]));
+			res.push_back(PathData('L',Vec2f(m_formBox[0][0],m_formBox[1][1])));
+			res.push_back(PathData('L',m_formBox[1]));
+			res.push_back(PathData('L',Vec2f(m_formBox[1][0],m_formBox[0][1])));
 			res.push_back(PathData('Z'));
-			break;
 		}
-		res.push_back(PathData('M',m_formBox[0]));
-		res.push_back(PathData('L',Vec2f(m_formBox[0][0],m_formBox[1][1])));
-		res.push_back(PathData('L',m_formBox[1]));
-		res.push_back(PathData('L',Vec2f(m_formBox[1][0],m_formBox[0][1])));
-		res.push_back(PathData('Z'));
 		break;
 	case Circle:
 	{
-		Vec2f pt0 = Vec2f(m_formBox[0][0],0.5f*(m_formBox[0][1]+m_formBox[1][1]));
-		Vec2f pt1 = Vec2f(m_formBox[1][0],pt0[1]);
-		res.push_back(PathData('M',pt0));
-		PathData data('A',pt1);
-		data.m_r=0.5*(m_formBox[1]-m_formBox[0]);
-		data.m_largeAngle=true;
-		res.push_back(data);
-		data.m_x=pt0;
-		res.push_back(data);
-		break;
+		if (forTransformation)
+		{
+			Vec2f center=m_formBox.center();
+			Vec2f dir=0.5f*delta*(m_formBox[1]-m_formBox[0]);
+			Vec2f pt0(m_formBox[0][0],center[1]);
+			res.push_back(PathData('M',pt0));
+			Vec2f pt1(center[0],m_formBox[0][1]);
+			res.push_back(PathData('C',pt1, pt0-Vec2f(0,dir[1]), pt1-Vec2f(dir[0],0)));
+			pt0=Vec2f(m_formBox[1][0],center[1]);
+			res.push_back(PathData('C',pt0, pt1+Vec2f(dir[0],0), pt0-Vec2f(0,dir[1])));
+			pt1=Vec2f(center[0],m_formBox[1][1]);
+			res.push_back(PathData('C',pt1, pt0+Vec2f(0,dir[1]), pt1+Vec2f(dir[0],0)));
+			pt0=Vec2f(m_formBox[0][0],center[1]);
+			res.push_back(PathData('C',pt0, pt1-Vec2f(dir[0],0), pt0+Vec2f(0,dir[1])));
+		}
+		else
+		{
+			Vec2f pt0 = Vec2f(m_formBox[0][0],0.5f*(m_formBox[0][1]+m_formBox[1][1]));
+			Vec2f pt1 = Vec2f(m_formBox[1][0],pt0[1]);
+			res.push_back(PathData('M',pt0));
+			PathData data('A',pt1);
+			data.m_r=0.5*(m_formBox[1]-m_formBox[0]);
+			data.m_largeAngle=true;
+			res.push_back(data);
+			data.m_x=pt0;
+			res.push_back(data);
+			break;
+		}
 	}
 	case Arc:
 	case Pie:
@@ -566,12 +659,32 @@ std::vector<WPSGraphicShape::PathData> WPSGraphicShape::getPath() const
 			res.push_back(PathData('M', center));
 		Vec2f pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
 		res.push_back(PathData(addCenter ? 'L' : 'M', pt));
-		angl=angl1*float(M_PI/180.);
-		pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
-		PathData data('A',pt);
-		data.m_largeAngle=(angl1-angl0>=180.f);
-		data.m_r=rad;
-		res.push_back(data);
+		if (!forTransformation)
+		{
+			angl=angl1*float(M_PI/180.);
+			pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
+			PathData data('A',pt);
+			data.m_largeAngle=(angl1-angl0>=180.f);
+			data.m_r=rad;
+			res.push_back(data);
+		}
+		else
+		{
+			int N=int(angl1-angl0)/90;
+			float dAngle=float(angl1-angl0)/float(N+1);
+			for (int i=0; i<=N; ++i)
+			{
+				float newAngl= i==N ? angl1 : angl0+float(i+1)*dAngle;
+				newAngl*=float(M_PI/180.);
+				Vec2f newPt=center+Vec2f(std::cos(angl1)*rad[0],-std::sin(angl1)*rad[1]);
+				Vec2f dir(-std::sin(angl)*rad[0],-std::cos(angl)*rad[1]);
+				Vec2f newDir(-std::sin(newAngl)*rad[0],-std::cos(newAngl)*rad[1]);
+				float deltaDir=4/3.f*std::tan((newAngl-angl)/4);
+				res.push_back(PathData('C',newPt,pt+deltaDir*dir,newPt-deltaDir*newDir));
+				pt=newPt;
+				angl=newAngl;
+			}
+		}
 		break;
 	}
 	case Path:

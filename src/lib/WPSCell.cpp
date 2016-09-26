@@ -501,7 +501,7 @@ std::ostream &operator<<(std::ostream &o, WPSCell const &cell)
 	o << "C" << cell.m_position << ":";
 	if (cell.numSpannedCells()[0] != 1 || cell.numSpannedCells()[1] != 1)
 		o << "span=[" << cell.numSpannedCells()[0] << "," << cell.numSpannedCells()[1] << "],";
-	if (cell.m_box!=Box2f())
+	if (cell.m_box!=WPSBox2f())
 		o << "box=" << cell.m_box << ",";
 	if (cell.m_verticalSet) o << "ySet,";
 	o << static_cast<WPSCellFormat const &>(cell);

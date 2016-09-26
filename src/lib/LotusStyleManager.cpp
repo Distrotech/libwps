@@ -481,6 +481,11 @@ bool LotusStyleManager::getColor256(int cId, WPSColor &color) const
 	return m_state->getColor256(cId, color);
 }
 
+bool LotusStyleManager::getPattern(int id, WPSGraphicStyle::Pattern &pattern) const
+{
+	return m_state->getPattern(id, pattern);
+}
+
 ////////////////////////////////////////////////////////////
 // styles
 ////////////////////////////////////////////////////////////

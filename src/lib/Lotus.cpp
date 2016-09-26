@@ -1169,7 +1169,7 @@ bool LotusParser::readDataZone(shared_ptr<WPSStream> stream)
 			else
 				f << "dim" << i << "[h]=" << val << ",";
 		}
-		f << "dim=" << Box2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3])) << ",";
+		f << "dim=" << WPSBox2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3])) << ",";
 		for (int i=0; i<8; ++i)   // small value or 100
 		{
 			val=(int) libwps::read8(input);
@@ -1210,7 +1210,7 @@ bool LotusParser::readDataZone(shared_ptr<WPSStream> stream)
 			dim[i]=(int) libwps::read16(input);
 			if (val) f << "dim" << i <<"[h]=" << val << ",";
 		}
-		f << "dim=" << Box2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3])) << ",";
+		f << "dim=" << WPSBox2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3])) << ",";
 		for (int i=0; i<3; ++i)
 		{
 			static int const expected[]= {0,-1,25};

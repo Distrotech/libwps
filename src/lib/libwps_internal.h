@@ -28,6 +28,7 @@
 #include <stdio.h>
 #endif
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <map>
@@ -714,20 +715,20 @@ typedef Vec2<int> Vec2i;
 /*! \brief Vec2 of float */
 typedef Vec2<float> Vec2f;
 
-/*! \class Box2
- *   \brief small class which defines a 2D Box
+/*! \class WPSBox2
+ *   \brief small class which defines a 2D WPSBox
  */
-template <class T> class Box2
+template <class T> class WPSBox2
 {
 public:
 	//! constructor
-	Box2(Vec2<T> minPt=Vec2<T>(), Vec2<T> maxPt=Vec2<T>())
+	WPSBox2(Vec2<T> minPt=Vec2<T>(), Vec2<T> maxPt=Vec2<T>())
 	{
 		m_pt[0] = minPt;
 		m_pt[1] = maxPt;
 	}
 	//! generic constructor
-	template <class U> Box2(Box2<U> const &p)
+	template <class U> WPSBox2(WPSBox2<U> const &p)
 	{
 		for (int c=0; c < 2; c++) m_pt[c] = p[c];
 	}
@@ -821,9 +822,9 @@ public:
 		m_pt[1] += Vec2<T>(val-(val/2),val-(val/2));
 	}
 	//! returns the union between this and box
-	Box2<T> getUnion(Box2<T> const &box) const
+	WPSBox2<T> getUnion(WPSBox2<T> const &box) const
 	{
-		Box2<T> res;
+		WPSBox2<T> res;
 		res.m_pt[0]=Vec2<T>(m_pt[0][0]<box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
 		                    m_pt[0][1]<box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
 		res.m_pt[1]=Vec2<T>(m_pt[1][0]>box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
@@ -831,9 +832,9 @@ public:
 		return res;
 	}
 	//! returns the intersection between this and box
-	Box2<T> getIntersection(Box2<T> const &box) const
+	WPSBox2<T> getIntersection(WPSBox2<T> const &box) const
 	{
-		Box2<T> res;
+		WPSBox2<T> res;
 		res.m_pt[0]=Vec2<T>(m_pt[0][0]>box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
 		                    m_pt[0][1]>box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
 		res.m_pt[1]=Vec2<T>(m_pt[1][0]<box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
@@ -842,23 +843,23 @@ public:
 	}
 
 	//! comparison operator==
-	bool operator==(Box2<T> const &p) const
+	bool operator==(WPSBox2<T> const &p) const
 	{
 		return cmp(p) == 0;
 	}
 	//! comparison operator!=
-	bool operator!=(Box2<T> const &p) const
+	bool operator!=(WPSBox2<T> const &p) const
 	{
 		return cmp(p) != 0;
 	}
 	//! comparison operator< : fist sorts min by Y,X values then max extremity
-	bool operator<(Box2<T> const &p) const
+	bool operator<(WPSBox2<T> const &p) const
 	{
 		return cmp(p) < 0;
 	}
 
 	//! comparison function : fist sorts min by Y,X values then max extremity
-	int cmp(Box2<T> const &p) const
+	int cmp(WPSBox2<T> const &p) const
 	{
 		int diff  = m_pt[0].cmpY(p.m_pt[0]);
 		if (diff) return diff;
@@ -868,7 +869,7 @@ public:
 	}
 
 	//! print data in form X0xY0<->X1xY1
-	friend std::ostream &operator<< (std::ostream &o, Box2<T> const &f)
+	friend std::ostream &operator<< (std::ostream &o, WPSBox2<T> const &f)
 	{
 		o << "(" << f.m_pt[0] << "<->" << f.m_pt[1] << ")";
 		return o;
@@ -880,25 +881,346 @@ public:
 	struct PosSizeLt
 	{
 		//! comparaison function
-		bool operator()(Box2<T> const &s1, Box2<T> const &s2) const
+		bool operator()(WPSBox2<T> const &s1, WPSBox2<T> const &s2) const
 		{
 			return s1.cmp(s2) < 0;
 		}
 	};
 	/*! \typedef Map
-	 *  \brief map of Box2
+	 *  \brief map of WPSBox2
 	 */
-	typedef std::map<Box2<T>, T,struct PosSizeLt> Map;
+	typedef std::map<WPSBox2<T>, T,struct PosSizeLt> Map;
 
 protected:
 	//! the two extremities
 	Vec2<T> m_pt[2];
 };
 
-/*! \brief Box2 of int */
-typedef Box2<int> Box2i;
-/*! \brief Box2 of float */
-typedef Box2<float> Box2f;
+/*! \brief WPSBox2 of int */
+typedef WPSBox2<int> WPSBox2i;
+/*! \brief WPSBox2 of float */
+typedef WPSBox2<float> WPSBox2f;
 
+/*! \class WPSVec3
+ *   \brief small class which defines a vector with 3 elements
+ */
+template <class T> class WPSVec3
+{
+public:
+	//! constructor
+	explicit WPSVec3(T xx=0,T yy=0,T zz=0)
+	{
+		m_val[0] = xx;
+		m_val[1] = yy;
+		m_val[2] = zz;
+	}
+	//! generic copy constructor
+	template <class U> WPSVec3(WPSVec3<U> const &p)
+	{
+		for (int c = 0; c < 3; c++) m_val[c] = T(p[c]);
+	}
+
+	//! first element
+	T x() const
+	{
+		return m_val[0];
+	}
+	//! second element
+	T y() const
+	{
+		return m_val[1];
+	}
+	//! third element
+	T z() const
+	{
+		return m_val[2];
+	}
+	//! operator[]
+	T operator[](int c) const
+	{
+		if (c<0 || c>2) throw libwps::GenericException();
+		return m_val[c];
+	}
+	//! operator[]
+	T &operator[](int c)
+	{
+		if (c<0 || c>2) throw libwps::GenericException();
+		return m_val[c];
+	}
+
+	//! resets the three elements
+	void set(T xx, T yy, T zz)
+	{
+		m_val[0] = xx;
+		m_val[1] = yy;
+		m_val[2] = zz;
+	}
+	//! resets the first element
+	void setX(T xx)
+	{
+		m_val[0] = xx;
+	}
+	//! resets the second element
+	void setY(T yy)
+	{
+		m_val[1] = yy;
+	}
+	//! resets the third element
+	void setZ(T zz)
+	{
+		m_val[2] = zz;
+	}
+
+	//! increases the actuals values by \a dx, \a dy, \a dz
+	void add(T dx, T dy, T dz)
+	{
+		m_val[0] += dx;
+		m_val[1] += dy;
+		m_val[2] += dz;
+	}
+
+	//! operator+=
+	WPSVec3<T> &operator+=(WPSVec3<T> const &p)
+	{
+		for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]+p.m_val[c]);
+		return *this;
+	}
+	//! operator-=
+	WPSVec3<T> &operator-=(WPSVec3<T> const &p)
+	{
+		for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]-p.m_val[c]);
+		return *this;
+	}
+	//! generic operator*=
+	template <class U>
+	WPSVec3<T> &operator*=(U scale)
+	{
+		for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]*scale);
+		return *this;
+	}
+
+	//! operator+
+	friend WPSVec3<T> operator+(WPSVec3<T> const &p1, WPSVec3<T> const &p2)
+	{
+		WPSVec3<T> p(p1);
+		return p+=p2;
+	}
+	//! operator-
+	friend WPSVec3<T> operator-(WPSVec3<T> const &p1, WPSVec3<T> const &p2)
+	{
+		WPSVec3<T> p(p1);
+		return p-=p2;
+	}
+	//! generic operator*
+	template <class U>
+	friend WPSVec3<T> operator*(U scale, WPSVec3<T> const &p1)
+	{
+		WPSVec3<T> p(p1);
+		return p *= scale;
+	}
+
+	//! comparison==
+	bool operator==(WPSVec3<T> const &p) const
+	{
+		return cmp(p) == 0;
+	}
+	//! comparison!=
+	bool operator!=(WPSVec3<T> const &p) const
+	{
+		return cmp(p) != 0;
+	}
+	//! comparison<: which first compares x values, then y values then z values.
+	bool operator<(WPSVec3<T> const &p) const
+	{
+		return cmp(p) < 0;
+	}
+	//! a comparison function: which first compares x values, then y values then z values.
+	int cmp(WPSVec3<T> const &p) const
+	{
+		for (int c = 0; c < 3; c++)
+		{
+			if (m_val[c]<p.m_val[c]) return -1;
+			if (m_val[c]>p.m_val[c]) return 1;
+		}
+		return 0;
+	}
+
+	//! operator<<: prints data in form "XxYxZ"
+	friend std::ostream &operator<< (std::ostream &o, WPSVec3<T> const &f)
+	{
+		o << f.m_val[0] << "x" << f.m_val[1] << "x" << f.m_val[2];
+		return o;
+	}
+
+	/*! \struct PosSizeLt
+	 * \brief internal struct used to create sorted map, sorted by X, Y, Z
+	 */
+	struct PosSizeLt
+	{
+		//! comparaison function
+		bool operator()(WPSVec3<T> const &s1, WPSVec3<T> const &s2) const
+		{
+			return s1.cmp(s2) < 0;
+		}
+	};
+	/*! \typedef Map
+	 *  \brief map of WPSVec3
+	 */
+	typedef std::map<WPSVec3<T>, T,struct PosSizeLt> Map;
+
+protected:
+	//! the values
+	T m_val[3];
+};
+
+/*! \brief WPSVec3 of unsigned char */
+typedef WPSVec3<unsigned char> WPSVec3uc;
+/*! \brief WPSVec3 of int */
+typedef WPSVec3<int> WPSVec3i;
+/*! \brief WPSVec3 of float */
+typedef WPSVec3<float> WPSVec3f;
+
+/** a transformation which stored the first row of a 3x3 perspective matrix */
+class WPSTransformation
+{
+public:
+	//! constructor
+	explicit WPSTransformation(WPSVec3f const &xRow=WPSVec3f(1,0,0), WPSVec3f const &yRow=WPSVec3f(0,1,0)) : m_data(xRow, yRow), m_isIdentity(false)
+	{
+		checkIdentity();
+	}
+	//! returns true if the matrix is an identity matrix
+	bool isIdentity() const
+	{
+		return m_isIdentity;
+	}
+	//! check if a matrix is the identity matrix
+	void checkIdentity() const
+	{
+		m_isIdentity= m_data.first==WPSVec3f(1,0,0) && m_data.second==WPSVec3f(0,1,0);
+	}
+	/*! \brief the two extremum points which defined the box
+	 * \param c 0 means the minimum and 1 the maximum
+	 */
+	WPSVec3f const &operator[](int c) const
+	{
+		if (c<0 || c>1) throw libwps::GenericException();
+		return c==0 ? m_data.first : m_data.second;
+	}
+	//! operator* for vec2f
+	Vec2f operator*(Vec2f const &pt) const
+	{
+		if (m_isIdentity) return pt;
+		return multiplyDirection(pt)+Vec2f(m_data.first[2],m_data.second[2]);
+	}
+	//! operator* for direction
+	Vec2f multiplyDirection(Vec2f const &dir) const
+	{
+		if (m_isIdentity) return dir;
+		Vec2f res;
+		for (int coord=0; coord<2; ++coord)
+		{
+			WPSVec3f const &row=coord==0 ? m_data.first : m_data.second;
+			float value=0;
+			for (int i=0; i<2; ++i)
+				value+=row[i]*dir[i];
+			res[coord]=value;
+		}
+		return res;
+	}
+	//! operator* for box2f
+	WPSBox2f operator*(WPSBox2f const &box) const
+	{
+		if (m_isIdentity) return box;
+		return WPSBox2f(operator*(box.min()), operator*(box.max()));
+	}
+	//! operator* for transform
+	WPSTransformation operator*(WPSTransformation const &mat) const
+	{
+		if (mat.m_isIdentity) return *this;
+		WPSTransformation res;
+		for (int row=0; row<2; ++row)
+		{
+			WPSVec3f &resRow=row==0 ? res.m_data.first : res.m_data.second;
+			for (int col=0; col<3; ++col)
+			{
+				float value=0;
+				for (int i=0; i<3; ++i)
+					value+=(*this)[row][i]*(i==2 ? (col==2 ? 1.f : 0.f) : mat[i][col]);
+				resRow[col]=value;
+			}
+		}
+		res.checkIdentity();
+		return res;
+	}
+	//! operator*=
+	WPSTransformation &operator*=(WPSTransformation const &mat)
+	{
+		if (!mat.m_isIdentity)
+			*this=(*this)*mat;
+		return *this;
+	}
+	//! operator==
+	bool operator==(WPSTransformation const &mat) const
+	{
+		return m_data==mat.m_data;
+	}
+	//! operator!=
+	bool operator!=(WPSTransformation const &mat) const
+	{
+		return m_data!=mat.m_data;
+	}
+	//! operator<
+	bool operator<(WPSTransformation const &mat) const
+	{
+		return m_data<mat.m_data;
+	}
+	//! operator<=
+	bool operator<=(WPSTransformation const &mat) const
+	{
+		return m_data<=mat.m_data;
+	}
+	//! operator>
+	bool operator>(WPSTransformation const &mat) const
+	{
+		return m_data>mat.m_data;
+	}
+	//! operator>=
+	bool operator>=(WPSTransformation const &mat) const
+	{
+		return m_data>=mat.m_data;
+	}
+	/** try to decompose the matrix in a rotation + scaling/translation matrix.
+
+	    Note: the center of rotation is given before applying the transformation(this) */
+	bool decompose(float &rotation, Vec2f &shearing, WPSTransformation &transform, Vec2f const &center) const;
+
+	/** returns a translation transformation */
+	static WPSTransformation translation(Vec2f const &trans)
+	{
+		return WPSTransformation(WPSVec3f(1, 0, trans[0]), WPSVec3f(0, 1, trans[1]));
+	}
+	/** returns a scaling transformation */
+	static WPSTransformation scale(Vec2f const &trans)
+	{
+		return WPSTransformation(WPSVec3f(trans[0], 0, 0), WPSVec3f(0, trans[1], 0));
+	}
+	/** returns a rotation transformation around center.
+
+	 \note angle must be given in degree */
+	static WPSTransformation rotation(float angle, Vec2f const &center=Vec2f(0,0));
+	/** returns a shear transformation letting center invariant, ie. a matrix
+	    ( 1 s[0] -s[0]*center[1], s[1] 1 -s[1]*center[0], 0 0 1)
+	 */
+	static WPSTransformation shear(Vec2f s, Vec2f const &center=Vec2f(0,0))
+	{
+		return WPSTransformation(WPSVec3f(1, s[0], -s[0]*center[1]), WPSVec3f(s[1], 1, -s[1]*center[0]));
+	}
+protected:
+	//! the data
+	std::pair<WPSVec3f, WPSVec3f > m_data;
+	//! flag to know if this matrix is an identity matrix
+	mutable bool m_isIdentity;
+};
 #endif /* LIBWPS_INTERNAL_H */
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

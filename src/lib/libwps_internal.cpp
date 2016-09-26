@@ -768,6 +768,63 @@ void appendUnicode(uint32_t val, librevenge::RVNGString &buffer)
 }
 }
 
+// a little geometry
+WPSTransformation WPSTransformation::rotation(float angle, Vec2f const &center)
+{
+	float angl=float(double(angle)*M_PI/180);
+	float cosA=float(std::cos(angl));
+	float sinA=float(std::sin(angl));
+	return WPSTransformation(WPSVec3f(cosA, -sinA, center[0]-cosA*center[0]+sinA*center[1]),
+	                         WPSVec3f(sinA, cosA, center[1]-sinA*center[0]-cosA*center[1]));
+}
+
+bool WPSTransformation::decompose(float &rot, Vec2f &shearing, WPSTransformation &transform, Vec2f const &origCenter) const
+{
+	if (m_isIdentity) return false;
+	WPSVec3f const &xRow=(*this)[0];
+	WPSVec3f const &yRow=(*this)[1];
+	Vec2f const &center=*this * origCenter;
+	// first check shearing
+	float shearY=0;
+	float val1=xRow[0]*xRow[1];
+	float val2=yRow[0]*yRow[1];
+	float diff=val2-val1;
+	if (diff<-0.01f || diff>0.01f)
+	{
+		float const &A=val1;
+		float const B=xRow[1]*yRow[0]+xRow[0]*yRow[1];
+		float const &C=diff;
+		if (A>=0 && A<=0)
+		{
+			if (B>=0 && A<=0)
+			{
+				WPS_DEBUG_MSG(("WPSTransformation::decompose: can not determine the shearing\n"));
+				return false;
+			}
+			shearY=C/B;
+		}
+		else
+		{
+			float const &delta=B*B-4*A*C;
+			if (delta<0)
+			{
+				WPS_DEBUG_MSG(("WPSTransformation::decompose: can not determine the shearing\n"));
+				return false;
+			}
+			shearY=(B-float(std::sqrt(delta)))/2.f/A;
+		}
+		transform=WPSTransformation::shear(Vec2f(0,-shearY), center) **this;
+	}
+	else
+		transform=*this;
+	shearing=Vec2f(0,shearY);
+	// fixme: we must first check for symetry here...
+	// now the rotation
+	rot=-std::atan2(-transform[1][0],transform[1][1]);
+	rot *= float(180/M_PI);
+	transform=WPSTransformation::rotation(-rot, center) * transform;
+	return true;
+}
 ////////////////////////////////////////////////////////////
 // debug
 ////////////////////////////////////////////////////////////

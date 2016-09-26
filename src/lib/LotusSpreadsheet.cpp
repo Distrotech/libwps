@@ -185,7 +185,7 @@ struct CellsList
 	//! the sheet id
 	int m_id;
 	//! the first and last position
-	Box2i m_positions;
+	WPSBox2i m_positions;
 };
 
 //! a cellule of a Lotus spreadsheet

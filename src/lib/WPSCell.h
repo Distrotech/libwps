@@ -261,12 +261,12 @@ public:
 	void addTo(librevenge::RVNGPropertyList &propList) const;
 
 	//! set the bounding box (units in point)
-	void setBox(Box2f const &b)
+	void setBox(WPSBox2f const &b)
 	{
 		m_box = b;
 	}
 	//! return the bounding box
-	Box2f const &box() const
+	WPSBox2f const &box() const
 	{
 		return m_box;
 	}
@@ -364,7 +364,7 @@ protected:
 	};
 
 	/** the cell bounding box (unit in point)*/
-	Box2f m_box;
+	WPSBox2f m_box;
 	/** true if y size is fixed */
 	bool m_verticalSet;
 	//! the cell row and column : 0,0 -> A1, 0,1 -> A2

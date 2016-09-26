@@ -34,7 +34,8 @@
 
 namespace LotusGraphInternal
 {
-struct Zone;
+struct ZoneMac;
+struct ZoneWK4;
 struct State;
 
 class SubDocument;
@@ -73,7 +74,7 @@ protected:
 	//! send the graphics corresponding to a sheetId
 	void sendGraphics(int sheetId);
 	//! try to send a picture
-	void sendPicture(LotusGraphInternal::Zone const &zone);
+	void sendPicture(LotusGraphInternal::ZoneMac const &zone);
 	//! try to send a textbox content's
 	void sendTextBox(shared_ptr<WPSStream> stream, WPSEntry const &entry);
 
