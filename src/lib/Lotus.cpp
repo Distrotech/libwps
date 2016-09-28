@@ -480,40 +480,8 @@ bool LotusParser::parseFormatStream()
 	RVNGInputStreamPtr file=getFileInput();
 	if (!file || !file->isStructured()) return false;
 
-	unsigned numSubStreams = file->subStreamCount();
-	std::string wk3Name, fm3Name;
-	RVNGInputStreamPtr formatInput;
-	for (unsigned i = 0; i < numSubStreams; ++i)
-	{
-		char const *nm=file->subStreamName(i);
-		std::string name(nm);
-		size_t len=name.length();
-		if (len<=4 || name.find_last_of('/')!=std::string::npos || name[0]=='.' || name[len-4]!='.')
-			continue;
-		std::string extension=name.substr(len-3);
-		if (extension=="wk3" || extension=="WK3")
-		{
-			if (!wk3Name.empty())
-			{
-				wk3Name.clear();
-				break;
-			}
-			wk3Name=name;
-		}
-		else if (extension=="fm3" || extension=="FM3")
-		{
-			if (!fm3Name.empty())
-			{
-				fm3Name.clear();
-				break;
-			}
-			fm3Name=name;
-			formatInput.reset(file->getSubStreamByName(nm));
-			formatInput->seek(0, librevenge::RVNG_SEEK_SET);
-		}
-	}
-	if (wk3Name.empty() || fm3Name.empty() ||  !formatInput ||
-	        wk3Name.substr(0,wk3Name.length()-3) != fm3Name.substr(0,fm3Name.length()-3))
+	RVNGInputStreamPtr formatInput(file->getSubStreamByName("FM3"));
+	if (!formatInput)
 	{
 		WPS_DEBUG_MSG(("LotusParser::parseFormatStream: can not find the format stream\n"));
 		return false;

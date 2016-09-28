@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <vector>
 
 #include "helper.h"
@@ -68,22 +69,24 @@ void printDebugMsg(const char *format, ...)
 
 /** internal class used to create a structrured RVNGInputStream from two files
  */
-class StringStream: public librevenge::RVNGInputStream
+class FolderStream: public librevenge::RVNGInputStream
 {
 public:
 	//! constructor
-	StringStream(std::string const &dir, std::string const &name1, std::string const &name2) :
-		librevenge::RVNGInputStream(), m_directory(dir)
+	FolderStream() : librevenge::RVNGInputStream(), m_nameToPathMap()
 	{
-		m_names[0]=name1;
-		m_names[1]=name2;
 	}
 
 	//! destructor
-	~StringStream()
+	~FolderStream()
 	{
 	}
 
+	//! add a file
+	void addFile(std::string const &path, std::string const &shortName)
+	{
+		m_nameToPathMap[shortName]=path;
+	}
 	/**! reads numbytes data.
 
 	 * \return a pointer to the read elements
@@ -122,45 +125,45 @@ public:
 	 \sa returns always 2*/
 	unsigned subStreamCount()
 	{
-		return 2;
+		return unsigned(m_nameToPathMap.size());
 	}
 	/** returns the ith sub streams name */
 	const char *subStreamName(unsigned id)
 	{
-		if (id>=2) return 0;
-		return m_names[id].c_str();
+		std::map<std::string, std::string>::const_iterator it=m_nameToPathMap.begin();
+		for (unsigned i=0; i<id; ++i)
+		{
+			if (it==m_nameToPathMap.end()) return 0;
+			++it;
+		}
+		if (it==m_nameToPathMap.end()) return 0;
+		return it->first.c_str();
 	}
 	/** returns true if a substream with name exists */
 	bool existsSubStream(const char *name)
 	{
-		return name && (m_names[0]==name || m_names[1]==name);
+		return name && m_nameToPathMap.find(name)!= m_nameToPathMap.end();
 	}
 	/** return a new stream for a ole zone */
-	librevenge::RVNGInputStream *getSubStreamByName(const char *name)
+	librevenge::RVNGInputStream *getSubStreamByName(const char *name);
+	/** return a new stream for a ole zone */
+	librevenge::RVNGInputStream *getSubStreamById(unsigned id)
 	{
-		if (!name) return 0;
-		for (unsigned i=0; i<2; ++i)
-		{
-			if (m_names[i]==name) return getSubStreamById(i);
-		}
-		return 0;
+		char const *name=subStreamName(id);
+		if (name==0) return 0;
+		return getSubStreamByName(name);
 	}
-	/** return a new stream for a ole zone */
-	librevenge::RVNGInputStream *getSubStreamById(unsigned id);
 private:
-	/// the directory
-	std::string m_directory;
-	/// the 2 file name
-	std::string m_names[2];
-	StringStream(const StringStream &); // copy is not allowed
-	StringStream &operator=(const StringStream &); // assignment is not allowed
+	/// the map short name to path
+	std::map<std::string, std::string> m_nameToPathMap;
+	FolderStream(const FolderStream &); // copy is not allowed
+	FolderStream &operator=(const FolderStream &); // assignment is not allowed
 };
 
-librevenge::RVNGInputStream *StringStream::getSubStreamById(unsigned id)
+librevenge::RVNGInputStream *FolderStream::getSubStreamByName(const char *name)
 {
-	if (id>=2) return 0;
-	std::string name(m_directory+"/"+m_names[id]);
-	return new librevenge::RVNGFileStream(name.c_str());
+	if (m_nameToPathMap.find(name)== m_nameToPathMap.end()) return 0;
+	return new librevenge::RVNGFileStream(m_nameToPathMap.find(name)->second.c_str());
 }
 
 ////////////////////////////////////////////////////////////
@@ -173,7 +176,7 @@ librevenge::RVNGInputStream *StringStream::getSubStreamById(unsigned id)
 static shared_ptr<librevenge::RVNGInputStream> createMergeInput(char const *fName, librevenge::RVNGInputStream &input)
 try
 {
-	shared_ptr<librevenge::RVNGInputStream> res;
+	shared_ptr<FolderStream> res;
 
 	/* we do not want to compress already compressed file.
 	   So check if the file is structured, is a binhex file
@@ -208,16 +211,17 @@ try
 	if (stat(fmName.c_str(), &status) || !S_ISREG(status.st_mode))
 		return res;
 
-	std::string dir("");
-	std::string name1(name), name2(fmName);
-	size_t slashPos=name.find_last_of('/');
-	if (slashPos!=std::string::npos)
+	res.reset(new FolderStream());
+	if (oldFile)
 	{
-		dir=name.substr(0, slashPos);
-		name1=name.substr(slashPos+1);
-		name2=fmName.substr(slashPos+1);
+		res->addFile(name, "WK1");
+		res->addFile(fmName, "FMT");
 	}
-	res.reset(new StringStream(dir, name1, name2));
+	else
+	{
+		res->addFile(name, "WK3");
+		res->addFile(fmName, "FM3");
+	}
 	return res;
 }
 catch (...)

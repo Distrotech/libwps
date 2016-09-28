@@ -517,7 +517,7 @@ void LotusSpreadsheet::cleanState()
 bool LotusSpreadsheet::getLeftTopPosition(Vec2i const &cell, int sheetId, Vec2f &pos)
 {
 	// set to default
-	pos=Vec2f(cell[0]>=0 ? cell[0]*72 : 0, cell[1]>=0 ? cell[1]*16 : 0);
+	pos=Vec2i(cell[0]>=0 ? cell[0]*72 : 0, cell[1]>=0 ? cell[1]*16 : 0);
 	if (sheetId<0||sheetId>=m_state->getNumSheet() || cell[0]<0 || cell[1]<0)
 	{
 		WPS_DEBUG_MSG(("LotusSpreadsheet::getLeftTopPosition: the sheet %d seems bad\n", sheetId));

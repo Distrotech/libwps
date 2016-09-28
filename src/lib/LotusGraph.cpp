@@ -973,7 +973,7 @@ void LotusGraph::sendGraphics(int sheetId)
 		if (!zone) continue;
 		Vec2f decal;
 		if (!m_mainParser.getLeftTopPosition(zone->m_cell, sheetId, decal))
-			decal=Vec2f(72*zone->m_cell[0],16*zone->m_cell[1]);
+			decal=Vec2i(72*zone->m_cell[0],16*zone->m_cell[1]);
 		Vec2f dimension(zone->m_frameSize);
 		if (zone->m_type==LotusGraphInternal::ZoneWK4::Shape)
 			dimension=zone->m_shape.getBdBox().size();
@@ -1204,7 +1204,7 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 	val=int(libwps::readU8(input));
 	if (val<8)
 	{
-		style.m_lineWidth = noLine ? 0 : val+1;
+		style.m_lineWidth = noLine ? 0.f : float(val+1);
 		if (val) f << "w=" << val+1 << ",";
 	}
 	else

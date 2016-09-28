@@ -152,62 +152,28 @@ WPSHeader *WPSHeader::constructHeader(RVNGInputStreamPtr &input)
 		}
 	}
 
-	/* check for a lotus 123 zip file containing a .wk3 and a .fm3
-	   or a old lotus file containing a .wk? and a .fmt file
+	/* check for a lotus 123 zip file containing a WK3 and FM3
+	   or a old lotus file containing WK1 and FMT
 	 */
-	unsigned numSubStreams = input->subStreamCount();
-	std::string wkName, formatName;
-	RVNGInputStreamPtr wkStream;
-	int headerSz=0;
-	for (unsigned i = 0; i < numSubStreams; ++i)
+	if (input->existsSubStream("WK1") && input->existsSubStream("FMT"))
 	{
-		char const *nm=input->subStreamName(i);
-		std::string name(nm);
-		size_t len=name.length();
-		if (len<=4 || name.find_last_of('/')!=std::string::npos || name[0]=='.' || name[len-4]!='.')
-			continue;
-		std::string extension=name.substr(len-3, 2);
-		bool wkFile=false;
-		if (extension=="wk" || extension=="WK")
+		RVNGInputStreamPtr stream(input->getSubStreamByName("WK1"));
+		if (stream && stream->seek(0, librevenge::RVNG_SEEK_SET) == 0 && libwps::readU16(stream)==0 &&
+		        libwps::readU8(stream)==2 && libwps::readU8(stream)==0)
 		{
-			wkFile=true;
-			if (!wkName.empty())
-			{
-				wkName.clear();
-				break;
-			}
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: find a zip Lotus spreadsheet\n"));
+			return new WPSHeader(stream, input, 2, WPS_SPREADSHEET, WPS_LOTUS);
 		}
-		else if (extension=="fm" || extension=="FM")
-		{
-			if (!formatName.empty())
-			{
-				formatName.clear();
-				break;
-			}
-		}
-		else
-			continue;
-		RVNGInputStreamPtr stream(input->getSubStreamByName(nm));
-		if (!stream || stream->seek(0, librevenge::RVNG_SEEK_SET) != 0 || libwps::readU16(stream)!=0) break;
-		int newHeaderSz=int(libwps::readU8(stream));
-		if (libwps::readU8(stream) || (newHeaderSz!=2 && newHeaderSz!=0x1a) || (headerSz && newHeaderSz!=headerSz))
-			break;
-		headerSz=newHeaderSz;
-		if (wkFile)
-		{
-			wkName=name;
-			wkStream=stream;
-		}
-		else
-			formatName=name;
 	}
-	if (!wkName.empty() && !formatName.empty() &&
-	        wkName.substr(0,wkName.length()-3) == formatName.substr(0,formatName.length()-3))
+	if (input->existsSubStream("WK3") && input->existsSubStream("FM3"))
 	{
-		WPS_DEBUG_MSG(("WPSHeader::constructHeader: find a zip Lotus spreadsheet\n"));
-		if (headerSz==2)
-			return new WPSHeader(wkStream, input, 2, WPS_SPREADSHEET);
-		return new WPSHeader(wkStream, input, 101, WPS_SPREADSHEET, WPS_LOTUS);
+		RVNGInputStreamPtr stream(input->getSubStreamByName("WK3"));
+		if (stream && stream->seek(0, librevenge::RVNG_SEEK_SET) == 0 && libwps::readU16(stream)==0 &&
+		        libwps::readU8(stream)==0x1a && libwps::readU8(stream)==0)
+		{
+			WPS_DEBUG_MSG(("WPSHeader::constructHeader: find a zip Lotus spreadsheet\n"));
+			return new WPSHeader(stream, input, 101, WPS_SPREADSHEET, WPS_LOTUS);
+		}
 	}
 	return NULL;
 }

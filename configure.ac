@@ -368,6 +368,7 @@ inc/Makefile
 inc/libwps/Makefile
 src/Makefile
 src/conv/Makefile
+src/conv/helper/Makefile
 src/conv/html/Makefile
 src/conv/html/wps2html.rc
 src/conv/raw/Makefile
