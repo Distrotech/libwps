@@ -71,7 +71,7 @@ public:
 	shared_ptr<WPSStream> getStreamForId(int id) const;
 	/** try to retrieve the meta data */
 	bool updateMetaData(librevenge::RVNGPropertyList &list, libwps_tools_win::Font::Type encoding) const;
-	/** try to retrieve the content of a graphic, knowing it id */
+	/** try to retrieve the content of a graphic, knowing it local id */
 	bool updateEmbeddedObject(int id, WPSEmbeddedObject &object) const;
 
 protected:

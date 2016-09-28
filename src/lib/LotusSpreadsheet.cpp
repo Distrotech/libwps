@@ -304,6 +304,41 @@ public:
 		if (h>=0)
 			m_rowHeightMap[Vec2i(row,row)]=h;
 	}
+	//! returns the position corresponding to a cell
+	Vec2f getPosition(Vec2i const &cell) const
+	{
+		// first compute the height
+		int lastRow=0;
+		int h=0;
+		std::map<Vec2i,int>::const_iterator rIt=m_rowHeightMap.begin();
+		while (rIt!=m_rowHeightMap.end() && rIt->first[1]<cell[1])
+		{
+			if (rIt->first[0]>lastRow)
+			{
+				h+=(rIt->first[0]-lastRow)*m_heightDefault;
+				lastRow=rIt->first[0];
+			}
+			h+=(rIt->first[1]+1-lastRow)*rIt->second;
+			lastRow=rIt->first[1]+1;
+			++rIt;
+		}
+		if (lastRow<cell[1])
+		{
+			if (rIt!=m_rowHeightMap.end() && rIt->first[0]<cell[1])
+				h+=(cell[1]-lastRow)*rIt->second;
+			else
+				h+=(cell[1]-lastRow)*m_heightDefault;
+
+		}
+		// now compute the width
+		size_t const numCols = m_widthColsInChar.size();
+		int w=0;
+		for (size_t i = 0; i < numCols && i<size_t(cell[0]); i++)
+			w+=m_widthColsInChar[i] ? 8*m_widthColsInChar[i] : 72;
+		if (numCols<size_t(cell[0]))
+			w+=72*int(size_t(cell[0])-numCols);
+		return Vec2f(float(w), float(h));
+	}
 	//! try to compress the list of row height
 	void compressRowHeights()
 	{
@@ -341,16 +376,34 @@ public:
 			m_rowHeightMap[actPos]=actHeight;
 	}
 	//! convert the m_widthColsInChar, m_rowHeightMap in a vector of of point size
-	static std::vector<float> convertInPoint(std::vector<int> const &list,
-	                                         float defSize, float factor=1)
+	std::vector<float> getColumnWidths(std::vector<int> &repeated) const
 	{
-		size_t numElt = list.size();
+		size_t numElt = m_widthColsInChar.size();
 		std::vector<float> res;
-		res.resize(numElt);
+		size_t actCol=0;
+		int prevWidth=-1;
 		for (size_t i = 0; i < numElt; i++)
 		{
-			if (list[i] < 0) res[i] = defSize;
-			else res[i] = float(list[i])*factor;
+			int newVal=m_widthColsInChar[i]>=0 ? m_widthColsInChar[i]*8 : 72;
+			if (newVal==prevWidth)
+				continue;
+			if (actCol!=i)
+			{
+				res.push_back(float(prevWidth));
+				repeated.push_back(int(i-actCol));
+			}
+			actCol=i;
+			prevWidth=newVal;
+		}
+		if (actCol<numElt)
+		{
+			res.push_back(float(prevWidth));
+			repeated.push_back(int(numElt-actCol));
+		}
+		if (numElt<256)
+		{
+			res.push_back(72);
+			repeated.push_back(int(256-numElt));
 		}
 		return res;
 	}
@@ -459,6 +512,20 @@ LotusSpreadsheet::~LotusSpreadsheet()
 void LotusSpreadsheet::cleanState()
 {
 	m_state.reset(new LotusSpreadsheetInternal::State);
+}
+
+bool LotusSpreadsheet::getLeftTopPosition(Vec2i const &cell, int sheetId, Vec2f &pos)
+{
+	// set to default
+	pos=Vec2f(cell[0]>=0 ? cell[0]*72 : 0, cell[1]>=0 ? cell[1]*16 : 0);
+	if (sheetId<0||sheetId>=m_state->getNumSheet() || cell[0]<0 || cell[1]<0)
+	{
+		WPS_DEBUG_MSG(("LotusSpreadsheet::getLeftTopPosition: the sheet %d seems bad\n", sheetId));
+		return true;
+	}
+	LotusSpreadsheetInternal::Spreadsheet const &sheet = m_state->getSheet(sheetId);
+	pos=sheet.getPosition(cell);
+	return true;
 }
 
 void LotusSpreadsheet::updateState()
@@ -1706,9 +1773,10 @@ void LotusSpreadsheet::sendSpreadsheet(int sheetId)
 		return;
 	}
 	LotusSpreadsheetInternal::Spreadsheet &sheet = m_state->getSheet(sheetId);
-
-	m_listener->openSheet(sheet.convertInPoint(sheet.m_widthColsInChar,72,8), librevenge::RVNG_POINT,
-	                      std::vector<int>(), m_state->getSheetName(sheetId));
+	std::vector<int> repeated;
+	std::vector<float> colWidths=sheet.getColumnWidths(repeated);
+	m_listener->openSheet(colWidths, librevenge::RVNG_POINT,
+	                      repeated, m_state->getSheetName(sheetId));
 	m_mainParser.sendGraphics(sheetId);
 	sheet.compressRowHeights();
 	/* create a set to know which row needed to be send, each value of

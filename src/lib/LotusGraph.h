@@ -77,6 +77,8 @@ protected:
 	void sendPicture(LotusGraphInternal::ZoneMac const &zone);
 	//! try to send a textbox content's
 	void sendTextBox(shared_ptr<WPSStream> stream, WPSEntry const &entry);
+	//! try to send a textbox content's
+	void sendTextBoxWK4(shared_ptr<WPSStream> stream, WPSEntry const &entry, bool isButton);
 
 	//
 	// low level
@@ -105,6 +107,8 @@ protected:
 	bool readGraphic(shared_ptr<WPSStream> stream);
 	//! try to read a graph's frame: 0xcc (wk4)
 	bool readFrame(shared_ptr<WPSStream> stream);
+	//! reads a graphic textbox data: 0xd1 (wk4)
+	bool readTextBoxDataD1(shared_ptr<WPSStream> stream);
 
 private:
 	LotusGraph(LotusGraph const &orig);

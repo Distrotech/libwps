@@ -287,8 +287,10 @@ struct State
 	bool getColor16(int id, WPSColor &color) const;
 	//! returns a color corresponding to an id
 	bool getColor256(int id, WPSColor &color) const;
-	//! returns the pattern corresponding to a pattern id
-	bool getPattern(int id, WPSGraphicStyle::Pattern &pattern) const;
+	//! returns the pattern corresponding to a pattern id between 1 and 48
+	bool getPattern48(int id, WPSGraphicStyle::Pattern &pattern) const;
+	//! returns the pattern corresponding to a pattern id between 1 and 64
+	bool getPattern64(int id, WPSGraphicStyle::Pattern &pattern) const;
 
 	//! the file version
 	int m_version;
@@ -390,27 +392,58 @@ bool State::getColor256(int id, WPSColor &color) const
 	return true;
 }
 
-bool State::getPattern(int id, WPSGraphicStyle::Pattern &pat) const
+bool State::getPattern48(int id, WPSGraphicStyle::Pattern &pat) const
 {
 	if (id<=0 || id>=49)
 	{
-		WPS_DEBUG_MSG(("LotusStyleManagerInternal::State::getPattern(): unknown pattern id: %d\n",id));
+		WPS_DEBUG_MSG(("LotusStyleManagerInternal::State::getPattern48(): unknown pattern id: %d\n",id));
+		return false;
+	}
+	if (id==47 || id==48)
+	{
+		// the gradient
+		static const uint16_t (patterns[])=
+		{
+			0x8814, 0x2241, 0x8800, 0xaa00, 0x2050, 0x8888, 0x8888, 0x502
+		};
+		pat.m_dim=Vec2i(8,8);
+		uint16_t const *ptr=&patterns[4*(id-47)];
+		pat.m_data.resize(8);
+		for (size_t i=0; i < 8; i+=2)
+		{
+			uint16_t val=*(ptr++);
+			pat.m_data[i]=(unsigned char)((val>>8) & 0xFF);
+			pat.m_data[i+1]=(unsigned char)(val & 0xFF);
+		}
+	}
+	return getPattern64(id, pat);
+}
+
+bool State::getPattern64(int id, WPSGraphicStyle::Pattern &pat) const
+{
+	if (id<=0 || id>=64)
+	{
+		WPS_DEBUG_MSG(("LotusStyleManagerInternal::State::getPattern64(): unknown pattern id: %d\n",id));
 		return false;
 	}
 	static const uint16_t (patterns[])=
 	{
-		0xffff, 0xffff, 0xffff, 0xffff, 0x0, 0x0, 0x0, 0x0, 0x50a, 0x1428, 0x50a0, 0x4182, 0xa851, 0xa245, 0x8a15, 0x2a54,
+		0xffff, 0xffff, 0xffff, 0xffff, 0x0, 0x0, 0x0, 0x0, 0x50a, 0x1428, 0x50a0, 0x4182, 0xa851, 0xa245, 0x8a15, 0x2a54, // 1-4
 		0x2142, 0x8409, 0x1224, 0x4890, 0x102, 0x408, 0x1020, 0x4080, 0x1122, 0x4488, 0x1122, 0x4488, 0xeedd, 0xbb77, 0xeedd, 0xbb77,
-		0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa, 0x8888, 0x8888, 0x8888, 0x8888, 0xa050, 0x2814, 0xa05, 0x8241, 0x158a, 0x45a2, 0x51a8, 0x542a,
+		0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa, 0x8888, 0x8888, 0x8888, 0x8888, 0xa050, 0x2814, 0xa05, 0x8241, 0x158a, 0x45a2, 0x51a8, 0x542a, // 9-12
 		0x9048, 0x2412, 0x984, 0x4221, 0x8040, 0x2010, 0x804, 0x201, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0x0, 0xff00, 0x0,
-		0x44aa, 0x11aa, 0x44aa, 0x11aa, 0x182, 0x4428, 0x1028, 0x4482, 0xf874, 0x2247, 0x8f17, 0x2271, 0xaa00, 0xaa00, 0xaa00, 0xaa00,
+		0x44aa, 0x11aa, 0x44aa, 0x11aa, 0x182, 0x4428, 0x1028, 0x4482, 0xf874, 0x2247, 0x8f17, 0x2271, 0xaa00, 0xaa00, 0xaa00, 0xaa00, // 17-20
 		0xff88, 0x8888, 0xff88, 0x8888, 0xff80, 0x8080, 0x8080, 0x8080, 0xaa00, 0x8000, 0x8800, 0x8000, 0xbf00, 0xbfbf, 0xb0b0, 0xb0b0,
-		0xddff, 0x77ff, 0xddff, 0x77ff, 0xdd77, 0xdd77, 0xdd77, 0xdd77, 0xaa55, 0xaa55, 0xaa55, 0xaa55, 0x8822, 0x8822, 0x8822, 0x8822,
+		0xddff, 0x77ff, 0xddff, 0x77ff, 0xdd77, 0xdd77, 0xdd77, 0xdd77, 0xaa55, 0xaa55, 0xaa55, 0xaa55, 0x8822, 0x8822, 0x8822, 0x8822, // 25-28
 		0x8010, 0x220, 0x108, 0x4004, 0x8800, 0x2200, 0x8800, 0x2200, 0x8000, 0x800, 0x8000, 0x800, 0x40a0, 0x0, 0x40a, 0x0,
-		0x8040, 0x2000, 0x204, 0x800, 0x8000, 0x0, 0x0, 0x0, 0xb130, 0x31b, 0xd8c0, 0xc8d, 0xff80, 0x8080, 0xff08, 0x808,
+		0x8040, 0x2000, 0x204, 0x800, 0x8000, 0x0, 0x0, 0x0, 0xb130, 0x31b, 0xd8c0, 0xc8d, 0xff80, 0x8080, 0xff08, 0x808, // 33-36
 		0x81c, 0x22c1, 0x8001, 0x204, 0x8244, 0x3944, 0x8201, 0x101, 0x55a0, 0x4040, 0x550a, 0x404, 0x384, 0x4830, 0xc02, 0x101,
-		0x8080, 0x413e, 0x808, 0x14e3, 0x1020, 0x54aa, 0xff02, 0x408, 0x7789, 0x8f8f, 0x7798, 0xf8f8, 0x8, 0x142a, 0x552a, 0x1408,
-		0xf0f0, 0xf0f0, 0xf0f, 0xf0f, 0x9966, 0x6699, 0x9966, 0x6699, 0x8814, 0x2241, 0x8800, 0xaa00, 0x2050, 0x8888, 0x8888, 0x502
+		0x8080, 0x413e, 0x808, 0x14e3, 0x1020, 0x54aa, 0xff02, 0x408, 0x7789, 0x8f8f, 0x7798, 0xf8f8, 0x8, 0x142a, 0x552a, 0x1408, // 41-44
+		0xf0f0, 0xf0f0, 0xf0f, 0xf0f, 0x9966, 0x6699, 0x9966, 0x6699, 0x4188, 0x00cc, 0x8008, 0x1422, 0x8888, 0x8805, 0x220, 0x4184,
+		0xff, 0xff00, 0xff, 0xff00, 0x55aa, 0x55aa, 0x55aa, 0x55aa, 0xff55, 0xff55, 0xff55, 0xff55, 0x8142, 0x2418, 0x1824, 0x4281, // 49-52
+		0xc0c0, 0xc0c0, 0xc0c0, 0xc0c0, 0x3399, 0xcc66, 0x3399, 0xcc66, 0x3366, 0xcc99, 0x3366, 0xcc99, 0x1188, 0x4422, 0x1188, 0x4422,
+		0xffcc, 0xff33, 0xffcc, 0xff33, 0xf0f0, 0x0f0f, 0xf0f0, 0x0f0f, 0xcc33, 0x3333, 0x33cc, 0xcccc, 0xf0f, 0xf0f, 0xf0f, 0xf0f,// 57-60
+		0xf0f0, 0xf0f0, 0xf0f0, 0xf0f0, 0, 0, 0xffff, 0xffff, 0xffff, 0xffff, 0, 0
 	};
 	pat.m_dim=Vec2i(8,8);
 	uint16_t const *ptr=&patterns[4*(id-1)];
@@ -481,9 +514,9 @@ bool LotusStyleManager::getColor256(int cId, WPSColor &color) const
 	return m_state->getColor256(cId, color);
 }
 
-bool LotusStyleManager::getPattern(int id, WPSGraphicStyle::Pattern &pattern) const
+bool LotusStyleManager::getPattern64(int id, WPSGraphicStyle::Pattern &pattern) const
 {
-	return m_state->getPattern(id, pattern);
+	return m_state->getPattern64(id, pattern);
 }
 
 ////////////////////////////////////////////////////////////
@@ -548,7 +581,7 @@ bool LotusStyleManager::readLineStyle(shared_ptr<WPSStream> stream, long endPos,
 			line.m_width=0;
 		else if (patId==2)
 			finalColor=color[1];
-		else if (m_state->getPattern(patId, pattern))
+		else if (m_state->getPattern48(patId, pattern))
 		{
 			pattern.m_colors[0]=color[1];
 			pattern.m_colors[1]=color[0];
@@ -624,7 +657,7 @@ bool LotusStyleManager::readColorStyle(shared_ptr<WPSStream> stream, long endPos
 		}
 	}
 	color.m_patternId=(int) libwps::readU8(input);
-	if (color.m_patternId && !m_state->getPattern(color.m_patternId, color.m_pattern))
+	if (color.m_patternId && !m_state->getPattern48(color.m_patternId, color.m_pattern))
 	{
 		WPS_DEBUG_MSG(("LotusStyleManager::readColorStyle: can not read a pattern\n"));
 		f << "##patId=" << color.m_patternId << ",";
@@ -670,7 +703,7 @@ bool LotusStyleManager::updateSurfaceStyle(int colorId, WPSGraphicStyle &style) 
 		style.m_gradientStopList.push_back(WPSGraphicStyle::GradientStop(0.0, color.m_patternId==47 ? color.m_colors[2] : WPSColor::black()));
 		style.m_gradientStopList.push_back(WPSGraphicStyle::GradientStop(1.0, color.m_patternId==47 ? WPSColor::black() : color.m_colors[2]));
 	}
-	else if (color.m_patternId!=1 && m_state->getPattern(color.m_patternId, pattern))
+	else if (color.m_patternId!=1 && m_state->getPattern48(color.m_patternId, pattern))
 	{
 		pattern.m_colors[0]=color.m_colors[3];
 		pattern.m_colors[1]=color.m_colors[2];
@@ -680,6 +713,39 @@ bool LotusStyleManager::updateSurfaceStyle(int colorId, WPSGraphicStyle &style) 
 
 	if (!style.hasPattern() && !style.hasGradient())
 		style.setSurfaceColor(finalColor);
+	return true;
+}
+
+bool LotusStyleManager::updateSurfaceStyle(int fColorId, int bColorId, int patternId, WPSGraphicStyle &style) const
+{
+	if (patternId==0)
+		return true;
+	WPSGraphicStyle::Pattern pattern;
+	if (!getColor256(fColorId, pattern.m_colors[0])||!getColor256(bColorId, pattern.m_colors[1]))
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::updateSurfaceStyle: can not find some colors\n"));
+		return false;
+	}
+	if (patternId>=60 && patternId<=63)
+	{
+		style.m_gradientType=WPSGraphicStyle::G_Linear;
+		style.m_gradientStopList.clear();
+		style.m_gradientStopList.push_back(WPSGraphicStyle::GradientStop(0.0, pattern.m_colors[0]));
+		style.m_gradientStopList.push_back(WPSGraphicStyle::GradientStop(1.0, pattern.m_colors[1]));
+		float const(angles[])= {90, 270, 0, 180};
+		style.m_gradientAngle=angles[patternId-60];
+		return true;
+	}
+	if (!getPattern64(patternId, pattern))
+	{
+		WPS_DEBUG_MSG(("LotusStyleManager::updateSurfaceStyle: can not find the pattern\n"));
+		return false;
+	}
+	WPSColor color;
+	if (pattern.getUniqueColor(color))
+		style.setSurfaceColor(color);
+	else
+		style.m_pattern=pattern;
 	return true;
 }
 
@@ -699,7 +765,7 @@ bool LotusStyleManager::updateShadowStyle(int colorId, WPSGraphicStyle &style) c
 	WPSGraphicStyle::Pattern pattern;
 	if (color.m_patternId==2)
 		finalColor=color.m_colors[3];
-	else if (color.m_patternId!=1 && m_state->getPattern(color.m_patternId, pattern))
+	else if (color.m_patternId!=1 && m_state->getPattern48(color.m_patternId, pattern))
 	{
 		pattern.m_colors[0]=color.m_colors[3];
 		pattern.m_colors[1]=color.m_colors[2];
@@ -1255,18 +1321,24 @@ bool LotusStyleManager::readCellStyleE6(shared_ptr<WPSStream> stream, long endPo
 				if (!getColor256(val, color)) f << "#colorId=" << val << ",";
 				else
 				{
-					cell.m_colorStyle.m_colors[j==2 ? 2 : 3]=color;
+					cell.m_colorStyle.m_colors[j==2 ? 3 : 2]=color;
 					if (!color.isWhite()) f << "color" << j << "=" << color << ",";
 				}
 			}
 			else if (j==3)
 			{
-				if (val&0x3F)
+				// checkme: something is not right here...
+				if (val==1 || val==3)
 				{
-					cell.m_colorStyle.m_patternId=(val&0x3F);
-					f << "pat=" << val << ",";
+					cell.m_colorStyle.m_patternId=2;
+					f << "pat[low]=" << val << ",";
 				}
-				if (val&0xC0) f << "pat[high]=" << (val>>6) << ",";
+				else
+				{
+					cell.m_colorStyle.m_patternId=(val>>2);
+					f << "pat=" << (val>>2) << ",";
+					if (val&3) f << "pat[low]=" << (val&3) << ",";
+				}
 			}
 			else
 				f << "fl" << j << "=" << std::hex << val << std::dec << ",";
@@ -1277,19 +1349,19 @@ bool LotusStyleManager::readCellStyleE6(shared_ptr<WPSStream> stream, long endPo
 		colors[0]=(lVal>>10)&0x1f;
 		colors[1]=(lVal>>5)&0x1f;
 		lVal&=0xC21F;
-		if (lVal) f << "col[h0]=" << std::hex << lVal << ",";
+		if (lVal) f << "col[h0]=" << std::hex << lVal << std::dec << ",";
 		lVal=libwps::readU16(input);
 		colors[2]=(lVal>>5)&0x1f;
 		colors[3]=(lVal>>0)&0x1f;
 		borders[1]=(lVal>>10)&0xf;
 		lVal&=0xC210;
-		if (lVal) f << "col[h1]=" << std::hex << lVal << ",";
+		if (lVal) f << "col[h1]=" << std::hex << lVal << std::dec << ",";
 		lVal=libwps::readU16(input);
 		borders[0]=(lVal&0xf);
 		borders[3]=((lVal>>4)&0xf);
 		borders[2]=((lVal>>8)&0xf);
 		lVal&=0xF000;
-		if (lVal) f << "col[h2]=" << std::hex << lVal << ",";
+		if (lVal) f << "col[h2]=" << std::hex << lVal << std::dec << ",";
 		for (int j=0; j<4; ++j)
 		{
 			if (!borders[j]) continue;
@@ -1399,7 +1471,9 @@ bool LotusStyleManager::updateCellStyle(int cellId, WPSCellFormat &format,
 				WPSGraphicStyle::Pattern pattern;
 				if (color.m_patternId==2)
 					finalColor=color.m_colors[3];
-				else if (color.m_patternId!=1 && m_state->getPattern(color.m_patternId, pattern))
+				else if (color.m_patternId!=1 &&
+				         ((vers<3 && m_state->getPattern48(color.m_patternId, pattern)) ||
+				          (vers>=3 && m_state->getPattern64(color.m_patternId, pattern))))
 				{
 					pattern.m_colors[0]=color.m_colors[3];
 					pattern.m_colors[1]=color.m_colors[2];

@@ -75,14 +75,32 @@ struct OLEZone
 struct State
 {
 	/// constructor
-	State(shared_ptr<WPSStream> fileStream) : m_fileStream(fileStream), m_idToZoneMap(), m_idToTypeNameMap() { }
+	State(shared_ptr<WPSStream> fileStream) : m_fileStream(fileStream), m_idToZoneMap(), m_idToTypeNameMap(), m_pictureIdToZoneIdList(), m_pictureIdToZoneIdListCreated(false) { }
 	/// the file stream
 	shared_ptr<WPSStream> m_fileStream;
 	/// the map id to zone
 	std::map<int, OLEZone> m_idToZoneMap;
 	/// the map id to zone type
 	std::map<int, std::string> m_idToTypeNameMap;
+	/// a map local id to picture id zone
+	std::vector<int> m_pictureIdToZoneIdList;
+	/// a flag to know if the pictureIdToZoneIdList is created
+	bool m_pictureIdToZoneIdListCreated;
+	/// create the pictureIdToZoneIdList
+	void createPictureIdToZoneIdList();
 };
+
+void State::createPictureIdToZoneIdList()
+{
+	if (m_pictureIdToZoneIdListCreated) return;
+	m_pictureIdToZoneIdListCreated=true;
+	for (std::map<int, OLEZone>::const_iterator it=m_idToZoneMap.begin();
+	        it!=m_idToZoneMap.end(); ++it)
+	{
+		if (it->second.m_names[1]=="Lotus:TOOLS:OEMString")
+			m_pictureIdToZoneIdList.push_back(it->first);
+	}
+}
 }
 
 ////////////////////////////////////////////////////////////
@@ -410,8 +428,15 @@ shared_ptr<WPSStream> WPSOLE1Parser::getStream(WPSOLE1ParserInternal::OLEZone co
 	return res;
 }
 
-bool WPSOLE1Parser::updateEmbeddedObject(int id, WPSEmbeddedObject &object) const
+bool WPSOLE1Parser::updateEmbeddedObject(int localId, WPSEmbeddedObject &object) const
 {
+	m_state->createPictureIdToZoneIdList();
+	if (localId<=0 || localId>int(m_state->m_pictureIdToZoneIdList.size()))
+	{
+		WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: can not find any zone with id=%d\n", localId));
+		return false;
+	}
+	int id=m_state->m_pictureIdToZoneIdList[size_t(localId-1)];
 	if (m_state->m_idToZoneMap.find(id)==m_state->m_idToZoneMap.end())
 	{
 		WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: can not find any zone with id=%d\n", id));
@@ -423,7 +448,7 @@ bool WPSOLE1Parser::updateEmbeddedObject(int id, WPSEmbeddedObject &object) cons
 		WPS_DEBUG_MSG(("WPSOLE1Parser::createZones: the zone name \"%s\"seems odd\n", zone.m_names[1].empty() ? "" : zone.m_names[1].c_str()));
 	}
 	zone.m_parsed=true;
-	bool done=true;
+	bool done=false;
 	/* normally two children:
 	   - first with name "Lotus:TOOLS:OEMString" which contains .ole in varD
 	   - second with name "Lotus:TOOLS:ByteStream" which contains the data
@@ -432,7 +457,7 @@ bool WPSOLE1Parser::updateEmbeddedObject(int id, WPSEmbeddedObject &object) cons
 	{
 		if (!zone.m_childList[c].m_beginList.empty())
 		{
-			shared_ptr<WPSStream> stream=getStream(zone);
+			shared_ptr<WPSStream> stream=getStream(zone.m_childList[c]);
 			if (stream)	done |= readPicture(stream, object);
 		}
 	}

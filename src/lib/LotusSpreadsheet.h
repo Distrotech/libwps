@@ -67,6 +67,11 @@ public:
 	}
 	//! set the last spreadsheet number ( default 0)
 	void setLastSpreadsheetId(int id);
+
+	// interface which LotusParser
+
+	//! returns the left top position of a cell
+	bool getLeftTopPosition(Vec2i const &cell, int spreadsheet, Vec2f &pos);
 protected:
 	//! return the file version
 	int version() const;

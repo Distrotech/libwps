@@ -63,9 +63,6 @@ public:
 	//! returns if possible the color(id between 0 and 255)
 	bool getColor256(int cId, WPSColor &color) const;
 
-	//! returns the pattern corresponding to a pattern id (id between 1 and 48)
-	bool getPattern(int id, WPSGraphicStyle::Pattern &pattern) const;
-
 	//! update a cell format using the cell id
 	bool updateCellStyle(int cellId, WPSCellFormat &format,
 	                     WPSFont &font, libwps_tools_win::Font::Type &fontType);
@@ -77,9 +74,16 @@ public:
 	bool updateSurfaceStyle(int colorId, WPSGraphicStyle &style) const;
 	//! update style using graphic id
 	bool updateGraphicStyle(int graphicId, WPSGraphicStyle &style) const;
+	//! update style using front/back color and pattern id
+	bool updateSurfaceStyle(int fColorId, int bColorId, int patternId, WPSGraphicStyle &style) const;
 protected:
 	//! return the file version
 	int version() const;
+
+	//! returns the pattern corresponding to a pattern id (id between 1 and 48)
+	bool getPattern48(int id, WPSGraphicStyle::Pattern &pattern) const;
+	//! returns the pattern corresponding to a pattern id (id between 1 and 64)
+	bool getPattern64(int id, WPSGraphicStyle::Pattern &pattern) const;
 
 	//
 	// low level

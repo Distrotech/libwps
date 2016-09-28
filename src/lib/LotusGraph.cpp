@@ -196,24 +196,36 @@ bool ZoneMac::getGraphicShape(WPSGraphicShape &shape, WPSPosition &pos) const
 struct ZoneWK4
 {
 	//! the different type
-	enum Type { Shape, TextBox, Unknown };
+	enum Type { Border, Chart, Group, Picture, Shape, TextBox, Unknown };
 	//! constructor
 	ZoneWK4(shared_ptr<WPSStream> stream) :
-		m_type(Unknown), m_subType(-1), m_origin(0,0), m_shape(), m_graphicStyle(WPSGraphicStyle::emptyStyle()), m_hasShadow(false), m_stream(stream)
+		m_type(Unknown), m_subType(-1), m_id(-1), m_cell(0,0), m_cellPosition(0,0), m_frameSize(0,0), m_pictureDim(),
+		m_shape(), m_graphicStyle(WPSGraphicStyle::emptyStyle()), m_hasShadow(false),
+		m_textEntry(), m_stream(stream)
 	{
 	}
 	//! the zone type
 	int m_type;
 	//! the sub type
 	int m_subType;
-	//! the origin
-	Vec2f m_origin;
+	//! the zone id
+	int m_id;
+	//! the cell
+	Vec2i m_cell;
+	//! the position in the cell
+	Vec2f m_cellPosition;
+	//! the frame dimension
+	Vec2i m_frameSize;
+	//! the picture dimension
+	WPSBox2i m_pictureDim;
 	//! the graphic shape
 	WPSGraphicShape m_shape;
 	//! the graphic style wk4
 	WPSGraphicStyle m_graphicStyle;
 	//! a flag to know if we need to add shadow
 	bool m_hasShadow;
+	//! the text entry (for textbox and button)
+	WPSEntry m_textEntry;
 	//! the stream
 	shared_ptr<WPSStream> m_stream;
 };
@@ -246,8 +258,8 @@ class SubDocument : public WKSSubDocument
 {
 public:
 	//! constructor for a text entry
-	SubDocument(shared_ptr<WPSStream> stream, LotusGraph &graphParser, WPSEntry &entry) :
-		WKSSubDocument(RVNGInputStreamPtr(), &graphParser.m_mainParser), m_stream(stream), m_graphParser(graphParser), m_entry(entry) {}
+	SubDocument(shared_ptr<WPSStream> stream, LotusGraph &graphParser, WPSEntry &entry, int version) :
+		WKSSubDocument(RVNGInputStreamPtr(), &graphParser.m_mainParser), m_stream(stream), m_graphParser(graphParser), m_entry(entry), m_version(version) {}
 	//! destructor
 	~SubDocument() {}
 
@@ -260,6 +272,7 @@ public:
 		if (!sDoc) return false;
 		if (&m_graphParser != &sDoc->m_graphParser) return false;
 		if (m_stream.get() != sDoc->m_stream.get()) return false;
+		if (m_version != sDoc->m_version) return false;
 		return m_entry == sDoc->m_entry;
 	}
 
@@ -271,6 +284,8 @@ public:
 	LotusGraph &m_graphParser;
 	//! a flag to known if we need to send the entry or the footer
 	WPSEntry m_entry;
+	//! the textbox version
+	int m_version;
 };
 
 void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDocumentType)
@@ -285,8 +300,15 @@ void SubDocument::parse(shared_ptr<WKSContentListener> &listener, libwps::SubDoc
 		WPS_DEBUG_MSG(("LotusGraphInternal::SubDocument::parse: bad listener\n"));
 		return;
 	}
-
-	m_graphParser.sendTextBox(m_stream, m_entry);
+	if (m_version==0)
+		m_graphParser.sendTextBox(m_stream, m_entry);
+	else if (m_version==1 || m_version==2)
+		m_graphParser.sendTextBoxWK4(m_stream, m_entry, m_version==2);
+	else
+	{
+		WPS_DEBUG_MSG(("LotusGraphInternal::SubDocument::parse: unknown version=%d\n", m_version));
+		return;
+	}
 }
 
 }
@@ -930,7 +952,7 @@ void LotusGraph::sendGraphics(int sheetId)
 		if (zone->m_textBoxEntry.valid())
 		{
 			shared_ptr<LotusGraphInternal::SubDocument> doc
-			(new LotusGraphInternal::SubDocument(zone->m_stream, *this, zone->m_textBoxEntry));
+			(new LotusGraphInternal::SubDocument(zone->m_stream, *this, zone->m_textBoxEntry, 0));
 			m_listener->insertTextBox(pos, doc, style);
 			continue;
 		}
@@ -948,10 +970,40 @@ void LotusGraph::sendGraphics(int sheetId)
 	while (it4!=m_state->m_sheetIdZoneWK4Map.end() && it4->first==sheetId)
 	{
 		shared_ptr<LotusGraphInternal::ZoneWK4> zone=it4++->second;
-		if (!zone || zone->m_shape.m_type==WPSGraphicShape::ShapeUnknown) continue;
-		WPSPosition pos(zone->m_origin, zone->m_shape.getBdBox().size(), librevenge::RVNG_POINT);
+		if (!zone) continue;
+		Vec2f decal;
+		if (!m_mainParser.getLeftTopPosition(zone->m_cell, sheetId, decal))
+			decal=Vec2f(72*zone->m_cell[0],16*zone->m_cell[1]);
+		Vec2f dimension(zone->m_frameSize);
+		if (zone->m_type==LotusGraphInternal::ZoneWK4::Shape)
+			dimension=zone->m_shape.getBdBox().size();
+		else if (zone->m_type==LotusGraphInternal::ZoneWK4::Picture)
+			dimension=zone->m_pictureDim.size();
+		WPSPosition pos(decal+zone->m_cellPosition, dimension, librevenge::RVNG_POINT);
 		pos.setRelativePosition(WPSPosition::Page);
-		m_listener->insertPicture(pos, zone->m_shape, zone->m_graphicStyle);
+		if (zone->m_type==LotusGraphInternal::ZoneWK4::Shape)
+			m_listener->insertPicture(pos, zone->m_shape, zone->m_graphicStyle);
+		else if (zone->m_type==LotusGraphInternal::ZoneWK4::TextBox)
+		{
+			shared_ptr<LotusGraphInternal::SubDocument> doc
+			(new LotusGraphInternal::SubDocument(zone->m_stream, *this, zone->m_textEntry, zone->m_subType==0xd ? 2 : 1));
+			m_listener->insertTextBox(pos, doc, zone->m_graphicStyle);
+		}
+		else if (zone->m_type==LotusGraphInternal::ZoneWK4::Picture)
+		{
+			WPSEmbeddedObject object;
+			if (m_mainParser.updateEmbeddedObject(zone->m_id, object) && !object.isEmpty())
+				m_listener->insertObject(pos, object);
+		}
+		else
+		{
+			static bool first=true;
+			if (first)
+			{
+				first=false;
+				WPS_DEBUG_MSG(("LotusGraph::sendGraphics: sorry, sending some graph types is not implemented\n"));
+			}
+		}
 	}
 }
 
@@ -1028,6 +1080,7 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		f << "line,";
 		break;
 	case 2:
+		zone->m_type=LotusGraphInternal::ZoneWK4::Shape;
 		f << "poly,";
 		break;
 	case 4:
@@ -1035,6 +1088,7 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		f << "arc,";
 		break;
 	case 5:
+		zone->m_type=LotusGraphInternal::ZoneWK4::Shape;
 		f << "spline,";
 		break;
 	case 6:
@@ -1046,12 +1100,15 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		f << "rect[round],";
 		break;
 	case 8:
+		zone->m_type=LotusGraphInternal::ZoneWK4::Shape;
 		f << "oval,";
 		break;
 	case 9:
+		zone->m_type=LotusGraphInternal::ZoneWK4::Chart;
 		f << "chart,";
 		break;
 	case 0xa:
+		zone->m_type=LotusGraphInternal::ZoneWK4::Group;
 		f << "group,";
 		break;
 	case 0xd:
@@ -1063,9 +1120,11 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		f << "textbox,";
 		break;
 	case 0x10:
+		zone->m_type=LotusGraphInternal::ZoneWK4::Border;
 		f << "cell[border],";
 		break;
 	case 0x11:
+		zone->m_type=LotusGraphInternal::ZoneWK4::Picture;
 		f << "picture,";
 		break;
 	default:
@@ -1075,8 +1134,8 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 	}
 	int val=int(libwps::readU8(input)); // 0|80
 	if (val) f << "fl0=" << std::hex << val << std::dec << ",";
-	int id=int(libwps::readU16(input));
-	f << "id=" << id << ",";
+	zone->m_id=int(libwps::readU16(input));
+	f << "id=" << zone->m_id << ",";
 
 	f << "line=[";
 	val=int(libwps::readU8(input));
@@ -1156,36 +1215,16 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 	}
 	f << "],";
 	f << "surf=[";
-	WPSGraphicStyle::Pattern pattern;
+	int colId[2];
 	for (int i=0; i<2; ++i)
 	{
-		val=int(libwps::readU8(input));
-		if (!m_styleManager->getColor256(val, pattern.m_colors[i]))
-		{
-			WPS_DEBUG_MSG(("LotusGraph::readGraphic: can not read a color\n"));
-			f << "###colId" << i << "=" << val << ",";
-		}
+		colId[1-i]=int(libwps::readU8(input));
+		f << colId[1-i] << ",";
 	}
-	val=int(libwps::readU8(input)); // 0=none
-	if (val && m_styleManager->getPattern(val, pattern))
-	{
-		WPSColor color;
-		if (pattern.getUniqueColor(color))
-		{
-			f << color << ",";
-			style.setSurfaceColor(color);
-		}
-		else
-		{
-			style.m_pattern=pattern;
-			f << pattern << ",";
-		}
-	}
-	else if (val)
-	{
-		WPS_DEBUG_MSG(("LotusGraph::readGraphic: can not read a pattern\n"));
-		f << "##patId=" << val << ",";
-	}
+	int patternId=int(libwps::readU8(input));
+	f << patternId << ",";
+	if (!m_styleManager->updateSurfaceStyle(colId[0], colId[1], patternId, style))
+		f << "###";
 	f << "],";
 	f << "shadow=["; // border design
 	val=int(libwps::readU8(input));
@@ -1227,12 +1266,12 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		val=int(libwps::readU16(input));
 		if (val&1)
 		{
-			style.m_arrows[1]=true;
+			style.m_arrows[0]=true;
 			f << "arrow[beg],";
 		}
 		if (val&2)
 		{
-			style.m_arrows[0]=true;
+			style.m_arrows[1]=true;
 			f << "arrow[end],";
 		}
 		val&=0xFFFC;
@@ -1243,7 +1282,8 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		zone->m_shape=WPSGraphicShape::line(Vec2f(float(pts[0]),float(pts[1])), Vec2f(float(pts[2]),float(pts[3])));
 		break;
 	}
-	case 4:
+	case 4:   // arc
+	{
 		if (sz!=0x3b)
 			break;
 		val=int(libwps::readU16(input));
@@ -1251,10 +1291,23 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		val=int(libwps::readU16(input)); // 0208
 		if (val) f << "g1=" << std::hex << val << std::dec << ",";
 		f << "pts=[";
-		for (int i=0; i<3; ++i)
-			f << int(libwps::readU16(input)) << "x" << int(libwps::readU16(input)) << ",";
+		std::vector<Vec2f> vertices;
+		vertices.resize(3);
+		WPSBox2f box;
+		for (size_t i=0; i<3; ++i)
+		{
+			vertices[i]=Vec2f(float(libwps::readU16(input)),float(libwps::readU16(input)));
+			if (i==0) box=WPSBox2f(vertices[i],vertices[i]);
+			else box=box.getUnion(WPSBox2f(vertices[i],vertices[i]));
+			f << vertices[i] << ",";
+		}
 		f << "],";
+		// not frequent, approximate it by a Bezier's curve
+		zone->m_shape=WPSGraphicShape::path(box);
+		zone->m_shape.m_path.push_back(WPSGraphicShape::PathData('M', vertices[0]));
+		zone->m_shape.m_path.push_back(WPSGraphicShape::PathData('Q', vertices[2], vertices[1]));
 		break;
+	}
 	case 2:
 	case 5:
 	{
@@ -1262,10 +1315,32 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		if (sz!=4*N+0x2f) break;
 		val=int(libwps::readU16(input)); // 0
 		if (val) f << "g0=" << val << ",";
+		std::vector<Vec2f> vertices;
+		vertices.resize(size_t(N));
 		f << "pts=[";
-		for (int i=0; i<N; ++i)
-			f << int(libwps::readU16(input)) << "x" << int(libwps::readU16(input)) << ",";
+		WPSBox2f box;
+		for (size_t i=0; i<size_t(N); ++i)
+		{
+			vertices[i]=Vec2f(float(libwps::readU16(input)),float(libwps::readU16(input)));
+			if (i==0) box=WPSBox2f(vertices[i],vertices[i]);
+			else box=box.getUnion(WPSBox2f(vertices[i],vertices[i]));
+			f << vertices[i] << ",";
+		}
 		f << "],";
+		if (zone->m_subType==2 || vertices.size()<=1)
+		{
+			zone->m_shape=WPSGraphicShape::polygon(box);
+			zone->m_shape.m_vertices=vertices;
+		}
+		else
+		{
+			zone->m_shape=WPSGraphicShape::path(box);
+			zone->m_shape.m_path.push_back(WPSGraphicShape::PathData('M', vertices[0]));
+			for (size_t i=0; i+1<vertices.size(); ++i)
+				zone->m_shape.m_path.push_back(WPSGraphicShape::PathData('Q', 0.5f*(vertices[i]+vertices[i+1]),
+				                                                         vertices[i]));
+			zone->m_shape.m_path.push_back(WPSGraphicShape::PathData('T', vertices.back()));
+		}
 		break;
 	}
 	case 6: // rect
@@ -1308,7 +1383,7 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 			zone->m_shape=WPSGraphicShape::rectangle(box, zone->m_subType==6 ? Vec2f(0,0) : Vec2f(5,5));
 		break;
 	}
-	case 9:
+	case 9: // chart, readme
 		if (sz!=0x33)
 			break;
 		f << "dim=";
@@ -1319,7 +1394,7 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 			else f << ",";
 		}
 		break;
-	case 10:
+	case 10: // group, useme
 		if (sz!=0x35)
 			break;
 		f << "pts=[";
@@ -1359,16 +1434,14 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		if (val) f << "g5=" << val << ",";
 		break;
 	case 0x11:
+	{
 		if (sz!=0x43) break;
-		f << "dim=";
-		for (int i=0; i<2; ++i)
-		{
-			f << int(libwps::readU16(input)) << "x" << int(libwps::readU16(input));
-			if (i==0) f << "<->";
-			else f << ",";
-		}
+		Vec2i dim[2];
+		for (int i=0; i<2; ++i) dim[i]=Vec2i(int(libwps::readU16(input)), int(libwps::readU16(input)));
+		zone->m_pictureDim=WPSBox2i(dim[0], dim[1]);
+		f << "dim=" << dim << ",";
 		val=int(libwps::readU16(input)); // big number 2590..3262
-		if (val) f << "g0=" << val << ",";
+		if (val) f << "g0=" << std::hex << val << std::dec << ",";
 		val=int(libwps::readU16(input));
 		if (val!=0x3cf7) f << "g1=" << std::hex << val << std::dec << ",";
 		for (int i=0; i<6; ++i)   // 0
@@ -1377,6 +1450,7 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 			if (val) f << "g" << i+2 << "=" << val << ",";
 		}
 		break;
+	}
 	default:
 		break;
 	}
@@ -1387,7 +1461,7 @@ bool LotusGraph::readGraphic(shared_ptr<WPSStream> stream)
 		WPS_DEBUG_MSG(("LotusGraph::readGraphic: oops an zone is already defined\n"));
 	}
 	m_state->m_actualZoneWK4=zone;
-	if (input->tell() != pos+sz)
+	if (input->tell() != pos+4+sz)
 		ascFile.addDelimiter(input->tell(), '|');
 	ascFile.addPos(pos);
 	ascFile.addNote(f.str().c_str());
@@ -1405,7 +1479,7 @@ bool LotusGraph::readFrame(shared_ptr<WPSStream> stream)
 	long type = long(libwps::read16(input));
 	if (type!=0xcc)
 	{
-		WPS_DEBUG_MSG(("LotusGraph::readFrame: not a sheet header\n"));
+		WPS_DEBUG_MSG(("LotusGraph::readFrame: not a frame header\n"));
 		return false;
 	}
 	long sz = long(libwps::readU16(input));
@@ -1418,33 +1492,48 @@ bool LotusGraph::readFrame(shared_ptr<WPSStream> stream)
 		ascFile.addNote(f.str().c_str());
 		return true;
 	}
-	int row=int(libwps::readU16(input));
-	f << "row=" << row << ",";
-	int col=int(libwps::readU8(input));
-	f << "col=" << col << ",";
-	// X X X:flsymetry?
-	ascFile.addDelimiter(input->tell(), '|');
-	input->seek(9, librevenge::RVNG_SEEK_CUR);
-	ascFile.addDelimiter(input->tell(), '|');
-	int val=int(libwps::readU16(input)); // 0-c
-	if (val) f << "f0=" << val << ",";
-	int dim[2];
-	for (int i=0; i<2; ++i) dim[i]=int(libwps::readU16(input));
-	f << "orig=" << Vec2i(dim[0], dim[1]) << ",";
-	val=int(libwps::readU8(input)); // 1|2
-	if (val!=1) f << "fl0=" << val << ",";
 	shared_ptr<LotusGraphInternal::ZoneWK4> zone=m_state->m_actualZoneWK4;
 	if (!zone)
 	{
 		WPS_DEBUG_MSG(("LotusGraph::readFrame: can not find the original shape\n"));
 		f << "##noShape,";
 	}
+	/* the positions are relative to a cell ; the first cell stores the LT position,
+	   while the second stores the RB position.
+
+	   fixme: if we want precise position, we must add graphic with anchor-type=cell
+	     instead of using the first cell to find the page's LT position...
+	 */
+	for (int c=0; c<2; ++c)
+	{
+		int row=int(libwps::readU16(input));
+		int col=int(libwps::readU8(input));
+		// first in 100.*char, second in point
+		Vec2f decal(8.f*float(libwps::readU16(input))/100.f, float(libwps::readU16(input)));
+		Vec2i cell(col, row);
+		if (c==0 && zone)
+		{
+			zone->m_cell=cell;
+			zone->m_cellPosition=decal;
+		}
+		f << "C" << cell << "[" << decal << "]";
+		if (c==0) f << "<->";
+		else f << ",";
+	}
+	// this is the initial dimension, which may become invalid when a column/row shrinks/grows...
+	int dim[2];
+	for (int i=0; i<2; ++i) dim[i]=int(libwps::readU16(input));
+	f << "dim=" << Vec2i(dim[0], dim[1]) << ",";
+	if (zone) zone->m_frameSize=Vec2i(dim[0], dim[1]);
+	int val=int(libwps::readU8(input)); // 1|2
+	if (val&0x80) f << "in[group],";
+	val &= 0x7F;
+	if (val!=1) f << "fl0=" << val << ",";
 	ascFile.addPos(pos);
 	ascFile.addNote(f.str().c_str());
 
 	if (zone)
 	{
-		zone->m_origin=Vec2f(float(dim[0]),float(dim[1]));
 		if (m_state->m_actualSheetId<0)
 		{
 			WPS_DEBUG_MSG(("LotusGraph::readFrame: oops no sheet zone is opened\n"));
@@ -1458,6 +1547,128 @@ bool LotusGraph::readFrame(shared_ptr<WPSStream> stream)
 	m_state->m_actualZoneWK4.reset();
 
 	return true;
+}
+
+bool LotusGraph::readTextBoxDataD1(shared_ptr<WPSStream> stream)
+{
+	if (!stream) return false;
+	RVNGInputStreamPtr &input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
+	libwps::DebugStream f;
+
+	long pos = input->tell();
+	long type = long(libwps::read16(input));
+	if (type!=0xd1)
+	{
+		WPS_DEBUG_MSG(("LotusGraph::readTextBoxDataD1: not a textbox header\n"));
+		return false;
+	}
+	long sz = long(libwps::readU16(input));
+	f << "Entries(FMTTextBox):";
+	if (!m_state->m_actualZoneWK4 || m_state->m_actualZoneWK4->m_type!=LotusGraphInternal::ZoneWK4::TextBox)
+	{
+		WPS_DEBUG_MSG(("LotusGraph::readTextBoxDataD1: find unexpected textbox data\n"));
+		f << "###";
+	}
+	else
+	{
+		m_state->m_actualZoneWK4->m_textEntry.setBegin(input->tell());
+		m_state->m_actualZoneWK4->m_textEntry.setLength(sz);
+		input->seek(sz, librevenge::RVNG_SEEK_CUR);
+	}
+	ascFile.addPos(pos);
+	ascFile.addNote(f.str().c_str());
+	return true;
+}
+
+void LotusGraph::sendTextBoxWK4(shared_ptr<WPSStream> stream, WPSEntry const &entry, bool isButton)
+{
+	if (!stream || !m_listener || (entry.length() && entry.length()<3))
+	{
+		WPS_DEBUG_MSG(("LotusGraph::sendTextBoxWK4: I can not find the listener/textbox entry\n"));
+		return;
+	}
+	RVNGInputStreamPtr input=stream->m_input;
+	libwps::DebugFile &ascFile=stream->m_ascii;
+	libwps::DebugStream f;
+	long endPos=entry.end();
+	input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+
+	libwps_tools_win::Font::Type fontType = m_mainParser.getDefaultFontType();
+	WPSFont font=WPSFont::getDefault();
+	m_listener->setFont(font);
+	while (!input->isEnd())
+	{
+		long pos = input->tell();
+		if (pos+3>endPos) break;
+		f.str("");
+		f << "FMTTextBox[data]:";
+		int dSz=int(libwps::readU16(input));
+		if (pos+2+dSz>endPos)
+		{
+			input->seek(pos, librevenge::RVNG_SEEK_SET);
+			break;
+		}
+		bool send=!isButton || (isButton && pos==entry.begin());
+		for (int i=0; i<dSz-1; ++i)
+		{
+			char c=char(libwps::readU8(input));
+			if (c==0)
+			{
+				if (i+2<dSz)
+				{
+					WPS_DEBUG_MSG(("LotusGraph::sendTextBox: find a 0 char\n"));
+					f << "[###0]";
+				}
+				continue;
+			}
+			if (c==1)
+			{
+				if (i+2>=dSz)
+				{
+					WPS_DEBUG_MSG(("LotusGraph::sendTextBox: find unexpected 1 char\n"));
+					f << "[###1]";
+					continue;
+				}
+				++i;
+				c=char(libwps::readU8(input));
+				f << "[1-" << int(c) << "]";
+				// find 010d010d010a
+				if (send)
+				{
+					if (c==0xd) m_listener->insertEOL(false);
+					else if (c==0xa) m_listener->insertEOL();
+					else
+					{
+						WPS_DEBUG_MSG(("LotusGraph::sendTextBox: find unexpected 1 char\n"));
+						f << "###";
+					}
+					continue;
+				}
+			}
+			f << c;
+			if (send)
+				m_listener->insertUnicode((uint32_t)libwps_tools_win::Font::unicode((unsigned char)c,fontType));
+		}
+		f << ",unk=" << int(libwps::readU8(input));
+		if (input->tell()<endPos)
+			m_listener->insertEOL();
+		ascFile.addPos(pos);
+		ascFile.addNote(f.str().c_str());
+	}
+	if (isButton && input->tell()+1==endPos)
+	{
+		f.str("");
+		f << "FMTTextBox[data]:button=" << int(libwps::readU8(input)) << ",";
+		ascFile.addPos(endPos-1);
+		ascFile.addNote(f.str().c_str());
+	}
+	if (input->tell()!=endPos)
+	{
+		WPS_DEBUG_MSG(("LotusGraph::sendTextBoxWK4: find extra data\n"));
+		ascFile.addPos(input->tell());
+		ascFile.addNote("FMTTextBox[data]:###extra");
+	}
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

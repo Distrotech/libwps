@@ -589,15 +589,15 @@ std::vector<WPSGraphicShape::PathData> WPSGraphicShape::getPath(bool forTransfor
 				res.push_back(PathData('L',Vec2f(box[0][0],box[0][1]+c[1])));
 				data.m_x=Vec2f(box[0][0]+c[0],box[0][1]);
 				res.push_back(data);
-				res.push_back(PathData('Z'));
-				break;
 			}
-			res.push_back(PathData('M',m_formBox[0]));
-			res.push_back(PathData('L',Vec2f(m_formBox[0][0],m_formBox[1][1])));
-			res.push_back(PathData('L',m_formBox[1]));
-			res.push_back(PathData('L',Vec2f(m_formBox[1][0],m_formBox[0][1])));
 			res.push_back(PathData('Z'));
+			break;
 		}
+		res.push_back(PathData('M',m_formBox[0]));
+		res.push_back(PathData('L',Vec2f(m_formBox[0][0],m_formBox[1][1])));
+		res.push_back(PathData('L',m_formBox[1]));
+		res.push_back(PathData('L',Vec2f(m_formBox[1][0],m_formBox[0][1])));
+		res.push_back(PathData('Z'));
 		break;
 	case Circle:
 	{
@@ -615,6 +615,7 @@ std::vector<WPSGraphicShape::PathData> WPSGraphicShape::getPath(bool forTransfor
 			res.push_back(PathData('C',pt1, pt0+Vec2f(0,dir[1]), pt1+Vec2f(dir[0],0)));
 			pt0=Vec2f(m_formBox[0][0],center[1]);
 			res.push_back(PathData('C',pt0, pt1-Vec2f(dir[0],0), pt0+Vec2f(0,dir[1])));
+			res.push_back(PathData('Z'));
 		}
 		else
 		{
@@ -684,6 +685,7 @@ std::vector<WPSGraphicShape::PathData> WPSGraphicShape::getPath(bool forTransfor
 				pt=newPt;
 				angl=newAngl;
 			}
+			if (m_type==Pie) res.push_back(PathData('Z'));
 		}
 		break;
 	}

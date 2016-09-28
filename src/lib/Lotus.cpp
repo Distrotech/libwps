@@ -201,7 +201,7 @@ private:
 // constructor, destructor
 LotusParser::LotusParser(RVNGInputStreamPtr &input, WPSHeaderPtr &header,
                          libwps_tools_win::Font::Type encoding) :
-	WKSParser(input, header), m_listener(), m_state(), m_styleManager(), m_graphParser(), m_spreadsheetParser()
+	WKSParser(input, header), m_listener(), m_state(), m_styleManager(), m_graphParser(), m_spreadsheetParser(), m_ole1Parser()
 
 {
 	m_state.reset(new LotusParserInternal::State(encoding));
@@ -248,6 +248,21 @@ bool LotusParser::hasGraphics(int sheetId) const
 void LotusParser::sendGraphics(int sheetId)
 {
 	m_graphParser->sendGraphics(sheetId);
+}
+
+bool LotusParser::getLeftTopPosition(Vec2i const &cell, int spreadsheet, Vec2f &pos) const
+{
+	return m_spreadsheetParser->getLeftTopPosition(cell, spreadsheet, pos);
+}
+
+bool LotusParser::updateEmbeddedObject(int id, WPSEmbeddedObject &object) const
+{
+	if (!m_ole1Parser)
+	{
+		WPS_DEBUG_MSG(("LotusParser::updateEmbeddedObject: can not find the ole1 parser\n"));
+		return false;
+	}
+	return m_ole1Parser->updateEmbeddedObject(id, object);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -439,16 +454,16 @@ bool LotusParser::createZones()
 	shared_ptr<WPSStream> mainStream(new WPSStream(input, ascii()));
 	if (vers>=3)
 	{
-		shared_ptr<WPSOLE1Parser> ole1Parser(new WPSOLE1Parser(mainStream));
-		ole1Parser->createZones();
-		shared_ptr<WPSStream> wkStream=ole1Parser->getStreamForName(vers==3 ? "WK3" : "123");
+		m_ole1Parser.reset(new WPSOLE1Parser(mainStream));
+		m_ole1Parser->createZones();
+		shared_ptr<WPSStream> wkStream=m_ole1Parser->getStreamForName(vers==3 ? "WK3" : "123");
 		if (wkStream)
 		{
 			if (!readZones(wkStream)) return false;
-			ole1Parser->updateMetaData(m_state->m_metaData, getDefaultFontType());
+			m_ole1Parser->updateMetaData(m_state->m_metaData, getDefaultFontType());
 			if (vers==3)
 			{
-				shared_ptr<WPSStream> fmStream=ole1Parser->getStreamForName("FM3");
+				shared_ptr<WPSStream> fmStream=m_ole1Parser->getStreamForName("FM3");
 				if (fmStream) readZones(fmStream);
 			}
 			return true;
@@ -1036,10 +1051,13 @@ bool LotusParser::readZone(shared_ptr<WPSStream> stream)
 			isParsed=ok=m_spreadsheetParser->readSheetHeader(stream);
 			break;
 		case 0xc4: // with 0-8, 5c-15c
-		case 0xcb: // with 1,1
+		case 0xcb: // unsure, seems appeared together a group with 1,1
 			if (m_state->m_inMainContentBlock) break;
 			f.str("");
-			f << "Entries(FMTInt2" << std::hex << id << std::dec << "Z):";
+			if (id==0xcb)
+				f << "Entries(FMTGrpData):";
+			else
+				f << "Entries(FMTInt2" << std::hex << id << std::dec << "Z):";
 			if (sz!=4)
 			{
 				f << "###";
@@ -1071,8 +1089,7 @@ bool LotusParser::readZone(shared_ptr<WPSStream> stream)
 			break;
 		case 0xd1: // the textbox data
 			if (m_state->m_inMainContentBlock) break;
-			f.str("");
-			f << "Entries(FMTTextBoxD):";
+			isParsed=ok=m_graphParser->readTextBoxDataD1(stream);
 			break;
 		case 0xb7: // main style ?
 		case 0xbf: // serie style ?

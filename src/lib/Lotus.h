@@ -40,6 +40,7 @@ struct State;
 class LotusGraph;
 class LotusSpreadsheet;
 class LotusStyleManager;
+class WPSOLE1Parser;
 
 /* .wk3: a spreadsheet is composed in two files
        + a wk3 file which contains the spreadsheet data
@@ -103,6 +104,20 @@ protected:
 	//! send the graphics corresponding to a sheetId
 	void sendGraphics(int sheetId);
 
+	//
+	// interface with LotusSpreadsheet
+	//
+
+	//! returns the left top position of a cell
+	bool getLeftTopPosition(Vec2i const &cell, int spreadsheet, Vec2f &pos) const;
+
+	//
+	// interface with WPSOLE1Parser
+	//
+
+	/** try to retrieve the content of a graphic, knowing it local id */
+	bool updateEmbeddedObject(int id, WPSEmbeddedObject &object) const;
+
 	/** try to parse the different zones */
 	bool createZones();
 	/** creates the main listener */
@@ -155,6 +170,8 @@ protected:
 	shared_ptr<LotusGraph> m_graphParser;
 	//! the spreadsheet manager
 	shared_ptr<LotusSpreadsheet> m_spreadsheetParser;
+	//! the ole1 parser
+	shared_ptr<WPSOLE1Parser> m_ole1Parser;
 };
 
 #endif /* LOTUS_H */
