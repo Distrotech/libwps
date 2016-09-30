@@ -922,6 +922,13 @@ bool WPSOLEParser::readContents(RVNGInputStreamPtr &input,
 	// bdbox 0 : size in the file ?
 	int dim[2];
 	dim[0] = libwps::read32(input);
+	if (dim[0]==0x12345678)
+	{
+		WPS_DEBUG_MSG(("WPSOLEParser: warning: find a MSDraw picture, ignored\n"));
+		ascii.addPos(0);
+		ascii.addNote("Entries(MSDraw):");
+		return false;
+	}
 	dim[1] = libwps::read32(input);
 	f << "bdbox0=(" << dim[0] << "," << dim[1]<<"),";
 	for (int i = 0; i < 3; i++)

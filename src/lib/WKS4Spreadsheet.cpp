@@ -588,7 +588,7 @@ bool WKS4Spreadsheet::readColumnSize()
 			f << "#col[inc],";
 		}
 		// checkme: unit in character(?) -> TWIP
-		m_state->getActualSheet().setColumnWidth(col, width*105);
+		m_state->getActualSheet().setColumnWidth(col, width*160);
 	}
 	ascii().addPos(pos);
 	ascii().addNote(f.str().c_str());
@@ -796,8 +796,10 @@ bool WKS4Spreadsheet::readMsWorksStyle()
 		case 4: // left rellenar
 			style.setHAlignement(WPSCell::HALIGN_LEFT);
 			break;
+		case 5: // center arround cell
+			f << ",center[between cell]";
+		// fail through expected
 		case 2:
-		case 5: // center in selection
 			style.setHAlignement(WPSCell::HALIGN_CENTER);
 			break;
 		case 3:
@@ -2320,7 +2322,7 @@ void WKS4Spreadsheet::sendSpreadsheet(int sId)
 		sheet.reset(new WKS4SpreadsheetInternal::Spreadsheet);
 	}
 
-	m_listener->openSheet(sheet->convertInPoint(sheet->m_widthCols,76), librevenge::RVNG_POINT,
+	m_listener->openSheet(sheet->convertInPoint(sheet->m_widthCols,72), librevenge::RVNG_POINT,
 	                      std::vector<int>(), m_state->getSheetName(sId));
 	sheet->compressRowHeights();
 	std::map<Vec2i, WKS4SpreadsheetInternal::Cell>::const_iterator it = sheet->m_positionToCellMap.begin();

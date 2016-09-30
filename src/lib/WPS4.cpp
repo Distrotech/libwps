@@ -600,11 +600,23 @@ bool WPS4Parser::findZones()
 		break;
 	case 4:
 		worksVersion=3;
-		f << "vers=Win3,";
+		if (apCreator==0x4e27)
+		{
+			f << "vers=Win3.0,";
+			apCreator = 0;
+		}
+		else
+			f << "vers=Win3,";
 		break;
 	case 6:
 		worksVersion=4;
-		f << "vers=Win4,";
+		if (apCreator==0x5375)
+		{
+			f << "vers=Win4.0,";
+			apCreator = 0;
+		}
+		else
+			f << "vers=Win4,";
 		break;
 	default:
 		WPS_DEBUG_MSG(("WPS4Parser::findZones: can not read the version\n"));

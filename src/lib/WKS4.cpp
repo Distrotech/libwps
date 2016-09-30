@@ -482,7 +482,8 @@ bool WKS4Parser::checkHeader(WPSHeader *header, bool strict)
 bool WKS4Parser::parseFormatStream()
 {
 	RVNGInputStreamPtr file=getFileInput();
-	if (!file || !file->isStructured()) return false;
+	if (!file || !file->isStructured() || !m_state->m_isSpreadsheet)
+		return false;
 
 	RVNGInputStreamPtr formatInput(file->getSubStreamByName("FMT"));
 	if (!formatInput)
@@ -1292,7 +1293,7 @@ bool WKS4Parser::readFont()
 	uint32_t attributes = 0;
 	if (flags & 1) attributes |= WPS_BOLD_BIT;
 	if (flags & 2) attributes |= WPS_ITALICS_BIT;
-	if (flags & 4) attributes |= WPS_BOLD_BIT;
+	if (flags & 4) attributes |= WPS_UNDERLINE_BIT;
 	if (flags & 8) attributes |= WPS_STRIKEOUT_BIT;
 
 	font.m_attributes=attributes;

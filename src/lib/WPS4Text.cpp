@@ -2009,7 +2009,7 @@ bool WPS4Text::readParagraph(long endPos, int &id, std::string &mess)
 		f << "f" << v << "=" << std::hex << arg << std::dec << ",";
 	}
 	if (pp.m_listLevelIndex >= 1)
-		pp.m_margins[0] +=  pp.m_margins[1];
+		pp.m_listLevel.m_labelIndent = pp.m_margins[1];
 	else if (pp.m_margins[0] + pp.m_margins[1] < 0.0)
 	{
 		// sanity check
@@ -2220,8 +2220,8 @@ bool WPS4Text::objectDataParser(long bot, long /*eot*/, int id,
 		WPS_DEBUG_MSG(("WPS4Text:objectDataParser unknown size %ld for object data\n", length));
 		return false;
 	}
-
-	f << "type(?)=" <<libwps::read16(m_input) << ","; // 3->08 4->4f4d or 68->list?
+	// 3->08 4->4f4d or 68->list?
+	f << "type?=" << int(libwps::read16(m_input)) << ",";
 	for (int i = 0; i < 2; ++i)
 	{
 		int v =libwps::read16(m_input);
