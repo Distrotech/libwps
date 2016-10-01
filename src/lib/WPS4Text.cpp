@@ -225,12 +225,16 @@ struct Note : public WPSEntry
 struct Object
 {
 	//! constructor
-	Object() : m_id(-1), m_size(), m_pos(), m_unknown(0), m_extra("") {}
+	Object() : m_id(-1), m_page(0), m_origin(), m_size(), m_pos(), m_unknown(0), m_extra("") {}
 	//! operator <<
 	friend std::ostream &operator<<(std::ostream &o, Object const &obj);
 
 	//! the object identificator
 	int m_id;
+	//! the page
+	int m_page;
+	//! the origin
+	Vec2f m_origin;
 	//! the object size in the document
 	Vec2f m_size;
 	//! an entry which indicates where the object is defined in the file
@@ -243,11 +247,13 @@ struct Object
 //! operator<< for an object
 std::ostream &operator<<(std::ostream &o, Object const &obj)
 {
-	if (obj.m_id > -1) o << "ole" << obj.m_id;
-	o <<": size(" << obj.m_size << ")";
-	if (obj.m_pos.valid()) o << std::hex << ", def=(0x" << obj.m_pos.begin() << "->" << obj.m_pos.end() << ")" << std::dec;
-	if (obj.m_unknown) o << std::hex << ", unkn=" << obj.m_unknown << std::dec;
-	if (!obj.m_extra.empty()) o << ", err=" << obj.m_extra;
+	if (obj.m_id > -1) o << "ole" << obj.m_id << ",";
+	if (obj.m_page) o << "page=" << obj.m_page << ",";
+	if (obj.m_origin!=Vec2f(0,0)) o << "orig=" << obj.m_origin << ",";
+	o <<"size=" << obj.m_size << ",";
+	if (obj.m_pos.valid()) o << std::hex << "def=(0x" << obj.m_pos.begin() << "->" << obj.m_pos.end() << ")," << std::dec;
+	if (obj.m_unknown) o << std::hex << "unkn=" << obj.m_unknown << std::dec << ",";
+	if (!obj.m_extra.empty()) o << obj.m_extra;
 	return o;
 }
 
@@ -488,7 +494,35 @@ int WPS4Text::numPages() const
 	{
 		if (libwps::readU8(m_input.get()) == 0x0C) numPage++;
 	}
+	for (std::map<long, WPS4TextInternal::Object>::const_iterator it=m_state->m_objectMap.begin();
+	        it!=m_state->m_objectMap.end(); ++it)
+	{
+		if (it->second.m_page<=numPage) continue;
+		if (it->second.m_page<=numPage+10)
+			numPage=it->second.m_page;
+		else
+		{
+			WPS_DEBUG_MSG(("WPS4Text::numPages: the number of pages seems bad\n"));
+		}
+	}
 	return numPage;
+}
+
+// page object
+void WPS4Text::sendObjects(int page)
+{
+	for (std::map<long, WPS4TextInternal::Object>::const_iterator it=m_state->m_objectMap.begin();
+	        it!=m_state->m_objectMap.end(); ++it)
+	{
+		WPS4TextInternal::Object const &obj=it->second;
+		if (obj.m_page<=0 || obj.m_id<0) continue;
+		if (page>=0 && obj.m_page!=page+1) continue;
+		WPSPosition position(obj.m_origin, obj.m_size);
+		if (page<0) position.setPage(obj.m_page);
+		position.setRelativePosition(WPSPosition::Page);
+		position.m_wrapping = WPSPosition::WDynamic;
+		mainParser().sendObject(position, obj.m_id);
+	}
 }
 
 // return main/header/footer/all entry
@@ -774,9 +808,11 @@ bool WPS4Text::readText(WPSEntry const &zone)
 				else
 				{
 					WPS4TextInternal::Object const &obj = m_state->m_objectMap[actPos];
-					if (obj.m_id < 0) break;
-
-					mainParser().sendObject(obj.m_size, obj.m_id);
+					if (obj.m_id < 0 || obj.m_page > 0) break;
+					WPSPosition position(Vec2f(0,0), obj.m_size);
+					position.setRelativePosition(WPSPosition::CharBaseLine);
+					position.m_wrapping = WPSPosition::WDynamic;
+					mainParser().sendObject(position, obj.m_id);
 				}
 				break;
 			}
@@ -2255,7 +2291,6 @@ bool WPS4Text::objectDataParser(long bot, long /*eot*/, int id,
 			WPS_DEBUG_MSG(("WPS4Text::objectDataParser: can not find the object %d\n", id));
 		}
 		obj.m_id = objectId;
-		m_state->m_objectMap[bot] = obj;
 	}
 	else
 	{
@@ -2263,14 +2298,20 @@ bool WPS4Text::objectDataParser(long bot, long /*eot*/, int id,
 	}
 
 	m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
-
-	for (int i = 0; i < 7; ++i)
+	int val =int(libwps::read16(m_input)); // small number, probably an id
+	if (val) f << "id=" << val << ",";
+	for (int i = 0; i < 2; ++i)
 	{
-		long val =libwps::read16(m_input);
-		if (val) f << "unkn2:" << i << "=" << val << ",";
+		val =int(libwps::read16(m_input));
+		if (val) f << "f" << i << "=" << val << ",";
 	}
-
+	obj.m_page =int(libwps::read16(m_input));
+	obj.m_origin=Vec2f(float(libwps::read16(m_input)/1440.),float(libwps::read16(m_input)/1440.));
+	val =int(libwps::read16(m_input)); // can be big
+	if (val) f << "f2=" << val << ",";
 	obj.m_extra = f.str();
+	if (obj.m_id>=0)
+		m_state->m_objectMap[bot] = obj;
 	f.str("");
 	f << obj;
 

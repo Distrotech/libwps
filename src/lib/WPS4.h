@@ -117,8 +117,8 @@ protected:
 
 	/** sends an object with given id ( via its WPS4Graph )
 	 *
-	 * The object is sent as a character with given size \a size */
-	void sendObject(Vec2f const &size, int id);
+	 * The object is sent as a character with given size \a position */
+	void sendObject(WPSPosition const &position, int id);
 
 	//
 	// low level

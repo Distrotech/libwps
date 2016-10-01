@@ -95,8 +95,8 @@ protected:
 	 */
 	int readObject(RVNGInputStreamPtr input, WPSEntry const &entry);
 
-	//! sends an object with identificator \a id as a character with given size
-	void sendObject(Vec2f const &size, int id);
+	//! sends an object with identificator \a id as a character to a given pposition
+	void sendObject(WPSPosition const &position, int id);
 
 	/** send all the objects of a given page:
 	 * \param page if page < 0, sends all the pictures which have not been used,

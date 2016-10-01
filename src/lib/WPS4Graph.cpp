@@ -109,7 +109,7 @@ void WPS4Graph::storeObjects(std::vector<WPSOLEParserObject> const &objects,
 }
 
 // send object
-void WPS4Graph::sendObject(Vec2f const &sz, int id)
+void WPS4Graph::sendObject(WPSPosition const &position, int id)
 {
 	if (m_listener.get() == 0L)
 	{
@@ -132,9 +132,7 @@ void WPS4Graph::sendObject(Vec2f const &sz, int id)
 	}
 
 	m_state->m_parsed[size_t(pos)] = true;
-	WPSPosition posi(Vec2f(),sz);
-	posi.setRelativePosition(WPSPosition::CharBaseLine);
-	posi.m_wrapping = WPSPosition::WDynamic;
+	WPSPosition posi(position);
 	float scale = float(1.0/m_state->m_objects[size_t(pos)].m_position.getInvUnitScale(librevenge::RVNG_INCH));
 	posi.setNaturalSize(scale*m_state->m_objects[size_t(pos)].m_position.naturalSize());
 	m_listener->insertPicture(posi, m_state->m_objects[size_t(pos)].m_data, m_state->m_objects[size_t(pos)].m_mime);
@@ -298,7 +296,7 @@ int WPS4Graph::readObject(RVNGInputStreamPtr input, WPSEntry const &entry)
 			}
 
 			if (!ok) f << "###";
-			f << "dSize=" << std::hex << dSize << std::dec;
+			f << "dSize=" << std::hex << dSize << std::dec << ",";
 		}
 		else
 			break;

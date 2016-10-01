@@ -85,6 +85,10 @@ public:
 	//! sends the data which have not yet been sent to the listener
 	void flushExtra();
 
+	/** send all the objects with page anchor corresponding given page
+	 * \param page if page < 0, sends all the pictures which have a page anchor,
+	 */
+	void sendObjects(int page);
 protected:
 	//! return the main parser
 	WPS4Parser &mainParser()

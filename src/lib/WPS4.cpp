@@ -219,7 +219,7 @@ bool WPS4Parser::getColor(int id, WPSColor &color) const
 		0x0000FF, 0x00FFFF,
 		0x00FF00, 0xFF00FF,	0xFF0000, 0xFFFF00,
 		0x808080, 0xFFFFFF,	0x000080, 0x008080,
-		0x008000, 0x800080,	0x808000, 0xC0C0C0
+		0x008000, 0x800080,	0x800000, 0xC0C0C0
 	};
 	if (id < 0 || id >= 16)
 	{
@@ -322,9 +322,9 @@ int WPS4Parser::readObject(RVNGInputStreamPtr input, WPSEntry const &entry)
 	return id;
 }
 
-void WPS4Parser::sendObject(Vec2f const &size, int id)
+void WPS4Parser::sendObject(WPSPosition const &position, int id)
 {
-	return m_graphParser->sendObject(size, id);
+	return m_graphParser->sendObject(position, id);
 }
 
 void WPS4Parser::send(WPSEntry const &entry, libwps::SubDocumentType)
@@ -413,6 +413,7 @@ void WPS4Parser::parse(librevenge::RVNGTextInterface *documentInterface)
 		throw (libwps::ParseException());
 	}
 	m_listener->startDocument();
+	m_textParser->sendObjects(-1);
 	WPSEntry ent = m_textParser->getMainTextEntry();
 	if (ent.valid())
 		m_textParser->readText(ent);
