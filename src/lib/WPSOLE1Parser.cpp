@@ -48,7 +48,7 @@ namespace WPSOLE1ParserInternal
 struct OLEZone
 {
 	//! constructor
-	OLEZone(int levl) : m_level(levl), m_defPosition(0), m_varIdToValueMap(), m_idsList(), m_beginList(), m_lengthList(), m_childList(), m_parsed(false)
+	explicit OLEZone(int levl) : m_level(levl), m_defPosition(0), m_varIdToValueMap(), m_idsList(), m_beginList(), m_lengthList(), m_childList(), m_parsed(false)
 	{
 	}
 	//! the level
@@ -75,7 +75,7 @@ struct OLEZone
 struct State
 {
 	/// constructor
-	State(shared_ptr<WPSStream> fileStream) : m_fileStream(fileStream), m_idToZoneMap(), m_idToTypeNameMap(), m_pictureIdToZoneIdList(), m_pictureIdToZoneIdListCreated(false) { }
+	explicit State(shared_ptr<WPSStream> fileStream) : m_fileStream(fileStream), m_idToZoneMap(), m_idToTypeNameMap(), m_pictureIdToZoneIdList(), m_pictureIdToZoneIdListCreated(false) { }
 	/// the file stream
 	shared_ptr<WPSStream> m_fileStream;
 	/// the map id to zone
@@ -161,7 +161,7 @@ bool WPSOLE1Parser::createZones()
 			break;
 		}
 		if (pos+10>=endPos) break;
-		if (level<1 && level>3)
+		if (level<1 || level>3)
 		{
 			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			break;

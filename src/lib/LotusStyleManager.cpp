@@ -180,7 +180,7 @@ struct LineStyle
 struct CellStyle
 {
 	//! constructor
-	CellStyle(libwps_tools_win::Font::Type fontType) :
+	explicit CellStyle(libwps_tools_win::Font::Type fontType) :
 		m_borders(0), m_fontId(0), m_formatId(0),
 		m_colorStyle(), m_fontStyle(fontType), m_extra("")
 	{

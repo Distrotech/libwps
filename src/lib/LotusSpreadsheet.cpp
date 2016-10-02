@@ -195,7 +195,7 @@ public:
 	/// constructor
 	Cell() : m_input(), m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content(), m_comment() { }
 	/// constructor
-	Cell(RVNGInputStreamPtr input) : m_input(input), m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content(), m_comment() { }
+	explicit Cell(RVNGInputStreamPtr input) : m_input(input), m_styleId(-1), m_hAlign(WPSCellFormat::HALIGN_DEFAULT), m_content(), m_comment() { }
 	//! operator<<
 	friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
 
@@ -1077,10 +1077,6 @@ bool LotusSpreadsheet::readRowFormat(shared_ptr<WPSStream> stream, LotusSpreadsh
 		else
 			f << "#fId=" << fId << ",";
 		value[1] &= 0x303C;
-	}
-	else if (wh&0x10)
-	{
-		f << "##,";
 	}
 	else
 	{

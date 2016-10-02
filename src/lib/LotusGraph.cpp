@@ -56,7 +56,7 @@ struct ZoneMac
 	//! the different type
 	enum Type { Arc, Frame, Line, Rect, Unknown };
 	//! constructor
-	ZoneMac(shared_ptr<WPSStream> stream) :
+	explicit ZoneMac(shared_ptr<WPSStream> stream) :
 		m_type(Unknown), m_subType(0), m_stream(stream), m_box(), m_ordering(0),
 		m_lineId(0), m_graphicId(0), m_surfaceId(0), m_hasShadow(false),
 		m_pictureEntry(), m_textBoxEntry(),
@@ -198,7 +198,7 @@ struct ZoneWK4
 	//! the different type
 	enum Type { Border, Chart, Group, Picture, Shape, TextBox, Unknown };
 	//! constructor
-	ZoneWK4(shared_ptr<WPSStream> stream) :
+	explicit ZoneWK4(shared_ptr<WPSStream> stream) :
 		m_type(Unknown), m_subType(-1), m_id(-1), m_cell(0,0), m_cellPosition(0,0), m_frameSize(0,0), m_pictureDim(),
 		m_shape(), m_graphicStyle(WPSGraphicStyle::emptyStyle()), m_hasShadow(false),
 		m_textEntry(), m_stream(stream)
@@ -1609,7 +1609,7 @@ void LotusGraph::sendTextBoxWK4(shared_ptr<WPSStream> stream, WPSEntry const &en
 			input->seek(pos, librevenge::RVNG_SEEK_SET);
 			break;
 		}
-		bool send=!isButton || (isButton && pos==entry.begin());
+		bool send=!isButton || pos==entry.begin();
 		for (int i=0; i<dSz-1; ++i)
 		{
 			char c=char(libwps::readU8(input));
