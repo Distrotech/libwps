@@ -1,5 +1,13 @@
 CHANGES:
 
+--- version 0.4.4
+03/10/2016:
+- Lotus: add support to read .fm3 and .fmt files,
+- Lotus v3, v4: try to retrieve the character/cell
+  formating and basic shapes,
+- MsWorks v4: try to retrieve the page's embedded
+  objects.
+
 --- version 0.4.3
 
 10/02/2016

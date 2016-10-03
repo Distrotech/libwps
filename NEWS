@@ -1,3 +1,8 @@
+0.4.3 -> 0.4.4
+- Lotus .wk3, .wk4: retrieve more formattings,
+- Lotus .wk3: add support to read .fm3 file,
+- MsWorks v4: retrieve page's embedded objects.
+
 0.4.2 -> 0.4.3
 - add support for Microsoft Word for DOS files
 
