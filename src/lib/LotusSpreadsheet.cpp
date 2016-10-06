@@ -1878,6 +1878,8 @@ void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet cons
 			newColSet.insert(sIt->first[1]+1);
 		}
 		sIt=styles->m_colsToStyleMap.begin();
+		if (sIt==styles->m_colsToStyleMap.end())
+			styles=0;
 	}
 
 	LotusSpreadsheetInternal::ExtraRowStyles const *extraStyles=0;
@@ -1893,6 +1895,8 @@ void LotusSpreadsheet::sendRowContent(LotusSpreadsheetInternal::Spreadsheet cons
 			newColSet.insert(eIt->first[1]+1);
 		}
 		eIt=extraStyles->m_colsToStyleMap.begin();
+		if (eIt==extraStyles->m_colsToStyleMap.end())
+			extraStyles=0;
 	}
 
 
